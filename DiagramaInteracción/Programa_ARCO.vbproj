@@ -1,0 +1,762 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{900E9A25-2DF6-4662-8096-41541D71D785}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <StartupObject>ARCO.My.MyApplication</StartupObject>
+    <RootNamespace>ARCO</RootNamespace>
+    <AssemblyName>ARCO</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <MyType>WindowsForms</MyType>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>C:\Users\vidal\Desktop\Temporal\ARCO_Temporal\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <TargetCulture>es-CO</TargetCulture>
+    <ProductName>StruCheck Columnas</ProductName>
+    <PublisherName>EstrucMed, Ingeniería Especializada</PublisherName>
+    <SuiteName>StruCheck</SuiteName>
+    <ApplicationRevision>3</ApplicationRevision>
+    <ApplicationVersion>2.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <PublishWizardCompleted>true</PublishWizardCompleted>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DocumentationFile>ARCO.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DocumentationFile>ARCO.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionExplicit>On</OptionExplicit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionCompare>Binary</OptionCompare>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionStrict>Off</OptionStrict>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>LogoColumnaSinFondo_1.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignManifests>false</SignManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestCertificateThumbprint>08AC7391E8DD1C89B9B2172A73E9BC3537D56189</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestKeyFile>
+    </ManifestKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateManifests>true</GenerateManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DelaySign>false</DelaySign>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>ARCO.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DocumentationFile>ARCO.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DocumentationFile>ARCO.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BouncyCastle.Crypto, Version=1.8.9.0, Culture=neutral, PublicKeyToken=0e99375e54769942">
+      <HintPath>..\packages\BouncyCastle.1.8.9\lib\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+    <Reference Include="FCB_Etabs">
+      <HintPath>..\..\..\..\06_ProyectoEtabs\BibliotecaEtabs\FCB_Etabs\bin\Debug\FCB_Etabs.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\iTextSharp.5.5.13.2\lib\itextsharp.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp.pdfa, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\itextsharp.pdfa.5.5.13.2\lib\itextsharp.pdfa.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp.xmlworker, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\itextsharp.xmlworker.5.5.13.2\lib\itextsharp.xmlworker.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp.xtra, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\itextsharp.xtra.5.5.13.2\lib\itextsharp.xtra.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Excel1">
+      <HintPath>C:\Program Files\Microsoft Office\root\Office16\ADDINS\PowerPivot Excel Add-in\Microsoft.Office.Interop.Excel.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Word, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.Common, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.DataVisualization, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.DataVisualization.DLL</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.Design, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.Design.DLL</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.ProcessingObjectModel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.ProcessingObjectModel.DLL</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebDesign, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.WebDesign.DLL</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebForms, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.WebForms.DLL</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WinForms, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.WinForms.DLL</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Data.Tools.ExceptionMessageBox, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.SqlServer.Types.14.0.1016.290\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web.Services" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Windows.Forms.DataVisualization" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Import Include="Microsoft.VisualBasic" />
+    <Import Include="System" />
+    <Import Include="System.Collections" />
+    <Import Include="System.Collections.Generic" />
+    <Import Include="System.Data" />
+    <Import Include="System.Drawing" />
+    <Import Include="System.Diagnostics" />
+    <Import Include="System.Windows.Forms" />
+    <Import Include="System.Linq" />
+    <Import Include="System.Xml.Linq" />
+    <Import Include="System.Threading.Tasks" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ApplicationEvents.vb" />
+    <Compile Include="Clases\Columnas\cColumnas.vb" />
+    <Compile Include="Clases\Columnas\Columnas.vb" />
+    <Compile Include="Clases\Columnas\Elemento_Columna.vb" />
+    <Compile Include="Clases\Escaleras\Proyecto_Escaleras.vb" />
+    <Compile Include="Clases\Funcion_Proyecto.vb" />
+    <Compile Include="Clases\MurosNoEstructurales\Proyecto_MNE.vb" />
+    <Compile Include="Clases\Muros\cMuros.vb" />
+    <Compile Include="Clases\Muros\Muros.vb" />
+    <Compile Include="Clases\Muros\SeccionMuro.vb" />
+    <Compile Include="Clases\Pilas\cPilas.vb" />
+    <Compile Include="Clases\Pilas\Elemento_Pila.vb" />
+    <Compile Include="Clases\Losas\Proyecto_Losas.vb" />
+    <Compile Include="Clases\Proyecto.vb" />
+    <Compile Include="eNum\ColoresProyecto.vb" />
+    <Compile Include="eNum\eDiccionarios.vb" />
+    <Compile Include="eNum\eNum.vb" />
+    <Compile Include="Formularios\04_Escaleras\Form_04_Escaleras.Designer.vb">
+      <DependentUpon>Form_04_Escaleras.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\04_Escaleras\Form_04_Escaleras.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\03_Losas\Form_03_Losas.Designer.vb">
+      <DependentUpon>Form_03_Losas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\03_Losas\Form_03_Losas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\05_MurosNoEstructurales\Form_05_MurosNoEstructurales.Designer.vb">
+      <DependentUpon>Form_05_MurosNoEstructurales.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\05_MurosNoEstructurales\Form_05_MurosNoEstructurales.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_06_00_PagInfoMuros.Designer.vb">
+      <DependentUpon>Form_06_00_PagInfoMuros.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_06_00_PagInfoMuros.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_06_01_ResultadosMuros.Designer.vb">
+      <DependentUpon>Form_06_01_ResultadosMuros.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_06_01_ResultadosMuros.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_06_PagMuros.Designer.vb">
+      <DependentUpon>Form_06_PagMuros.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_06_PagMuros.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_InfoDesignMuros.Designer.vb">
+      <DependentUpon>Form_InfoDesignMuros.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_InfoDesignMuros.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\R_ReporteInicial.Designer.vb">
+      <DependentUpon>R_ReporteInicial.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\R_ReporteInicial.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Archivos.Designer.vb">
+      <DependentUpon>Archivos.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Archivos.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
+      <DependentUpon>Form_Logos.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Logos.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Derivas.Designer.vb">
+      <DependentUpon>Form_Derivas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_Derivas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_ImagenProyecto.Designer.vb">
+      <DependentUpon>Form_ImagenProyecto.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_ImagenProyecto.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Funciones\Class1.vb" />
+    <Compile Include="Formularios\02_Columnas\Form_02_01_00_RevisionCortante.Designer.vb">
+      <DependentUpon>Form_02_01_00_RevisionCortante.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_01_00_RevisionCortante.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_01_02_ResultadosModelo.Designer.vb">
+      <DependentUpon>Form_02_01_02_ResultadosModelo.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_01_02_ResultadosModelo.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Fuerzas.Designer.vb">
+      <DependentUpon>Form_Fuerzas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Fuerzas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Opciones_Combinaciones.Designer.vb">
+      <DependentUpon>Form_Opciones_Combinaciones.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Opciones_Combinaciones.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Graficos.Designer.vb">
+      <DependentUpon>Form_Graficos.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Graficos.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_ALR.Designer.vb">
+      <DependentUpon>Form_ALR.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_ALR.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Reportes.Designer.vb">
+      <DependentUpon>Form_Reportes.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Reportes.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_01_ResultadosColumnas.Designer.vb">
+      <DependentUpon>Form_02_01_ResultadosColumnas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_01_ResultadosColumnas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Combinaciones.Designer.vb">
+      <DependentUpon>Form_Combinaciones.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Combinaciones.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_00_PagInfoColumnas.Designer.vb">
+      <DependentUpon>Form_02_00_PagInfoColumnas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_00_PagInfoColumnas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.Designer.vb">
+      <DependentUpon>Form_02_PagColumnas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form1.Designer.vb">
+      <DependentUpon>Form1.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form1.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_00_PaginaPrincipal.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_00_PaginaPrincipal.Designer.vb">
+      <DependentUpon>Form_00_PaginaPrincipal.vb</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_01_00_PagInfoPilas.Designer.vb">
+      <DependentUpon>Form_01_00_PagInfoPilas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_01_00_PagInfoPilas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_11_PagMateriales.Designer.vb">
+      <DependentUpon>Form_11_PagMateriales.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_11_PagMateriales.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_04_SeccionRectangular.Designer.vb">
+      <DependentUpon>Form_04_SeccionRectangular.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_04_SeccionRectangular.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_01_PagPilas.Designer.vb">
+      <DependentUpon>Form_01_PagPilas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_01_PagPilas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_05_FiguraRectangular.Designer.vb">
+      <DependentUpon>Form_05_FiguraRectangular.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_05_FiguraRectangular.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_12_PagPropRefuerzo.Designer.vb">
+      <DependentUpon>Form_12_PagPropRefuerzo.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_12_PagPropRefuerzo.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_13_PagAcerca.Designer.vb">
+      <DependentUpon>Form_13_PagAcerca.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_13_PagAcerca.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_10_PagInfoGeneral.Designer.vb">
+      <DependentUpon>Form_10_PagInfoGeneral.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_10_PagInfoGeneral.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form9.Designer.vb">
+      <DependentUpon>Form9.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Form9.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\OleDbDataAdapter.vb" />
+    <Compile Include="Funciones\Funciones_04_Escalera.vb" />
+    <Compile Include="Funciones\Funciones_03_Losa.vb" />
+    <Compile Include="Funciones\Funciones_05_MurosNoEstructurales.vb" />
+    <Compile Include="Funciones\Funciones_01_Pilas.vb" />
+    <Compile Include="Funciones\Funciones_00_Varias.vb" />
+    <Compile Include="Funciones\Funciones_02_Columnas.vb" />
+    <Compile Include="Funciones\Funciones_Muros.vb" />
+    <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
+    <Compile Include="Funciones\ReporteInicial.vb" />
+    <Compile Include="Microsofts\Office.vb" />
+    <Compile Include="Funciones\Diagrama_Interaccion_Rectangular.vb" />
+    <Compile Include="My Project\AssemblyInfo.vb" />
+    <Compile Include="My Project\Application.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Application.myapp</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="My Project\Resources.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\Settings.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="Reporte\DataSet1.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DataSet1.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Reporte\DataSet1.vb">
+      <DependentUpon>DataSet1.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Reporte\SplashScreen1.Designer.vb">
+      <DependentUpon>SplashScreen1.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Reporte\SplashScreen1.vb">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Formularios\02_Columnas\Form_02_01_02_ResultadosModelo.resx">
+      <DependentUpon>Form_02_01_02_ResultadosModelo.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\02_Columnas\Form_02_01_00_RevisionCortante.resx">
+      <DependentUpon>Form_02_01_00_RevisionCortante.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\05_MurosNoEstructurales\Form_05_MurosNoEstructurales.resx">
+      <DependentUpon>Form_05_MurosNoEstructurales.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\06_Muros\Form_06_00_PagInfoMuros.resx">
+      <DependentUpon>Form_06_00_PagInfoMuros.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\06_Muros\Form_06_01_ResultadosMuros.resx">
+      <DependentUpon>Form_06_01_ResultadosMuros.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\06_Muros\Form_06_PagMuros.resx">
+      <DependentUpon>Form_06_PagMuros.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\06_Muros\Form_InfoDesignMuros.resx">
+      <DependentUpon>Form_InfoDesignMuros.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\06_Muros\R_ReporteInicial.resx">
+      <DependentUpon>R_ReporteInicial.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Archivos.resx">
+      <DependentUpon>Archivos.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_Fuerzas.resx">
+      <DependentUpon>Form_Fuerzas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_Graficos.resx">
+      <DependentUpon>Form_Graficos.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\02_Columnas\Form_02_01_ResultadosColumnas.resx">
+      <DependentUpon>Form_02_01_ResultadosColumnas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_ALR.resx">
+      <DependentUpon>Form_ALR.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_Combinaciones.resx">
+      <DependentUpon>Form_Combinaciones.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_Logos.resx">
+      <DependentUpon>Form_Logos.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_Opciones_Combinaciones.resx">
+      <DependentUpon>Form_Opciones_Combinaciones.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\04_Escaleras\Form_04_Escaleras.resx">
+      <DependentUpon>Form_04_Escaleras.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form1.resx">
+      <DependentUpon>Form1.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_00_PaginaPrincipal.resx">
+      <DependentUpon>Form_00_PaginaPrincipal.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\03_Losas\Form_03_Losas.resx">
+      <DependentUpon>Form_03_Losas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\01_Pilas\Form_01_00_PagInfoPilas.resx">
+      <DependentUpon>Form_01_00_PagInfoPilas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\02_Columnas\Form_02_PagColumnas.resx">
+      <DependentUpon>Form_02_PagColumnas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\02_Columnas\Form_02_00_PagInfoColumnas.resx">
+      <DependentUpon>Form_02_00_PagInfoColumnas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_11_PagMateriales.resx">
+      <DependentUpon>Form_11_PagMateriales.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_04_SeccionRectangular.resx">
+      <DependentUpon>Form_04_SeccionRectangular.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\01_Pilas\Form_01_PagPilas.resx">
+      <DependentUpon>Form_01_PagPilas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_05_FiguraRectangular.resx">
+      <DependentUpon>Form_05_FiguraRectangular.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_12_PagPropRefuerzo.resx">
+      <DependentUpon>Form_12_PagPropRefuerzo.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_13_PagAcerca.resx">
+      <DependentUpon>Form_13_PagAcerca.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_10_PagInfoGeneral.resx">
+      <DependentUpon>Form_10_PagInfoGeneral.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Form9.resx">
+      <DependentUpon>Form9.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Complementos\Form_Reportes.resx">
+      <DependentUpon>Form_Reportes.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_Derivas.resx">
+      <DependentUpon>Form_Derivas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_ImagenProyecto.resx">
+      <DependentUpon>Form_ImagenProyecto.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="My Project\Resources.resx">
+      <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
+      <CustomToolNamespace>My.Resources</CustomToolNamespace>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Report1.rdlc" />
+    <EmbeddedResource Include="Reporte\SplashScreen1.resx">
+      <DependentUpon>SplashScreen1.vb</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ARCO.snk" />
+    <None Include="My Project\app.manifest" />
+    <None Include="My Project\Application.myapp">
+      <Generator>MyApplicationCodeGenerator</Generator>
+      <LastGenOutput>Application.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="My Project\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <CustomToolNamespace>My</CustomToolNamespace>
+      <LastGenOutput>Settings.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+    <None Include="Reporte\DataSet1.xsc">
+      <DependentUpon>DataSet1.xsd</DependentUpon>
+    </None>
+    <None Include="Reporte\DataSet1.xsd">
+      <SubType>Designer</SubType>
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>DataSet1.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="Reporte\DataSet1.xss">
+      <DependentUpon>DataSet1.xsd</DependentUpon>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="ADODB">
+      <Guid>{2A75196C-D9EB-4129-B803-931327F72D5C}</Guid>
+      <VersionMajor>2</VersionMajor>
+      <VersionMinor>8</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="EnvDTEProperties">
+      <Guid>{A128DB83-F218-41DB-8314-34C333F3B7FD}</Guid>
+      <VersionMajor>8</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="EnvDTEProperties120">
+      <Guid>{B4AA6999-EB9D-4404-8597-BB41495469CD}</Guid>
+      <VersionMajor>12</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="Microsoft.Office.Core">
+      <Guid>{2DF8D04C-5BFA-101B-BDE5-00AA0044DE52}</Guid>
+      <VersionMajor>2</VersionMajor>
+      <VersionMinor>8</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="Microsoft.Office.Interop.Access">
+      <Guid>{4AFFC9A0-5F99-101B-AF4E-00AA003F0F07}</Guid>
+      <VersionMajor>9</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="Microsoft.Office.Interop.Access.Dao">
+      <Guid>{4AC9E1DA-5BAD-4AC7-86E3-24F4CDCECA28}</Guid>
+      <VersionMajor>12</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="Microsoft.Office.Interop.Excel">
+      <Guid>{00020813-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>9</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="MSDAOSP">
+      <Guid>{E0E270C2-C0BE-11D0-8FE4-00A0C90A6341}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>5</VersionMinor>
+      <Lcid>1033</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="MSDASC">
+      <Guid>{2206CEB0-19C1-11D1-89E0-00C04FD7A829}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="OLEDBError">
+      <Guid>{C8B522D5-5CF3-11CE-ADE5-00AA0044773D}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="stdole">
+      <Guid>{00020430-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="VBIDE">
+      <Guid>{0002E157-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>5</VersionMajor>
+      <VersionMinor>3</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.7.2 %28x86 y x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Logo3.ico" />
+    <Content Include="LogoColumnaSinFondo_1.ico" />
+    <None Include="Resources\Im.png" />
+    <None Include="Resources\ARCO_ICONOGRIS.ico" />
+    <None Include="Resources\ARCO_ICONOVERDE.ico" />
+    <None Include="Resources\ARCO_LOGOGRIS.png" />
+    <None Include="Resources\ARCO_LOGOVerde.png" />
+    <Content Include="SqlServerTypes\Loader.cs" />
+    <Content Include="SqlServerTypes\readme.htm" />
+    <Content Include="SqlServerTypes\x64\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

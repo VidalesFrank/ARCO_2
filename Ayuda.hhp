@@ -1,0 +1,12 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=Ayuda.chm
+Contents file=Ayuda\Table of Contents.hhc
+Display compile progress=No
+Index file=Index.hhk
+Language=0x240a Español (Colombia)
+Title=StruCheck
+
+
+[INFOTYPES]
+
