@@ -4,10 +4,11 @@ Public Class cMuros
     Public Lista_Muros As New List(Of Muro)
     Public Lista_Pisos_Muros As List(Of String)
     Public Lista_fc_Muros As List(Of Single)
+
     Public Lista_Combinaciones_Muros As New List(Of String)
     Public Lista_Combinaciones_ALR_Muros As New List(Of String)
-
     Public ListA_Combinaciones_Design As New List(Of String)
+    Public ListA_Combinaciones_Sismo As New List(Of String)
 
     Public Info_Diseño As Boolean
     Public Info_Secciones As Boolean

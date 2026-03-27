@@ -1,178 +1,184 @@
 ﻿Public Module Diagrama_Interaccion_Rectangular
 
-    Public Sub Diagrama_Interaccion(ByVal B As Single, ByVal H As Single, ByVal Lista_Refuerzo As List(Of Tramo_Columna.Detalles_Refuerzo_Longitudinal),
-                                         ByVal fc As Single, ByVal fy As Single, ByVal Es As Single, ByVal Angulo As Single)
+    'Public Sub Diagrama_Interaccion(ByVal B As Single, ByVal H As Single, ByVal Lista_Refuerzo As List(Of Tramo_Columna.Detalles_Refuerzo_Longitudinal),
+    '                                     ByVal fc As Single, ByVal fy As Single, ByVal Es As Single, ByVal Angulo As Single)
 
-        Dim Punto_1 As PointF : Punto_1.X = -B / 2 : Punto_1.Y = H / 2
-        Dim Punto_2 As PointF : Punto_2.X = B / 2 : Punto_2.Y = H / 2
-        Dim Punto_3 As PointF : Punto_3.X = B / 2 : Punto_3.Y = -H / 2
-        Dim Punto_4 As PointF : Punto_4.X = -B / 2 : Punto_4.Y = -H / 2
+    '    Dim Punto_1 As PointF : Punto_1.X = -B / 2 : Punto_1.Y = H / 2
+    '    Dim Punto_2 As PointF : Punto_2.X = B / 2 : Punto_2.Y = H / 2
+    '    Dim Punto_3 As PointF : Punto_3.X = B / 2 : Punto_3.Y = -H / 2
+    '    Dim Punto_4 As PointF : Punto_4.X = -B / 2 : Punto_4.Y = -H / 2
 
-        Dim Lista_Vertices As New List(Of PointF) : Lista_Vertices.Add(Punto_1) : Lista_Vertices.Add(Punto_2) : Lista_Vertices.Add(Punto_3) : Lista_Vertices.Add(Punto_4)
-        Dim Lista_Vertices_Rotados As New List(Of PointF)
-        Dim Y_max As Single : Dim Y_min As Single : Dim X_max As Single : Dim X_min As Single
+    '    Dim Lista_Vertices As New List(Of PointF) : Lista_Vertices.Add(Punto_1) : Lista_Vertices.Add(Punto_2) : Lista_Vertices.Add(Punto_3) : Lista_Vertices.Add(Punto_4)
+    '    Dim Lista_Vertices_Rotados As New List(Of PointF)
+    '    Dim Y_max As Single : Dim Y_min As Single : Dim X_max As Single : Dim X_min As Single
 
-        Dim Lista_Refuerzo_Rotados As New List(Of PointF)
-        Dim d As Single '---- Minima coordenada Y
-        Lista_Refuerzo_Rotados.Clear()
-        For i = 0 To Lista_Refuerzo.Count - 1
-            Dim Rotacion = Rotacion_Coordenadas(Lista_Refuerzo(i).Coordenada_X, Lista_Refuerzo(i).Coordenada_Y, Angulo * Math.PI / 180)
-            Dim Punto As PointF
-            Punto.X = Rotacion(0)
-            Punto.Y = Rotacion(1)
-            If Punto.Y < d Then
-                d = Punto.Y
-            End If
-            Lista_Refuerzo_Rotados.Add(Punto)
-        Next
-        Lista_Vertices_Rotados.Clear()
-        For i = 0 To 3
-            Dim Rotacion = Rotacion_Coordenadas(Lista_Vertices(i).X, Lista_Vertices(i).Y, Angulo * Math.PI / 180)
-            Dim Punto As PointF
-            Punto.X = Rotacion(0)
-            Punto.Y = Rotacion(1)
-            If Punto.Y > Y_max Then
-                Y_max = Punto.Y
-            End If
-            If Punto.Y < Y_min Then
-                Y_min = Punto.Y
-            End If
-            If Punto.X > X_max Then
-                X_max = Punto.X
-            End If
-            If Punto.X < X_min Then
-                X_min = Punto.X
-            End If
-            Lista_Vertices_Rotados.Add(Punto)
-        Next
+    '    Dim Lista_Refuerzo_Rotados As New List(Of PointF)
 
-        Dim Area = Area_Coordenadas(Lista_Vertices_Rotados)
-        Dim X_g As Single = Area(2) / Area(0)
-        Dim Y_g As Single = Area(1) / Area(0)
-        '---- Cálculo del Centro Plastico ----------
-        Dim Fuerza_Concreto As Single = 0.85 * fc * Area(0) * 1000
-        Dim Fuerza_Refuerzo As Single = Lista_Refuerzo.Sum(Function(p) p.Asb) * (fy - 0.85 * fc) / 1000
+    '    Dim d As Single '---- Minima coordenada Y
 
-        Dim M_X As Single : Dim M_Y As Single
-        For i = 0 To Lista_Refuerzo.Count - 1
-            Dim d_x As Single = Lista_Refuerzo(i).Coordenada_X - X_g
-            Dim d_y As Single = Lista_Refuerzo(i).Coordenada_Y - Y_g
+    '    Lista_Refuerzo_Rotados.Clear()
 
-            M_X += (Lista_Refuerzo(i).Asb * (fy - 0.85 * fc)) * d_x
-            M_Y += (Lista_Refuerzo(i).Asb * (fy - 0.85 * fc)) * d_y
-        Next
-        Dim C_X As Single = M_X / (Fuerza_Concreto + Fuerza_Refuerzo)
-        Dim C_Y As Single = M_Y / (Fuerza_Concreto + Fuerza_Refuerzo)
+    '    For i = 0 To Lista_Refuerzo.Count - 1
+    '        Dim Rotacion = Rotacion_Coordenadas(Lista_Refuerzo(i).Coordenada_X, Lista_Refuerzo(i).Coordenada_Y, Angulo * Math.PI / 180)
+    '        Dim Punto As PointF
+    '        Punto.X = Rotacion(0)
+    '        Punto.Y = Rotacion(1)
+    '        If Punto.Y < d Then
+    '            d = Punto.Y
+    '        End If
+    '        Lista_Refuerzo_Rotados.Add(Punto)
+    '    Next
 
-        Dim Pmax As Single = Fuerza_Concreto + Fuerza_Refuerzo
-        Dim Pmin As Single = -Fuerza_Refuerzo
+    '    Lista_Vertices_Rotados.Clear()
 
-        Dim Lista_Pn As New List(Of Single) : Lista_Pn.Add(Pmax)
-        Dim Lista_Phi_Pn As New List(Of Single) : Lista_Phi_Pn.Add(Pmax * 0.65 * 0.8)
-        Dim Lista_Mn_X As New List(Of Single) : Lista_Mn_X.Add(0)
-        Dim Lista_Phi_Mn_X As New List(Of Single) : Lista_Phi_Mn_X.Add(0)
-        Dim Lista_Mn_Y As New List(Of Single) : Lista_Mn_Y.Add(0)
-        Dim Lista_Phi_Mn_Y As New List(Of Single) : Lista_Phi_Mn_Y.Add(0)
+    '    For i = 0 To 3
+    '        Dim Rotacion = Rotacion_Coordenadas(Lista_Vertices(i).X, Lista_Vertices(i).Y, Angulo * Math.PI / 180)
+    '        Dim Punto As PointF
+    '        Punto.X = Rotacion(0)
+    '        Punto.Y = Rotacion(1)
+    '        If Punto.Y > Y_max Then
+    '            Y_max = Punto.Y
+    '        End If
+    '        If Punto.Y < Y_min Then
+    '            Y_min = Punto.Y
+    '        End If
+    '        If Punto.X > X_max Then
+    '            X_max = Punto.X
+    '        End If
+    '        If Punto.X < X_min Then
+    '            X_min = Punto.X
+    '        End If
+    '        Lista_Vertices_Rotados.Add(Punto)
+    '    Next
 
-        Dim Elemento As New SRectangular.DI
-        Elemento.Pn = Pmax
-        Elemento.Mn_X = 0
-        Elemento.Mn_Y = 0
-        Elemento.Phi_Pn = Pmax * 0.65 * 0.8
-        Elemento.Phi_Mn_X = 0
-        Elemento.Phi_Mn_Y = 0
-        SRectangular.Lista_Elementos.Add(Elemento)
+    '    Dim Area = Area_Coordenadas(Lista_Vertices_Rotados)
+    '    Dim X_g As Single = Area(2) / Area(0)
+    '    Dim Y_g As Single = Area(1) / Area(0)
+    '    '---- Cálculo del Centro Plastico ----------
+    '    Dim Fuerza_Concreto As Single = 0.85 * fc * Area(0) * 1000
+    '    Dim Fuerza_Refuerzo As Single = Lista_Refuerzo.Sum(Function(p) p.Asb) * (fy - 0.85 * fc) / 1000
 
-        d = Y_max + Math.Abs(d)
-        For C = (Y_max - Y_min) To 0.04 Step -(Math.Abs(Y_min) + Y_max - 0.04) / 10
-            Dim Area_C = Area_Comprimida(Lista_Vertices_Rotados, C)
-            Dim b1 As Single = 0.85 - (0.05 * (fc - 28) / 7)
-            If b1 < 0.65 Then
-                b1 = 0.65
-            ElseIf b1 > 0.85 Then
-                b1 = 0.85
-            End If
-            Dim F_Concreto As Single = b1 * fc * Area_C(0) * 1000
-            Dim Mx_C As Single = F_Concreto * ((Area_C(2) / Area_C(0)) - C_X)
-            Dim My_C As Single = F_Concreto * ((Area_C(1) / Area_C(0)) - C_Y)
+    '    Dim M_X As Single : Dim M_Y As Single
 
-            Dim Fst As Single = 0
-            Dim Mst_X As Single = 0
-            Dim Mst_Y As Single = 0
-            For i = 0 To Lista_Refuerzo_Rotados.Count - 1
-                Dim di As Single = (Y_max - Lista_Refuerzo_Rotados(i).Y)
-                Dim esi As Single = (C - di) * 0.003 / C
-                Dim fsi As Single = Es * esi
-                If fsi > fy Then
-                    fsi = fy
-                ElseIf fsi < -fy Then
-                    fsi = -fy
-                End If
-                Dim Fs As Single = fsi * Lista_Refuerzo(i).Asb / 1000
-                If C >= di Then
-                    Fs = (fsi - 0.85 * fc) * Lista_Refuerzo(i).Asb / 1000
-                End If
-                Fst += Fs
-                Mst_X += Fs * (Lista_Refuerzo_Rotados(i).X - C_X)
-                Mst_Y += Fs * (Lista_Refuerzo_Rotados(i).Y - C_Y)
-            Next
-            Dim es1 As Single = (d - C) * 0.003 / C
-            Dim Phi As Single
-            If Math.Abs(es1) <= (fy / Es) Then
-                Phi = 0.65
-            ElseIf Math.Abs(es1) > (fy / Es) And Math.Abs(es1) <= (2.5 * (fy / Es)) Then
-                Phi = 0.65 + (Math.Abs(es1) - 0.002) * (250 / 3)
-            Else
-                Phi = 0.9
-            End If
+    '    For i = 0 To Lista_Refuerzo.Count - 1
+    '        Dim d_x As Single = Lista_Refuerzo(i).Coordenada_X - X_g
+    '        Dim d_y As Single = Lista_Refuerzo(i).Coordenada_Y - Y_g
 
-            Dim Pn As Single = Fst + F_Concreto
-            Dim Mn_X As Single = Mx_C + Mst_X
-            Dim Mn_Y As Single = My_C + Mst_Y
-            Dim Phi_Pn As Single = Pn * Phi
-            If Pn * Phi > Pmax * 0.65 * 0.8 Then
-                Phi_Pn = Pmax * 0.65 * 0.8
-            End If
-            Dim Phi_Mn_X As Single = Mn_X * Phi
-            Dim Phi_Mn_Y As Single = Mn_Y * Phi
+    '        M_X += (Lista_Refuerzo(i).Asb * (fy - 0.85 * fc)) * d_x
+    '        M_Y += (Lista_Refuerzo(i).Asb * (fy - 0.85 * fc)) * d_y
+    '    Next
+    '    Dim C_X As Single = M_X / (Fuerza_Concreto + Fuerza_Refuerzo)
+    '    Dim C_Y As Single = M_Y / (Fuerza_Concreto + Fuerza_Refuerzo)
 
-            Lista_Pn.Add(Pn)
-            Lista_Mn_X.Add(Mn_X)
-            Lista_Mn_Y.Add(Mn_Y)
+    '    Dim Pmax As Single = Fuerza_Concreto + Fuerza_Refuerzo
+    '    Dim Pmin As Single = -Fuerza_Refuerzo
 
-            Lista_Phi_Pn.Add(Phi_Pn)
-            Lista_Phi_Mn_X.Add(Phi_Mn_X)
-            Lista_Phi_Mn_Y.Add(Phi_Mn_Y)
+    '    Dim Lista_Pn As New List(Of Single) : Lista_Pn.Add(Pmax)
+    '    Dim Lista_Phi_Pn As New List(Of Single) : Lista_Phi_Pn.Add(Pmax * 0.65 * 0.8)
+    '    Dim Lista_Mn_X As New List(Of Single) : Lista_Mn_X.Add(0)
+    '    Dim Lista_Phi_Mn_X As New List(Of Single) : Lista_Phi_Mn_X.Add(0)
+    '    Dim Lista_Mn_Y As New List(Of Single) : Lista_Mn_Y.Add(0)
+    '    Dim Lista_Phi_Mn_Y As New List(Of Single) : Lista_Phi_Mn_Y.Add(0)
+
+    '    Dim Elemento As New SRectangular.DI
+    '    Elemento.Pn = Pmax
+    '    Elemento.Mn_X = 0
+    '    Elemento.Mn_Y = 0
+    '    Elemento.Phi_Pn = Pmax * 0.65 * 0.8
+    '    Elemento.Phi_Mn_X = 0
+    '    Elemento.Phi_Mn_Y = 0
+    '    SRectangular.Lista_Elementos.Add(Elemento)
+
+    '    d = Y_max + Math.Abs(d)
+    '    For C = (Y_max - Y_min) To 0.04 Step -(Math.Abs(Y_min) + Y_max - 0.04) / 10
+    '        Dim Area_C = Area_Comprimida(Lista_Vertices_Rotados, C)
+    '        Dim b1 As Single = 0.85 - (0.05 * (fc - 28) / 7)
+    '        If b1 < 0.65 Then
+    '            b1 = 0.65
+    '        ElseIf b1 > 0.85 Then
+    '            b1 = 0.85
+    '        End If
+    '        Dim F_Concreto As Single = b1 * fc * Area_C(0) * 1000
+    '        Dim Mx_C As Single = F_Concreto * ((Area_C(2) / Area_C(0)) - C_X)
+    '        Dim My_C As Single = F_Concreto * ((Area_C(1) / Area_C(0)) - C_Y)
+
+    '        Dim Fst As Single = 0
+    '        Dim Mst_X As Single = 0
+    '        Dim Mst_Y As Single = 0
+    '        For i = 0 To Lista_Refuerzo_Rotados.Count - 1
+    '            Dim di As Single = (Y_max - Lista_Refuerzo_Rotados(i).Y)
+    '            Dim esi As Single = (C - di) * 0.003 / C
+    '            Dim fsi As Single = Es * esi
+    '            If fsi > fy Then
+    '                fsi = fy
+    '            ElseIf fsi < -fy Then
+    '                fsi = -fy
+    '            End If
+    '            Dim Fs As Single = fsi * Lista_Refuerzo(i).Asb / 1000
+    '            If C >= di Then
+    '                Fs = (fsi - 0.85 * fc) * Lista_Refuerzo(i).Asb / 1000
+    '            End If
+    '            Fst += Fs
+    '            Mst_X += Fs * (Lista_Refuerzo_Rotados(i).X - C_X)
+    '            Mst_Y += Fs * (Lista_Refuerzo_Rotados(i).Y - C_Y)
+    '        Next
+    '        Dim es1 As Single = (d - C) * 0.003 / C
+    '        Dim Phi As Single
+    '        If Math.Abs(es1) <= (fy / Es) Then
+    '            Phi = 0.65
+    '        ElseIf Math.Abs(es1) > (fy / Es) And Math.Abs(es1) <= (2.5 * (fy / Es)) Then
+    '            Phi = 0.65 + (Math.Abs(es1) - 0.002) * (250 / 3)
+    '        Else
+    '            Phi = 0.9
+    '        End If
+
+    '        Dim Pn As Single = Fst + F_Concreto
+    '        Dim Mn_X As Single = Mx_C + Mst_X
+    '        Dim Mn_Y As Single = My_C + Mst_Y
+    '        Dim Phi_Pn As Single = Pn * Phi
+    '        If Pn * Phi > Pmax * 0.65 * 0.8 Then
+    '            Phi_Pn = Pmax * 0.65 * 0.8
+    '        End If
+    '        Dim Phi_Mn_X As Single = Mn_X * Phi
+    '        Dim Phi_Mn_Y As Single = Mn_Y * Phi
+
+    '        Lista_Pn.Add(Pn)
+    '        Lista_Mn_X.Add(Mn_X)
+    '        Lista_Mn_Y.Add(Mn_Y)
+
+    '        Lista_Phi_Pn.Add(Phi_Pn)
+    '        Lista_Phi_Mn_X.Add(Phi_Mn_X)
+    '        Lista_Phi_Mn_Y.Add(Phi_Mn_Y)
 
 
-            Dim Elemento_ As New SRectangular.DI
-            Elemento_.Pn = Pn
-            Elemento_.Mn_X = Mn_X
-            Elemento_.Mn_Y = Mn_Y
-            Elemento_.Phi_Pn = Phi_Pn
-            Elemento_.Phi_Mn_X = Phi_Mn_X
-            Elemento_.Phi_Mn_Y = Phi_Mn_Y
-            SRectangular.Lista_Elementos.Add(Elemento_)
+    '        Dim Elemento_ As New SRectangular.DI
+    '        Elemento_.Pn = Pn
+    '        Elemento_.Mn_X = Mn_X
+    '        Elemento_.Mn_Y = Mn_Y
+    '        Elemento_.Phi_Pn = Phi_Pn
+    '        Elemento_.Phi_Mn_X = Phi_Mn_X
+    '        Elemento_.Phi_Mn_Y = Phi_Mn_Y
+    '        SRectangular.Lista_Elementos.Add(Elemento_)
 
-        Next
-        Lista_Pn.Add(Pmin)
-        Lista_Mn_X.Add(0)
-        Lista_Mn_Y.Add(0)
+    '    Next
+    '    Lista_Pn.Add(Pmin)
+    '    Lista_Mn_X.Add(0)
+    '    Lista_Mn_Y.Add(0)
 
-        Lista_Phi_Pn.Add(0.9 * Pmin)
-        Lista_Phi_Mn_X.Add(0)
-        Lista_Phi_Mn_Y.Add(0)
+    '    Lista_Phi_Pn.Add(0.9 * Pmin)
+    '    Lista_Phi_Mn_X.Add(0)
+    '    Lista_Phi_Mn_Y.Add(0)
 
-        Dim Elementos As New SRectangular.DI
-        Elementos.Pn = Pmin
-        Elementos.Mn_X = 0
-        Elementos.Mn_Y = 0
-        Elementos.Phi_Pn = 0.9 * Pmin
-        Elementos.Phi_Mn_X = 0
-        Elementos.Phi_Mn_Y = 0
-        SRectangular.Lista_Elementos.Add(Elementos)
+    '    Dim Elementos As New SRectangular.DI
+    '    Elementos.Pn = Pmin
+    '    Elementos.Mn_X = 0
+    '    Elementos.Mn_Y = 0
+    '    Elementos.Phi_Pn = 0.9 * Pmin
+    '    Elementos.Phi_Mn_X = 0
+    '    Elementos.Phi_Mn_Y = 0
+    '    SRectangular.Lista_Elementos.Add(Elementos)
 
-    End Sub
+    'End Sub
 
     Public Function Area_Coordenadas(ByVal Lista_Coordenadas As List(Of PointF))
         Lista_Coordenadas.Add(Lista_Coordenadas(0))
@@ -273,6 +279,191 @@
             End If
         Next
         Quitar_Duplicados = Lista
+
+    End Function
+
+
+    Public Function Funcion_Diagrama_Interaccion(ByVal B As Single, ByVal H As Single,
+                                                 ByVal Lista_Refuerzo As List(Of RefuerzoSimple),
+                                                ByVal fc As Single, ByVal fy As Single,
+                                                 ByVal Es As Single, ByVal Angulo As Single) As (List(Of Single), List(Of Single), List(Of Single), List(Of Single))
+
+        Dim Punto_1 As PointF : Punto_1.X = -B / 2 : Punto_1.Y = H / 2
+        Dim Punto_2 As PointF : Punto_2.X = B / 2 : Punto_2.Y = H / 2
+        Dim Punto_3 As PointF : Punto_3.X = B / 2 : Punto_3.Y = -H / 2
+        Dim Punto_4 As PointF : Punto_4.X = -B / 2 : Punto_4.Y = -H / 2
+
+        Dim Lista_Vertices As New List(Of PointF) : Lista_Vertices.Add(Punto_1) : Lista_Vertices.Add(Punto_2) : Lista_Vertices.Add(Punto_3) : Lista_Vertices.Add(Punto_4)
+        Dim Lista_Vertices_Rotados As New List(Of PointF)
+        Dim Y_max As Single : Dim Y_min As Single : Dim X_max As Single : Dim X_min As Single
+
+        Dim Lista_Refuerzo_Rotados As New List(Of PointF)
+
+        Dim d As Single '---- Minima coordenada Y
+
+        Lista_Refuerzo_Rotados.Clear()
+
+        For i = 0 To Lista_Refuerzo.Count - 1
+            Dim Rotacion = Rotacion_Coordenadas(Lista_Refuerzo(i).Coordenada_X, Lista_Refuerzo(i).Coordenada_Y, Angulo * Math.PI / 180)
+            Dim Punto As PointF
+            Punto.X = Rotacion(0)
+            Punto.Y = Rotacion(1)
+            If Punto.Y < d Then
+                d = Punto.Y
+            End If
+            Lista_Refuerzo_Rotados.Add(Punto)
+        Next
+
+        Lista_Vertices_Rotados.Clear()
+
+        For i = 0 To 3
+            Dim Rotacion = Rotacion_Coordenadas(Lista_Vertices(i).X, Lista_Vertices(i).Y, Angulo * Math.PI / 180)
+            Dim Punto As PointF
+            Punto.X = Rotacion(0)
+            Punto.Y = Rotacion(1)
+            If Punto.Y > Y_max Then
+                Y_max = Punto.Y
+            End If
+            If Punto.Y < Y_min Then
+                Y_min = Punto.Y
+            End If
+            If Punto.X > X_max Then
+                X_max = Punto.X
+            End If
+            If Punto.X < X_min Then
+                X_min = Punto.X
+            End If
+            Lista_Vertices_Rotados.Add(Punto)
+        Next
+
+        Dim Area = Area_Coordenadas(Lista_Vertices_Rotados)
+        Dim X_g As Single = Area(2) / Area(0)
+        Dim Y_g As Single = Area(1) / Area(0)
+
+        '---- Cálculo del Centro Plastico ----------
+        Dim Fuerza_Concreto As Single = 0.85 * fc * Area(0) * 1000
+        Dim Fuerza_Refuerzo As Single = Lista_Refuerzo.Sum(Function(p) p.Asb) * (fy - 0.85 * fc) / 1000
+
+        Dim M_X As Single : Dim M_Y As Single
+
+        For i = 0 To Lista_Refuerzo.Count - 1
+            Dim d_x As Single = Lista_Refuerzo(i).Coordenada_X - X_g
+            Dim d_y As Single = Lista_Refuerzo(i).Coordenada_Y - Y_g
+
+            M_X += (Lista_Refuerzo(i).Asb * (fy - 0.85 * fc)) * d_x
+            M_Y += (Lista_Refuerzo(i).Asb * (fy - 0.85 * fc)) * d_y
+        Next
+        Dim C_X As Single = M_X / (Fuerza_Concreto + Fuerza_Refuerzo)
+        Dim C_Y As Single = M_Y / (Fuerza_Concreto + Fuerza_Refuerzo)
+
+        Dim Pmax As Single = Fuerza_Concreto + Fuerza_Refuerzo
+        Dim Pmin As Single = -Fuerza_Refuerzo
+
+        Dim Lista_Pn As New List(Of Single) : Lista_Pn.Add(Pmax)
+        Dim Lista_Phi_Pn As New List(Of Single) : Lista_Phi_Pn.Add(Pmax * 0.65 * 0.8)
+        Dim Lista_Mn_X As New List(Of Single) : Lista_Mn_X.Add(0)
+        Dim Lista_Phi_Mn_X As New List(Of Single) : Lista_Phi_Mn_X.Add(0)
+        Dim Lista_Mn_Y As New List(Of Single) : Lista_Mn_Y.Add(0)
+        Dim Lista_Phi_Mn_Y As New List(Of Single) : Lista_Phi_Mn_Y.Add(0)
+
+        Dim Elemento As New SRectangular.DI
+        Elemento.Pn = Pmax
+        Elemento.Mn_X = 0
+        Elemento.Mn_Y = 0
+        Elemento.Phi_Pn = Pmax * 0.65 * 0.8
+        Elemento.Phi_Mn_X = 0
+        Elemento.Phi_Mn_Y = 0
+        'SRectangular.Lista_Elementos.Add(Elemento)
+
+        d = Y_max + Math.Abs(d)
+        For C = (Y_max - Y_min) To 0.04 Step -(Math.Abs(Y_min) + Y_max - 0.04) / 10
+            Dim Area_C = Area_Comprimida(Lista_Vertices_Rotados, C)
+            Dim b1 As Single = 0.85 - (0.05 * (fc - 28) / 7)
+            If b1 < 0.65 Then
+                b1 = 0.65
+            ElseIf b1 > 0.85 Then
+                b1 = 0.85
+            End If
+            Dim F_Concreto As Single = b1 * fc * Area_C(0) * 1000
+            Dim Mx_C As Single = F_Concreto * ((Area_C(2) / Area_C(0)) - C_X)
+            Dim My_C As Single = F_Concreto * ((Area_C(1) / Area_C(0)) - C_Y)
+
+            Dim Fst As Single = 0
+            Dim Mst_X As Single = 0
+            Dim Mst_Y As Single = 0
+            For i = 0 To Lista_Refuerzo_Rotados.Count - 1
+                Dim di As Single = (Y_max - Lista_Refuerzo_Rotados(i).Y)
+                Dim esi As Single = (C - di) * 0.003 / C
+                Dim fsi As Single = Es * esi
+                If fsi > fy Then
+                    fsi = fy
+                ElseIf fsi < -fy Then
+                    fsi = -fy
+                End If
+                Dim Fs As Single = fsi * Lista_Refuerzo(i).Asb / 1000
+                If C >= di Then
+                    Fs = (fsi - 0.85 * fc) * Lista_Refuerzo(i).Asb / 1000
+                End If
+                Fst += Fs
+                Mst_X += Fs * (Lista_Refuerzo_Rotados(i).X - C_X)
+                Mst_Y += Fs * (Lista_Refuerzo_Rotados(i).Y - C_Y)
+            Next
+            Dim es1 As Single = (d - C) * 0.003 / C
+            Dim Phi As Single
+            If Math.Abs(es1) <= (fy / Es) Then
+                Phi = 0.65
+            ElseIf Math.Abs(es1) > (fy / Es) And Math.Abs(es1) <= (2.5 * (fy / Es)) Then
+                Phi = 0.65 + (Math.Abs(es1) - 0.002) * (250 / 3)
+            Else
+                Phi = 0.9
+            End If
+
+            Dim Pn As Single = Fst + F_Concreto
+            Dim Mn_X As Single = Mx_C + Mst_X
+            Dim Mn_Y As Single = My_C + Mst_Y
+            Dim Phi_Pn As Single = Pn * Phi
+            If Pn * Phi > Pmax * 0.65 * 0.8 Then
+                Phi_Pn = Pmax * 0.65 * 0.8
+            End If
+            Dim Phi_Mn_X As Single = Mn_X * Phi
+            Dim Phi_Mn_Y As Single = Mn_Y * Phi
+
+            Lista_Pn.Add(Pn)
+            Lista_Mn_X.Add(Mn_X)
+            Lista_Mn_Y.Add(Mn_Y)
+
+            Lista_Phi_Pn.Add(Phi_Pn)
+            Lista_Phi_Mn_X.Add(Phi_Mn_X)
+            Lista_Phi_Mn_Y.Add(Phi_Mn_Y)
+
+            Dim Elemento_ As New SRectangular.DI
+            Elemento_.Pn = Pn
+            Elemento_.Mn_X = Mn_X
+            Elemento_.Mn_Y = Mn_Y
+            Elemento_.Phi_Pn = Phi_Pn
+            Elemento_.Phi_Mn_X = Phi_Mn_X
+            Elemento_.Phi_Mn_Y = Phi_Mn_Y
+            'SRectangular.Lista_Elementos.Add(Elemento_)
+
+        Next
+        Lista_Pn.Add(Pmin)
+        Lista_Mn_X.Add(0)
+        Lista_Mn_Y.Add(0)
+
+        Lista_Phi_Pn.Add(0.9 * Pmin)
+        Lista_Phi_Mn_X.Add(0)
+        Lista_Phi_Mn_Y.Add(0)
+
+        Dim Elementos As New SRectangular.DI
+        Elementos.Pn = Pmin
+        Elementos.Mn_X = 0
+        Elementos.Mn_Y = 0
+        Elementos.Phi_Pn = 0.9 * Pmin
+        Elementos.Phi_Mn_X = 0
+        Elementos.Phi_Mn_Y = 0
+        'SRectangular.Lista_Elementos.Add(Elementos)
+
+        Return (Lista_Phi_Mn_Y, Lista_Phi_Pn, Lista_Mn_Y, Lista_Pn)
 
     End Function
 

@@ -29,6 +29,11 @@ Partial Class Form_06_PagMuros
         Dim Legend1 As System.Windows.Forms.DataVisualization.Charting.Legend = New System.Windows.Forms.DataVisualization.Charting.Legend()
         Dim Series1 As System.Windows.Forms.DataVisualization.Charting.Series = New System.Windows.Forms.DataVisualization.Charting.Series()
         Dim Series2 As System.Windows.Forms.DataVisualization.Charting.Series = New System.Windows.Forms.DataVisualization.Charting.Series()
+        Dim ChartArea3 As System.Windows.Forms.DataVisualization.Charting.ChartArea = New System.Windows.Forms.DataVisualization.Charting.ChartArea()
+        Dim ChartArea4 As System.Windows.Forms.DataVisualization.Charting.ChartArea = New System.Windows.Forms.DataVisualization.Charting.ChartArea()
+        Dim Legend2 As System.Windows.Forms.DataVisualization.Charting.Legend = New System.Windows.Forms.DataVisualization.Charting.Legend()
+        Dim Series3 As System.Windows.Forms.DataVisualization.Charting.Series = New System.Windows.Forms.DataVisualization.Charting.Series()
+        Dim Series4 As System.Windows.Forms.DataVisualization.Charting.Series = New System.Windows.Forms.DataVisualization.Charting.Series()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form_06_PagMuros))
         Me.Combo_Elementos = New System.Windows.Forms.ComboBox()
         Me.Button2 = New System.Windows.Forms.Button()
@@ -61,6 +66,7 @@ Partial Class Form_06_PagMuros
         Me.UnirArchivosToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReportesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReporteInicialToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ImportarDatosEtabsToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.VisualizacionMuros = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem14 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem15 = New System.Windows.Forms.ToolStripMenuItem()
@@ -105,6 +111,7 @@ Partial Class Form_06_PagMuros
         Me.Tabla_Muros_Protagonicos = New System.Windows.Forms.DataGridView()
         Me.TabPage9 = New System.Windows.Forms.TabPage()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
+        Me.Grafico_Ar = New System.Windows.Forms.DataVisualization.Charting.Chart()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.Grafico_MurosProtagonicos = New System.Windows.Forms.DataVisualization.Charting.Chart()
         Me.Panel3.SuspendLayout()
@@ -134,6 +141,8 @@ Partial Class Form_06_PagMuros
         Me.TabPage6.SuspendLayout()
         CType(Me.Tabla_Muros_Protagonicos, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.TabPage9.SuspendLayout()
+        Me.GroupBox3.SuspendLayout()
+        CType(Me.Grafico_Ar, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox2.SuspendLayout()
         CType(Me.Grafico_MurosProtagonicos, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -151,7 +160,7 @@ Partial Class Form_06_PagMuros
         'Button2
         '
         Me.Button2.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Button2.Font = New System.Drawing.Font("SansSerif", 12.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button2.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button2.ForeColor = System.Drawing.Color.White
         Me.Button2.Location = New System.Drawing.Point(16, 122)
         Me.Button2.Name = "Button2"
@@ -192,7 +201,7 @@ Partial Class Form_06_PagMuros
         Me.GroupBox1.Controls.Add(Me.Check_Fuerzas)
         Me.GroupBox1.Controls.Add(Me.Check_Design)
         Me.GroupBox1.Controls.Add(Me.Check_Secciones)
-        Me.GroupBox1.Font = New System.Drawing.Font("SansSerif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.GroupBox1.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox1.ForeColor = System.Drawing.Color.White
         Me.GroupBox1.Location = New System.Drawing.Point(16, 285)
         Me.GroupBox1.Name = "GroupBox1"
@@ -204,11 +213,11 @@ Partial Class Form_06_PagMuros
         'Check_Fuerzas
         '
         Me.Check_Fuerzas.AutoSize = True
-        Me.Check_Fuerzas.Font = New System.Drawing.Font("SansSerif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Check_Fuerzas.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Check_Fuerzas.Location = New System.Drawing.Point(14, 76)
         Me.Check_Fuerzas.Margin = New System.Windows.Forms.Padding(2)
         Me.Check_Fuerzas.Name = "Check_Fuerzas"
-        Me.Check_Fuerzas.Size = New System.Drawing.Size(81, 21)
+        Me.Check_Fuerzas.Size = New System.Drawing.Size(81, 22)
         Me.Check_Fuerzas.TabIndex = 2
         Me.Check_Fuerzas.Text = "Fuerzas"
         Me.Check_Fuerzas.UseVisualStyleBackColor = True
@@ -216,11 +225,11 @@ Partial Class Form_06_PagMuros
         'Check_Design
         '
         Me.Check_Design.AutoSize = True
-        Me.Check_Design.Font = New System.Drawing.Font("SansSerif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Check_Design.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Check_Design.Location = New System.Drawing.Point(14, 50)
         Me.Check_Design.Margin = New System.Windows.Forms.Padding(2)
         Me.Check_Design.Name = "Check_Design"
-        Me.Check_Design.Size = New System.Drawing.Size(73, 21)
+        Me.Check_Design.Size = New System.Drawing.Size(74, 22)
         Me.Check_Design.TabIndex = 1
         Me.Check_Design.Text = "Diseño"
         Me.Check_Design.UseVisualStyleBackColor = True
@@ -228,11 +237,11 @@ Partial Class Form_06_PagMuros
         'Check_Secciones
         '
         Me.Check_Secciones.AutoSize = True
-        Me.Check_Secciones.Font = New System.Drawing.Font("SansSerif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Check_Secciones.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Check_Secciones.Location = New System.Drawing.Point(14, 24)
         Me.Check_Secciones.Margin = New System.Windows.Forms.Padding(2)
         Me.Check_Secciones.Name = "Check_Secciones"
-        Me.Check_Secciones.Size = New System.Drawing.Size(96, 21)
+        Me.Check_Secciones.Size = New System.Drawing.Size(97, 22)
         Me.Check_Secciones.TabIndex = 0
         Me.Check_Secciones.Text = "Secciones"
         Me.Check_Secciones.UseVisualStyleBackColor = True
@@ -240,7 +249,7 @@ Partial Class Form_06_PagMuros
         'GroupBox4
         '
         Me.GroupBox4.Controls.Add(Me.Combo_Elementos)
-        Me.GroupBox4.Font = New System.Drawing.Font("SansSerif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.GroupBox4.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox4.ForeColor = System.Drawing.Color.White
         Me.GroupBox4.Location = New System.Drawing.Point(16, 201)
         Me.GroupBox4.Name = "GroupBox4"
@@ -251,7 +260,7 @@ Partial Class Form_06_PagMuros
         '
         'Label7
         '
-        Me.Label7.Font = New System.Drawing.Font("SansSerif", 16.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label7.Font = New System.Drawing.Font("Microsoft Sans Serif", 16.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Label7.ForeColor = System.Drawing.Color.White
         Me.Label7.Location = New System.Drawing.Point(1, 15)
         Me.Label7.Name = "Label7"
@@ -339,7 +348,7 @@ Partial Class Form_06_PagMuros
         '
         'OpcionesMuros
         '
-        Me.OpcionesMuros.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem9, Me.ToolStripMenuItem4, Me.ToolStripMenuItem16, Me.ActualizarInformaciónToolStripMenuItem, Me.UnirArchivosToolStripMenuItem, Me.ReportesToolStripMenuItem})
+        Me.OpcionesMuros.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ImportarDatosEtabsToolStripMenuItem, Me.ToolStripMenuItem9, Me.ToolStripMenuItem4, Me.ToolStripMenuItem16, Me.ActualizarInformaciónToolStripMenuItem, Me.UnirArchivosToolStripMenuItem, Me.ReportesToolStripMenuItem})
         Me.OpcionesMuros.ForeColor = System.Drawing.Color.White
         Me.OpcionesMuros.Name = "OpcionesMuros"
         Me.OpcionesMuros.Size = New System.Drawing.Size(75, 36)
@@ -353,6 +362,7 @@ Partial Class Form_06_PagMuros
         Me.ToolStripMenuItem9.Name = "ToolStripMenuItem9"
         Me.ToolStripMenuItem9.Size = New System.Drawing.Size(220, 22)
         Me.ToolStripMenuItem9.Text = "Importar Datos de Etabs"
+        Me.ToolStripMenuItem9.Visible = False
         '
         'ToolStripMenuItem10
         '
@@ -441,8 +451,16 @@ Partial Class Form_06_PagMuros
         Me.ReporteInicialToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.ReporteInicialToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ReporteInicialToolStripMenuItem.Name = "ReporteInicialToolStripMenuItem"
-        Me.ReporteInicialToolStripMenuItem.Size = New System.Drawing.Size(180, 22)
+        Me.ReporteInicialToolStripMenuItem.Size = New System.Drawing.Size(159, 22)
         Me.ReporteInicialToolStripMenuItem.Text = "Reporte Inicial"
+        '
+        'ImportarDatosEtabsToolStripMenuItem
+        '
+        Me.ImportarDatosEtabsToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.ImportarDatosEtabsToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.ImportarDatosEtabsToolStripMenuItem.Name = "ImportarDatosEtabsToolStripMenuItem"
+        Me.ImportarDatosEtabsToolStripMenuItem.Size = New System.Drawing.Size(220, 22)
+        Me.ImportarDatosEtabsToolStripMenuItem.Text = "Importar Datos Etabs"
         '
         'VisualizacionMuros
         '
@@ -783,7 +801,7 @@ Partial Class Form_06_PagMuros
         Me.Figura_Muros_Tw.BackColor = System.Drawing.Color.White
         Me.Figura_Muros_Tw.Location = New System.Drawing.Point(3, 3)
         Me.Figura_Muros_Tw.Name = "Figura_Muros_Tw"
-        Me.Figura_Muros_Tw.Size = New System.Drawing.Size(1087, 640)
+        Me.Figura_Muros_Tw.Size = New System.Drawing.Size(1087, 639)
         Me.Figura_Muros_Tw.TabIndex = 0
         Me.Figura_Muros_Tw.TabStop = False
         '
@@ -806,7 +824,7 @@ Partial Class Form_06_PagMuros
         Me.Figura_Muros_Protagonicos.BackColor = System.Drawing.Color.White
         Me.Figura_Muros_Protagonicos.Location = New System.Drawing.Point(3, 2)
         Me.Figura_Muros_Protagonicos.Name = "Figura_Muros_Protagonicos"
-        Me.Figura_Muros_Protagonicos.Size = New System.Drawing.Size(1087, 655)
+        Me.Figura_Muros_Protagonicos.Size = New System.Drawing.Size(1087, 666)
         Me.Figura_Muros_Protagonicos.TabIndex = 1
         Me.Figura_Muros_Protagonicos.TabStop = False
         '
@@ -865,31 +883,20 @@ Partial Class Form_06_PagMuros
         Me.TabPage9.Padding = New System.Windows.Forms.Padding(3)
         Me.TabPage9.Size = New System.Drawing.Size(1093, 647)
         Me.TabPage9.TabIndex = 4
-        Me.TabPage9.Text = "TabPage9"
+        Me.TabPage9.Text = "Gráficos"
         Me.TabPage9.UseVisualStyleBackColor = True
         '
         'GroupBox3
         '
-        Me.GroupBox3.Location = New System.Drawing.Point(9, 493)
+        Me.GroupBox3.Controls.Add(Me.Grafico_Ar)
+        Me.GroupBox3.Location = New System.Drawing.Point(386, 266)
         Me.GroupBox3.Name = "GroupBox3"
-        Me.GroupBox3.Size = New System.Drawing.Size(327, 42)
+        Me.GroupBox3.Size = New System.Drawing.Size(654, 192)
         Me.GroupBox3.TabIndex = 2
         Me.GroupBox3.TabStop = False
         Me.GroupBox3.Text = "GroupBox3"
         '
-        'GroupBox2
-        '
-        Me.GroupBox2.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
-            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.GroupBox2.Controls.Add(Me.Grafico_MurosProtagonicos)
-        Me.GroupBox2.Location = New System.Drawing.Point(6, 6)
-        Me.GroupBox2.Name = "GroupBox2"
-        Me.GroupBox2.Size = New System.Drawing.Size(1081, 481)
-        Me.GroupBox2.TabIndex = 1
-        Me.GroupBox2.TabStop = False
-        Me.GroupBox2.Text = "GroupBox2"
-        '
-        'Grafico_MurosProtagonicos
+        'Grafico_Ar
         '
         ChartArea1.AlignmentOrientation = CType((System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations.Vertical Or System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations.Horizontal), System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations)
         ChartArea1.AlignmentStyle = CType((System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles.Position Or System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles.PlotPosition), System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles)
@@ -925,13 +932,13 @@ Partial Class Form_06_PagMuros
         ChartArea2.Position.Height = 90.0!
         ChartArea2.Position.Width = 48.0!
         ChartArea2.Position.X = 50.0!
-        Me.Grafico_MurosProtagonicos.ChartAreas.Add(ChartArea1)
-        Me.Grafico_MurosProtagonicos.ChartAreas.Add(ChartArea2)
-        Me.Grafico_MurosProtagonicos.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.Grafico_Ar.ChartAreas.Add(ChartArea1)
+        Me.Grafico_Ar.ChartAreas.Add(ChartArea2)
+        Me.Grafico_Ar.Dock = System.Windows.Forms.DockStyle.Fill
         Legend1.Name = "Legend1"
-        Me.Grafico_MurosProtagonicos.Legends.Add(Legend1)
-        Me.Grafico_MurosProtagonicos.Location = New System.Drawing.Point(3, 19)
-        Me.Grafico_MurosProtagonicos.Name = "Grafico_MurosProtagonicos"
+        Me.Grafico_Ar.Legends.Add(Legend1)
+        Me.Grafico_Ar.Location = New System.Drawing.Point(3, 19)
+        Me.Grafico_Ar.Name = "Grafico_Ar"
         Series1.BorderColor = System.Drawing.Color.Black
         Series1.ChartArea = "ChartArea1"
         Series1.Color = System.Drawing.Color.Red
@@ -940,9 +947,77 @@ Partial Class Form_06_PagMuros
         Series2.ChartArea = "ChartArea2"
         Series2.Legend = "Legend1"
         Series2.Name = "Series2"
-        Me.Grafico_MurosProtagonicos.Series.Add(Series1)
-        Me.Grafico_MurosProtagonicos.Series.Add(Series2)
-        Me.Grafico_MurosProtagonicos.Size = New System.Drawing.Size(1075, 459)
+        Me.Grafico_Ar.Series.Add(Series1)
+        Me.Grafico_Ar.Series.Add(Series2)
+        Me.Grafico_Ar.Size = New System.Drawing.Size(648, 170)
+        Me.Grafico_Ar.TabIndex = 1
+        Me.Grafico_Ar.Text = "Chart1"
+        Me.Grafico_Ar.TextAntiAliasingQuality = System.Windows.Forms.DataVisualization.Charting.TextAntiAliasingQuality.SystemDefault
+        '
+        'GroupBox2
+        '
+        Me.GroupBox2.Controls.Add(Me.Grafico_MurosProtagonicos)
+        Me.GroupBox2.Location = New System.Drawing.Point(432, 72)
+        Me.GroupBox2.Name = "GroupBox2"
+        Me.GroupBox2.Size = New System.Drawing.Size(638, 175)
+        Me.GroupBox2.TabIndex = 1
+        Me.GroupBox2.TabStop = False
+        Me.GroupBox2.Text = "GroupBox2"
+        '
+        'Grafico_MurosProtagonicos
+        '
+        ChartArea3.AlignmentOrientation = CType((System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations.Vertical Or System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations.Horizontal), System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations)
+        ChartArea3.AlignmentStyle = CType((System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles.Position Or System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles.PlotPosition), System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles)
+        ChartArea3.AxisX.IsLabelAutoFit = False
+        ChartArea3.AxisX.LabelStyle.Font = New System.Drawing.Font("Arial", 14.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        ChartArea3.AxisX.MajorGrid.LineDashStyle = System.Windows.Forms.DataVisualization.Charting.ChartDashStyle.NotSet
+        ChartArea3.AxisX.Title = "Muros"
+        ChartArea3.AxisX.TitleFont = New System.Drawing.Font("Times New Roman", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        ChartArea3.AxisX2.MajorGrid.LineColor = System.Drawing.Color.Silver
+        ChartArea3.AxisX2.MajorTickMark.LineColor = System.Drawing.Color.Silver
+        ChartArea3.AxisY.MajorGrid.LineDashStyle = System.Windows.Forms.DataVisualization.Charting.ChartDashStyle.NotSet
+        ChartArea3.AxisY.MajorTickMark.TickMarkStyle = System.Windows.Forms.DataVisualization.Charting.TickMarkStyle.AcrossAxis
+        ChartArea3.AxisY.MinorTickMark.TickMarkStyle = System.Windows.Forms.DataVisualization.Charting.TickMarkStyle.AcrossAxis
+        ChartArea3.AxisY.ScaleBreakStyle.LineDashStyle = System.Windows.Forms.DataVisualization.Charting.ChartDashStyle.NotSet
+        ChartArea3.InnerPlotPosition.Auto = False
+        ChartArea3.InnerPlotPosition.Height = 90.0!
+        ChartArea3.InnerPlotPosition.Width = 90.0!
+        ChartArea3.InnerPlotPosition.X = 8.5!
+        ChartArea3.InnerPlotPosition.Y = 2.0!
+        ChartArea3.Name = "ChartArea1"
+        ChartArea3.Position.Auto = False
+        ChartArea3.Position.Height = 90.0!
+        ChartArea3.Position.Width = 48.0!
+        ChartArea4.AlignmentOrientation = CType((System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations.Vertical Or System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations.Horizontal), System.Windows.Forms.DataVisualization.Charting.AreaAlignmentOrientations)
+        ChartArea4.AlignmentStyle = CType((System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles.Position Or System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles.PlotPosition), System.Windows.Forms.DataVisualization.Charting.AreaAlignmentStyles)
+        ChartArea4.InnerPlotPosition.Auto = False
+        ChartArea4.InnerPlotPosition.Height = 90.0!
+        ChartArea4.InnerPlotPosition.Width = 90.0!
+        ChartArea4.InnerPlotPosition.X = 8.5!
+        ChartArea4.InnerPlotPosition.Y = 2.0!
+        ChartArea4.Name = "ChartArea2"
+        ChartArea4.Position.Auto = False
+        ChartArea4.Position.Height = 90.0!
+        ChartArea4.Position.Width = 48.0!
+        ChartArea4.Position.X = 50.0!
+        Me.Grafico_MurosProtagonicos.ChartAreas.Add(ChartArea3)
+        Me.Grafico_MurosProtagonicos.ChartAreas.Add(ChartArea4)
+        Me.Grafico_MurosProtagonicos.Dock = System.Windows.Forms.DockStyle.Fill
+        Legend2.Name = "Legend1"
+        Me.Grafico_MurosProtagonicos.Legends.Add(Legend2)
+        Me.Grafico_MurosProtagonicos.Location = New System.Drawing.Point(3, 19)
+        Me.Grafico_MurosProtagonicos.Name = "Grafico_MurosProtagonicos"
+        Series3.BorderColor = System.Drawing.Color.Black
+        Series3.ChartArea = "ChartArea1"
+        Series3.Color = System.Drawing.Color.Red
+        Series3.Legend = "Legend1"
+        Series3.Name = "Series1"
+        Series4.ChartArea = "ChartArea2"
+        Series4.Legend = "Legend1"
+        Series4.Name = "Series2"
+        Me.Grafico_MurosProtagonicos.Series.Add(Series3)
+        Me.Grafico_MurosProtagonicos.Series.Add(Series4)
+        Me.Grafico_MurosProtagonicos.Size = New System.Drawing.Size(632, 153)
         Me.Grafico_MurosProtagonicos.TabIndex = 0
         Me.Grafico_MurosProtagonicos.Text = "Chart1"
         Me.Grafico_MurosProtagonicos.TextAntiAliasingQuality = System.Windows.Forms.DataVisualization.Charting.TextAntiAliasingQuality.SystemDefault
@@ -990,6 +1065,8 @@ Partial Class Form_06_PagMuros
         Me.TabPage6.ResumeLayout(False)
         CType(Me.Tabla_Muros_Protagonicos, System.ComponentModel.ISupportInitialize).EndInit()
         Me.TabPage9.ResumeLayout(False)
+        Me.GroupBox3.ResumeLayout(False)
+        CType(Me.Grafico_Ar, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox2.ResumeLayout(False)
         CType(Me.Grafico_MurosProtagonicos, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
@@ -1072,4 +1149,6 @@ Partial Class Form_06_PagMuros
     Friend WithEvents GroupBox2 As GroupBox
     Friend WithEvents Grafico_MurosProtagonicos As DataVisualization.Charting.Chart
     Friend WithEvents GroupBox3 As GroupBox
+    Friend WithEvents Grafico_Ar As DataVisualization.Charting.Chart
+    Friend WithEvents ImportarDatosEtabsToolStripMenuItem As ToolStripMenuItem
 End Class

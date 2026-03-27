@@ -1,10 +1,6 @@
-﻿Imports ARCO.Funciones_00_Varias
+﻿Imports System.Data.OleDb
+Imports ARCO.Funciones_00_Varias
 Imports Excel = Microsoft.Office.Interop.Excel
-Imports System.Data.OleDb
-Imports System.Windows.Controls
-Imports iTextSharp
-Imports System.Windows.Controls.Primitives
-Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar
 
 Public Class Form_06_01_ResultadosMuros
     Public Shared proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
@@ -16,8 +12,8 @@ Public Class Form_06_01_ResultadosMuros
         Tabla_Result_EB1.Rows.Clear()
         Tabla_Result_EB2.Rows.Clear()
 
-        Dim Elemento = proyecto.Muros.Lista_Muros.Find(Function(p) p.Label = Combo_Elementos.Text)
-        Dim Seccion = proyecto.Muros.Lista_Muros.Find(Function(p) p.Label = Combo_Elementos.Text).Lista_Secciones
+        Dim Elemento = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Label = Combo_Elementos.Text)
+        Dim Seccion = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Label = Combo_Elementos.Text).Lista_Secciones
 
         ' ------------- INSERTAR FILAS EN LAS TABLAS DE RESULTANTE A FLEXO-COMPRESIÓN
         For i = 0 To (Seccion.Count - 1) * 2 + 1
@@ -460,8 +456,8 @@ Public Class Form_06_01_ResultadosMuros
         Hoja_Resultados.Cells(1, 6) = "Cuantía Col/Req"
         Hoja_Resultados.Cells(1, 7) = "Verificación)"
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            Dim muro = proyecto.Muros.Lista_Muros(i)
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Dim muro = proyecto.Elementos.Muros.Lista_Muros(i)
             Hoja_Resultados.Cells(2 + i, 1) = muro.Name
             Hoja_Resultados.Cells(2 + i, 3) = muro.Lw
             Hoja_Resultados.Cells(2 + i, 4) = muro.tw
@@ -572,9 +568,9 @@ Public Class Form_06_01_ResultadosMuros
         Dim R_Ash_Min As Single = 1
         Dim Fc_Max As Single = 35
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
 
-            Dim Muro = proyecto.Muros.Lista_Muros(i)
+            Dim Muro = proyecto.Elementos.Muros.Lista_Muros(i)
 
             Hoja_Resultados.Cells(2 + i, 1) = Muro.Name
             Hoja_Resultados.Cells(2 + i, 2) = Muro.Label
@@ -845,8 +841,8 @@ Public Class Form_06_01_ResultadosMuros
         Dim R_Ash_Min As Single = 1
         Dim Fc_Max As Single = 35
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            Dim Muro = proyecto.Muros.Lista_Muros(i)
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Dim Muro = proyecto.Elementos.Muros.Lista_Muros(i)
 
             Hoja_Resultados.Cells(g, 1) = Muro.Name
             Hoja_Resultados.Cells(g, 2) = Muro.Label
@@ -1089,8 +1085,8 @@ Public Class Form_06_01_ResultadosMuros
         Dim R_Ash_Min As Single = 1
         Dim Fc_Max As Single = 35
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            Dim Muro = proyecto.Muros.Lista_Muros(i)
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Dim Muro = proyecto.Elementos.Muros.Lista_Muros(i)
 
             Dim F As Single = 100
             Dim Cuantia_Col As Single
@@ -1121,8 +1117,8 @@ Public Class Form_06_01_ResultadosMuros
                 If F < 0.9 Then
                     Hoja_Resultados.Cells(g, 1) = Muro.Name
                     Hoja_Resultados.Cells(g, 2) = Muro.Label
-                    Hoja_Resultados.Cells(g, 3) = Muro.Lw
-                    Hoja_Resultados.Cells(g, 4) = Muro.tw
+                    Hoja_Resultados.Cells(g, 3) = Tramo.Lw_Model
+                    Hoja_Resultados.Cells(g, 4) = Tramo.tw_Model
                     Hoja_Resultados.Cells(g, 5) = Tramo.Piso
 
                     Hoja_Resultados.Cells(g, 6) = Convert.ToString(Math.Round(Cuantia_Col, 2) & " %")
@@ -1173,8 +1169,8 @@ Public Class Form_06_01_ResultadosMuros
         Hoja_Cortante.Range("A1:P10000").VerticalAlignment = Excel.XlVAlign.xlVAlignCenter
         Hoja_Cortante.Range("A:F").ColumnWidth = 15
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            Dim Muro = proyecto.Muros.Lista_Muros(i)
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Dim Muro = proyecto.Elementos.Muros.Lista_Muros(i)
             For j = 0 To Muro.Lista_Secciones.Count - 1
                 Dim Tramo = Muro.Lista_Secciones(j)
 
@@ -1208,8 +1204,8 @@ Public Class Form_06_01_ResultadosMuros
 
 
 
-        'For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-        '    Dim Muro = proyecto.Muros.Lista_Muros(i)
+        'For i = 0 To Proyecto.Elementos.Muros.Lista_Muros.Count - 1
+        '    Dim Muro = Proyecto.Elementos.Muros.Lista_Muros(i)
 
         '    Hoja_EB.Cells(g, 1) = Muro.Label
 

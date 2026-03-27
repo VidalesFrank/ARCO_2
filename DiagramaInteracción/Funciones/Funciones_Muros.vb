@@ -1,8 +1,8 @@
-﻿Imports System.Net.Http.Headers
-Imports System.Windows.Forms.DataVisualization.Charting
+﻿Imports System.Windows.Forms.DataVisualization.Charting
+Imports ARCO.eNumeradores
 Imports ARCO.Form_06_PagMuros
 Imports ARCO.Funciones_00_Varias
-Imports Org.BouncyCastle.Crypto.Engines
+'Imports Microsoft.Office.Interop.Word
 Imports Colores = ARCO.ColoresProyecto
 Public Class Funciones_Muros
     Public Shared proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
@@ -20,6 +20,7 @@ Public Class Funciones_Muros
             Rho_L = 0.0012
             Rho_t = 0.002
         End If
+
         Resultados_Rho(0) = Rho_L * 100
         Resultados_Rho(1) = Rho_t * 100
         Resultados_Rho(2) = V_Lim
@@ -45,8 +46,9 @@ Public Class Funciones_Muros
     End Function
 
     Public Shared Function Calculo_Cuantia(ByVal tw As Single, ByVal Ref_Malla As String, ByVal Capas_1 As Integer, ByVal Sep_1 As Single, ByVal Ref_2 As String, ByVal Capas_2 As Integer, ByVal Sep_2 As Single)
+        Dim mallaTipo As MallaTipo = StringToMallaTipo(Ref_Malla)
 
-        Dim As_1 As Single = Acero_Mallas(Ref_Malla)
+        Dim As_1 As Single = Acero_Mallas(mallaTipo)
         Dim As_2 As Single = AreaRefuerzo(Ref_2)
 
         Dim Rho_1 As Single = 0
@@ -105,34 +107,74 @@ Public Class Funciones_Muros
     End Function
 
 
-    Public Shared Function Acero_Mallas(ByVal Malla As String)
-
-        Dim Ac As Single
-
-        If Malla = "D-84" Then
-            Ac = 84
-        ElseIf Malla = "D-106" Then
-            Ac = 106
-        ElseIf Malla = "D-131" Then
-            Ac = 131
-        ElseIf Malla = "D-158" Then
-            Ac = 158
-        ElseIf Malla = "D-188" Then
-            Ac = 188
-        ElseIf Malla = "D-221" Then
-            Ac = 221
-        ElseIf Malla = "D-257" Then
-            Ac = 257
-        ElseIf Malla = "D-295" Then
-            Ac = 295
-        ElseIf Malla = "D-335" Then
-            Ac = 335
-        ElseIf Malla = "None" Then
-            Ac = 0
+    Public Shared Function Acero_Mallas(ByVal malla As MallaTipo) As Single
+        If MallaData.MallaAreas.ContainsKey(malla) Then
+            Return MallaData.MallaAreas(malla)
+        Else
+            Throw New ArgumentOutOfRangeException("malla", "Tipo de malla no soportado")
         End If
+    End Function
 
-        Acero_Mallas = Ac
+    Public Shared Function StringToMallaTipo(ByVal mallaString As String) As MallaTipo
+        Select Case mallaString
+            Case "D-84"
+                Return MallaTipo.D_84
+            Case "D-106"
+                Return MallaTipo.D_106
+            Case "D-131"
+                Return MallaTipo.D_131
+            Case "D-158"
+                Return MallaTipo.D_158
+            Case "D-188"
+                Return MallaTipo.D_188
+            Case "D-221"
+                Return MallaTipo.D_221
+            Case "D-257"
+                Return MallaTipo.D_257
+            Case "D-295"
+                Return MallaTipo.D_295
+            Case "D-335"
+                Return MallaTipo.D_335
+            Case "None"
+                Return MallaTipo.None
+            Case Else
+                Throw New ArgumentOutOfRangeException("mallaString", "Cadena de malla no soportada")
+        End Select
+    End Function
 
+    Public Shared Function Acero_Barras(ByVal Barra As BarraTipo) As Single
+        If BarraData.BarraAreas.ContainsKey(Barra) Then
+            Return BarraData.BarraAreas(Barra)
+        Else
+            Throw New ArgumentOutOfRangeException("malla", "Tipo de malla no soportado")
+        End If
+    End Function
+
+    Public Shared Function StringToBarraTipo(ByVal BarraString As String) As MallaTipo
+        Select Case BarraString
+            Case "D-84"
+                Return MallaTipo.D_84
+            Case "D-106"
+                Return MallaTipo.D_106
+            Case "D-131"
+                Return MallaTipo.D_131
+            Case "D-158"
+                Return MallaTipo.D_158
+            Case "D-188"
+                Return MallaTipo.D_188
+            Case "D-221"
+                Return MallaTipo.D_221
+            Case "D-257"
+                Return MallaTipo.D_257
+            Case "D-295"
+                Return MallaTipo.D_295
+            Case "D-335"
+                Return MallaTipo.D_335
+            Case "None"
+                Return MallaTipo.None
+            Case Else
+                Throw New ArgumentOutOfRangeException("BarraString", "Cadena de Barra no soportada")
+        End Select
     End Function
 
     Public Shared Function AceroH_EB(ByVal Dis As String, ByVal E_Borde As SeccionMuro.ElementoBorde, ByVal tw As Single, ByVal fc As Single, ByVal fy As Single)
@@ -202,8 +244,8 @@ Public Class Funciones_Muros
 
         chart1.Series.Clear()
 
-        Dim Lista_MurosProtagonicos_L As List(Of Muro) = proyecto.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico And p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(p) p.Porc_Vs).ToList()
-        Dim Lista_MurosComplemento_L As List(Of Muro) = proyecto.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Complemento And p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+        Dim Lista_MurosProtagonicos_L As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico And p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+        Dim Lista_MurosComplemento_L As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Complemento And p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(p) p.Porc_Vs).ToList()
 
         Dim series_Muros_L As New Series("Muros")
         With series_Muros_L
@@ -253,8 +295,8 @@ Public Class Funciones_Muros
         Next
 
         ' =========== DIRECCION TRANSVERSAL ===============
-        Dim Lista_MurosProtagonicos_T As List(Of Muro) = proyecto.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico And p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(p) p.Porc_Vs).ToList()
-        Dim Lista_MurosComplemento_T As List(Of Muro) = proyecto.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Complemento And p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+        Dim Lista_MurosProtagonicos_T As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico And p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+        Dim Lista_MurosComplemento_T As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Complemento And p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(p) p.Porc_Vs).ToList()
 
         Dim series_Muros_T As New Series("Muros-T")
         With series_Muros_T
@@ -446,6 +488,198 @@ Public Class Funciones_Muros
         End With
 
     End Sub
+    Public Shared Sub Grafico_ArMuros(chart1 As Chart, Size_Title_Axis As Integer, Size_Value_Axis As Integer, Size_Legend As Integer)
+
+        chart1.Series.Clear()
+
+        Dim Lista_MurosProtagonicos_L As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico And p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+        Dim Lista_MurosComplemento_L As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Complemento And p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+
+        Dim series_Muros_L As New Series("Muros")
+        With series_Muros_L
+            .ChartType = SeriesChartType.Column
+            .Color = Color.Silver
+        End With
+
+        series_Muros_L("PointWidth") = "0.9"
+
+        Dim Protagonicos_L As New Series("Protagónicos Longitudinal")
+        With Protagonicos_L
+            .ChartType = SeriesChartType.Column
+            .Color = ColorTranslator.FromHtml("#1874CD")
+            .BorderColor = Color.Black
+            .BorderWidth = 1
+        End With
+        Protagonicos_L("PointWidth") = "0.9"
+
+
+        Dim val_X_L As Single = 1
+        Dim Acum_Y_L As Single = 0
+
+        For i = 0 To Lista_MurosProtagonicos_L.Count - 1
+            series_Muros_L.Points.AddXY(Lista_MurosProtagonicos_L(i).Name, 0)
+            Protagonicos_L.Points.AddXY(Lista_MurosProtagonicos_L(i).Name, Lista_MurosProtagonicos_L(i).Ar)
+            val_X_L += 1
+        Next
+
+        For i = 0 To Lista_MurosComplemento_L.Count - 1
+            series_Muros_L.Points.AddXY(Lista_MurosComplemento_L(i).Name, Lista_MurosComplemento_L(i).Ar)
+            Protagonicos_L.Points.AddXY(Lista_MurosComplemento_L(i).Name, 0)
+            val_X_L += 1
+        Next
+
+        ' =========== DIRECCION TRANSVERSAL ===============
+        Dim Lista_MurosProtagonicos_T As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico And p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+        Dim Lista_MurosComplemento_T As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Complemento And p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(p) p.Porc_Vs).ToList()
+
+        Dim series_Muros_T As New Series("Muros-T")
+        With series_Muros_T
+            .ChartType = SeriesChartType.Column
+            .Color = Color.Silver
+            .IsVisibleInLegend = False
+        End With
+
+        series_Muros_T("PointWidth") = "0.9"
+
+        Dim Protagonicos_T As New Series("Protagónicos Transversal")
+        With Protagonicos_T
+            .ChartType = SeriesChartType.Column
+            .Color = ColorTranslator.FromHtml("#FC4E07")
+            .BorderColor = Color.Black
+            .BorderWidth = 1
+        End With
+
+        Protagonicos_T("PointWidth") = "0.9"
+
+        Dim val_X_T As Single = 1
+
+        For i = 0 To Lista_MurosProtagonicos_T.Count - 1
+            series_Muros_T.Points.AddXY(Lista_MurosProtagonicos_T(i).Name, 0)
+            Protagonicos_T.Points.AddXY(Lista_MurosProtagonicos_T(i).Name, Lista_MurosProtagonicos_T(i).Ar)
+            val_X_T += 1
+        Next
+
+        For i = 0 To Lista_MurosComplemento_T.Count - 1
+            series_Muros_T.Points.AddXY(Lista_MurosComplemento_T(i).Name, Lista_MurosComplemento_T(i).Ar)
+            Protagonicos_T.Points.AddXY(Lista_MurosComplemento_T(i).Name, 0)
+            val_X_T += 1
+        Next
+
+        chart1.Series.Add(series_Muros_L)
+        chart1.Series.Add(Protagonicos_L)
+        chart1.Series.Add(series_Muros_T)
+        chart1.Series.Add(Protagonicos_T)
+
+        series_Muros_L.ChartArea = "ChartArea1"
+        Protagonicos_L.ChartArea = "ChartArea1"
+        series_Muros_T.ChartArea = "ChartArea2"
+        Protagonicos_T.ChartArea = "ChartArea2"
+
+        '=========== AJUSTE DE EJES DE GRAFICOS DE MUROS PROTAGONICOS =============
+
+        '======== GRAFICO LONGITUDINAL ===========
+        Dim myfontFamily As FontFamily = New FontFamily("Times New Roman")
+
+        '====== EJE X - PRINCIPAL =======
+
+        Dim axis_x = chart1.ChartAreas("ChartArea1").AxisX
+        OrganizaEje(axis_x, myfontFamily, "Muros", Size_Title_Axis, Size_Value_Axis, Size_Legend)
+        With axis_x
+            .LabelStyle.Enabled = False
+        End With
+
+        '====== EJE Y - PRINCIPAL =======
+        Dim Valor_Ymax As Single = Math.Min(Math.Max(Lista_MurosComplemento_L.Max(Function(p) p.Ar), Lista_MurosComplemento_T.Max(Function(p) p.Ar)), 20)
+
+        Dim axis_y = chart1.ChartAreas("ChartArea1").AxisY
+        OrganizaEje(axis_y, myfontFamily, "Relación de Aspecto, Ar", Size_Title_Axis, Size_Value_Axis, Size_Legend)
+        With axis_y
+            .Minimum = 0
+            .Maximum = 1.1 * Valor_Ymax
+            .Interval = 2
+            .MajorTickMark.Enabled = True
+        End With
+
+        '====== EJE X - SECUNDARIO =======
+        Dim axis_x2 = chart1.ChartAreas("ChartArea1").AxisX2
+        OrganizaEje(axis_x2, myfontFamily, "", Size_Title_Axis, Size_Value_Axis, Size_Legend)
+        With axis_x2
+            .Minimum = 0
+            .Maximum = val_X_L + 1
+            .Interval = 20
+            .LabelStyle.Enabled = False
+        End With
+
+        '======== EJE Y - SECUNDARIO ======
+        Dim axis_y2 = chart1.ChartAreas("ChartArea1").AxisY2
+        OrganizaEje(axis_y2, myfontFamily, "", Size_Title_Axis, Size_Value_Axis, Size_Legend)
+        With axis_y2
+            .Minimum = 0
+            .Maximum = 100
+            .Interval = 20
+            .LabelStyle.Enabled = False
+            .MajorTickMark.Enabled = True
+        End With
+
+        '======== GRAFICO TRANSVERSAL ===========
+
+        '====== EJE X - PRINCIPAL =======
+        Dim axis_x_T = chart1.ChartAreas("ChartArea2").AxisX
+        OrganizaEje(axis_x_T, myfontFamily, "Muros", Size_Title_Axis, Size_Value_Axis, Size_Legend)
+        With axis_x_T
+            .LabelStyle.Enabled = False
+        End With
+
+        '====== EJE Y - PRINCIPAL =======
+        Dim axis_y_T = chart1.ChartAreas("ChartArea2").AxisY
+        OrganizaEje(axis_y_T, myfontFamily, "", Size_Title_Axis, Size_Value_Axis, Size_Legend)
+        With axis_y_T
+            .Minimum = 0
+            .Maximum = 1.1 * Valor_Ymax
+            .Interval = 2
+            .LabelStyle.Enabled = False
+            .MajorTickMark.Enabled = True
+        End With
+
+        '==== AJUSTE DE LEYENDA ==========
+        chart1.Legends.Clear()
+        Dim Legend1 As New Legend("Legend1")
+        chart1.Legends.Add(Legend1)
+        chart1.Legends(0).Font = New Font(myfontFamily, Size_Legend, FontStyle.Regular)
+        chart1.Legends(0).Docking = Docking.Bottom
+        chart1.Legends(0).Alignment = StringAlignment.Center
+
+        Dim ChartArea_1 = chart1.ChartAreas("ChartArea1")
+        With ChartArea_1
+            .Position.Height = 95
+            .Position.Width = 49
+            .Position.X = 5
+            .Position.Y = 2
+            .BorderDashStyle = ChartDashStyle.Solid
+            .BorderColor = Color.Black
+            .BorderWidth = 1
+            .InnerPlotPosition.Height = 80
+            .InnerPlotPosition.Width = 80
+            .InnerPlotPosition.X = 5
+            .InnerPlotPosition.Y = 2
+        End With
+
+        Dim ChartArea_2 = chart1.ChartAreas("ChartArea2")
+        With ChartArea_2
+            .Position.Height = 95
+            .Position.Width = 49
+            .Position.X = 47
+            .Position.Y = 2
+            .BorderDashStyle = ChartDashStyle.Solid
+            .BorderColor = Color.Black
+            .BorderWidth = 1
+            .InnerPlotPosition.Height = 80
+            .InnerPlotPosition.Width = 85
+            .InnerPlotPosition.X = 5
+            .InnerPlotPosition.Y = 2
+        End With
+
+    End Sub
 
     Public Shared Sub OrganizaEje(axis As Axis, fuente As FontFamily, Title As String, size_Title As Integer, size_Value_axis As Integer,
                             size_legend As Integer)
@@ -474,8 +708,8 @@ Public Class Funciones_Muros
         MaxCoorY = 0
         MinCoorY = 0
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count() - 1
-            Dim Muro_ As Muro = proyecto.Muros.Lista_Muros(i)
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count() - 1
+            Dim Muro_ As Muro = proyecto.Elementos.Muros.Lista_Muros(i)
 
             If Muro_.Lista_Secciones(0).Direccion_Muro = eNumeradores.eDireccion.X Then
                 Rectangulos.Add(New Rectangulo() With {.Name = Muro_.Name, .Direccion = Muro_.Direccion, .Tipo_M = Muro_.TipoMuro, .CoorX = Muro_.Coor_X, .CoorY = Muro_.Coor_Y, .Largo = Muro_.Lw, .Espesor = Muro_.tw})
@@ -749,8 +983,9 @@ Public Class Funciones_Muros
             Dim colB_PrY As New SolidBrush(Color.FromArgb(colorrgb_Pr_Y.R, colorrgb_Pr_Y.G, colorrgb_Pr_Y.B))
 
             Dim Texto_1 As String = "Muros Protagónicos Dir. Longitudinal (X)"
-            Dim Texto_2 As String = "Muros Protagónicos Dir. Longitudinal (Y)"
+            Dim Texto_2 As String = "Muros Protagónicos Dir. Transversal (Y)"
             Dim Texto_3 As String = "Muros"
+
             Dim AnchoText_Total As Single = g.MeasureString(Texto_1, Letra_16).Width + g.MeasureString(Texto_2, Letra_16).Width + g.MeasureString(Texto_3, Letra_16).Width + 70
             Dim AltoTest As Single = g.MeasureString(Texto_1, Letra_16).Height
 
@@ -903,10 +1138,10 @@ Public Class Funciones_Muros
         Dim valores_X_Der_Y As New List(Of Single)
         Dim valores_Y As New List(Of Single)
 
-        For i = 0 To proyecto.Deriva_X.Count - 1
-            valores_X_Der_X.Add(proyecto.Deriva_X(i).Deriva * 100)
-            valores_X_Der_Y.Add(proyecto.Deriva_Y(i).Deriva * 100)
-            valores_Y.Add(proyecto.Deriva_X(i).Piso.CoorZ)
+        For i = 0 To proyecto.ResultadosGlobales.DerivasX.Count - 1
+            valores_X_Der_X.Add(proyecto.ResultadosGlobales.DerivasX(i).Deriva * 100)
+            valores_X_Der_Y.Add(proyecto.ResultadosGlobales.DerivasX(i).Deriva * 100)
+            valores_Y.Add(proyecto.ResultadosGlobales.DerivasX(i).Piso.CoorZ)
         Next
         valores_X_Der_X.Add(0)
         valores_X_Der_Y.Add(0)
@@ -1004,11 +1239,11 @@ Public Class Funciones_Muros
             .BorderWidth = 1
         End With
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            Serie_Grav.Points.AddXY(proyecto.Muros.Lista_Muros(i).Name, proyecto.Muros.Lista_Muros(i).ALR_G * 100)
-            Serie_Din.Points.AddXY(proyecto.Muros.Lista_Muros(i).Name, (proyecto.Muros.Lista_Muros(i).ALR_D - proyecto.Muros.Lista_Muros(i).ALR_G) * 100)
-            Serie_LimMod.Points.AddXY(proyecto.Muros.Lista_Muros(i).Name, 20)
-            Serie_LimAlto.Points.AddXY(proyecto.Muros.Lista_Muros(i).Name, 35)
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Serie_Grav.Points.AddXY(proyecto.Elementos.Muros.Lista_Muros(i).Name, proyecto.Elementos.Muros.Lista_Muros(i).ALR_G * 100)
+            Serie_Din.Points.AddXY(proyecto.Elementos.Muros.Lista_Muros(i).Name, (proyecto.Elementos.Muros.Lista_Muros(i).ALR_D - proyecto.Elementos.Muros.Lista_Muros(i).ALR_G) * 100)
+            Serie_LimMod.Points.AddXY(proyecto.Elementos.Muros.Lista_Muros(i).Name, 20)
+            Serie_LimAlto.Points.AddXY(proyecto.Elementos.Muros.Lista_Muros(i).Name, 35)
         Next
 
         Grafico_ALR.Series.Add(Serie_Grav)
@@ -1048,7 +1283,7 @@ Public Class Funciones_Muros
             .AxisY.LabelStyle.Format = "00.0"
             .AxisY.Interval = 5
             .AxisY.Minimum = 0
-            .AxisY.Maximum = Math.Max(proyecto.Muros.Lista_Muros.Max(Function(p) p.ALR_D) * 120, 41)
+            .AxisY.Maximum = Math.Max(proyecto.Elementos.Muros.Lista_Muros.Max(Function(p) p.ALR_D) * 120, 41)
 
         End With
 
@@ -1095,7 +1330,7 @@ Public Class Funciones_Muros
 
         Grafico.Series.Clear()
 
-        Dim list_Tw As List(Of Single) = proyecto.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).Select(Function(k) k.tw).Distinct().OrderByDescending(Function(t) t).ToList()
+        Dim list_Tw As List(Of Single) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).Select(Function(k) k.tw).Distinct().OrderByDescending(Function(t) t).ToList()
 
         Dim list_Series As New List(Of Series)
 
@@ -1114,7 +1349,7 @@ Public Class Funciones_Muros
             list_Series.Add(Serie_i)
         Next
 
-        Dim list_Muros As List(Of Muro) = proyecto.Muros.Lista_Muros.FindAll(Function(m) m.TipoMuro = eNumeradores.eTipoMuro.Protagonico)
+        Dim list_Muros As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(m) m.TipoMuro = eNumeradores.eTipoMuro.Protagonico)
 
         For i = 0 To list_Tw.Count - 1
             For Each MuroProt In list_Muros
@@ -1137,7 +1372,7 @@ Public Class Funciones_Muros
             Serie.ChartArea = "ChartArea1"
         Next
 
-        proyecto.NumPisos = 20
+        proyecto.Info.NPisos = 20
 
         With Grafico.ChartAreas(0)
             .AxisX.Title = "Muros"
@@ -1153,7 +1388,7 @@ Public Class Funciones_Muros
             .AxisY.MajorGrid.LineColor = Color.LightGray
             .AxisY.Interval = 5
             .AxisY.Minimum = 0
-            .AxisY.Maximum = proyecto.NumPisos
+            .AxisY.Maximum = proyecto.Info.NPisos
 
         End With
 
@@ -1184,6 +1419,110 @@ Public Class Funciones_Muros
         Grafico.Update()
 
     End Sub
+
+    Public Shared Function CalculoFactorCapacidad(solicitaciones As List(Of SeccionMuro.Fuerzas_Elementos), Lista_Mn As List(Of Single), lista_Pn As List(Of Single)) As (String, Single)
+
+        Dim m_demanda As Single
+        Dim dist_demanda As Single
+        Dim dist_capacidad As Single
+        Dim Factor_demanda As Single = 100
+        Dim Solicitacion_Pr As String
+
+        For Each solicitacion As SeccionMuro.Fuerzas_Elementos In solicitaciones
+
+            m_demanda = solicitacion.P / solicitacion.M3
+            dist_demanda = Math.Sqrt(solicitacion.P ^ 2 + solicitacion.M3 ^ 2)
+
+            For i As Integer = 1 To Lista_Mn.Count - 3
+
+                Dim m1 As Single = lista_Pn(i) / Lista_Mn(i)
+                Dim m2 As Single = lista_Pn(i + 1) / Lista_Mn(i + 1)
+
+                If m_demanda <= m1 AndAlso m_demanda >= m2 Then
+
+                    Dim m_aux As Single = (lista_Pn(i + 1) - lista_Pn(i)) / (Lista_Mn(i + 1) - Lista_Mn(i))
+
+                    Dim x As Single = (lista_Pn(i + 1) - m_aux * Lista_Mn(i + 1)) / (m_demanda - m_aux)
+                    Dim y As Single = m_demanda * x
+
+                    dist_capacidad = Math.Sqrt(y ^ 2 + x ^ 2)
+
+                    Dim Factor As Single = dist_capacidad / dist_demanda
+
+                    If Factor < Factor_demanda Then
+
+                        Factor_demanda = Factor
+                        Solicitacion_Pr = solicitacion.Name
+
+                    End If
+
+                    Exit For
+
+                End If
+
+            Next
+
+        Next
+
+        Return (Solicitacion_Pr, Factor_demanda)
+
+    End Function
+
+    Public Shared Function RectaCapacidadDemanda(solicitacion As SeccionMuro.Fuerzas_Elementos, Lista_Mn As List(Of Single), lista_Pn As List(Of Single)) As (List(Of Single), List(Of Single))
+
+        Dim m_demanda As Single
+        Dim dist_demanda As Single
+        Dim dist_capacidad As Single
+        Dim Factor_demanda As Single = 100
+        Dim Solicitacion_Pr As String
+
+        Dim List_X As New List(Of Single)
+        Dim List_Y As New List(Of Single)
+
+        List_X.Add(0)
+        List_Y.Add(0)
+
+        m_demanda = solicitacion.P / solicitacion.M3
+        dist_demanda = Math.Sqrt(solicitacion.P ^ 2 + solicitacion.M3 ^ 2)
+
+        For i As Integer = 1 To Lista_Mn.Count - 3
+
+            Dim m1 As Single = lista_Pn(i) / Lista_Mn(i)
+            Dim m2 As Single = lista_Pn(i + 1) / Lista_Mn(i + 1)
+
+            If m_demanda <= m1 AndAlso m_demanda >= m2 Then
+
+                Dim m_aux As Single = (lista_Pn(i + 1) - lista_Pn(i)) / (Lista_Mn(i + 1) - Lista_Mn(i))
+
+                Dim x As Single = (lista_Pn(i + 1) - m_aux * Lista_Mn(i + 1)) / (m_demanda - m_aux)
+                Dim y As Single = m_demanda * x
+
+                dist_capacidad = Math.Sqrt(y ^ 2 + x ^ 2)
+
+                Dim Factor As Single = dist_capacidad / dist_demanda
+
+                If Factor < Factor_demanda Then
+
+                    Factor_demanda = Factor
+                    Solicitacion_Pr = solicitacion.Name
+
+                    List_X.Add(x)
+                    List_Y.Add(y)
+
+                End If
+
+                Exit For
+
+            End If
+
+        Next
+
+        Return (List_X, List_Y)
+
+    End Function
+
+
+
 
 
 End Class

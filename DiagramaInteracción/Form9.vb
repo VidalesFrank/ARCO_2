@@ -1,5 +1,5 @@
 ﻿Public Class Reportes
-    Private Sub PrintPreviewControl1_Click(sender As Object, e As EventArgs) 
+    Private Sub PrintPreviewControl1_Click(sender As Object, e As EventArgs)
 
     End Sub
 

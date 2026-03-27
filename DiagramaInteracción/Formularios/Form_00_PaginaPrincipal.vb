@@ -1,10 +1,13 @@
 ﻿Imports System.Data.OleDb
 Imports System.IO
-Imports System.Security.Cryptography.X509Certificates
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports ARCO.eNumeradores
+Imports ARCO.Funciones_00_Varias
 Public Class Form_00_PaginaPrincipal
+    '========= CREACIÓN DE PROYECTO ===============
+    '----------------------------------------------
     Public Shared proyecto As New Proyecto
+    '----------------------------------------------
 
     Private Sub Opcion1_CheckedChanged(sender As Object, e As EventArgs) Handles Opcion1.CheckedChanged
         SeccionR.Show()
@@ -76,7 +79,7 @@ Public Class Form_00_PaginaPrincipal
 
         Dim Paso As Boolean = False
 
-        If proyecto.Nombre Is Nothing Then
+        If proyecto.Info.Nombre Is Nothing Then
             Dim resultado As DialogResult = MessageBox.Show("No se ha ingresado la información del proyecto. ¿Desea agregarla?", "Advertencia", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
 
             If resultado = DialogResult.Yes Then
@@ -87,7 +90,7 @@ Public Class Form_00_PaginaPrincipal
             End If
         End If
 
-        If proyecto.Nombre IsNot Nothing Or Paso = True Then
+        If proyecto.Info.Nombre IsNot Nothing Or Paso = True Then
 
             Form_01_PagPilas.Show()
             Form_01_PagPilas.WindowState = FormWindowState.Maximized
@@ -98,12 +101,12 @@ Public Class Form_00_PaginaPrincipal
             Form_01_PagPilas.Dc.Visible = True
             Form_01_PagPilas.GroupBox4.Size = New Size(285, 60)
             Form_01_PagPilas.Op_Seccion.Visible = True
-            Form_01_PagPilas.GroupBox1.Height = 110
+            'Form_01_PagPilas.GroupBox1.Height = 110
 
-            Form_01_PagPilas.GroupBox1.Location = New Point(10, Form_01_PagPilas.GroupBox4.Top + Form_01_PagPilas.GroupBox4.Height + 10)
-            Form_01_PagPilas.GroupBox2.Location = New Point(10, Form_01_PagPilas.GroupBox1.Top + Form_01_PagPilas.GroupBox1.Height + 10)
-            Form_01_PagPilas.GroupBox6.Location = New Point(10, Form_01_PagPilas.GroupBox2.Top + Form_01_PagPilas.GroupBox2.Height + 10)
-            Form_01_PagPilas.GroupBox6.Visible = True
+            'Form_01_PagPilas.GroupBox1.Location = New Point(10, Form_01_PagPilas.GroupBox4.Top + Form_01_PagPilas.GroupBox4.Height + 10)
+            'Form_01_PagPilas.GroupBox2.Location = New Point(10, Form_01_PagPilas.GroupBox1.Top + Form_01_PagPilas.GroupBox1.Height + 10)
+            'Form_01_PagPilas.GroupBox6.Location = New Point(10, Form_01_PagPilas.GroupBox2.Top + Form_01_PagPilas.GroupBox2.Height + 10)
+            'Form_01_PagPilas.GroupBox6.Visible = True
             Form_01_PagPilas.OpcionPila.Checked = True
 
             Form_01_PagPilas.Op_Seccion.SelectedIndex = 0
@@ -123,12 +126,12 @@ Public Class Form_00_PaginaPrincipal
         Form_01_PagPilas.Dc.Visible = True
         Form_01_PagPilas.GroupBox4.Size = New Size(285, 60)
         Form_01_PagPilas.Op_Seccion.Visible = True
-        Form_01_PagPilas.GroupBox1.Height = 110
+        'Form_01_PagPilas.GroupBox1.Height = 110
 
-        Form_01_PagPilas.GroupBox1.Location = New Point(10, Form_01_PagPilas.GroupBox4.Top + Form_01_PagPilas.GroupBox4.Height + 10)
-        Form_01_PagPilas.GroupBox2.Location = New Point(10, Form_01_PagPilas.GroupBox1.Top + Form_01_PagPilas.GroupBox1.Height + 10)
-        Form_01_PagPilas.GroupBox6.Location = New Point(10, Form_01_PagPilas.GroupBox2.Top + Form_01_PagPilas.GroupBox2.Height + 10)
-        Form_01_PagPilas.GroupBox6.Visible = True
+        'Form_01_PagPilas.GroupBox1.Location = New Point(10, Form_01_PagPilas.GroupBox4.Top + Form_01_PagPilas.GroupBox4.Height + 10)
+        'Form_01_PagPilas.GroupBox2.Location = New Point(10, Form_01_PagPilas.GroupBox1.Top + Form_01_PagPilas.GroupBox1.Height + 10)
+        'Form_01_PagPilas.GroupBox6.Location = New Point(10, Form_01_PagPilas.GroupBox2.Top + Form_01_PagPilas.GroupBox2.Height + 10)
+        'Form_01_PagPilas.GroupBox6.Visible = True
         Form_01_PagPilas.OpcionPila.Checked = True
 
         Form_01_PagPilas.Op_Seccion.SelectedIndex = 0
@@ -139,7 +142,7 @@ Public Class Form_00_PaginaPrincipal
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Boton_Columnas.Click
         Dim Paso As Boolean = False
 
-        If proyecto.Nombre Is Nothing Then
+        If proyecto.Info.Nombre Is Nothing Then
             Dim resultado As DialogResult = MessageBox.Show("No se ha ingresado la información del proyecto. ¿Desea agregarla?", "Advertencia", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
 
             If resultado = DialogResult.Yes Then
@@ -150,7 +153,7 @@ Public Class Form_00_PaginaPrincipal
             End If
         End If
 
-        If proyecto.Nombre IsNot Nothing Or Paso = True Then
+        If proyecto.Info.Nombre IsNot Nothing Or Paso = True Then
             Form_02_PagColumnas.Show()
         End If
     End Sub
@@ -167,7 +170,7 @@ Public Class Form_00_PaginaPrincipal
         Form_03_Losas.Show()
     End Sub
 
-    Private Sub PictureBox5_Click_1(sender As Object, e As EventArgs) Handles Imag_Los.Click
+    Private Sub PictureBox5_Click_1(sender As Object, e As EventArgs)
         Form_03_Losas.Show()
     End Sub
 
@@ -179,11 +182,11 @@ Public Class Form_00_PaginaPrincipal
         Form_05_MurosNoEstructurales.Show()
     End Sub
 
-    Private Sub PictureBox7_Click(sender As Object, e As EventArgs) Handles Imag_Escaleras.Click
+    Private Sub PictureBox7_Click(sender As Object, e As EventArgs)
         Form_04_Escaleras.Show()
     End Sub
 
-    Private Sub PictureBox8_Click(sender As Object, e As EventArgs) Handles Imag_MNE.Click
+    Private Sub PictureBox8_Click(sender As Object, e As EventArgs)
         Form_05_MurosNoEstructurales.Show()
         Form_05_MurosNoEstructurales.WindowState = FormWindowState.Maximized
     End Sub
@@ -192,7 +195,7 @@ Public Class Form_00_PaginaPrincipal
 
         Dim Paso As Boolean = False
 
-        If proyecto.Nombre Is Nothing Then
+        If proyecto.Info.Nombre Is Nothing Then
             Dim resultado As DialogResult = MessageBox.Show("No se ha ingresado la información del proyecto. ¿Desea agregarla?", "Advertencia", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
 
             If resultado = DialogResult.Yes Then
@@ -203,9 +206,13 @@ Public Class Form_00_PaginaPrincipal
             End If
         End If
 
-        If proyecto.Nombre IsNot Nothing Or Paso = True Then
+        If proyecto.Info.Nombre IsNot Nothing Or Paso = True Then
             Form_06_PagMuros.Show()
             Form_06_PagMuros.WindowState = FormWindowState.Maximized
+        End If
+
+        If proyecto.Elementos.Muros.Lista_Muros.Count > 0 Then
+            Form_06_PagMuros.Obtencion_Macroparametros()
         End If
 
     End Sub
@@ -253,30 +260,30 @@ Public Class Form_00_PaginaPrincipal
     End Sub
 
     Private Sub InformaciónDeProyectoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles InformaciónDeProyectoToolStripMenuItem.Click
-        If proyecto.Year = 0 Then
-            PagInfoGeneral.C_YearBuilding.Text = "2024"
+        If proyecto.Info.Year = 0 Then
+            PagInfoGeneral.C_YearBuilding.Text = "2025"
         Else
-            PagInfoGeneral.C_YearBuilding.Text = proyecto.Year
+            PagInfoGeneral.C_YearBuilding.Text = proyecto.Info.Year
         End If
 
-        If IsNothing(proyecto.Disipacion) Then
+        If IsNothing(proyecto.ParametrosSismicos.NDE) Then
             PagInfoGeneral.C_DM.Text = "DMO"
             PagInfoGeneral.C_TS.Text = "D"
             PagInfoGeneral.C_GU.Text = "I"
 
         Else
-            PagInfoGeneral.C_DM.Text = proyecto.Disipacion
-            PagInfoGeneral.T_NameProjet.Text = proyecto.Nombre
-            PagInfoGeneral.T_Direction.Text = proyecto.Direccion
-            PagInfoGeneral.T_Department.Text = proyecto.Departamento
-            PagInfoGeneral.T_City.Text = proyecto.Ciudad
-            PagInfoGeneral.T_Propietario.Text = proyecto.Propietario
-            PagInfoGeneral.T_Disenador.Text = proyecto.Disenador
-            PagInfoGeneral.C_SE.Text = proyecto.SistemaEstructural
+            PagInfoGeneral.C_DM.Text = proyecto.ParametrosSismicos.NDE
+            PagInfoGeneral.T_NameProjet.Text = proyecto.Info.Nombre
+            PagInfoGeneral.T_Direction.Text = proyecto.Info.Direccion
+            PagInfoGeneral.T_Department.Text = proyecto.Info.Departamento
+            PagInfoGeneral.T_City.Text = proyecto.Info.Ciudad
+            PagInfoGeneral.T_Propietario.Text = proyecto.Info.Propietario
+            PagInfoGeneral.T_Disenador.Text = proyecto.Info.Designer
+            PagInfoGeneral.C_SE.Text = proyecto.Info.SistemaEstructural
 
-            PagInfoGeneral.C_SE.Text = DirectorioSistemaEstructural.dSistemaEstructural(proyecto.SistemaEstructural).ToString()
+            PagInfoGeneral.C_SE.Text = DirectorioSistemaEstructural.dSistemaEstructural(proyecto.Info.SistemaEstructural).ToString()
 
-            Dim responsableEnum As eResponsables = proyecto.Persona_Responsable
+            Dim responsableEnum As eResponsables = proyecto.Info.Persona_Responsable
 
             Dim nombreSeleccionado As String = DirectorioResponsables.dResponsables(responsableEnum).NombreCompleto
 
@@ -287,8 +294,8 @@ Public Class Form_00_PaginaPrincipal
                 PagInfoGeneral.C_Responsable.SelectedItem = nombreSeleccionado
             End If
 
-            PagInfoGeneral.C_GU.Text = proyecto.GrupoU
-            PagInfoGeneral.C_TS.Text = proyecto.T_Suelo
+            PagInfoGeneral.C_GU.Text = proyecto.Info.GrupoUso
+            PagInfoGeneral.C_TS.Text = proyecto.Info.TipoSuelo
 
         End If
 
@@ -329,10 +336,10 @@ Public Class Form_00_PaginaPrincipal
                         If Not IsDBNull(row(0)) AndAlso row(0).ToString() <> "Story" Then
                             Dim comb As String = row(1).ToString()
                             comb = comb.Substring(0, comb.Length - 4)
-                            If comb.Contains("X") And proyecto.Combinacion_SismoX = Nothing Then
-                                proyecto.Combinacion_SismoX = comb
-                            ElseIf comb.Contains("Y") And proyecto.Combinacion_SismoY = Nothing Then
-                                proyecto.Combinacion_SismoY = comb
+                            If comb.Contains("X") And proyecto.ParametrosSismicos.Combinacion_SismoX = Nothing Then
+                                proyecto.ParametrosSismicos.Combinacion_SismoX = comb
+                            ElseIf comb.Contains("Y") And proyecto.ParametrosSismicos.Combinacion_SismoY = Nothing Then
+                                proyecto.ParametrosSismicos.Combinacion_SismoY = comb
                             End If
 
                             Dim piso_ As New cPiso
@@ -344,12 +351,12 @@ Public Class Form_00_PaginaPrincipal
                             Deriva_.Deriva = Convert.ToSingle(row(3))
 
                             If comb.Contains("X") And row(2) = "X" Then
-                                If Not proyecto.Deriva_X.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
-                                    proyecto.Deriva_X.Add(Deriva_)
+                                If Not proyecto.ResultadosGlobales.DerivasX.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
+                                    proyecto.ResultadosGlobales.DerivasX.Add(Deriva_)
                                 End If
                             ElseIf comb.Contains("Y") And row(2) = "Y" Then
-                                If Not proyecto.Deriva_Y.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
-                                    proyecto.Deriva_Y.Add(Deriva_)
+                                If Not proyecto.ResultadosGlobales.DerivasY.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
+                                    proyecto.ResultadosGlobales.DerivasY.Add(Deriva_)
                                 End If
                             End If
                         End If
@@ -374,15 +381,15 @@ Public Class Form_00_PaginaPrincipal
                         Dim valores_X_Der_Y As New List(Of Single)
                         Dim valores_Y As New List(Of Single)
 
-                        For i = 0 To proyecto.Deriva_X.Count - 1
-                            Form_Derivas.Tabla_Derivas.Rows.Add(proyecto.Deriva_X(i).Piso.Nombre,
-                                                                Math.Round(proyecto.Deriva_X(i).Deriva * 100, 2),
-                                                                Math.Round(proyecto.Deriva_Y(i).Deriva * 100, 2),
-                                                                Math.Round(proyecto.Deriva_X(i).Piso.CoorZ, 2))
+                        For i = 0 To proyecto.ResultadosGlobales.DerivasX.Count - 1
+                            Form_Derivas.Tabla_Derivas.Rows.Add(proyecto.ResultadosGlobales.DerivasX(i).Piso.Nombre,
+                                                                Math.Round(proyecto.ResultadosGlobales.DerivasX(i).Deriva * 100, 2),
+                                                                Math.Round(proyecto.ResultadosGlobales.DerivasY(i).Deriva * 100, 2),
+                                                                Math.Round(proyecto.ResultadosGlobales.DerivasX(i).Piso.CoorZ, 2))
 
-                            valores_X_Der_X.Add(proyecto.Deriva_X(i).Deriva * 100)
-                            valores_X_Der_Y.Add(proyecto.Deriva_Y(i).Deriva * 100)
-                            valores_Y.Add(proyecto.Deriva_X(i).Piso.CoorZ)
+                            valores_X_Der_X.Add(proyecto.ResultadosGlobales.DerivasX(i).Deriva * 100)
+                            valores_X_Der_Y.Add(proyecto.ResultadosGlobales.DerivasY(i).Deriva * 100)
+                            valores_Y.Add(proyecto.ResultadosGlobales.DerivasX(i).Piso.CoorZ)
                         Next
                         Form_Derivas.Tabla_Derivas.RowHeadersVisible = False
 
@@ -416,7 +423,6 @@ Public Class Form_00_PaginaPrincipal
                     Me.Cursor = Cursors.Arrow
 
                 End Try
-
 
             End If
         End With
@@ -455,10 +461,10 @@ Public Class Form_00_PaginaPrincipal
                         If Not IsDBNull(row(0)) AndAlso row(0).ToString() <> "Story" Then
                             Dim comb As String = row(1).ToString()
                             comb = comb.Substring(0, comb.Length - 4)
-                            If comb.Contains("X") And proyecto.Combinacion_SismoX = Nothing Then
-                                proyecto.Combinacion_SismoX = comb
-                            ElseIf comb.Contains("Y") And proyecto.Combinacion_SismoY = Nothing Then
-                                proyecto.Combinacion_SismoY = comb
+                            If comb.Contains("X") And proyecto.ParametrosSismicos.Combinacion_SismoX = Nothing Then
+                                proyecto.ParametrosSismicos.Combinacion_SismoX = comb
+                            ElseIf comb.Contains("Y") And proyecto.ParametrosSismicos.Combinacion_SismoY = Nothing Then
+                                proyecto.ParametrosSismicos.Combinacion_SismoY = comb
                             End If
 
                             Dim piso_ As New cPiso
@@ -470,12 +476,12 @@ Public Class Form_00_PaginaPrincipal
                             Deriva_.Deriva = Convert.ToSingle(row(3))
 
                             If comb.Contains("X") And row(2) = "X" Then
-                                If Not proyecto.DerivaCr_X.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
-                                    proyecto.DerivaCr_X.Add(Deriva_)
+                                If Not proyecto.ResultadosGlobales.DerivaCrX.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
+                                    proyecto.ResultadosGlobales.DerivaCrX.Add(Deriva_)
                                 End If
                             ElseIf comb.Contains("Y") And row(2) = "Y" Then
-                                If Not proyecto.DerivaCr_Y.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
-                                    proyecto.DerivaCr_Y.Add(Deriva_)
+                                If Not proyecto.ResultadosGlobales.DerivaCrY.Any(Function(p) p.Piso.Nombre = piso_.Nombre) Then
+                                    proyecto.ResultadosGlobales.DerivaCrY.Add(Deriva_)
                                 End If
                             End If
                         End If
@@ -502,15 +508,15 @@ Public Class Form_00_PaginaPrincipal
                         Dim valores_X_Der_Y As New List(Of Single)
                         Dim valores_Y As New List(Of Single)
 
-                        For i = 0 To proyecto.DerivaCr_X.Count - 1
-                            Form_Derivas.Tabla_Derivas.Rows.Add(proyecto.DerivaCr_X(i).Piso.Nombre,
-                                                                Math.Round(proyecto.DerivaCr_X(i).Deriva * 100, 2),
-                                                                Math.Round(proyecto.DerivaCr_Y(i).Deriva * 100, 2),
-                                                                Math.Round(proyecto.DerivaCr_X(i).Piso.CoorZ, 2))
+                        For i = 0 To proyecto.ResultadosGlobales.DerivaCrX.Count - 1
+                            Form_Derivas.Tabla_Derivas.Rows.Add(proyecto.ResultadosGlobales.DerivaCrX(i).Piso.Nombre,
+                                                                Math.Round(proyecto.ResultadosGlobales.DerivaCrX(i).Deriva * 100, 2),
+                                                                Math.Round(proyecto.ResultadosGlobales.DerivaCrY(i).Deriva * 100, 2),
+                                                                Math.Round(proyecto.ResultadosGlobales.DerivaCrX(i).Piso.CoorZ, 2))
 
-                            valores_X_Der_X.Add(proyecto.DerivaCr_X(i).Deriva * 100)
-                            valores_X_Der_Y.Add(proyecto.DerivaCr_Y(i).Deriva * 100)
-                            valores_Y.Add(proyecto.DerivaCr_X(i).Piso.CoorZ)
+                            valores_X_Der_X.Add(proyecto.ResultadosGlobales.DerivaCrX(i).Deriva * 100)
+                            valores_X_Der_Y.Add(proyecto.ResultadosGlobales.DerivaCrY(i).Deriva * 100)
+                            valores_Y.Add(proyecto.ResultadosGlobales.DerivaCrX(i).Piso.CoorZ)
                         Next
                         Form_Derivas.Tabla_Derivas.RowHeadersVisible = False
 
@@ -559,7 +565,7 @@ Public Class Form_00_PaginaPrincipal
             Dim SaveAs As New SaveFileDialog
             SaveAs.Filter = "Archivo|*.esm"
             SaveAs.Title = "Guardar Archivo"
-            SaveAs.FileName = Convert.ToString("RevisiónMuros_Proyecto - " & proyecto.Nombre)
+            SaveAs.FileName = Convert.ToString("RevisiónMuros_Proyecto - " & proyecto.Info.Nombre)
             SaveAs.ShowDialog()
             If SaveAs.FileName <> String.Empty Then
                 proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
@@ -581,5 +587,63 @@ Public Class Form_00_PaginaPrincipal
         Catch ex As Exception
 
         End Try
+    End Sub
+
+    Public ResultadosGlobales As New Dictionary(Of String, DataTable)
+
+    Private Sub ImportarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarToolStripMenuItem.Click
+        Dim openFD As New OpenFileDialog()
+        With openFD
+            .Title = "Seleccionar archivo de resultados ETABS"
+            .Filter = "Archivos Excel (*.xls;*.xlsx)|*.xls;*.xlsx|Todos los archivos (*.*)|*.*"
+            .Multiselect = False
+
+            If .ShowDialog() = DialogResult.OK Then
+                Dim path As String = .FileName
+                Me.Cursor = Cursors.WaitCursor
+
+                Try
+                    ' Leer cada hoja
+                    proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(path, "Objects and Elements - Joints")
+                    proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(path, "Objects and Elements - Frames")
+                    proyecto.TablasEtabs.TablaOEShells = LeerHojaExcel(path, "Objects and Elements - Shells")
+                    proyecto.TablasEtabs.TablaStoryDrifts = LeerHojaExcel(path, "Story Drifts")
+
+                    MsgBox("Importación completada correctamente.", MsgBoxStyle.Information)
+
+                    proyecto.Elementos.Joints = DataTableToJoints(proyecto.TablasEtabs.TablaOEJoints)
+                    proyecto.Elementos.Frames = DataTableToFrames(proyecto.TablasEtabs.TablaOEFrames)
+
+                Catch ex As Exception
+                    MsgBox("Error al importar: " & ex.Message, MsgBoxStyle.Critical)
+                Finally
+                    Me.Cursor = Cursors.Arrow
+                End Try
+            End If
+        End With
+
+    End Sub
+
+    Private Sub Button1_Click_1(sender As Object, e As EventArgs) Handles Button1.Click
+
+        Form_07_Pag_Zapatas.Show()
+        Form_07_Pag_Zapatas.WindowState = FormWindowState.Maximized
+
+    End Sub
+
+    Private Sub Button2_Click_1(sender As Object, e As EventArgs) Handles Button2.Click
+
+        If proyecto.Elementos.Zapatas.Tipos.Count > 0 Then
+            Form_08_VigasFundacion.Pu_Analisis.Text = Math.Round(proyecto.Elementos.Zapatas.Reactions.Max(Function(r) r.FZ), 2)
+        End If
+
+        Form_08_VigasFundacion.Show()
+        'Form_08_VigasFundacion.WindowState = FormWindowState.Maximized
+
+    End Sub
+
+    Private Sub Button3_Click_1(sender As Object, e As EventArgs) Handles Button3.Click
+        Form_09_Vigas.Show()
+        Form_09_Vigas.WindowState = FormWindowState.Maximized
     End Sub
 End Class

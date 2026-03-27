@@ -1,5 +1,4 @@
-﻿Imports System
-Imports System.Reflection
+﻿Imports System.Reflection
 Imports System.Runtime.InteropServices
 
 ' La información general de un ensamblado se controla mediante el siguiente 
@@ -12,7 +11,7 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyDescription("Análisis y Revisión de Estructuras de Concreto")>
 <Assembly: AssemblyCompany("EstrucMed, Ingeniería Especializada")>
 <Assembly: AssemblyProduct("ARCO")>
-<Assembly: AssemblyCopyright("Copyright ©  2021")>
+<Assembly: AssemblyCopyright("Copyright ©  2025")>
 <Assembly: AssemblyTrademark("EstrucMed")>
 
 <Assembly: ComVisible(False)>

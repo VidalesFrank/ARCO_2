@@ -1,36 +1,35 @@
 ﻿Imports ARCO.eNumeradores
-Imports iTextSharp.text.pdf
 
 Public Class PagInfoGeneral
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         Try
-            Form_00_PaginaPrincipal.proyecto.Nombre = T_NameProjet.Text
-            Form_00_PaginaPrincipal.proyecto.Direccion = T_Direction.Text
-            Form_00_PaginaPrincipal.proyecto.Ciudad = T_City.Text
-            Form_00_PaginaPrincipal.proyecto.Departamento = T_Department.Text
-            Form_00_PaginaPrincipal.proyecto.Year = Convert.ToInt16(C_YearBuilding.Text)
-            Form_00_PaginaPrincipal.proyecto.Disipacion = C_DM.Text
-            Form_00_PaginaPrincipal.proyecto.Propietario = T_Propietario.Text
-            Form_00_PaginaPrincipal.proyecto.Disenador = T_Disenador.Text
-            Form_00_PaginaPrincipal.proyecto.SistemaE = C_SE.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Nombre = T_NameProjet.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Direccion = T_Direction.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Ciudad = T_City.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Departamento = T_Department.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Year = Convert.ToInt16(C_YearBuilding.Text)
+            Form_00_PaginaPrincipal.proyecto.ParametrosSismicos.NDE = C_DM.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Propietario = T_Propietario.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Designer = T_Disenador.Text
+            Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = C_SE.Text
 
             If C_SE.Text = "MCR" Then
-                Form_00_PaginaPrincipal.proyecto.SistemaEstructural = eNumeradores.eSistemaEstructural.MCR
+                Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.MCR
             ElseIf C_SE.Text = "Porticos" Then
-                Form_00_PaginaPrincipal.proyecto.SistemaEstructural = eNumeradores.eSistemaEstructural.Porticos
+                Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Porticos
             Else
-                Form_00_PaginaPrincipal.proyecto.SistemaEstructural = eNumeradores.eSistemaEstructural.Combinado
+                Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Combinado
             End If
 
-            Form_00_PaginaPrincipal.proyecto.GrupoU = C_GU.Text
-            Form_00_PaginaPrincipal.proyecto.T_Suelo = C_TS.Text
-            Form_00_PaginaPrincipal.proyecto.Area_Planta = Convert.ToSingle(T_AreaPlanta.Text)
+            Form_00_PaginaPrincipal.proyecto.Info.GrupoUso = C_GU.Text
+            Form_00_PaginaPrincipal.proyecto.Info.TipoSuelo = C_TS.Text
+            Form_00_PaginaPrincipal.proyecto.Info.Area = Convert.ToSingle(T_AreaPlanta.Text)
 
             Dim nombreSeleccionado As String = C_Responsable.SelectedItem.ToString()
 
             Dim responsableEnum As eResponsables = DirectorioResponsables.dResponsables.FirstOrDefault(Function(kvp) kvp.Value.NombreCompleto = nombreSeleccionado).Key
 
-            Form_00_PaginaPrincipal.proyecto.Persona_Responsable = responsableEnum
+            Form_00_PaginaPrincipal.proyecto.Info.Persona_Responsable = responsableEnum
 
         Catch ex As Exception
         Finally
@@ -39,19 +38,19 @@ Public Class PagInfoGeneral
     End Sub
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-        If IsNothing(Form_00_PaginaPrincipal.proyecto.Imagen) Then
+        If IsNothing(Form_00_PaginaPrincipal.proyecto.Info.Imagen) Then
             Dim Dialog As New OpenFileDialog
             Dialog.Filter = "Imagenes |*.jpg"
             Dialog.Title = "Insertar Imagen del Proyecto"
             Dialog.ShowDialog()
-            Form_00_PaginaPrincipal.proyecto.Ruta_Imagen = Dialog.FileName
+            Form_00_PaginaPrincipal.proyecto.Info.Ruta_Imagen = Dialog.FileName
             If Dialog.FileName <> String.Empty Then
                 Form_ImagenProyecto.P_ImagenProyecto.ImageLocation = Dialog.FileName
                 Form_ImagenProyecto.P_ImagenProyecto.SizeMode = PictureBoxSizeMode.StretchImage
                 Form_ImagenProyecto.Show()
             End If
         Else
-            Form_ImagenProyecto.P_ImagenProyecto.Image = Form_00_PaginaPrincipal.proyecto.Imagen
+            Form_ImagenProyecto.P_ImagenProyecto.Image = Form_00_PaginaPrincipal.proyecto.Info.Imagen
             Form_ImagenProyecto.P_ImagenProyecto.SizeMode = PictureBoxSizeMode.StretchImage
             Form_ImagenProyecto.Show()
         End If

@@ -1,5 +1,4 @@
-﻿Imports System.IO
-Imports ARCO.Funciones_00_Varias
+﻿Imports ARCO.Funciones_00_Varias
 Imports ARCO.Funciones_04_Escalera
 Public Class Form_04_Escaleras
     Public Shared Proyecto As New Proyecto_Escaleras

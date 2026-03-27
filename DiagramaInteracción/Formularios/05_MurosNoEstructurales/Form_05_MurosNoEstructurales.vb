@@ -1,8 +1,8 @@
-﻿Imports ARCO.Funciones_00_Varias
+﻿Imports System.IO
+Imports ARCO.Funciones_00_Varias
+Imports ARCO.Funciones_Reportes_PDF
 Imports iTextSharp.text
 Imports iTextSharp.text.pdf
-Imports System.IO
-Imports ARCO.Funciones_Reportes_PDF
 Public Class Form_05_MurosNoEstructurales
     Public Shared Proyecto As New Proyecto_MNE
     Private Sub T_Hn_TextChanged(sender As Object, e As EventArgs) Handles T_Hn.TextChanged

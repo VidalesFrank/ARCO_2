@@ -1,6 +1,5 @@
-﻿Imports System.IO
+﻿Imports ARCO.Funciones_00_Varias
 Imports ARCO.Funciones_03_Losa
-Imports ARCO.Funciones_00_Varias
 
 Public Class Form_03_Losas
     Public Shared Proyecto As New Proyecto_Losas

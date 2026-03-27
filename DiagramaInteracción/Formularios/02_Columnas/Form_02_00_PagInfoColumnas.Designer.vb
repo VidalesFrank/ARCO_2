@@ -36,6 +36,10 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Label1 = New System.Windows.Forms.Label()
         Me.Combo_Elementos = New System.Windows.Forms.ComboBox()
         Me.Tabla_Info_Seccion = New System.Windows.Forms.DataGridView()
+        Me.MenuStrip1 = New System.Windows.Forms.MenuStrip()
+        Me.VerToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.SecciónToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Panel2 = New System.Windows.Forms.Panel()
         Me.Column1 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column3 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column12 = New System.Windows.Forms.DataGridViewTextBoxColumn()
@@ -52,11 +56,10 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Column14 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column15 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column17 = New System.Windows.Forms.DataGridViewComboBoxColumn()
+        Me.Column19 = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.Column20 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column16 = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.MenuStrip1 = New System.Windows.Forms.MenuStrip()
-        Me.VerToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.SecciónToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.Panel2 = New System.Windows.Forms.Panel()
+        Me.Column18 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Panel1.SuspendLayout()
         CType(Me.Tabla_Info_Seccion, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel2.SuspendLayout()
@@ -76,10 +79,9 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Panel1.Controls.Add(Me.Combo_Elementos)
         Me.Panel1.Controls.Add(Me.Tabla_Info_Seccion)
         Me.Panel1.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.Panel1.Location = New System.Drawing.Point(0, 31)
-        Me.Panel1.Margin = New System.Windows.Forms.Padding(4)
+        Me.Panel1.Location = New System.Drawing.Point(0, 25)
         Me.Panel1.Name = "Panel1"
-        Me.Panel1.Size = New System.Drawing.Size(1467, 648)
+        Me.Panel1.Size = New System.Drawing.Size(1100, 527)
         Me.Panel1.TabIndex = 0
         '
         'C_Lista_Secciones_Principales
@@ -88,20 +90,18 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.C_Lista_Secciones_Principales.Enabled = False
         Me.C_Lista_Secciones_Principales.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.C_Lista_Secciones_Principales.FormattingEnabled = True
-        Me.C_Lista_Secciones_Principales.Location = New System.Drawing.Point(701, 129)
-        Me.C_Lista_Secciones_Principales.Margin = New System.Windows.Forms.Padding(4)
+        Me.C_Lista_Secciones_Principales.Location = New System.Drawing.Point(526, 105)
         Me.C_Lista_Secciones_Principales.Name = "C_Lista_Secciones_Principales"
-        Me.C_Lista_Secciones_Principales.Size = New System.Drawing.Size(160, 28)
+        Me.C_Lista_Secciones_Principales.Size = New System.Drawing.Size(121, 24)
         Me.C_Lista_Secciones_Principales.TabIndex = 11
         '
         'Op_SeccionSimilar
         '
         Me.Op_SeccionSimilar.AutoSize = True
-        Me.Op_SeccionSimilar.Font = New System.Drawing.Font("SansSerif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Op_SeccionSimilar.Location = New System.Drawing.Point(472, 130)
-        Me.Op_SeccionSimilar.Margin = New System.Windows.Forms.Padding(4)
+        Me.Op_SeccionSimilar.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Op_SeccionSimilar.Location = New System.Drawing.Point(354, 106)
         Me.Op_SeccionSimilar.Name = "Op_SeccionSimilar"
-        Me.Op_SeccionSimilar.Size = New System.Drawing.Size(182, 27)
+        Me.Op_SeccionSimilar.Size = New System.Drawing.Size(148, 24)
         Me.Op_SeccionSimilar.TabIndex = 10
         Me.Op_SeccionSimilar.Text = "Sección Similar a"
         Me.Op_SeccionSimilar.UseVisualStyleBackColor = True
@@ -110,11 +110,10 @@ Partial Class Form_02_00_PagInfoColumnas
         '
         Me.Op_SeccionPrincipal.AutoSize = True
         Me.Op_SeccionPrincipal.Checked = True
-        Me.Op_SeccionPrincipal.Font = New System.Drawing.Font("SansSerif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Op_SeccionPrincipal.Location = New System.Drawing.Point(472, 94)
-        Me.Op_SeccionPrincipal.Margin = New System.Windows.Forms.Padding(4)
+        Me.Op_SeccionPrincipal.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Op_SeccionPrincipal.Location = New System.Drawing.Point(354, 76)
         Me.Op_SeccionPrincipal.Name = "Op_SeccionPrincipal"
-        Me.Op_SeccionPrincipal.Size = New System.Drawing.Size(180, 27)
+        Me.Op_SeccionPrincipal.Size = New System.Drawing.Size(147, 24)
         Me.Op_SeccionPrincipal.TabIndex = 9
         Me.Op_SeccionPrincipal.TabStop = True
         Me.Op_SeccionPrincipal.Text = "Sección Principal"
@@ -123,11 +122,10 @@ Partial Class Form_02_00_PagInfoColumnas
         'T_Seccion
         '
         Me.T_Seccion.Font = New System.Drawing.Font("Arial", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.T_Seccion.Location = New System.Drawing.Point(216, 129)
-        Me.T_Seccion.Margin = New System.Windows.Forms.Padding(4)
+        Me.T_Seccion.Location = New System.Drawing.Point(162, 105)
         Me.T_Seccion.Multiline = True
         Me.T_Seccion.Name = "T_Seccion"
-        Me.T_Seccion.Size = New System.Drawing.Size(160, 29)
+        Me.T_Seccion.Size = New System.Drawing.Size(121, 24)
         Me.T_Seccion.TabIndex = 8
         Me.T_Seccion.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
         '
@@ -137,12 +135,11 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Button2.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Button2.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
         Me.Button2.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Button2.Font = New System.Drawing.Font("SansSerif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button2.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button2.ForeColor = System.Drawing.Color.White
-        Me.Button2.Location = New System.Drawing.Point(753, 590)
-        Me.Button2.Margin = New System.Windows.Forms.Padding(4)
+        Me.Button2.Location = New System.Drawing.Point(565, 480)
         Me.Button2.Name = "Button2"
-        Me.Button2.Size = New System.Drawing.Size(173, 43)
+        Me.Button2.Size = New System.Drawing.Size(130, 35)
         Me.Button2.TabIndex = 7
         Me.Button2.Text = "CALCULAR"
         Me.Button2.UseVisualStyleBackColor = False
@@ -153,12 +150,11 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Button1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Button1.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
         Me.Button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Button1.Font = New System.Drawing.Font("SansSerif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button1.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button1.ForeColor = System.Drawing.Color.White
-        Me.Button1.Location = New System.Drawing.Point(551, 590)
-        Me.Button1.Margin = New System.Windows.Forms.Padding(4)
+        Me.Button1.Location = New System.Drawing.Point(413, 480)
         Me.Button1.Name = "Button1"
-        Me.Button1.Size = New System.Drawing.Size(173, 43)
+        Me.Button1.Size = New System.Drawing.Size(130, 35)
         Me.Button1.TabIndex = 6
         Me.Button1.Text = "AGREGAR"
         Me.Button1.UseVisualStyleBackColor = False
@@ -166,12 +162,11 @@ Partial Class Form_02_00_PagInfoColumnas
         'Label2
         '
         Me.Label2.FlatStyle = System.Windows.Forms.FlatStyle.System
-        Me.Label2.Font = New System.Drawing.Font("SansSerif", 14.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label2.Font = New System.Drawing.Font("Microsoft Sans Serif", 14.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Label2.ForeColor = System.Drawing.Color.FromArgb(CType(CType(61, Byte), Integer), CType(CType(61, Byte), Integer), CType(CType(61, Byte), Integer))
-        Me.Label2.Location = New System.Drawing.Point(52, 110)
-        Me.Label2.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
+        Me.Label2.Location = New System.Drawing.Point(39, 89)
         Me.Label2.Name = "Label2"
-        Me.Label2.Size = New System.Drawing.Size(156, 30)
+        Me.Label2.Size = New System.Drawing.Size(117, 24)
         Me.Label2.TabIndex = 5
         Me.Label2.Text = "SECCIÓN"
         Me.Label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
@@ -182,12 +177,11 @@ Partial Class Form_02_00_PagInfoColumnas
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.Label1.AutoSize = True
         Me.Label1.FlatStyle = System.Windows.Forms.FlatStyle.System
-        Me.Label1.Font = New System.Drawing.Font("SansSerif", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label1.Font = New System.Drawing.Font("Microsoft Sans Serif", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Label1.ForeColor = System.Drawing.Color.FromArgb(CType(CType(61, Byte), Integer), CType(CType(61, Byte), Integer), CType(CType(61, Byte), Integer))
-        Me.Label1.Location = New System.Drawing.Point(387, 33)
-        Me.Label1.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
+        Me.Label1.Location = New System.Drawing.Point(290, 27)
         Me.Label1.Name = "Label1"
-        Me.Label1.Size = New System.Drawing.Size(630, 35)
+        Me.Label1.Size = New System.Drawing.Size(531, 29)
         Me.Label1.TabIndex = 4
         Me.Label1.Text = "INGRESAR INFORMACIÓN DE SECCIONES"
         '
@@ -196,10 +190,9 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Combo_Elementos.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.Combo_Elementos.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Combo_Elementos.FormattingEnabled = True
-        Me.Combo_Elementos.Location = New System.Drawing.Point(216, 92)
-        Me.Combo_Elementos.Margin = New System.Windows.Forms.Padding(4)
+        Me.Combo_Elementos.Location = New System.Drawing.Point(162, 75)
         Me.Combo_Elementos.Name = "Combo_Elementos"
-        Me.Combo_Elementos.Size = New System.Drawing.Size(160, 28)
+        Me.Combo_Elementos.Size = New System.Drawing.Size(121, 24)
         Me.Combo_Elementos.TabIndex = 3
         '
         'Tabla_Info_Seccion
@@ -219,7 +212,7 @@ Partial Class Form_02_00_PagInfoColumnas
         DataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
         Me.Tabla_Info_Seccion.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         Me.Tabla_Info_Seccion.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        Me.Tabla_Info_Seccion.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.Column1, Me.Column3, Me.Column12, Me.Column13, Me.Column2, Me.Column4, Me.Column5, Me.Column6, Me.Column7, Me.Column8, Me.Column9, Me.Column10, Me.Column11, Me.Column14, Me.Column15, Me.Column17, Me.Column16})
+        Me.Tabla_Info_Seccion.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.Column1, Me.Column3, Me.Column12, Me.Column13, Me.Column2, Me.Column4, Me.Column5, Me.Column6, Me.Column7, Me.Column8, Me.Column9, Me.Column10, Me.Column11, Me.Column14, Me.Column15, Me.Column17, Me.Column19, Me.Column20, Me.Column16, Me.Column18})
         DataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window
         DataGridViewCellStyle2.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
@@ -228,13 +221,50 @@ Partial Class Form_02_00_PagInfoColumnas
         DataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText
         DataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.[False]
         Me.Tabla_Info_Seccion.DefaultCellStyle = DataGridViewCellStyle2
-        Me.Tabla_Info_Seccion.Location = New System.Drawing.Point(21, 174)
-        Me.Tabla_Info_Seccion.Margin = New System.Windows.Forms.Padding(4)
+        Me.Tabla_Info_Seccion.Location = New System.Drawing.Point(16, 141)
         Me.Tabla_Info_Seccion.Name = "Tabla_Info_Seccion"
         Me.Tabla_Info_Seccion.RowHeadersVisible = False
         Me.Tabla_Info_Seccion.RowHeadersWidth = 51
-        Me.Tabla_Info_Seccion.Size = New System.Drawing.Size(1429, 395)
+        Me.Tabla_Info_Seccion.Size = New System.Drawing.Size(1072, 322)
         Me.Tabla_Info_Seccion.TabIndex = 0
+        '
+        'MenuStrip1
+        '
+        Me.MenuStrip1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.MenuStrip1.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.MenuStrip1.Font = New System.Drawing.Font("Segoe UI", 10.0!)
+        Me.MenuStrip1.ImageScalingSize = New System.Drawing.Size(20, 20)
+        Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
+        Me.MenuStrip1.Name = "MenuStrip1"
+        Me.MenuStrip1.Padding = New System.Windows.Forms.Padding(4, 2, 0, 2)
+        Me.MenuStrip1.Size = New System.Drawing.Size(1100, 25)
+        Me.MenuStrip1.TabIndex = 9
+        Me.MenuStrip1.Text = "MenuStrip1"
+        '
+        'VerToolStripMenuItem
+        '
+        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.SecciónToolStripMenuItem})
+        Me.VerToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.VerToolStripMenuItem.Name = "VerToolStripMenuItem"
+        Me.VerToolStripMenuItem.Size = New System.Drawing.Size(49, 27)
+        Me.VerToolStripMenuItem.Text = "Ver"
+        '
+        'SecciónToolStripMenuItem
+        '
+        Me.SecciónToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.SecciónToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.SecciónToolStripMenuItem.Name = "SecciónToolStripMenuItem"
+        Me.SecciónToolStripMenuItem.Size = New System.Drawing.Size(115, 22)
+        Me.SecciónToolStripMenuItem.Text = "Sección"
+        '
+        'Panel2
+        '
+        Me.Panel2.Controls.Add(Me.MenuStrip1)
+        Me.Panel2.Dock = System.Windows.Forms.DockStyle.Top
+        Me.Panel2.Location = New System.Drawing.Point(0, 0)
+        Me.Panel2.Name = "Panel2"
+        Me.Panel2.Size = New System.Drawing.Size(1100, 25)
+        Me.Panel2.TabIndex = 1
         '
         'Column1
         '
@@ -344,65 +374,41 @@ Partial Class Form_02_00_PagInfoColumnas
         'Column17
         '
         Me.Column17.HeaderText = "# Barra"
-        Me.Column17.Items.AddRange(New Object() {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10"})
+        Me.Column17.Items.AddRange(New Object() {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10", "User"})
         Me.Column17.MinimumWidth = 6
         Me.Column17.Name = "Column17"
+        '
+        'Column19
+        '
+        Me.Column19.HeaderText = "As Sent. Largo (mm2)"
+        Me.Column19.Name = "Column19"
+        '
+        'Column20
+        '
+        Me.Column20.HeaderText = "As Sent. Corto (mm2)"
+        Me.Column20.Name = "Column20"
         '
         'Column16
         '
         Me.Column16.FillWeight = 155.1581!
-        Me.Column16.HeaderText = "Separación (m)"
+        Me.Column16.HeaderText = "Sep. ZC (m)"
         Me.Column16.MinimumWidth = 6
         Me.Column16.Name = "Column16"
         '
-        'MenuStrip1
+        'Column18
         '
-        Me.MenuStrip1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.MenuStrip1.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.MenuStrip1.Font = New System.Drawing.Font("Segoe UI", 10.0!)
-        Me.MenuStrip1.ImageScalingSize = New System.Drawing.Size(20, 20)
-        Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
-        Me.MenuStrip1.Name = "MenuStrip1"
-        Me.MenuStrip1.Size = New System.Drawing.Size(1467, 31)
-        Me.MenuStrip1.TabIndex = 9
-        Me.MenuStrip1.Text = "MenuStrip1"
-        '
-        'VerToolStripMenuItem
-        '
-        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.SecciónToolStripMenuItem})
-        Me.VerToolStripMenuItem.ForeColor = System.Drawing.Color.White
-        Me.VerToolStripMenuItem.Name = "VerToolStripMenuItem"
-        Me.VerToolStripMenuItem.Size = New System.Drawing.Size(49, 27)
-        Me.VerToolStripMenuItem.Text = "Ver"
-        '
-        'SecciónToolStripMenuItem
-        '
-        Me.SecciónToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.SecciónToolStripMenuItem.ForeColor = System.Drawing.Color.White
-        Me.SecciónToolStripMenuItem.Name = "SecciónToolStripMenuItem"
-        Me.SecciónToolStripMenuItem.Size = New System.Drawing.Size(143, 26)
-        Me.SecciónToolStripMenuItem.Text = "Sección"
-        '
-        'Panel2
-        '
-        Me.Panel2.Controls.Add(Me.MenuStrip1)
-        Me.Panel2.Dock = System.Windows.Forms.DockStyle.Top
-        Me.Panel2.Location = New System.Drawing.Point(0, 0)
-        Me.Panel2.Margin = New System.Windows.Forms.Padding(4)
-        Me.Panel2.Name = "Panel2"
-        Me.Panel2.Size = New System.Drawing.Size(1467, 31)
-        Me.Panel2.TabIndex = 1
+        Me.Column18.HeaderText = "Sep. ZNC (m)"
+        Me.Column18.Name = "Column18"
         '
         'Form_02_00_PagInfoColumnas
         '
-        Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(1467, 679)
+        Me.ClientSize = New System.Drawing.Size(1100, 552)
         Me.Controls.Add(Me.Panel1)
         Me.Controls.Add(Me.Panel2)
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.MainMenuStrip = Me.MenuStrip1
-        Me.Margin = New System.Windows.Forms.Padding(4)
         Me.Name = "Form_02_00_PagInfoColumnas"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Información de sección"
@@ -422,6 +428,14 @@ Partial Class Form_02_00_PagInfoColumnas
     Friend WithEvents Label1 As Label
     Friend WithEvents Button1 As Button
     Friend WithEvents Button2 As Button
+    Friend WithEvents T_Seccion As TextBox
+    Friend WithEvents MenuStrip1 As MenuStrip
+    Friend WithEvents VerToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents SecciónToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents Panel2 As Panel
+    Friend WithEvents Op_SeccionPrincipal As RadioButton
+    Friend WithEvents Op_SeccionSimilar As RadioButton
+    Friend WithEvents C_Lista_Secciones_Principales As ComboBox
     Friend WithEvents Column1 As DataGridViewTextBoxColumn
     Friend WithEvents Column3 As DataGridViewTextBoxColumn
     Friend WithEvents Column12 As DataGridViewTextBoxColumn
@@ -438,13 +452,8 @@ Partial Class Form_02_00_PagInfoColumnas
     Friend WithEvents Column14 As DataGridViewTextBoxColumn
     Friend WithEvents Column15 As DataGridViewTextBoxColumn
     Friend WithEvents Column17 As DataGridViewComboBoxColumn
+    Friend WithEvents Column19 As DataGridViewTextBoxColumn
+    Friend WithEvents Column20 As DataGridViewTextBoxColumn
     Friend WithEvents Column16 As DataGridViewTextBoxColumn
-    Friend WithEvents T_Seccion As TextBox
-    Friend WithEvents MenuStrip1 As MenuStrip
-    Friend WithEvents VerToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents SecciónToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents Panel2 As Panel
-    Friend WithEvents Op_SeccionPrincipal As RadioButton
-    Friend WithEvents Op_SeccionSimilar As RadioButton
-    Friend WithEvents C_Lista_Secciones_Principales As ComboBox
+    Friend WithEvents Column18 As DataGridViewTextBoxColumn
 End Class

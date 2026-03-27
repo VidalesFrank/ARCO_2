@@ -1,6 +1,4 @@
-﻿Imports System.Drawing
-
-<Serializable>
+﻿<Serializable>
 Public Class SeccionMuro__
 
     ' Propiedades y otras clases como antes...

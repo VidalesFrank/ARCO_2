@@ -1,7 +1,6 @@
 ﻿Imports System.Windows.Forms.DataVisualization.Charting
-Imports ARCO.eNumeradores
-Imports Word = Microsoft.Office.Interop.Word
 Imports Fun_Muros = ARCO.Funciones_Muros
+Imports Word = Microsoft.Office.Interop.Word
 
 Public Class ReporteInicial
     Public Shared proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
@@ -18,22 +17,22 @@ Public Class ReporteInicial
         '======== REEMPLAZAR TEXTO EN EL DOCUMENTO =============
         Dim fechaActual As String = DateTime.Now.ToString("dd 'de' MMMM 'de' yyyy")
         ReemplazarTexto(wordDoc, "{Fecha_Informe}", fechaActual)
-        ReemplazarTexto(wordDoc, "{Nombre_Proyecto}", proyecto.Nombre)
-        ReemplazarTexto(wordDoc, "{Direccion_Proyecto}", proyecto.Direccion)
-        ReemplazarTexto(wordDoc, "{Propietario}", proyecto.Propietario)
+        ReemplazarTexto(wordDoc, "{Nombre_Proyecto}", proyecto.Info.Nombre)
+        ReemplazarTexto(wordDoc, "{Direccion_Proyecto}", proyecto.Info.Direccion)
+        ReemplazarTexto(wordDoc, "{Propietario}", proyecto.Info.Propietario)
 
-        Dim valorSistemaEstructural As String = DirectorioSistemaEstructural.dSistemaEstructural(proyecto.SistemaEstructural).NameSistema
+        Dim valorSistemaEstructural As String = DirectorioSistemaEstructural.dSistemaEstructural(proyecto.Info.SistemaEstructural).NameSistema
         ReemplazarTexto(wordDoc, "{Sistema_Estructural}", valorSistemaEstructural)
-        ReemplazarTexto(wordDoc, "{N_Pisos}", proyecto.NumPisos)
-        ReemplazarTexto(wordDoc, "{Area_Planta}", proyecto.Area_Planta)
+        ReemplazarTexto(wordDoc, "{N_Pisos}", proyecto.Info.NPisos)
+        ReemplazarTexto(wordDoc, "{Area_Planta}", proyecto.Info.Area)
 
-        Dim Persona_Responsable As String = DirectorioResponsables.dResponsables(proyecto.Persona_Responsable).NombreCompleto
+        Dim Persona_Responsable As String = DirectorioResponsables.dResponsables(proyecto.Info.Persona_Responsable).NombreCompleto
         ReemplazarTexto(wordDoc, "{Responsable}", Persona_Responsable)
 
-        ReemplazarTexto(wordDoc, "{Densidad_X}", Math.Round(proyecto.Muros.Densidad_X * 100, 2))
-        ReemplazarTexto(wordDoc, "{Densidad_Y}", Math.Round(proyecto.Muros.Densidad_Y * 100, 2))
+        ReemplazarTexto(wordDoc, "{Densidad_X}", Math.Round(proyecto.Elementos.Muros.Densidad_X * 100, 2))
+        ReemplazarTexto(wordDoc, "{Densidad_Y}", Math.Round(proyecto.Elementos.Muros.Densidad_Y * 100, 2))
 
-        ReemplazarTexto(wordDoc, "{Nombre_Proyecto_Anexos}", proyecto.Nombre)
+        ReemplazarTexto(wordDoc, "{Nombre_Proyecto_Anexos}", proyecto.Info.Nombre)
 
         Dim anchoCm As Double = 10
         Dim altoCm As Double = 3.5

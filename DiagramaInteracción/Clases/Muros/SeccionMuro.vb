@@ -5,6 +5,7 @@ Public Class SeccionMuro
     Public Piso As String
     Public Altura As Single
     Public Seccion As String
+    Public Coordenadas As cCoordenadasElemento
 
     '------------ INFORMACION GENERAL DE LA SECCION ----------------
     Public fc As Single
@@ -37,12 +38,20 @@ Public Class SeccionMuro
 
     '----------- INFORMACION DE LEIDA (COLOCADA) ------------
     Public Refuerzo_Muro_Top As New Refuerzo_Longitudinal
+
+    Public Refuerzo_Muro_Top_Pr As New Refuerzo_Longitudinal_Prueba
+
     Public Cuantia_Top_Col As Single
     Public AsT_Top_Col As Single
+    Public Cantidad_Barras_Col_Top As Integer
 
     Public Refuerzo_Muro_Bottom As New Refuerzo_Longitudinal
+
+    Public Refuerzo_Muro_Bot_Pr As New Refuerzo_Longitudinal_Prueba
+
     Public Cuantia_Bot_Col As Single
     Public AsT_Bot_Col As Single
+    Public Cantidad_Barras_Col_Bot As Integer
 
     '-------- VERIFICACION DE CAPACIDAD FLEXO-COMPRESION -----------
     Public Rho_Min_L As Single
@@ -115,7 +124,27 @@ Public Class SeccionMuro
     Public Lista_ALR As New List(Of ALR)
     Public Lista_Combinaciones As New List(Of Fuerzas_Elementos)
 
-    Public ListaRefuerzos As New List(Of Refuerzo)
+    Public ListaRefuerzos_Bot As New List(Of Refuerzo)
+    Public ListaRefuerzoCompleto_Bot As New List(Of RefuerzoSimple)
+    Public ListaRefuerzos_Top As New List(Of Refuerzo)
+    Public ListaRefuerzoCompleto_Top As New List(Of RefuerzoSimple)
+
+
+    '-------- DIAGRAMA DE INTERACCIÓN ------
+    Public Lista_Mn_Top As List(Of Single)
+    Public Lista_Pn_Top As List(Of Single)
+    Public Lista_M_Top As List(Of Single)
+    Public Lista_P_Top As List(Of Single)
+
+    Public Lista_Mn_Bot As List(Of Single)
+    Public Lista_Pn_Bot As List(Of Single)
+    Public Lista_M_Bot As List(Of Single)
+    Public Lista_P_Bot As List(Of Single)
+
+    Public Factor_Demanda_Flexo_Top As Single
+    Public Combinacion_Demanda_Flexo_Top As String
+    Public Factor_Demanda_Flexo_Bot As Single
+    Public Combinacion_Demanda_Flexo_Bot As String
 
     <Serializable>
     Public Class ElementoBorde
@@ -161,6 +190,7 @@ Public Class SeccionMuro
     <Serializable>
     Public Class Malla_Patron
 
+        Public Tipo_Malla As eNumeradores.MallaTipo
         Public Malla As String
         Public Capas As Integer
         Public Acero_T As Single
@@ -186,6 +216,38 @@ Public Class SeccionMuro
         Public Combinacion As String
         Public ALR As Single
 
+    End Class
+
+    <Serializable>
+    Public Class BarraInfo
+        Public Property Id As Integer
+        Public Property Id_Barra As Integer
+        Public Property String_Barra As String
+        Public Property Count_Barras As Integer
+        Public Property Ast As Single
+        Public Property Db As Single
+        Public Property Separacion As Single
+    End Class
+
+    <Serializable>
+    Public Class Refuerzo_Longitudinal_Prueba
+        Public Property Barras As New List(Of BarraInfo)
+
+        Public Sub OrdenarBarrasPorId()
+            Barras = Barras.OrderByDescending(Function(b) b.Id_Barra).ToList()
+        End Sub
+
+    End Class
+
+    <Serializable>
+    Public Class cCoordenadasElemento
+        Public Property Xi As Single
+        Public Property Yi As Single
+        Public Property Zi As Single
+
+        Public Property Xf As Single
+        Public Property Yf As Single
+        Public Property Zf As Single
     End Class
 
 End Class

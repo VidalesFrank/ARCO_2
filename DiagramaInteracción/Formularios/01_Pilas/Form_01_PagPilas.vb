@@ -1,15 +1,23 @@
-﻿Imports System.Windows.Forms.DataVisualization.Charting
-Imports Excel = Microsoft.Office.Interop.Excel
-Imports System.Data.OleDb
+﻿Imports System.Data.OleDb
 Imports System.IO
-Imports ARCO.Funciones_01_Pilas
+Imports System.Windows.Forms.DataVisualization.Charting
 Imports ARCO.Funciones_00_Varias
+Imports Excel = Microsoft.Office.Interop.Excel
 Public Class Form_01_PagPilas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Public pictureBox4 As New PictureBox()
 
     '-------------------------------- INICIAR ANÁLISIS --------------------------------
     Public Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+
+        Dim Lista_Elementos As New List(Of String)
+
+        Lista_Elementos = Proyecto.Elementos.Pilas.Reactions.Select(Function(r) r.JointLabel) _
+                                                        .Where(Function(x) Not String.IsNullOrWhiteSpace(x)) _
+                                                        .Distinct() _
+                                                        .OrderBy(Function(x) x) _
+                                                        .ToList()
+
         Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Clear()
 
         ComboElementos.Items.Clear()
@@ -24,172 +32,217 @@ Public Class Form_01_PagPilas
 
         ResumenDI.Visible = True
 
-        Proyecto.Pilas.Esf_Adm_Est = Convert.ToSingle(EadmEst.Text)
-        Proyecto.Pilas.Esf_Adm_Din = Convert.ToSingle(EadmDin.Text)
-        Proyecto.Pilas.Def_Uni_ConcAs = Convert.ToSingle(PagMateriales.ecu.Text)
-        Proyecto.Pilas.Fy = Convert.ToSingle(PagMateriales.Fy.Text)
-        Proyecto.Pilas.ModuloE_Acero = Convert.ToSingle(PagMateriales.Es.Text)
+        Proyecto.Elementos.Pilas.Esf_Adm_Est = Convert.ToSingle(EadmEst.Text)
+        Proyecto.Elementos.Pilas.Esf_Adm_Din = Convert.ToSingle(EadmDin.Text)
+        Proyecto.Elementos.Pilas.Esf_Frccion = Convert.ToSingle(Esf_Friccion.Text)
 
-        Try
-            Dim ColLab As Integer = 1
-            Dim ColComb As Integer = 3
-            Dim ColP As Integer = 6
-            Dim ColM2 As Integer = 7
-            Dim ColM3 As Integer = 8
-            Dim FT As Integer = 1
-            Dim V2 As Integer = 4
-            Dim V3 As Integer = 5
+        Proyecto.Elementos.Pilas.Def_Uni_ConcAs = Convert.ToSingle(PagMateriales.ecu.Text)
+        Proyecto.Elementos.Pilas.Fy = Convert.ToSingle(PagMateriales.Fy.Text)
+        Proyecto.Elementos.Pilas.ModuloE_Acero = Convert.ToSingle(PagMateriales.Es.Text)
 
-            If Proyecto.Pilas.Opcion_Elemento = "Frame" Then
-                ColLab = 1
-                ColComb = 3
-                ColP = 5
-                ColM2 = 9
-                ColM3 = 10
-                V2 = 6
-                V3 = 7
-                FT = -1
-            End If
-            If Proyecto.Pilas.Opcion_Elemento = "Pier" Then
-                ColComb = 2
-                ColP = 4
-                ColM2 = 8
-                ColM3 = 9
-                V2 = 5
-                V3 = 6
-                FT = -1
+        'Try
+        Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
+        For Each Elemento_ In Lista_Elementos
+
+            Dim Seccion As New Elemento_Pila
+
+            Seccion.Name_Elemento = Elemento_
+            Seccion.Name_Label = Elemento_
+
+            Seccion.Df = Convert.ToDouble(Diametro.Text)
+            Seccion.Dc = Convert.ToSingle(Dc.Text)
+            Seccion.L_Pila = Convert.ToSingle(Long_Pila.Text)
+            Seccion.fc = Convert.ToSingle(T_fc.Text)
+
+            If Op_Seccion.Text = "Hueca" Then
+                Seccion.Opcion_Hueca = "Si"
+                Seccion.Esp_Anillo = Convert.ToSingle(T_Espesor.Text)
+            Else
+                Seccion.Opcion_Hueca = "No"
+                Seccion.Esp_Anillo = 0
             End If
 
-            Dim NumServ As Double = TablaCServicio.Rows(0).Cells(15).Value + 1
-            Dim NumUlti As Double = TablaCUltimas.Rows(0).Cells(15).Value + 1
-            Dim Name As String = ""
+            Seccion.N_Barra_Long = RefuerzoLong.Text
+            Seccion.Cant_Barras_Long = Convert.ToInt32(NumRLong.Text)
+            Seccion.N_Barra_Trans = RefuerzoTransv.Text
+            Seccion.Separacion_Trans = Convert.ToSingle(Separacion.Text)
 
-            For i = 2 To NumUlti
-                If TablaCUltimas.Rows(i).Cells(ColLab).Value <> Name Then
+            Proyecto.Elementos.Pilas.ListaElementos.Add(Seccion)
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
 
-                    Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
-                    Dim Seccion As New Elemento_Pila
-                    Name = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
-                    Seccion.Name_Elemento = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
-                    Seccion.Name_Label = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
-                    Seccion.Matriz_PS = New List(Of Single)
-                    Seccion.Matriz_MS = New List(Of Single)
-                    Seccion.Matriz_PU = New List(Of Single)
-                    Seccion.Matriz_MU = New List(Of Single)
-                    Seccion.Matriz_V2 = New List(Of Single)
-                    Seccion.Matriz_V3 = New List(Of Single)
+        Next
 
-                    Seccion.Matriz_Combinaciones = New List(Of String)
-                    Seccion.Df = Convert.ToDouble(Diametro.Text)
-                    Seccion.Dc = Convert.ToSingle(Dc.Text)
-                    Seccion.fc = Convert.ToSingle(PagMateriales.Fc.Text)
 
-                    If Op_Seccion.Text = "Hueca" Then
-                        Seccion.Opcion_Hueca = "Si"
-                        Seccion.Esp_Anillo = Convert.ToSingle(T_Espesor.Text)
-                    Else
-                        Seccion.Opcion_Hueca = "No"
-                        Seccion.Esp_Anillo = 0
-                    End If
+        'Dim ColLab As Integer = 1
+        'Dim ColComb As Integer = 3
+        'Dim ColP As Integer = 6
+        'Dim ColM2 As Integer = 7
+        'Dim ColM3 As Integer = 8
+        'Dim FT As Integer = 1
+        'Dim V2 As Integer = 4
+        'Dim V3 As Integer = 5
 
-                    Seccion.N_Barra_Long = RefuerzoLong.Text
-                    Seccion.Cant_Barras_Long = Convert.ToInt32(NumRLong.Text)
-                    Seccion.N_Barra_Trans = RefuerzoTransv.Text
-                    Seccion.Separacion_Trans = Convert.ToSingle(Separacion.Text)
+        'If Proyecto.Elementos.Pilas.Opcion_Elemento = "Frame" Then
+        '    ColLab = 1
+        '    ColComb = 3
+        '    ColP = 5
+        '    ColM2 = 9
+        '    ColM3 = 10
+        '    V2 = 6
+        '    V3 = 7
+        '    FT = -1
+        'End If
+        'If Proyecto.Elementos.Pilas.Opcion_Elemento = "Pier" Then
+        '    ColComb = 2
+        '    ColP = 4
+        '    ColM2 = 8
+        '    ColM3 = 9
+        '    V2 = 5
+        '    V3 = 6
+        '    FT = -1
+        'End If
 
-                    Seccion.Ps_Estatica = 0
-                    Seccion.Ps_Dinamica = 0
-                    Seccion.Pu_Estatica = 0
-                    Seccion.Pu_Dinamica = 0
+        'Dim NumServ As Double = TablaCServicio.Rows(0).Cells(15).Value + 1
+        'Dim NumUlti As Double = TablaCUltimas.Rows(0).Cells(15).Value + 1
+        'Dim Name As String = ""
 
-                    For j = 2 To NumServ
-                        If TablaCServicio.Rows(j).Cells(ColLab).Value = Name Then
-                            Seccion.Matriz_PS.Add(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-                            Seccion.Matriz_MS.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM3).Value))))
-                            If Len(TablaCServicio.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
-                                If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Estatica) Then
-                                    Seccion.Ps_Estatica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-                                End If
-                            Else
-                                If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Dinamica) Then
-                                    Seccion.Ps_Dinamica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-                                End If
-                            End If
-                        End If
-                    Next
-                    For j = 2 To NumUlti
-                        If TablaCUltimas.Rows(j).Cells(ColLab).Value = Name Then
-                            Seccion.Matriz_PU.Add(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-                            Seccion.Matriz_MU.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM3).Value))))
-                            Seccion.Matriz_V2.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V2).Value)))
-                            Seccion.Matriz_V3.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V3).Value)))
+        'For i = 2 To NumUlti
+        '    If TablaCUltimas.Rows(i).Cells(ColLab).Value <> Name Then
 
-                            Seccion.Matriz_Combinaciones.Add(TablaCUltimas.Rows(j).Cells(ColComb).Value)
-                            If Len(TablaCUltimas.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
-                                If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Estatica) Then
-                                    Seccion.Pu_Estatica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-                                End If
-                            Else
-                                If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Dinamica) Then
-                                    Seccion.Pu_Dinamica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-                                End If
-                            End If
-                        End If
-                    Next
-                    Proyecto.Pilas.ListaElementos.Add(Seccion)
-                End If
-            Next
+        '        Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
+        '        Dim Seccion As New Elemento_Pila
+        '        Name = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
+        '        Seccion.Name_Elemento = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
+        '        Seccion.Name_Label = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
+        '        Seccion.Matriz_PS = New List(Of Single)
+        '        Seccion.Matriz_MS = New List(Of Single)
+        '        Seccion.Matriz_PU = New List(Of Single)
+        '        Seccion.Matriz_MU = New List(Of Single)
+        '        Seccion.Matriz_V2 = New List(Of Single)
+        '        Seccion.Matriz_V3 = New List(Of Single)
 
-            For i = 0 To Proyecto.Pilas.ListaElementos.Count - 1
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(0).Value = Proyecto.Pilas.ListaElementos(i).Name_Label
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(1).Value = Proyecto.Pilas.ListaElementos(i).Name_Elemento
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(2).Value = Proyecto.Pilas.ListaElementos(i).Df
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(3).Value = Proyecto.Pilas.ListaElementos(i).Dc
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(4).Value = Proyecto.Pilas.ListaElementos(i).Opcion_Hueca
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(5).Value = Proyecto.Pilas.ListaElementos(i).Esp_Anillo
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(6).Value = Proyecto.Pilas.ListaElementos(i).N_Barra_Long
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(8).Value = Proyecto.Pilas.ListaElementos(i).Cant_Barras_Long
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(9).Value = Proyecto.Pilas.ListaElementos(i).fc
+        '        Seccion.Matriz_Combinaciones = New List(Of String)
+        '        Seccion.Df = Convert.ToDouble(Diametro.Text)
+        '        Seccion.Dc = Convert.ToSingle(Dc.Text)
+        '        Seccion.fc = Convert.ToSingle(PagMateriales.Fc.Text)
 
-                TablaRevi.Rows.Add()
-            Next
-            If OpcionPila.Checked = True Then
-                TablaRevi.Columns(1).HeaderText = "Ps Estática [kN]"
-                TablaRevi.Columns(2).HeaderText = "Ps Dinámica [kN]"
-                TablaRevi.Columns(3).HeaderText = "Pu Estática [kN]"
-                TablaRevi.Columns(4).HeaderText = "Pu Dinámica [kN]"
-                TablaRevi.Columns(5).HeaderText = "Chequeo 1 (Ps E)"
-                TablaRevi.Columns(6).HeaderText = "Chequeo 2 (Ps D)"
-                TablaRevi.Columns(7).HeaderText = "Chequeo 3 (Pu E)"
-                TablaRevi.Columns(8).HeaderText = "Chequeo 4 (Pu D)"
-                TablaRevi.Columns(9).HeaderText = "σ Transmitido Estático [kN/m2]"
-                TablaRevi.Columns(10).HeaderText = "σ Transmitido Dinámico [kN/m2]"
-                TablaRevi.Columns(11).HeaderText = "σAdm/σTrans Estático"
-                TablaRevi.Columns(12).HeaderText = "σAdm/σTrans Dinámico"
-                TablaRevi.Columns(13).HeaderText = "φVn [kN]"
-                TablaRevi.Columns(14).HeaderText = "Vu [kN]"
-                TablaRevi.Columns(15).HeaderText = "φVn/Vu"
-                TablaRevi.Columns(16).HeaderText = "Chequeo V2"
-                TablaRevi.Columns(17).HeaderText = "Chequeo V3"
-                TablaRevi.Columns(18).HeaderText = "ρ Col [%]"
-                TablaRevi.Columns(19).HeaderText = "Capacidad/Demanda (Cortes)"
-                TablaRevi.Columns(20).HeaderText = "Capacidad/Demanda (Recta)"
-            End If
-            ComboElementos.Visible = True
-        Catch ex As Exception
-        Finally
-            Form_01_00_PagInfoPilas.Show()
-        End Try
+        '        If Op_Seccion.Text = "Hueca" Then
+        '            Seccion.Opcion_Hueca = "Si"
+        '            Seccion.Esp_Anillo = Convert.ToSingle(T_Espesor.Text)
+        '        Else
+        '            Seccion.Opcion_Hueca = "No"
+        '            Seccion.Esp_Anillo = 0
+        '        End If
+
+        '        Seccion.N_Barra_Long = RefuerzoLong.Text
+        '        Seccion.Cant_Barras_Long = Convert.ToInt32(NumRLong.Text)
+        '        Seccion.N_Barra_Trans = RefuerzoTransv.Text
+        '        Seccion.Separacion_Trans = Convert.ToSingle(Separacion.Text)
+
+        '        Seccion.Ps_Estatica = 0
+        '        Seccion.Ps_Dinamica = 0
+        '        Seccion.Pu_Estatica = 0
+        '        Seccion.Pu_Dinamica = 0
+
+        '        For j = 2 To NumServ
+        '            If TablaCServicio.Rows(j).Cells(ColLab).Value = Name Then
+        '                Seccion.Matriz_PS.Add(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
+        '                Seccion.Matriz_MS.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM3).Value))))
+        '                If Len(TablaCServicio.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
+        '                    If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Estatica) Then
+        '                        Seccion.Ps_Estatica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                Else
+        '                    If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Dinamica) Then
+        '                        Seccion.Ps_Dinamica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                End If
+        '            End If
+        '        Next
+        '        For j = 2 To NumUlti
+        '            If TablaCUltimas.Rows(j).Cells(ColLab).Value = Name Then
+        '                Seccion.Matriz_PU.Add(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
+        '                Seccion.Matriz_MU.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM3).Value))))
+        '                Seccion.Matriz_V2.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V2).Value)))
+        '                Seccion.Matriz_V3.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V3).Value)))
+
+        '                Seccion.Matriz_Combinaciones.Add(TablaCUltimas.Rows(j).Cells(ColComb).Value)
+        '                If Len(TablaCUltimas.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
+        '                    If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Estatica) Then
+        '                        Seccion.Pu_Estatica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                Else
+        '                    If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Dinamica) Then
+        '                        Seccion.Pu_Dinamica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                End If
+        '            End If
+        '        Next
+        '        Proyecto.Elementos.Pilas.ListaElementos.Add(Seccion)
+        '    End If
+        'Next
+
+        For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count - 1
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Label
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(1).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(2).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Df
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(3).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Dc
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(4).Value = Proyecto.Elementos.Pilas.ListaElementos(i).L_Pila
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(5).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Opcion_Hueca
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(6).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Esp_Anillo
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(7).Value = Proyecto.Elementos.Pilas.ListaElementos(i).N_Barra_Long
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(9).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Cant_Barras_Long
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(10).Value = Proyecto.Elementos.Pilas.ListaElementos(i).fc
+
+            TablaRevi.Rows.Add()
+        Next
+
+        If OpcionPila.Checked = True Then
+            TablaRevi.Columns(1).HeaderText = "Ps Estática [kN]"
+            TablaRevi.Columns(2).HeaderText = "Ps Dinámica [kN]"
+            TablaRevi.Columns(3).HeaderText = "Pu Estática [kN]"
+            TablaRevi.Columns(4).HeaderText = "Pu Dinámica [kN]"
+            TablaRevi.Columns(5).HeaderText = "Pu Tracción [kN]"
+            TablaRevi.Columns(6).HeaderText = "Chequeo 1 (Ps E)"
+            TablaRevi.Columns(7).HeaderText = "Chequeo 2 (Ps D)"
+            TablaRevi.Columns(8).HeaderText = "Chequeo 3 (Pu E)"
+            TablaRevi.Columns(9).HeaderText = "Chequeo 4 (Pu D)"
+            TablaRevi.Columns(10).HeaderText = "Chequeo 5 (Pu T)"
+            TablaRevi.Columns(11).HeaderText = "σ Transmitido Estático [kN/m2]"
+            TablaRevi.Columns(12).HeaderText = "σ Transmitido Dinámico [kN/m2]"
+            TablaRevi.Columns(13).HeaderText = "σAdm/σTrans Estático"
+            TablaRevi.Columns(14).HeaderText = "σAdm/σTrans Dinámico"
+            TablaRevi.Columns(15).HeaderText = "φVn [kN]"
+            TablaRevi.Columns(16).HeaderText = "Vu [kN]"
+            TablaRevi.Columns(17).HeaderText = "φVn/Vu"
+            TablaRevi.Columns(18).HeaderText = "Chequeo V2"
+            TablaRevi.Columns(19).HeaderText = "Chequeo V3"
+            TablaRevi.Columns(20).HeaderText = "ρ Col [%]"
+            TablaRevi.Columns(21).HeaderText = "Capacidad/Demanda (Cortes)"
+            TablaRevi.Columns(22).HeaderText = "Capacidad/Demanda (Recta)"
+        End If
+
+        ComboElementos.Visible = True
+
+        'Catch ex As Exception
+        'Finally
+
+        Form_01_00_PagInfoPilas.Show()
+
+        'End Try
         Me.Cursor = Cursors.Arrow
+
+
     End Sub
     Public Sub PictureBox4_Paint(ByVal sender As Object, ByVal e As PaintEventArgs)
-        Dim D As Single = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Dc
+
+        Dim D As Single = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Dc
         Dim R As Single = 0.075
-        Dim Num_Ref_Long As String = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).N_Barra_Long
-        Dim Cant_Ref_Long As Single = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Cant_Barras_Long
-        Dim Op_Hueca As String = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Opcion_Hueca
-        Dim Esp_Anillo As Single = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Esp_Anillo
-        Dim cuantia As Single = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Cuantia
+        Dim Num_Ref_Long As String = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).N_Barra_Long
+        Dim Cant_Ref_Long As Single = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Cant_Barras_Long
+        Dim Op_Hueca As String = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Opcion_Hueca
+        Dim Esp_Anillo As Single = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Esp_Anillo
+        Dim cuantia As Single = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Cuantia
 
         Dim g As Graphics = e.Graphics
         pictureBox4.BackColor = Color.White
@@ -296,7 +349,7 @@ Public Class Form_01_PagPilas
             'objRange = shXL.Range("C1:D600")
             'objExcelChart.SetSourceData(objRange)
 
-            '---------------------------- Exportar Datos en la hoja 2 - (RESUMEN PROYECTO) -----------------------------
+            '---------------------------- Exportar Datos en la hoja 2 - (RESUMEN Proyecto.Elementos) -----------------------------
             If OpcionPila.Checked = True Then
                 Archivo = "RevisiónPilas"
                 shxl4 = wbXL.Sheets.Add()
@@ -458,13 +511,13 @@ Public Class Form_01_PagPilas
             shXL3.Cells(2, 5) = "Cantidad de Barras"
             shXL3.Cells(2, 6) = "f'c (MPa)"
 
-            For i = 0 To Proyecto.Pilas.ListaElementos.Count - 1
-                shXL3.Cells(3 + i, 1) = Proyecto.Pilas.ListaElementos(i).Name_Elemento
-                shXL3.Cells(3 + i, 2) = Math.Round(Proyecto.Pilas.ListaElementos(i).Df, 2)
-                shXL3.Cells(3 + i, 3) = Math.Round(Proyecto.Pilas.ListaElementos(i).Dc, 2)
-                shXL3.Cells(3 + i, 4) = Proyecto.Pilas.ListaElementos(i).N_Barra_Long
-                shXL3.Cells(3 + i, 5) = Proyecto.Pilas.ListaElementos(i).Cant_Barras_Long
-                shXL3.Cells(3 + i, 6) = Proyecto.Pilas.ListaElementos(i).fc
+            For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count - 1
+                shXL3.Cells(3 + i, 1) = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento
+                shXL3.Cells(3 + i, 2) = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Df, 2)
+                shXL3.Cells(3 + i, 3) = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Dc, 2)
+                shXL3.Cells(3 + i, 4) = Proyecto.Elementos.Pilas.ListaElementos(i).N_Barra_Long
+                shXL3.Cells(3 + i, 5) = Proyecto.Elementos.Pilas.ListaElementos(i).Cant_Barras_Long
+                shXL3.Cells(3 + i, 6) = Proyecto.Elementos.Pilas.ListaElementos(i).fc
 
                 shXL3.Range("A" & i + 3).BorderAround2(1, 2, 2, Color.FromArgb(210, 210, 210))
                 shXL3.Range("B" & i + 3).BorderAround2(1, 2, 2, Color.FromArgb(210, 210, 210))
@@ -481,7 +534,7 @@ Public Class Form_01_PagPilas
             Dim saveFileDialog1 As New SaveFileDialog()
             saveFileDialog1.Title = "Guardar documento Excel"
             saveFileDialog1.Filter = "Excel File|*.xlsx"
-            saveFileDialog1.FileName = Convert.ToString(Archivo & "_Proyecto -" & PagInfoGeneral.NameProject.Text)
+            saveFileDialog1.FileName = Convert.ToString(Archivo & "_Proyecto.Elementos -" & PagInfoGeneral.NameProject.Text)
             saveFileDialog1.ShowDialog()
             wbXL.SaveAs(saveFileDialog1.FileName)
             appXL.Workbooks.Close()
@@ -497,15 +550,15 @@ Public Class Form_01_PagPilas
 
     '---------------------- LLAMAR Y LLENAR CADA DATAGRIDVIEW CON LAS TABLAS DE EXCEL ------------------------------- 
     Private Sub TipoFrameToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Frame.Click
-        Proyecto.Pilas.Opcion_Elemento = "Frame"
+        Proyecto.Elementos.Pilas.Opcion_Elemento = "Frame"
         Abrir_Importar_Excel()
     End Sub
     Private Sub TipoPuntoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Puntos.Click
-        Proyecto.Pilas.Opcion_Elemento = "Punto"
+        Proyecto.Elementos.Pilas.Opcion_Elemento = "Punto"
         Abrir_Importar_Excel()
     End Sub
     Private Sub TipoPierToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Pier.Click
-        Proyecto.Pilas.Opcion_Elemento = "Pier"
+        Proyecto.Elementos.Pilas.Opcion_Elemento = "Pier"
         Abrir_Importar_Excel()
     End Sub
 
@@ -517,13 +570,14 @@ Public Class Form_01_PagPilas
         End Try
     End Sub
     Private Sub ComboElementos_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboElementos.SelectedIndexChanged
-        Dim FT As Double = -1
-        If Proyecto.Pilas.Opcion_Elemento = "Pier" Then
+        Dim FT As Double = 1
+        If Proyecto.Elementos.Pilas.Opcion_Elemento = "Pier" Then
             FT = -1
         End If
-        If Proyecto.Pilas.Opcion_Elemento = "Punto" Then
+        If Proyecto.Elementos.Pilas.Opcion_Elemento = "Punto" Then
             FT = 1
         End If
+
         Try
             TablaDI.Rows.Clear()
 
@@ -552,28 +606,29 @@ Public Class Form_01_PagPilas
             series.Color = Color.Orange
             Demandas.Color = Color.Black
             Demandas.BorderWidth = 2
+
             Dim Mm As Integer = 0
 
-            For i = 0 To Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn.Count - 1
-                series.Points.AddXY(Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn(i), Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn(i))
-                Serie2.Points.AddXY(Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Mn(i), Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Pn(i))
-                TablaDI.Rows.Add(Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Pn(i), Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Mn(i), Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn(i), Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn(i))
-                If Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn.Max = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn(i) Then
+            For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn.Count - 1
+                series.Points.AddXY(Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn(i), Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn(i))
+                Serie2.Points.AddXY(Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Mn(i), Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Pn(i))
+                TablaDI.Rows.Add(Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Pn(i), Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_Mn(i), Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn(i), Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn(i))
+                If Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn.Max = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn(i) Then
                     Mm = i
                 End If
             Next
 
-            For fi = 0 To Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_MU.Count - 1
-                Demandas.Points.AddXY(Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_MU(fi), FT * Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_PU(fi))
+            For fi = 0 To Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_MU.Count - 1
+                Demandas.Points.AddXY(Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_MU(fi), FT * Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_PU(fi))
             Next
 
-            ResumenDI.Rows(0).Cells(0).Value = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn.Max
+            ResumenDI.Rows(0).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn.Max
             ResumenDI.Rows(0).Cells(1).Value = 0
 
-            ResumenDI.Rows(1).Cells(0).Value = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn(Mm)
-            ResumenDI.Rows(1).Cells(1).Value = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn.Max
+            ResumenDI.Rows(1).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn(Mm)
+            ResumenDI.Rows(1).Cells(1).Value = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiMn.Max
 
-            ResumenDI.Rows(2).Cells(0).Value = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn.Min
+            ResumenDI.Rows(2).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text).Matriz_DI_PhiPn.Min
             ResumenDI.Rows(2).Cells(1).Value = 0
 
             Panel2.Controls.Add(pictureBox4)
@@ -582,7 +637,7 @@ Public Class Form_01_PagPilas
             pictureBox4.Location = New Point(Panel2.Width / 2 - pictureBox4.Width / 2, 11)
             AddHandler pictureBox4.Paint, AddressOf PictureBox4_Paint
 
-            Dim Pila As Elemento_Pila = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text)
+            Dim Pila As Elemento_Pila = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Elemento = ComboElementos.Text)
             Diametro.Text = Pila.Df
             Dc.Text = Pila.Dc
             NumRLong.Text = Pila.Cant_Barras_Long
@@ -606,47 +661,54 @@ Public Class Form_01_PagPilas
     Private Sub Op_Seccion_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Op_Seccion.SelectedIndexChanged
         Try
             If Op_Seccion.Text = "Maciza" Then
-                GroupBox1.Size = New Size(285, 110)
-                Label3.Top = 53
-                Recubrimiento.Top = 50
-                Label5.Top = 53
-                Label11.Top = 81
-                Dc.Top = 78
-                Label12.Top = 81
-                Label16.Top = 109
-                T_Espesor.Top = 106
-                Label15.Top = 109
-
-                Label16.Visible = False
-                T_Espesor.Visible = False
-                Label15.Visible = False
-                GroupBox1.Location = New Point(10, GroupBox4.Top + GroupBox4.Height + 10)
-                GroupBox2.Location = New Point(10, GroupBox1.Top + GroupBox1.Height + 10)
-                GroupBox6.Location = New Point(10, GroupBox2.Top + GroupBox2.Height + 10)
+                T_Espesor.ReadOnly = True
             Else
-
-                Label3.Top = 81
-                Recubrimiento.Top = 78
-                Label5.Top = 81
-
-                Label11.Top = 109
-                Dc.Top = 106
-                Label12.Top = 109
-
-                Label16.Top = 53
-                T_Espesor.Top = 50
-                Label15.Top = 53
-
-                Label16.Visible = True
-                T_Espesor.Visible = True
-                Label15.Visible = True
-
-                GroupBox1.Size = New Size(285, 140)
-                GroupBox1.Location = New Point(10, GroupBox4.Top + GroupBox4.Height + 10)
-                GroupBox2.Location = New Point(10, GroupBox1.Top + GroupBox1.Height + 10)
-                GroupBox6.Location = New Point(10, GroupBox2.Top + GroupBox2.Height + 10)
-
+                T_Espesor.ReadOnly = False
             End If
+
+
+            'If Op_Seccion.Text = "Maciza" Then
+            '    GroupBox1.Size = New Size(285, 110)
+            '    Label3.Top = 53
+            '    Recubrimiento.Top = 50
+            '    Label5.Top = 53
+            '    Label11.Top = 81
+            '    Dc.Top = 78
+            '    Label12.Top = 81
+            '    Label16.Top = 109
+            '    T_Espesor.Top = 106
+            '    Label15.Top = 109
+
+            '    Label16.Visible = False
+            '    T_Espesor.Visible = False
+            '    Label15.Visible = False
+            '    GroupBox1.Location = New Point(10, GroupBox4.Top + GroupBox4.Height + 10)
+            '    GroupBox2.Location = New Point(10, GroupBox1.Top + GroupBox1.Height + 10)
+            '    GroupBox6.Location = New Point(10, GroupBox2.Top + GroupBox2.Height + 10)
+            'Else
+
+            '    Label3.Top = 81
+            '    Recubrimiento.Top = 78
+            '    Label5.Top = 81
+
+            '    Label11.Top = 109
+            '    Dc.Top = 106
+            '    Label12.Top = 109
+
+            '    Label16.Top = 53
+            '    T_Espesor.Top = 50
+            '    Label15.Top = 53
+
+            '    Label16.Visible = True
+            '    T_Espesor.Visible = True
+            '    Label15.Visible = True
+
+            '    GroupBox1.Size = New Size(285, 140)
+            '    GroupBox1.Location = New Point(10, GroupBox4.Top + GroupBox4.Height + 10)
+            '    GroupBox2.Location = New Point(10, GroupBox1.Top + GroupBox1.Height + 10)
+            '    GroupBox6.Location = New Point(10, GroupBox2.Top + GroupBox2.Height + 10)
+
+            'End If
         Catch ex As Exception
 
         End Try
@@ -656,7 +718,7 @@ Public Class Form_01_PagPilas
         Dim SaveAs As New SaveFileDialog
         SaveAs.Filter = "Archivo|*.esm"
         SaveAs.Title = "Guardar Archivo"
-        SaveAs.FileName = Convert.ToString("RevisiónPilas_Proyecto - " & PagInfoGeneral.NameProject.Text)
+        SaveAs.FileName = Convert.ToString("RevisiónPilas_Proyecto.Elementos - " & PagInfoGeneral.NameProject.Text)
         SaveAs.ShowDialog()
         If SaveAs.FileName <> String.Empty Then
             Proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
@@ -686,10 +748,10 @@ Public Class Form_01_PagPilas
     End Sub
 
     Private Sub GuardarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Save_Pilas.Click
-        Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+        Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto.Elementos)
     End Sub
     Private Sub GuardarComoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SaveAs_Pilas.Click
-        SaveAs(Proyecto)
+        SaveAs(Proyecto.Elementos)
     End Sub
     Private Sub AbrirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Open_Pilas.Click
         Open()
@@ -717,50 +779,50 @@ Public Class Form_01_PagPilas
         TablaRevi.Columns(19).HeaderText = "Capacidad/Demanda (Cortes)"
         TablaRevi.Columns(20).HeaderText = "Capacidad/Demanda (Recta)"
 
-        For i = 0 To Proyecto.Pilas.ListaElementos.Count() - 1
+        For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count() - 1
             TablaRevi.Rows.Add()
-            ComboElementos.Items.Add(Proyecto.Pilas.ListaElementos(i).Name_Elemento)
+            ComboElementos.Items.Add(Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento)
             Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
         Next
 
-        For i = 0 To Proyecto.Pilas.ListaElementos.Count() - 1
-            TablaRevi.Rows(i).Cells(0).Value = Proyecto.Pilas.ListaElementos(i).Name_Elemento
-            TablaRevi.Rows(i).Cells(1).Value = Proyecto.Pilas.ListaElementos(i).Ps_Estatica
-            TablaRevi.Rows(i).Cells(2).Value = Proyecto.Pilas.ListaElementos(i).Ps_Dinamica
-            TablaRevi.Rows(i).Cells(3).Value = Proyecto.Pilas.ListaElementos(i).Pu_Estatica
-            TablaRevi.Rows(i).Cells(4).Value = Proyecto.Pilas.ListaElementos(i).Pu_Dinamica
-            TablaRevi.Rows(i).Cells(5).Value = Proyecto.Pilas.ListaElementos(i).Check1_PsE
-            TablaRevi.Rows(i).Cells(6).Value = Proyecto.Pilas.ListaElementos(i).Check2_PsD
-            TablaRevi.Rows(i).Cells(7).Value = Proyecto.Pilas.ListaElementos(i).Check3_PuE
-            TablaRevi.Rows(i).Cells(8).Value = Proyecto.Pilas.ListaElementos(i).Check4_PuD
-            TablaRevi.Rows(i).Cells(9).Value = Proyecto.Pilas.ListaElementos(i).EsfE_Trans
-            TablaRevi.Rows(i).Cells(10).Value = Proyecto.Pilas.ListaElementos(i).EsfD_Trans
-            TablaRevi.Rows(i).Cells(11).Value = Proyecto.Pilas.ListaElementos(i).Relacion_EsfE
-            TablaRevi.Rows(i).Cells(12).Value = Proyecto.Pilas.ListaElementos(i).Relacion_EsfD
-            TablaRevi.Rows(i).Cells(13).Value = Proyecto.Pilas.ListaElementos(i).Vn
-            TablaRevi.Rows(i).Cells(14).Value = Proyecto.Pilas.ListaElementos(i).Vu
-            TablaRevi.Rows(i).Cells(15).Value = Proyecto.Pilas.ListaElementos(i).FactorShear
-            TablaRevi.Rows(i).Cells(16).Value = Proyecto.Pilas.ListaElementos(i).Check_V2
-            TablaRevi.Rows(i).Cells(17).Value = Proyecto.Pilas.ListaElementos(i).Check_V3
-            TablaRevi.Rows(i).Cells(18).Value = Proyecto.Pilas.ListaElementos(i).Cuantia
-            TablaRevi.Rows(i).Cells(19).Value = Proyecto.Pilas.ListaElementos(i).Factor_CortesH
-            TablaRevi.Rows(i).Cells(20).Value = Proyecto.Pilas.ListaElementos(i).Factor_Diagonal
+        For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count() - 1
+            TablaRevi.Rows(i).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento
+            TablaRevi.Rows(i).Cells(1).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Ps_Estatica
+            TablaRevi.Rows(i).Cells(2).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Ps_Dinamica
+            TablaRevi.Rows(i).Cells(3).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Pu_Estatica
+            TablaRevi.Rows(i).Cells(4).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Pu_Dinamica
+            TablaRevi.Rows(i).Cells(5).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check1_PsE
+            TablaRevi.Rows(i).Cells(6).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check2_PsD
+            TablaRevi.Rows(i).Cells(7).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check3_PuE
+            TablaRevi.Rows(i).Cells(8).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check4_PuD
+            TablaRevi.Rows(i).Cells(9).Value = Proyecto.Elementos.Pilas.ListaElementos(i).EsfE_Trans
+            TablaRevi.Rows(i).Cells(10).Value = Proyecto.Elementos.Pilas.ListaElementos(i).EsfD_Trans
+            TablaRevi.Rows(i).Cells(11).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Relacion_EsfE
+            TablaRevi.Rows(i).Cells(12).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Relacion_EsfD
+            TablaRevi.Rows(i).Cells(13).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Vn
+            TablaRevi.Rows(i).Cells(14).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Vu
+            TablaRevi.Rows(i).Cells(15).Value = Proyecto.Elementos.Pilas.ListaElementos(i).FactorShear
+            TablaRevi.Rows(i).Cells(16).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check_V2
+            TablaRevi.Rows(i).Cells(17).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check_V3
+            TablaRevi.Rows(i).Cells(18).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Cuantia
+            TablaRevi.Rows(i).Cells(19).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Factor_CortesH
+            TablaRevi.Rows(i).Cells(20).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Diagonal
 
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(0).Value = Proyecto.Pilas.ListaElementos(i).Name_Label
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(1).Value = Proyecto.Pilas.ListaElementos(i).Name_Elemento
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(2).Value = Proyecto.Pilas.ListaElementos(i).Df
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(3).Value = Proyecto.Pilas.ListaElementos(i).Dc
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(4).Value = Proyecto.Pilas.ListaElementos(i).Opcion_Hueca
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(5).Value = Proyecto.Pilas.ListaElementos(i).Esp_Anillo
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(6).Value = Proyecto.Pilas.ListaElementos(i).N_Barra_Long
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(8).Value = Proyecto.Pilas.ListaElementos(i).Cant_Barras_Long
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(9).Value = Proyecto.Pilas.ListaElementos(i).fc
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Label
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(1).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(2).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Df
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(3).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Dc
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(4).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Opcion_Hueca
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(5).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Esp_Anillo
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(6).Value = Proyecto.Elementos.Pilas.ListaElementos(i).N_Barra_Long
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(8).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Cant_Barras_Long
+            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(9).Value = Proyecto.Elementos.Pilas.ListaElementos(i).fc
         Next
-        ComboElementos.Text = Proyecto.Pilas.ListaElementos(0).Name_Elemento
+        ComboElementos.Text = Proyecto.Elementos.Pilas.ListaElementos(0).Name_Elemento
         ComboElementos.Visible = True
 
-        EadmEst.Text = Proyecto.Pilas.Esf_Adm_Est
-        EadmDin.Text = Proyecto.Pilas.Esf_Adm_Din
+        EadmEst.Text = Proyecto.Elementos.Pilas.Esf_Adm_Est
+        EadmDin.Text = Proyecto.Elementos.Pilas.Esf_Adm_Din
 
     End Sub
     Public Sub BorrarDatos()
@@ -824,96 +886,212 @@ Public Class Form_01_PagPilas
 
     Private Sub ActualizarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ActualizarDemandasToolStripMenuItem.Click
 
-        Abrir_Importar_Excel()
+        'Abrir_Importar_Excel()
 
-        Dim ColLab As Integer = 1
-        Dim ColComb As Integer = 3
-        Dim ColP As Integer = 6
-        Dim ColM2 As Integer = 7
-        Dim ColM3 As Integer = 8
-        Dim FT As Integer = 1
-        Dim V2 As Integer = 4
-        Dim V3 As Integer = 5
+        'Dim ColLab As Integer = 1
+        'Dim ColComb As Integer = 3
+        'Dim ColP As Integer = 6
+        'Dim ColM2 As Integer = 7
+        'Dim ColM3 As Integer = 8
+        'Dim FT As Integer = 1
+        'Dim V2 As Integer = 4
+        'Dim V3 As Integer = 5
 
-        If Proyecto.Pilas.Opcion_Elemento = "Frame" Then
-            ColLab = 1
-            ColComb = 3
-            ColP = 5
-            ColM2 = 9
-            ColM3 = 10
-            V2 = 6
-            V3 = 7
-            FT = -1
-        End If
-        If Proyecto.Pilas.Opcion_Elemento = "Pier" Then
-            ColComb = 2
-            ColP = 4
-            ColM2 = 8
-            ColM3 = 9
-            V2 = 5
-            V3 = 6
-            FT = -1
-        End If
+        'If Proyecto.Elementos.Pilas.Opcion_Elemento = "Frame" Then
+        '    ColLab = 1
+        '    ColComb = 3
+        '    ColP = 5
+        '    ColM2 = 9
+        '    ColM3 = 10
+        '    V2 = 6
+        '    V3 = 7
+        '    FT = -1
+        'End If
+        'If Proyecto.Elementos.Pilas.Opcion_Elemento = "Pier" Then
+        '    ColComb = 2
+        '    ColP = 4
+        '    ColM2 = 8
+        '    ColM3 = 9
+        '    V2 = 5
+        '    V3 = 6
+        '    FT = -1
+        'End If
 
-        Dim NumServ As Double = TablaCServicio.Rows(0).Cells(15).Value + 1
-        Dim NumUlti As Double = TablaCUltimas.Rows(0).Cells(15).Value + 1
-        Dim Name As String = ""
+        'Dim NumServ As Double = TablaCServicio.Rows(0).Cells(15).Value + 1
+        'Dim NumUlti As Double = TablaCUltimas.Rows(0).Cells(15).Value + 1
+        'Dim Name As String = ""
 
-        For i = 2 To NumUlti
-            If TablaCUltimas.Rows(i).Cells(ColLab).Value <> Name Then
+        'For i = 2 To NumUlti
+        '    If TablaCUltimas.Rows(i).Cells(ColLab).Value <> Name Then
 
-                Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
+        '        Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
 
-                Dim Seccion = Proyecto.Pilas.ListaElementos.Find(Function(p) p.Name_Label = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value))
+        '        Dim Seccion = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Label = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value))
 
-                Seccion.Matriz_PS = New List(Of Single)
-                Seccion.Matriz_MS = New List(Of Single)
-                Seccion.Matriz_PU = New List(Of Single)
-                Seccion.Matriz_MU = New List(Of Single)
-                Seccion.Matriz_V2 = New List(Of Single)
-                Seccion.Matriz_V3 = New List(Of Single)
+        '        Seccion.Matriz_PS = New List(Of Single)
+        '        Seccion.Matriz_MS = New List(Of Single)
+        '        Seccion.Matriz_PU = New List(Of Single)
+        '        Seccion.Matriz_MU = New List(Of Single)
+        '        Seccion.Matriz_V2 = New List(Of Single)
+        '        Seccion.Matriz_V3 = New List(Of Single)
 
-                Seccion.Matriz_Combinaciones = New List(Of String)
-                Seccion.Ps_Estatica = 0
-                Seccion.Ps_Dinamica = 0
-                Seccion.Pu_Estatica = 0
-                Seccion.Pu_Dinamica = 0
+        '        Seccion.Matriz_Combinaciones = New List(Of String)
+        '        Seccion.Ps_Estatica = 0
+        '        Seccion.Ps_Dinamica = 0
+        '        Seccion.Pu_Estatica = 0
+        '        Seccion.Pu_Dinamica = 0
 
-                For j = 2 To NumServ
-                    If TablaCServicio.Rows(j).Cells(ColLab).Value = Seccion.Name_Label Then
-                        Seccion.Matriz_PS.Add(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-                        Seccion.Matriz_MS.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM3).Value))))
-                        If Len(TablaCServicio.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
-                            If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Estatica) Then
-                                Seccion.Ps_Estatica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-                            End If
-                        Else
-                            If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Dinamica) Then
-                                Seccion.Ps_Dinamica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-                            End If
-                        End If
-                    End If
-                Next
-                For j = 2 To NumUlti
-                    If TablaCUltimas.Rows(j).Cells(ColLab).Value = Seccion.Name_Label Then
-                        Seccion.Matriz_PU.Add(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-                        Seccion.Matriz_MU.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM3).Value))))
-                        Seccion.Matriz_V2.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V2).Value)))
-                        Seccion.Matriz_V3.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V3).Value)))
+        '        For j = 2 To NumServ
+        '            If TablaCServicio.Rows(j).Cells(ColLab).Value = Seccion.Name_Label Then
+        '                Seccion.Matriz_PS.Add(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
+        '                Seccion.Matriz_MS.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM3).Value))))
+        '                If Len(TablaCServicio.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
+        '                    If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Estatica) Then
+        '                        Seccion.Ps_Estatica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                Else
+        '                    If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Dinamica) Then
+        '                        Seccion.Ps_Dinamica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                End If
+        '            End If
+        '        Next
+        '        For j = 2 To NumUlti
+        '            If TablaCUltimas.Rows(j).Cells(ColLab).Value = Seccion.Name_Label Then
+        '                Seccion.Matriz_PU.Add(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
+        '                Seccion.Matriz_MU.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM3).Value))))
+        '                Seccion.Matriz_V2.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V2).Value)))
+        '                Seccion.Matriz_V3.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V3).Value)))
 
-                        Seccion.Matriz_Combinaciones.Add(TablaCUltimas.Rows(j).Cells(ColComb).Value)
-                        If Len(TablaCUltimas.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
-                            If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Estatica) Then
-                                Seccion.Pu_Estatica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-                            End If
-                        Else
-                            If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Dinamica) Then
-                                Seccion.Pu_Dinamica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-                            End If
-                        End If
-                    End If
-                Next
-            End If
-        Next
+        '                Seccion.Matriz_Combinaciones.Add(TablaCUltimas.Rows(j).Cells(ColComb).Value)
+        '                If Len(TablaCUltimas.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
+        '                    If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Estatica) Then
+        '                        Seccion.Pu_Estatica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                Else
+        '                    If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Dinamica) Then
+        '                        Seccion.Pu_Dinamica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
+        '                    End If
+        '                End If
+        '            End If
+        '        Next
+        '    End If
+        'Next
+
+
+
     End Sub
+
+    Private Sub ImportarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarDemandasToolStripMenuItem.Click
+
+        Dim openFD As New OpenFileDialog()
+        With openFD
+            .Title = "Seleccionar archivo de resultados ETABS"
+            .Filter = "Archivos Excel (*.xls;*.xlsx)|*.xls;*.xlsx|Todos los archivos (*.*)|*.*"
+            .Multiselect = False
+
+            If .ShowDialog() = DialogResult.OK Then
+                Dim path As String = .FileName
+                Me.Cursor = Cursors.WaitCursor
+
+                Try
+                    ' Leer cada hoja
+                    Proyecto.Elementos.Pilas.Tabla_JointReactions = LeerHojaExcel(path, "Joint Reactions")
+
+                    MsgBox("Importación completada correctamente.", MsgBoxStyle.Information)
+
+                    Proyecto.Elementos.Pilas.Reactions = DataTableToReactions(Proyecto.Elementos.Pilas.Tabla_JointReactions)
+
+                    ' 🔹 Extraer combinaciones únicas
+                    Proyecto.Elementos.Pilas.Lista_Combinaciones = Proyecto.Elementos.Pilas.Reactions.Select(Function(r) r.LoadCase) _
+                                                        .Where(Function(x) Not String.IsNullOrWhiteSpace(x)) _
+                                                        .Distinct() _
+                                                        .OrderBy(Function(x) x) _
+                                                        .ToList()
+
+
+                    For Each Combinacion As String In Proyecto.Elementos.Pilas.Lista_Combinaciones
+                        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Combinacion)
+                    Next
+
+                    Form_Opciones_Combinaciones.OpcionLlamado = "Pilas"
+
+                    Form_Opciones_Combinaciones.Evaluacion = "Grav_Servicio"
+
+                    Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Gravitacionales de Servicio"
+
+                    Form_Opciones_Combinaciones.ShowDialog()
+
+                    ' Este código ejecuta después de que el formulario inicial se cierra con OK
+                    If Form_Opciones_Combinaciones.DialogResult = DialogResult.OK Then
+                        ' Limpiar el ListBox de combinaciones
+                        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+                        ' Agregar las nuevas combinaciones sísmicas
+                        For Each Combinacion As String In Proyecto.Elementos.Pilas.Lista_Combinaciones
+                            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Combinacion)
+                        Next
+
+                        ' Cambiar los valores de OpcionLlamado y Evaluacion para combinaciones de diseño
+                        Form_Opciones_Combinaciones.OpcionLlamado = "Pilas"
+                        Form_Opciones_Combinaciones.Evaluacion = "Grav_Design"
+
+                        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Gravitacionales de Diseño"
+                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+                        ' Mostrar nuevamente el formulario con combinaciones sísmicas
+                        Form_Opciones_Combinaciones.ShowDialog()
+
+
+                        ' Cambiar los valores de OpcionLlamado y Evaluacion para combinaciones sismicas de servicio
+                        Form_Opciones_Combinaciones.OpcionLlamado = "Pilas"
+                        Form_Opciones_Combinaciones.Evaluacion = "Sismicas_Servicio"
+
+                        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Sismicas de Servicio"
+                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+                        ' Mostrar nuevamente el formulario con combinaciones sísmicas
+                        Form_Opciones_Combinaciones.ShowDialog()
+
+
+                        ' Cambiar los valores de OpcionLlamado y Evaluacion para combinaciones sismicas de Diseño
+                        Form_Opciones_Combinaciones.OpcionLlamado = "Pilas"
+                        Form_Opciones_Combinaciones.Evaluacion = "Sismicas_Design"
+
+                        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Sismicas de Diseño"
+                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+                        ' Mostrar nuevamente el formulario con combinaciones sísmicas
+                        Form_Opciones_Combinaciones.ShowDialog()
+
+                        ' Cambiar los valores de OpcionLlamado y Evaluacion para combinaciones sismicas de Tracción
+                        Form_Opciones_Combinaciones.OpcionLlamado = "Pilas"
+                        Form_Opciones_Combinaciones.Evaluacion = "Comb_Traccion"
+
+                        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones de Tracción"
+                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+                        ' Mostrar nuevamente el formulario con combinaciones sísmicas
+                        Form_Opciones_Combinaciones.ShowDialog()
+
+                    End If
+
+                    MsgBox("Importación completada.", MsgBoxStyle.Information)
+
+                Catch ex As Exception
+                    MsgBox("Error al importar: " & ex.Message, MsgBoxStyle.Critical)
+                Finally
+                    Me.Cursor = Cursors.Arrow
+                End Try
+            End If
+        End With
+
+
+
+
+
+    End Sub
+
+
 End Class

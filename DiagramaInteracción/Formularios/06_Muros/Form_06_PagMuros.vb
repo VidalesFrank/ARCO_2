@@ -1,9 +1,4 @@
 ﻿Imports System.IO
-Imports System.Data.OleDb
-Imports System.Drawing
-Imports Microsoft.ReportingServices.Rendering.WordRenderer.WordOpenXmlRenderer.Parser.dc.elements
-Imports ARCO.ReporteInicial
-Imports System.Windows.Forms.DataVisualization.Charting
 Imports Func_Muros = ARCO.Funciones_Muros
 'Imports System.Windows.Media
 
@@ -39,7 +34,7 @@ Public Class Form_06_PagMuros
         Dim Col_Secciones = Funciones_02_Columnas.Columnas_Secciones("Pier")
         Dim Col_Fuerzas = Funciones_02_Columnas.Columnas_Fuerzas("Pier")
 
-        If proyecto.Muros.Info_Diseño = True Then
+        If proyecto.Elementos.Muros.Info_Diseño = True Then
             Tabla = Tabla_Diseño_Flexo
 
             Dim Col_Piso As Integer = 0
@@ -127,9 +122,9 @@ Public Class Form_06_PagMuros
                 Muro_.Label = Muro.Lista_Secciones(i).Name
                 Muro_.Lista_Secciones = Muro.Lista_Secciones.FindAll(Function(p) p.Name = Muro_.Name)
 
-                If proyecto.Muros.Lista_Muros.Exists(Function(p) p.Name = Muro_.Name) Then
+                If proyecto.Elementos.Muros.Lista_Muros.Exists(Function(p) p.Name = Muro_.Name) Then
                 Else
-                    proyecto.Muros.Lista_Muros.Add(Muro_)
+                    proyecto.Elementos.Muros.Lista_Muros.Add(Muro_)
                     Combo_Elementos.Items.Add(Muro_.Name)
                 End If
             Next
@@ -138,7 +133,7 @@ Public Class Form_06_PagMuros
 
         End If
 
-        If proyecto.Muros.Info_Secciones = True Then
+        If proyecto.Elementos.Muros.Info_Secciones = True Then
             Tabla = Tabla_secciones
 
             Dim Col_Piso As Integer = Col_Secciones(0)
@@ -147,7 +142,7 @@ Public Class Form_06_PagMuros
             Dim Col_B As Integer = Col_Secciones(3)
             Dim Col_H As Integer = Col_Secciones(4)
 
-            If proyecto.Muros.Lista_Muros.Count = 0 Then
+            If proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then
                 For i = 2 To Tabla.Rows.Count() - 1
                     Dim Seccion As New SeccionMuro
                     Seccion.Name = Tabla.Rows(i).Cells(Col_Name).Value
@@ -163,10 +158,10 @@ Public Class Form_06_PagMuros
                     Muro_.Label = Muro.Lista_Secciones(i).Name
                     Muro_.Lista_Secciones = Muro.Lista_Secciones.FindAll(Function(p) p.Name = Muro_.Name)
 
-                    If proyecto.Muros.Lista_Muros.Exists(Function(p) p.Name = Muro_.Name) Then
+                    If proyecto.Elementos.Muros.Lista_Muros.Exists(Function(p) p.Name = Muro_.Name) Then
                     Else
                         If Muro_ IsNot Nothing AndAlso Not String.IsNullOrEmpty(Muro_.Name) Then
-                            proyecto.Muros.Lista_Muros.Add(Muro_)
+                            proyecto.Elementos.Muros.Lista_Muros.Add(Muro_)
                             Combo_Elementos.Items.Add(Muro_.Name)
                         End If
 
@@ -176,53 +171,53 @@ Public Class Form_06_PagMuros
 
             End If
 
-            For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-                Dim Elemento As String = proyecto.Muros.Lista_Muros(i).Name
+            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+                Dim Elemento As String = proyecto.Elementos.Muros.Lista_Muros(i).Name
 
-                For Np = 0 To proyecto.Muros.Lista_Muros(i).Lista_Secciones.Count - 1
-                    Dim Name As String = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Name
-                    Dim Piso As String = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Piso
+                For Np = 0 To proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1
+                    Dim Name As String = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Name
+                    Dim Piso As String = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Piso
 
                     Dim rowIndex As Integer = Tabla.Rows.Cast(Of DataGridViewRow)().ToList().FindIndex(Function(row) If(row.Cells(0).Value?.ToString() = Piso AndAlso
                             row.Cells(1).Value?.ToString() = Name, True, False))
 
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model = Math.Min(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value)) / 1000
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model = Math.Max(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value)) / 1000
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Planos = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Planos = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(rowIndex).Cells(Col_Material).Value, 1, 2))
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model = Math.Min(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value)) / 1000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model = Math.Max(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value)) / 1000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(rowIndex).Cells(Col_Material).Value, 1, 2))
 
                     If Convert.ToSingle(Tabla.Rows(rowIndex).Cells(2).Value) > 10 Then
-                        proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = eNumeradores.eDireccion.Y
-                        proyecto.Muros.Lista_Muros(i).Direccion = eNumeradores.eDireccion.Y
+                        proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = eNumeradores.eDireccion.Y
+                        proyecto.Elementos.Muros.Lista_Muros(i).Direccion = eNumeradores.eDireccion.Y
                     Else
-                        proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = eNumeradores.eDireccion.X
-                        proyecto.Muros.Lista_Muros(i).Direccion = eNumeradores.eDireccion.X
+                        proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = eNumeradores.eDireccion.X
+                        proyecto.Elementos.Muros.Lista_Muros(i).Direccion = eNumeradores.eDireccion.X
                     End If
 
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Altura = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(15).Value)
-                    proyecto.Muros.Lista_Muros(i).Coor_X = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(10).Value)
-                    proyecto.Muros.Lista_Muros(i).Coor_Y = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(11).Value)
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Coor_Z_Bot = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(12).Value)
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Coor_Z_Top = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(15).Value)
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Altura = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(15).Value)
+                    proyecto.Elementos.Muros.Lista_Muros(i).Coor_X = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(10).Value)
+                    proyecto.Elementos.Muros.Lista_Muros(i).Coor_Y = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(11).Value)
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Coor_Z_Bot = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(12).Value)
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Coor_Z_Top = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(15).Value)
 
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 1000000
-                    proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 1000000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 1000000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 1000000
 
                 Next
 
-                Dim seccionMayorZ As SeccionMuro = proyecto.Muros.Lista_Muros(i).Lista_Secciones.OrderBy(Function(seccion) seccion.Coor_Z_Top).Last()
+                Dim seccionMayorZ As SeccionMuro = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.OrderBy(Function(seccion) seccion.Coor_Z_Top).Last()
 
-                proyecto.Muros.Lista_Muros(i).Hw = seccionMayorZ.Coor_Z_Top
-                proyecto.Muros.Lista_Muros(i).tw = proyecto.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).tw_Model
-                proyecto.Muros.Lista_Muros(i).Lw = proyecto.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).Lw_Model
-                proyecto.Muros.Lista_Muros(i).Ar = proyecto.Muros.Lista_Muros(i).Hw / proyecto.Muros.Lista_Muros(i).Lw
+                proyecto.Elementos.Muros.Lista_Muros(i).Hw = seccionMayorZ.Coor_Z_Top
+                proyecto.Elementos.Muros.Lista_Muros(i).tw = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).tw_Model
+                proyecto.Elementos.Muros.Lista_Muros(i).Lw = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).Lw_Model
+                proyecto.Elementos.Muros.Lista_Muros(i).Ar = proyecto.Elementos.Muros.Lista_Muros(i).Hw / proyecto.Elementos.Muros.Lista_Muros(i).Lw
             Next
 
             Check_Secciones.Checked = True
         End If
 
-        If proyecto.Muros.Info_Fuerzas = True Then
+        If proyecto.Elementos.Muros.Info_Fuerzas = True Then
             Tabla = Tabla_Fuerzas
 
             Dim Col_Piso As Integer = Col_Fuerzas(0)
@@ -236,124 +231,62 @@ Public Class Form_06_PagMuros
             Dim Col_M2 As Integer = Col_Fuerzas(8)
             Dim Col_M3 As Integer = Col_Fuerzas(9)
 
-            proyecto.Muros.Lista_Combinaciones_Muros.Add(Tabla.Rows(2).Cells(Col_Combinacion).Value.ToString)
+            proyecto.Elementos.Muros.Lista_Combinaciones_Muros.Add(Tabla.Rows(2).Cells(Col_Combinacion).Value.ToString)
 
             Dim valoresDistintos As List(Of String) = Tabla.Rows.OfType(Of DataGridViewRow)().Skip(1) _
                     .Select(Function(row) If(row.Cells(Col_Combinacion).Value IsNot Nothing, row.Cells(Col_Combinacion).Value.ToString(), Nothing)) _
                     .Where(Function(valor) Not String.IsNullOrEmpty(valor)).Distinct().ToList()
 
-            'For i = 0 To valoresDistintos.Count() - 1
-            '    Dim Comb As String = valoresDistintos(i)
-            '    If Not proyecto.Muros.Lista_Combinaciones_Muros.Exists(Function(p) p = Comb) Then
-            '        proyecto.Muros.Lista_Combinaciones_Muros.Add(valoresDistintos(i))
-            '    End If
-            'Next
-
-            For Each Comb As String In valoresDistintos.Except(proyecto.Muros.Lista_Combinaciones_Muros)
-                proyecto.Muros.Lista_Combinaciones_Muros.Add(Comb)
+            For Each Comb As String In valoresDistintos.Except(proyecto.Elementos.Muros.Lista_Combinaciones_Muros)
+                proyecto.Elementos.Muros.Lista_Combinaciones_Muros.Add(Comb)
             Next
 
-            'For Each Elemento As String In proyecto.Muros.Lista_Muros.Select(Function(m) m.Name)
-            '    For Each Piso As String In proyecto.Muros.Lista_Muros.SelectMany(Function(m) m.Lista_Secciones.Select(Function(s) s.Piso))
-            '        For Each Combinacion As String In proyecto.Muros.Lista_Combinaciones_Muros
+            ' Pre-filtrar los pisos y las combinaciones para no hacerlo en cada iteración
+            Dim PisosUnicos = proyecto.Elementos.Muros.Lista_Muros.SelectMany(Function(m) m.Lista_Secciones.Select(Function(s) s.Piso)).Distinct().ToList()
+            Dim CombinacionesUnicas = proyecto.Elementos.Muros.Lista_Combinaciones_Muros.ToList()
 
-            '            Dim rowIndex As Integer = Tabla.Rows.Cast(Of DataGridViewRow)().ToList().FindIndex(Function(row) If(row.Cells(eNumeradores.ColumnaFuerzas.Piso).Value?.ToString() = Piso AndAlso
-            '               row.Cells(eNumeradores.ColumnaFuerzas.Label).Value?.ToString() = Elemento AndAlso row.Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value?.ToString() = Combinacion, True, False))
+            ' Crear un diccionario de búsqueda rápida para la tabla
+            ' Crear un diccionario de búsqueda rápida para la tabla usando la clase Key
+            Dim TablaDict = Tabla.Rows.Cast(Of DataGridViewRow)() _
+                .GroupBy(Function(row) New Key(
+                    If(row.Cells(eNumeradores.ColumnaFuerzas.Piso).Value?.ToString(), ""),  ' Manejo de nulos
+                    If(row.Cells(eNumeradores.ColumnaFuerzas.Label).Value?.ToString(), ""),  ' Manejo de nulos
+                    If(row.Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value?.ToString(), "")  ' Manejo de nulos
+                )) _
+                .ToDictionary(Function(g) g.Key, Function(g) g.First())
 
-            '            If rowIndex <> -1 Then
-            '                Dim Fuerza As New SeccionMuro.Fuerzas_Elementos With {
-            '                        .Name = Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value.ToString,
-            '                        .P = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.P).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.P).Value))),
-            '                        .V2 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.V2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V2).Value))),
-            '                        .V3 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.V3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V3).Value))),
-            '                        .T = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.T).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.T).Value))),
-            '                        .M2 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.M2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.M2).Value))),
-            '                        .M3 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.M3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.M3).Value)))
-            '                }
+            ' Iteración sobre los elementos
+            For Each Elemento As String In proyecto.Elementos.Muros.Lista_Muros.Select(Function(m) m.Name)
+                For Each Piso As String In PisosUnicos
+                    For Each Combinacion As String In CombinacionesUnicas
+                        ' Crear la clave
+                        Dim key = New Key(Piso, Elemento, Combinacion)
 
-            '                Dim Seccion = proyecto.Muros.Lista_Muros.FirstOrDefault(Function(m) m.Name = Elemento)?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
-            '                If Seccion IsNot Nothing Then
-            '                    Seccion.Lista_Combinaciones.Add(Fuerza)
-            '                End If
-            '            End If
+                        ' Buscar en el diccionario
+                        If TablaDict.ContainsKey(key) Then
+                            Dim row = TablaDict(key)
+                            Dim rowIndex As Integer = row.Index
 
-            '            Console.WriteLine($"Elemento: {Elemento}, Piso: {Piso}, Combinacion: {Combinacion}")
-
-            '        Next
-            '    Next
-            'Next
-            'Dim diccionarioFilas As New Dictionary(Of String, Dictionary(Of String, DataGridViewRow))
-
-            'For Each fila As DataGridViewRow In Tabla.Rows
-            '    Dim combinacion As String = fila.Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value?.ToString()
-            '    Dim elemento As String = fila.Cells(eNumeradores.ColumnaFuerzas.Label).Value?.ToString()
-
-            '    If Not diccionarioFilas.ContainsKey(combinacion) Then
-            '        diccionarioFilas(combinacion) = New Dictionary(Of String, DataGridViewRow)()
-            '    End If
-
-            '    diccionarioFilas(combinacion)(elemento) = fila
-            '    Console.WriteLine(fila)
-
-            'Next
-
-            'For Each Combinacion As String In proyecto.Muros.Lista_Combinaciones_Muros
-            '    For Each Elemento As String In proyecto.Muros.Lista_Muros.Select(Function(m) m.Name)
-            '        ' Verificar si existe la combinación y el elemento en el diccionario
-            '        If diccionarioFilas.ContainsKey(Combinacion) AndAlso diccionarioFilas(Combinacion).ContainsKey(Elemento) Then
-            '            ' Obtener la fila directamente del diccionario
-            '            Dim fila As DataGridViewRow = diccionarioFilas(Combinacion)(Elemento)
-            '            Dim piso As String = fila.Cells(eNumeradores.ColumnaFuerzas.Piso).Value?.ToString()
-
-            '            ' Resto del código permanece igual
-            '            Dim Fuerza As New SeccionMuro.Fuerzas_Elementos With {
-            '                    .Name = fila.Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value.ToString,
-            '                    .P = Math.Max(Math.Abs(Convert.ToSingle(fila.Cells(eNumeradores.ColumnaFuerzas.P).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(fila.Index + 1).Cells(eNumeradores.ColumnaFuerzas.P).Value))),
-            '                    .V2 = Math.Max(Math.Abs(Convert.ToSingle(fila.Cells(eNumeradores.ColumnaFuerzas.V2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(fila.Index + 1).Cells(eNumeradores.ColumnaFuerzas.V2).Value))),
-            '                    .V3 = Math.Max(Math.Abs(Convert.ToSingle(fila.Cells(eNumeradores.ColumnaFuerzas.V3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(fila.Index + 1).Cells(eNumeradores.ColumnaFuerzas.V3).Value))),
-            '                    .T = Math.Max(Math.Abs(Convert.ToSingle(fila.Cells(eNumeradores.ColumnaFuerzas.T).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(fila.Index + 1).Cells(eNumeradores.ColumnaFuerzas.T).Value))),
-            '                    .M2 = Math.Max(Math.Abs(Convert.ToSingle(fila.Cells(eNumeradores.ColumnaFuerzas.M2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(fila.Index + 1).Cells(eNumeradores.ColumnaFuerzas.M2).Value))),
-            '                    .M3 = Math.Max(Math.Abs(Convert.ToSingle(fila.Cells(eNumeradores.ColumnaFuerzas.M3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(fila.Index + 1).Cells(eNumeradores.ColumnaFuerzas.M3).Value)))
-            '                }
-
-            '            Dim Seccion = proyecto.Muros.Lista_Muros.FirstOrDefault(Function(m) m.Name = Elemento)?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
-
-            '            If Seccion IsNot Nothing Then
-            '                Seccion.Lista_Combinaciones.Add(Fuerza)
-            '            End If
-            '        End If
-            '    Next
-            'Next
-
-
-            For Each Elemento As String In proyecto.Muros.Lista_Muros.Select(Function(m) m.Name)
-                For Each Piso As String In proyecto.Muros.Lista_Muros.SelectMany(Function(m) m.Lista_Secciones.Select(Function(s) s.Piso)).Distinct()
-                    For Each Combinacion As String In proyecto.Muros.Lista_Combinaciones_Muros
-
-                        Dim rowIndex As Integer = Tabla.Rows.Cast(Of DataGridViewRow)().ToList().FindIndex(Function(row) If(row.Cells(eNumeradores.ColumnaFuerzas.Piso).Value?.ToString() = Piso AndAlso
-                           row.Cells(eNumeradores.ColumnaFuerzas.Label).Value?.ToString() = Elemento AndAlso row.Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value?.ToString() = Combinacion, True, False))
-
-                        If rowIndex <> -1 Then
+                            ' Procesar la fuerza de los elementos
                             Dim Fuerza As New SeccionMuro.Fuerzas_Elementos With {
-                                    .Name = Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value.ToString,
-                                    .P = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.P).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.P).Value))),
-                                    .V2 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.V2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V2).Value))),
-                                    .V3 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.V3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V3).Value))),
-                                    .T = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.T).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.T).Value))),
-                                    .M2 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.M2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.M2).Value))),
-                                    .M3 = Math.Max(Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.M3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(eNumeradores.ColumnaFuerzas.M3).Value)))
+                                .Name = Combinacion,
+                                .P = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.P).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.P).Value))),
+                                .V2 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.V2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V2).Value))),
+                                .V3 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.V3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V3).Value))),
+                                .T = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.T).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.T).Value))),
+                                .M2 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.M2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.M2).Value))),
+                                .M3 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.M3).Value)), Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.M3).Value)))
                             }
 
-                            Dim Seccion = proyecto.Muros.Lista_Muros.FirstOrDefault(Function(m) m.Name = Elemento)?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
+                            ' Obtener la sección correspondiente y agregar la fuerza
+                            Dim Seccion = proyecto.Elementos.Muros.Lista_Muros.FirstOrDefault(Function(m) m.Name = Elemento)?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
                             If Seccion IsNot Nothing Then
                                 Seccion.Lista_Combinaciones.Add(Fuerza)
 
-                                Dim combinacionesFiltradas = Seccion.Lista_Combinaciones.Where(Function(c) c.Name.ToUpper().Contains("ENV"))
-
-                                If combinacionesFiltradas.Any() Then
-                                    Seccion.Vu = combinacionesFiltradas.Max(Function(c) Math.Abs(c.V2))
+                                ' Calcular el Vu máximo de todas las combinaciones
+                                If Seccion.Lista_Combinaciones.Any() Then
+                                    Seccion.Vu = Seccion.Lista_Combinaciones.Max(Function(c) Math.Abs(c.V2))
                                 End If
-
                             End If
                         End If
                     Next
@@ -362,27 +295,46 @@ Public Class Form_06_PagMuros
 
             Check_Fuerzas.Checked = True
 
+
+            For Each Combinacion As String In CombinacionesUnicas
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Combinacion)
+            Next
+            Form_Opciones_Combinaciones.OpcionLlamado = "Muros"
+            Form_Opciones_Combinaciones.Evaluacion = "Design"
+            Form_Opciones_Combinaciones.ShowDialog()
+
+            ' Este código ejecuta después de que el formulario inicial se cierra con OK
+            If Form_Opciones_Combinaciones.DialogResult = DialogResult.OK Then
+                ' Limpiar el ListBox de combinaciones
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+                ' Agregar las nuevas combinaciones sísmicas
+                For Each CombinacionSismica As String In CombinacionesUnicas
+                    Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(CombinacionSismica)
+                Next
+
+                ' Cambiar los valores de OpcionLlamado y Evaluacion para combinaciones sísmicas
+                Form_Opciones_Combinaciones.OpcionLlamado = "Muros"
+                Form_Opciones_Combinaciones.Evaluacion = "Seismic"
+
+                Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Sismicas"
+
+                ' Mostrar nuevamente el formulario con combinaciones sísmicas
+                Form_Opciones_Combinaciones.ShowDialog()
+            End If
+
+
         End If
 
-        'For Each combinacion In proyecto.Muros.Lista_Combinaciones_Muros
-        '    Form_Combinaciones.Combo_Combinaciones.Items.Add(combinacion.ToString)
-        'Next
-
-        'If proyecto.Muros.Lista_Combinaciones_Muros.Count > 0 Then
-        '    Form_Combinaciones.Combo_Combinaciones.Text = proyecto.Muros.Lista_Combinaciones_Muros(0).ToString
-        '    proyecto.Muros.Lista_Combinaciones_ALR_Muros.ForEach(Sub(item) Form_Combinaciones.Tabla_combinaciones.Rows.Add(item))
-        '    If proyecto.Muros.Lista_Combinaciones_ALR_Muros.Count > 0 Then
-        '        Form_Combinaciones.Tabla_combinaciones.Rows.AddRange(proyecto.Muros.Lista_Combinaciones_ALR_Muros.ToArray())
-        '    End If
-        'End If
-
-        If proyecto.Muros.Info_Diseño = True Then
-            Combo_Elementos.Text = proyecto.Muros.Lista_Muros(0).Name
+        If proyecto.Elementos.Muros.Info_Diseño = True Then
+            Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
 
         'Catch ex As Exception
         '    MessageBox.Show("Error al leer la información.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         'Finally
+
         Obtencion_Macroparametros()
         Cursor = Cursors.Arrow
         MessageBox.Show("Información Cargada con Éxito.")
@@ -391,7 +343,7 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub LlenarTabla_Diseno_Muros()
-        proyecto.Muros.Info_Diseño = True
+        proyecto.Elementos.Muros.Info_Diseño = True
         Dim OpenFileDialog As New OpenFileDialog
         Dim openFD As New OpenFileDialog()
         With openFD
@@ -405,7 +357,7 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub LlenarTabla_Secciones()
-        proyecto.Muros.Info_Secciones = True
+        proyecto.Elementos.Muros.Info_Secciones = True
         Dim OpenFileDialog As New OpenFileDialog
         Dim openFD As New OpenFileDialog()
         With openFD
@@ -419,7 +371,7 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub LlenarTabla_Fuerzas()
-        proyecto.Muros.Info_Fuerzas = True
+        proyecto.Elementos.Muros.Info_Fuerzas = True
         Dim OpenFileDialog As New OpenFileDialog
         Dim openFD As New OpenFileDialog()
         With openFD
@@ -436,29 +388,29 @@ Public Class Form_06_PagMuros
         Try
             Tabla_Resumen.Rows.Clear()
             Tabla_Resumen.Columns.Clear()
-            If proyecto.Muros.Info_Diseño = True Then
+            If proyecto.Elementos.Muros.Info_Diseño = True Then
                 Tabla_Resumen.Columns.Add("Column1", "Elemento")
                 Tabla_Resumen.Columns.Add("Column2", "Piso")
                 Tabla_Resumen.Columns.Add("Column3", "Sección")
                 Tabla_Resumen.Columns.Add("Column4", "Estación")
                 Tabla_Resumen.Columns.Add("Column5", "Cuantia Requerida (%)")
             End If
-            Dim Elemento As String = proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text).Name
-            Dim Seccion = proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text).Lista_Secciones
+            Dim Elemento As String = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text).Name
+            Dim Seccion = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text).Lista_Secciones
             For i = 0 To (Seccion.Count - 1) * 2
                 Tabla_Resumen.Rows.Add()
             Next
 
 
-            If proyecto.Muros.Info_Fuerzas = True Then
+            If proyecto.Elementos.Muros.Info_Fuerzas = True Then
                 Tabla_Resumen.Columns.Add("Column6", "Vu (kN)")
             End If
-            If proyecto.Muros.Info_Secciones = True Then
+            If proyecto.Elementos.Muros.Info_Secciones = True Then
                 Tabla_Resumen.Columns.Add("Column7", "tw (m)")
                 Tabla_Resumen.Columns.Add("Column8", "Lw (m)")
                 Tabla_Resumen.Columns.Add("Column9", "f'c (MPa)")
             End If
-            'If proyecto.Info_Diseño = True Then
+            'If Proyecto.Elementos.Info_Diseño = True Then
             '    Tabla_Resumen.Columns.Add("Column10", "C-Izq (m)")
             '    Tabla_Resumen.Columns.Add("Column11", "C-Der (m)")
             '    Tabla_Resumen.Columns.Add("Column12", "L.EB-Izq (m)")
@@ -467,7 +419,7 @@ Public Class Form_06_PagMuros
             '    Tabla_Resumen.Columns.Add("Column15", "Esf-Der (MPa)")
             'End If
 
-            If proyecto.Muros.Info_Diseño = True Then
+            If proyecto.Elementos.Muros.Info_Diseño = True Then
                 Tabla_Resumen.Rows(0).Cells(0).Value = Elemento
                 For i = 0 To (Seccion.Count - 1) * 2 Step 2
                     Dim N_Cont As Integer = 5
@@ -479,11 +431,11 @@ Public Class Form_06_PagMuros
                     Tabla_Resumen.Rows(i).Cells(4).Value = Format(Seccion(i / 2).Cuantia_Top_Req, "##,##0.00")
                     Tabla_Resumen.Rows(i + 1).Cells(4).Value = Format(Seccion(i / 2).Cuantia_Bot_Req, "##,##0.00")
 
-                    If proyecto.Muros.Info_Fuerzas = True Then
+                    If proyecto.Elementos.Muros.Info_Fuerzas = True Then
                         Tabla_Resumen.Rows(i).Cells(5).Value = Math.Round(Seccion(i / 2).Vu, 2)
                         N_Cont += 1
                     End If
-                    If proyecto.Muros.Info_Secciones = True Then
+                    If proyecto.Elementos.Muros.Info_Secciones = True Then
                         Tabla_Resumen.Rows(i).Cells(6).Value = Format(Seccion(i / 2).tw_Model, "##,##0.00")
                         Tabla_Resumen.Rows(i).Cells(7).Value = Format(Seccion(i / 2).Lw_Model, "##,##0.00")
                         Tabla_Resumen.Rows(i).Cells(8).Value = Seccion(i / 2).fc
@@ -516,7 +468,7 @@ Public Class Form_06_PagMuros
             Dim SaveAs As New SaveFileDialog
             SaveAs.Filter = "Archivo|*.esm"
             SaveAs.Title = "Guardar Archivo"
-            SaveAs.FileName = Convert.ToString("RevisiónMuros_Proyecto - " & proyecto.Nombre)
+            SaveAs.FileName = Convert.ToString("RevisiónMuros_Proyecto - " & proyecto.Info.Nombre)
             SaveAs.ShowDialog()
             If SaveAs.FileName <> String.Empty Then
                 proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
@@ -543,14 +495,14 @@ Public Class Form_06_PagMuros
     End Sub
 
     Public Sub Rellenar_Columnas()
-        If proyecto.Muros.Info_Diseño = True Then
+        If proyecto.Elementos.Muros.Info_Diseño = True Then
 
-            For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-                Combo_Elementos.Items.Add(proyecto.Muros.Lista_Muros(i).Name)
-                Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(proyecto.Muros.Lista_Muros(i).Name)
+            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+                Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
+                Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
             Next
 
-            Combo_Elementos.Text = proyecto.Muros.Lista_Muros(0).Name
+            Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
 
     End Sub
@@ -578,9 +530,9 @@ Public Class Form_06_PagMuros
     Private Sub ToolStripMenuItem4_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem4.Click
 
 
-        If proyecto.Muros.D_Techo_X > 0 Then
-            Form_InfoDesignMuros.T_Dtecho_X.Text = Math.Round(proyecto.Muros.D_Techo_X, 3)
-            Form_InfoDesignMuros.T_Dtecho_Y.Text = Math.Round(proyecto.Muros.D_Techo_Y, 3)
+        If proyecto.Elementos.Muros.D_Techo_X > 0 Then
+            Form_InfoDesignMuros.T_Dtecho_X.Text = Math.Round(proyecto.Elementos.Muros.D_Techo_X, 3)
+            Form_InfoDesignMuros.T_Dtecho_Y.Text = Math.Round(proyecto.Elementos.Muros.D_Techo_Y, 3)
         End If
 
         Form_InfoDesignMuros.Show()
@@ -604,11 +556,11 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub ToolStripMenuItem14_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem14.Click
-        If proyecto.Muros.Lista_Muros.Count > 0 Then
-            For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-                Form_06_01_ResultadosMuros.Combo_Elementos.Items.Add(proyecto.Muros.Lista_Muros(i).Name)
+        If proyecto.Elementos.Muros.Lista_Muros.Count > 0 Then
+            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+                Form_06_01_ResultadosMuros.Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
             Next
-            Form_06_01_ResultadosMuros.Combo_Elementos.Text = proyecto.Muros.Lista_Muros(0).Name
+            Form_06_01_ResultadosMuros.Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
 
         Form_06_01_ResultadosMuros.Show()
@@ -623,7 +575,7 @@ Public Class Form_06_PagMuros
 
         Dim Col_Diseno = Funciones_02_Columnas.Columnas_Diseno("Pier")
 
-        If proyecto.Muros.Info_Diseño = True Then
+        If proyecto.Elementos.Muros.Info_Diseño = True Then
             Tabla = Tabla_Diseño_Flexo
 
             Dim Col_Piso As Integer = 0
@@ -674,7 +626,7 @@ Public Class Form_06_PagMuros
                         End If
                     Next
 
-                    Dim Muro_ = proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = Tabla.Rows(i).Cells(Col_Label).Value)
+                    Dim Muro_ = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Tabla.Rows(i).Cells(Col_Label).Value)
 
                     Dim Seccion = Nothing
                     If Muro_ IsNot Nothing Then
@@ -735,17 +687,17 @@ Public Class Form_06_PagMuros
             Dim Proyecto_1 As New Proyecto
             Proyecto_1 = Funciones_Programa.DeSerializar(Of Proyecto)(Open.FileName)
 
-            Dim muros_SinRef = proyecto.Muros.Lista_Muros.FindAll(Function(muro) muro.Lista_Secciones(0).AsH_Col = 0)
-            Dim muros_ConRef = Proyecto_1.Muros.Lista_Muros.FindAll(Function(muro) muro.Lista_Secciones(0).AsH_Col > 0)
+            Dim muros_SinRef = proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(muro) muro.Lista_Secciones(0).AsH_Col = 0)
+            Dim muros_ConRef = Proyecto_1.Elementos.Muros.Lista_Muros.FindAll(Function(muro) muro.Lista_Secciones(0).AsH_Col > 0)
 
             For i = 0 To muros_SinRef.Count() - 1
                 Dim Muro = muros_ConRef.Find(Function(p) p.Name = muros_SinRef(i).Name)
 
                 If Muro IsNot Nothing Then
-                    Dim index = proyecto.Muros.Lista_Muros.FindIndex(Function(p) p.Name = Muro.Name)
+                    Dim index = proyecto.Elementos.Muros.Lista_Muros.FindIndex(Function(p) p.Name = Muro.Name)
 
                     If index <> -1 Then
-                        proyecto.Muros.Lista_Muros(index) = Muro
+                        proyecto.Elementos.Muros.Lista_Muros(index) = Muro
                     End If
                 End If
 
@@ -763,7 +715,7 @@ Public Class Form_06_PagMuros
 
         Dim Col_Secciones = Funciones_02_Columnas.Columnas_Secciones("Pier")
 
-        If proyecto.Muros.Info_Secciones = True Then
+        If proyecto.Elementos.Muros.Info_Secciones = True Then
 
             Tabla = Tabla_secciones
 
@@ -773,35 +725,35 @@ Public Class Form_06_PagMuros
             Dim Col_B As Integer = Col_Secciones(3)
             Dim Col_H As Integer = Col_Secciones(4)
 
-            For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-                Dim Elemento As String = proyecto.Muros.Lista_Muros(i).Name
+            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+                Dim Elemento As String = proyecto.Elementos.Muros.Lista_Muros(i).Name
 
-                For Np = 0 To proyecto.Muros.Lista_Muros(i).Lista_Secciones.Count - 1
+                For Np = 0 To proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1
                     For j = 2 To Tabla.Rows.Count - 1
-                        If Tabla.Rows(j).Cells(Col_Name).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Name).Value = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Seccion And Tabla.Rows(j).Cells(Col_Piso).Value = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Piso Then
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model = Math.Min(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)) / 1000
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model = Math.Max(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)) / 1000
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Planos = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Planos = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value, 1, 2))
+                        If Tabla.Rows(j).Cells(Col_Name).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Name).Value = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Seccion And Tabla.Rows(j).Cells(Col_Piso).Value = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Piso Then
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model = Math.Min(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)) / 1000
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model = Math.Max(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)) / 1000
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value, 1, 2))
                             If Convert.ToSingle(Tabla.Rows(j).Cells(2).Value) > 10 Then
-                                proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = "Y"
+                                proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = "Y"
                             Else
-                                proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = "X"
+                                proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = "X"
                             End If
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Altura = Convert.ToSingle(Tabla.Rows(j).Cells(15).Value)
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Altura = Convert.ToSingle(Tabla.Rows(j).Cells(15).Value)
 
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 1000000
-                            proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 1000000
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 1000000
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 1000000
 
                             Exit For
                         End If
                     Next
                 Next
-                proyecto.Muros.Lista_Muros(i).Hw = proyecto.Muros.Lista_Muros(i).Lista_Secciones.Max(Function(p) p.Altura)
-                proyecto.Muros.Lista_Muros(i).tw = proyecto.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).tw_Model
-                proyecto.Muros.Lista_Muros(i).Lw = proyecto.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).Lw_Model
-                proyecto.Muros.Lista_Muros(i).Ar = proyecto.Muros.Lista_Muros(i).Hw / proyecto.Muros.Lista_Muros(i).Lw
+                proyecto.Elementos.Muros.Lista_Muros(i).Hw = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Max(Function(p) p.Altura)
+                proyecto.Elementos.Muros.Lista_Muros(i).tw = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).tw_Model
+                proyecto.Elementos.Muros.Lista_Muros(i).Lw = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1).Lw_Model
+                proyecto.Elementos.Muros.Lista_Muros(i).Ar = proyecto.Elementos.Muros.Lista_Muros(i).Hw / proyecto.Elementos.Muros.Lista_Muros(i).Lw
             Next
         End If
 
@@ -813,14 +765,14 @@ Public Class Form_06_PagMuros
 
         Crear_Subgrafico()
 
-        Dim List_X As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Dim List_Y As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
 
         Llenar_Tablas_Macroparametros(Tabla_Parametros, List_X, List_Y)
         Funciones_00_Varias.Estilo_Tabla(Tabla_Parametros)
 
-        Dim List_Prot_X As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Dim List_Prot_Y As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_Prot_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_Prot_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
         Llenar_Tablas_Macroparametros(Tabla_Muros_Protagonicos, List_Prot_X, List_Prot_Y)
         Funciones_00_Varias.Estilo_Tabla(Tabla_Muros_Protagonicos)
 
@@ -839,133 +791,123 @@ Public Class Form_06_PagMuros
         Dim Comb_G As String
         Dim Comb_D As String
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            Dim seccionMenorZ As SeccionMuro = proyecto.Muros.Lista_Muros(i).Lista_Secciones.OrderBy(Function(seccion) seccion.Coor_Z_Bot).First()
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Dim seccionMenorZ As SeccionMuro = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.OrderBy(Function(seccion) seccion.Coor_Z_Bot).First()
             Dim PisoBase As String = seccionMenorZ.Piso
             Dim Dir As String = [Enum].GetName(GetType(eNumeradores.eDireccion), seccionMenorZ.Direccion_Muro)
 
-            Comb_Sismo = proyecto.Muros.Lista_Combinaciones_Muros.Find(Function(comb) comb.ToUpper().Substring(0, 3).Contains("S") And comb.ToUpper().Substring(0, comb.Length - 3).Contains(Dir.ToUpper()))
+            Comb_Sismo = proyecto.Elementos.Muros.Lista_Combinaciones_Muros.Find(Function(comb) comb.ToUpper().Substring(0, 3).
+                Contains("S") And comb.ToUpper().Substring(0, comb.Length - 3).Contains(Dir.ToUpper()))
 
-            Comb_G = proyecto.Muros.Lista_Combinaciones_Muros.FirstOrDefault(Function(comb) comb.ToUpper().Contains("CM") And comb.ToUpper().Contains("CV"))
-            Comb_D = proyecto.Muros.Lista_Combinaciones_Muros.FirstOrDefault(Function(comb) comb.ToUpper().Contains("ENV") And comb.ToUpper().Contains("MIN"))
+            Comb_G = proyecto.Elementos.Muros.Lista_Combinaciones_Muros.FirstOrDefault(Function(comb) comb.ToUpper().Contains("CM") And comb.ToUpper().Contains("CV"))
+            'Comb_D = Proyecto.Elementos.Muros.Lista_Combinaciones_Muros.FirstOrDefault(Function(comb) comb.ToUpper().Contains("ENV") And comb.ToUpper().Contains("MIN"))
 
-            proyecto.Muros.Lista_Muros(i).fc_Base = seccionMenorZ.fc
-            proyecto.Muros.Lista_Muros(i).Vmax_S = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_Sismo).Max(Function(p) Math.Abs(p.V2))
-            proyecto.Muros.Lista_Muros(i).Pmax_G = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_G).Max(Function(p) Math.Abs(p.P))
-            proyecto.Muros.Lista_Muros(i).Pmax_D = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_D).Max(Function(p) Math.Abs(p.P))
-            proyecto.Muros.Lista_Muros(i).ALR_G = proyecto.Muros.Lista_Muros(i).Pmax_G / (seccionMenorZ.fc * 1000 * seccionMenorZ.Lw_Model * seccionMenorZ.tw_Model)
-            proyecto.Muros.Lista_Muros(i).ALR_D = proyecto.Muros.Lista_Muros(i).Pmax_D / (seccionMenorZ.fc * 1000 * seccionMenorZ.Lw_Model * seccionMenorZ.tw_Model)
-            proyecto.Muros.Lista_Muros(i).Porc_Vs_Geo = proyecto.Muros.Lista_Muros(i).tw * proyecto.Muros.Lista_Muros(i).Lw * proyecto.Muros.Lista_Muros(i).Lw
-            proyecto.Muros.Lista_Muros(i).Ag_M = proyecto.Muros.Lista_Muros(i).tw * proyecto.Muros.Lista_Muros(i).Lw
+            proyecto.Elementos.Muros.Lista_Muros(i).fc_Base = seccionMenorZ.fc
+            proyecto.Elementos.Muros.Lista_Muros(i).Vmax_S = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_Sismo).Max(Function(p) Math.Abs(p.V2))
+            proyecto.Elementos.Muros.Lista_Muros(i).Pmax_G = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_G).Max(Function(p) Math.Abs(p.P))
+
+            proyecto.Elementos.Muros.Lista_Muros(i).Pmax_D = seccionMenorZ.Lista_Combinaciones.Where(Function(p) proyecto.Elementos.Muros.ListA_Combinaciones_Design.Contains(p.Name)).Max(Function(p) Math.Abs(p.P))
+
+            'Proyecto.Elementos.Muros.Lista_Muros(i).Pmax_D = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_D).Max(Function(p) Math.Abs(p.P))
+            proyecto.Elementos.Muros.Lista_Muros(i).ALR_G = proyecto.Elementos.Muros.Lista_Muros(i).Pmax_G / (seccionMenorZ.fc * 1000 * seccionMenorZ.Lw_Model * seccionMenorZ.tw_Model)
+            proyecto.Elementos.Muros.Lista_Muros(i).ALR_D = proyecto.Elementos.Muros.Lista_Muros(i).Pmax_D / (seccionMenorZ.fc * 1000 * seccionMenorZ.Lw_Model * seccionMenorZ.tw_Model)
+            proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs_Geo = proyecto.Elementos.Muros.Lista_Muros(i).tw * proyecto.Elementos.Muros.Lista_Muros(i).Lw * proyecto.Elementos.Muros.Lista_Muros(i).Lw
+            proyecto.Elementos.Muros.Lista_Muros(i).Ag_M = proyecto.Elementos.Muros.Lista_Muros(i).tw * proyecto.Elementos.Muros.Lista_Muros(i).Lw
 
         Next
 
-        Dim VB_S_T_X As Single = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).Sum(Function(p) p.Vmax_S)
-        Dim VB_S_T_Y As Single = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).Sum(Function(p) p.Vmax_S)
+        Dim VB_S_T_X As Single = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).Sum(Function(p) p.Vmax_S)
+        Dim VB_S_T_Y As Single = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).Sum(Function(p) p.Vmax_S)
 
-        Dim Porc_Geo_X As Single = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).Sum(Function(p) p.Porc_Vs_Geo)
-        Dim Porc_Geo_Y As Single = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).Sum(Function(p) p.Porc_Vs_Geo)
+        Dim Porc_Geo_X As Single = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).Sum(Function(p) p.Porc_Vs_Geo)
+        Dim Porc_Geo_Y As Single = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).Sum(Function(p) p.Porc_Vs_Geo)
 
-        For i = 0 To proyecto.Muros.Lista_Muros.Count - 1
-            If proyecto.Muros.Lista_Muros(i).Direccion = eNumeradores.eDireccion.X Then
-                proyecto.Muros.Lista_Muros(i).Porc_Vs = proyecto.Muros.Lista_Muros(i).Vmax_S / VB_S_T_X
-                proyecto.Muros.Lista_Muros(i).Porc_Vs_Geo = proyecto.Muros.Lista_Muros(i).Porc_Vs_Geo / Porc_Geo_X
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            If proyecto.Elementos.Muros.Lista_Muros(i).Direccion = eNumeradores.eDireccion.X Then
+                proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs = proyecto.Elementos.Muros.Lista_Muros(i).Vmax_S / VB_S_T_X
+                proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs_Geo = proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs_Geo / Porc_Geo_X
             Else
-                proyecto.Muros.Lista_Muros(i).Porc_Vs = proyecto.Muros.Lista_Muros(i).Vmax_S / VB_S_T_Y
-                proyecto.Muros.Lista_Muros(i).Porc_Vs_Geo = proyecto.Muros.Lista_Muros(i).Porc_Vs_Geo / Porc_Geo_Y
+                proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs = proyecto.Elementos.Muros.Lista_Muros(i).Vmax_S / VB_S_T_Y
+                proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs_Geo = proyecto.Elementos.Muros.Lista_Muros(i).Porc_Vs_Geo / Porc_Geo_Y
             End If
         Next
 
-        proyecto.Muros.Densidad_X = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).Sum(Function(p) p.Ag_M) / proyecto.Area_Planta
-        proyecto.Muros.Densidad_Y = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).Sum(Function(p) p.Ag_M) / proyecto.Area_Planta
-        proyecto.Muros.IM_X = proyecto.Muros.Densidad_X / proyecto.NumPisos
-        proyecto.Muros.IM_Y = proyecto.Muros.Densidad_Y / proyecto.NumPisos
+        proyecto.Elementos.Muros.Densidad_X = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).Sum(Function(p) p.Ag_M) / proyecto.Info.Area
+        proyecto.Elementos.Muros.Densidad_Y = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).Sum(Function(p) p.Ag_M) / proyecto.Info.Area
+        proyecto.Elementos.Muros.IM_X = proyecto.Elementos.Muros.Densidad_X / proyecto.Info.NPisos
+        proyecto.Elementos.Muros.IM_Y = proyecto.Elementos.Muros.Densidad_Y / proyecto.Info.NPisos
 
-        Dim List_X As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Dim List_Y As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
 
         Llenar_Tablas_Macroparametros(Tabla_Parametros, List_X, List_Y)
         Funciones_00_Varias.Estilo_Tabla(Tabla_Parametros)
 
-        proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(0).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
-        proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(1).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+        proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(0).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+        proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(1).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
 
         Dim Paso_X As Boolean = False
 
         For i = 2 To List_X.Count() - 1
             If List_X(i).Porc_Vs / List_X(i - 1).Porc_Vs > 0.75 And Paso_X = False Then
-                proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(i).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(i).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
             Else
-                proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(i).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(i).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
                 Paso_X = True
             End If
         Next
 
-        proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(0).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
-        proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(1).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+        proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(0).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+        proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(1).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
         Dim Paso_Y As Boolean = False
 
         For i = 2 To List_Y.Count() - 1
             If List_Y(i).Porc_Vs / List_Y(i - 1).Porc_Vs > 0.75 And Paso_Y = False Then
-                proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(i).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(i).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
             Else
-                proyecto.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(i).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(i).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
                 Paso_Y = True
             End If
         Next
 
-        Dim List_Prot_X As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Dim List_Prot_Y As List(Of Muro) = proyecto.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_Prot_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
+        Dim List_Prot_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
 
         Llenar_Tablas_Macroparametros(Tabla_Muros_Protagonicos, List_Prot_X, List_Prot_Y)
         Funciones_00_Varias.Estilo_Tabla(Tabla_Muros_Protagonicos)
 
-        'MaxCoorX = 0
-        'MinCoorX = 0
-        'MaxCoorY = 0
-        'MinCoorY = 0
-
-        'For i = 0 To proyecto.Muros.Lista_Muros.Count() - 1
-        '    Dim Muro_ As Muro = proyecto.Muros.Lista_Muros(i)
-
-        '    If Muro_.Lista_Secciones(0).Direccion_Muro = eNumeradores.eDireccion.X Then
-        '        Rectangulos.Add(New Rectangulo() With {.Name = Muro_.Name, .Direccion = Muro_.Direccion, .Tipo_M = Muro_.TipoMuro, .CoorX = Muro_.Coor_X, .CoorY = Muro_.Coor_Y, .Largo = Muro_.Lw, .Espesor = Muro_.tw})
-        '        If (Muro_.Coor_X - Muro_.Lw / 2) < MinCoorX Then
-        '            MinCoorX = Muro_.Coor_X - Muro_.Lw / 2
-        '        End If
-        '        If (Muro_.Coor_X + Muro_.Lw / 2) > MaxCoorX Then
-        '            MaxCoorX = Muro_.Coor_X + Muro_.Lw / 2
-        '        End If
-        '        If (Muro_.Coor_Y - Muro_.tw / 2) < MinCoorY Then
-        '            MinCoorY = Muro_.Coor_Y - Muro_.tw / 2
-        '        End If
-        '        If (Muro_.Coor_Y + Muro_.tw / 2) > MaxCoorY Then
-        '            MaxCoorY = Muro_.Coor_Y + Muro_.tw / 2
-        '        End If
-
-        '    Else
-        '        Rectangulos.Add(New Rectangulo() With {.Name = Muro_.Name, .Direccion = Muro_.Direccion, .Tipo_M = Muro_.TipoMuro, .CoorX = Muro_.Coor_X, .CoorY = Muro_.Coor_Y, .Largo = Muro_.tw, .Espesor = Muro_.Lw})
-        '        If (Muro_.Coor_X - Muro_.tw / 2) < MinCoorX Then
-        '            MinCoorX = Muro_.Coor_X - Muro_.tw / 2
-        '        End If
-        '        If (Muro_.Coor_X + Muro_.tw / 2) > MaxCoorX Then
-        '            MaxCoorX = Muro_.Coor_X + Muro_.tw / 2
-        '        End If
-        '        If (Muro_.Coor_Y - Muro_.Lw / 2) < MinCoorY Then
-        '            MinCoorY = Muro_.Coor_Y - Muro_.Lw / 2
-        '        End If
-        '        If (Muro_.Coor_Y + Muro_.Lw / 2) > MaxCoorY Then
-        '            MaxCoorY = Muro_.Coor_Y + Muro_.Lw / 2
-        '        End If
-        '    End If
-        'Next
-
         Func_Muros.CalcularGeometriaMuros()
         Func_Muros.GraficosMurosPlanta(Figura_Muros_Tw, Figura_Muros_Protagonicos)
+        Func_Muros.Grafico_PorcentajeMuros(Grafico_MurosProtagonicos, 14, 12, 12)
+        Func_Muros.Grafico_ArMuros(Grafico_Ar, 14, 12, 12)
 
         'DibujarRectangulos()
 
     End Sub
+
+    Public Sub AjustarGroupBoxesEnTabPage()
+        ' Obtener el tamaño del TabPage9
+        Dim tabPageHeight As Integer = TabPage9.Height
+        Dim tabPageWidth As Integer = TabPage9.Width
+
+        ' Calcular la altura que debe tener cada GroupBox
+        Dim groupBoxHeight As Integer = tabPageHeight \ 2
+
+        ' Ajustar el tamaño y la posición de GroupBox2
+        With GroupBox2
+            .Width = tabPageWidth ' Ocupa todo el ancho del TabPage
+            .Height = groupBoxHeight ' Ocupa la mitad de la altura del TabPage
+            .Location = New Point(0, 0) ' Posición en la parte superior
+        End With
+
+        ' Ajustar el tamaño y la posición de GroupBox3
+        With GroupBox3
+            .Width = tabPageWidth ' Ocupa todo el ancho del TabPage
+            .Height = groupBoxHeight ' Ocupa la mitad de la altura del TabPage
+            .Location = New Point(0, groupBoxHeight) ' Posición en la parte inferior
+        End With
+    End Sub
+
 
     Public Sub Llenar_Tablas_Macroparametros(ByVal Tabla As DataGridView, ByVal List_X As List(Of Muro), ByVal List_Y As List(Of Muro))
 
@@ -1006,7 +948,7 @@ Public Class Form_06_PagMuros
 
     Private Sub Crear_Subgrafico()
 
-        Func_Muros.Grafico_PorcentajeMuros(Grafico_MurosProtagonicos, 18, 16, 14)
+        Func_Muros.Grafico_PorcentajeMuros(Grafico_MurosProtagonicos, 14, 12, 12)
 
     End Sub
 
@@ -1279,9 +1221,74 @@ Public Class Form_06_PagMuros
 
     Private Sub Form_06_PagMuros_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
 
-        If Rectangulos.Count > 0 Then
-            DibujarRectangulos(Figura_Muros_Tw, Figura_Muros_Protagonicos)
+        If proyecto.Elementos.Muros.Lista_Muros.Count > 0 Then
+            'DibujarRectangulos(Figura_Muros_Tw, Figura_Muros_Protagonicos)
+            AjustarGroupBoxesEnTabPage()
         End If
 
     End Sub
+
+    Private Sub ImportarDatosEtabsToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarDatosEtabsToolStripMenuItem.Click
+
+        Dim ofd As New OpenFileDialog With {
+        .Title = "Seleccionar archivo Excel",
+        .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
+        .Multiselect = False
+    }
+
+        If ofd.ShowDialog() = DialogResult.OK Then
+
+            Dim path As String = ofd.FileName
+
+            Dim okDiseno = Form_02_PagColumnas.Importar_Datos_de_Excel(path, Tabla_Diseño_Flexo, "Diseño", "Pier")
+            Dim okSecciones = Form_02_PagColumnas.Importar_Datos_de_Excel(path, Tabla_secciones, "Secciones", "Pier")
+            Dim okFuerzas = Form_02_PagColumnas.Importar_Datos_de_Excel(path, Tabla_Fuerzas, "Fuerzas", "Pier")
+
+            ' Activar banderas
+            proyecto.Elementos.Muros.Info_Diseño = True
+            proyecto.Elementos.Muros.Info_Secciones = True
+            proyecto.Elementos.Muros.Info_Fuerzas = True
+
+            ' --- Construir mensaje final ---
+            Dim mensaje As String = "Resultado de la importación:" & vbCrLf & vbCrLf
+
+            mensaje &= $"Diseño........... {If(okDiseno, "✔ Importado", "✘ No encontrado")}" & vbCrLf
+            mensaje &= $"Secciones....... {If(okSecciones, "✔ Importado", "✘ No encontrado")}" & vbCrLf
+            mensaje &= $"Fuerzas.......... {If(okFuerzas, "✔ Importado", "✘ No encontrado")}" & vbCrLf
+
+            ' --- Mostrar mensaje ---
+            If okDiseno AndAlso okSecciones AndAlso okFuerzas Then
+                MsgBox(mensaje, MsgBoxStyle.Information, "Importación exitosa")
+            Else
+                MsgBox(mensaje, MsgBoxStyle.Exclamation, "Importación incompleta")
+            End If
+
+        End If
+
+    End Sub
+End Class
+
+
+Public Class Key
+    Public Property Piso As String
+    Public Property Label As String
+    Public Property Combinacion As String
+
+    Public Sub New(piso As String, label As String, combinacion As String)
+        Me.Piso = piso
+        Me.Label = label
+        Me.Combinacion = combinacion
+    End Sub
+
+    Public Overrides Function Equals(obj As Object) As Boolean
+        Dim other As Key = TryCast(obj, Key)
+        If other Is Nothing Then
+            Return False
+        End If
+        Return Me.Piso = other.Piso AndAlso Me.Label = other.Label AndAlso Me.Combinacion = other.Combinacion
+    End Function
+
+    Public Overrides Function GetHashCode() As Integer
+        Return Piso.GetHashCode() Xor Label.GetHashCode() Xor Combinacion.GetHashCode()
+    End Function
 End Class

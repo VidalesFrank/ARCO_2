@@ -5,15 +5,21 @@ Public Class Elemento_Pila
     Public Name_Label As String
     Public Df As Single
     Public Dc As Single
+    Public L_Pila As Single
     Public fc As Integer
+
     Public Ps_Estatica As Single
     Public Ps_Dinamica As Single
     Public Pu_Estatica As Single
     Public Pu_Dinamica As Single
+    Public P_Traccion As Single
+
     Public Check1_PsE As Single
     Public Check2_PsD As Single
     Public Check3_PuE As Single
     Public Check4_PuD As Single
+    Public Check5_PuT As Single
+
     Public EsfE_Trans As Single
     Public EsfD_Trans As Single
     Public Relacion_EsfE As Double
@@ -28,6 +34,7 @@ Public Class Elemento_Pila
     Public Combinacion_Factor_Diagonal As String
     Public Factor_CortesH As Single
     Public combinacion_Factor_CortesH As String
+
     Public Matriz_PS As List(Of Single)
     Public Matriz_MS As List(Of Single)
     Public Matriz_PU As List(Of Single)

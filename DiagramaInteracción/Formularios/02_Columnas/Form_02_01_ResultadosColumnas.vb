@@ -1,7 +1,6 @@
-﻿Imports Excel = Microsoft.Office.Interop.Excel
-Imports System.Data.OleDb
-Imports System.Windows.Forms.DataVisualization.Charting
+﻿Imports System.Data.OleDb
 Imports ARCO.Funciones_00_Varias
+Imports Excel = Microsoft.Office.Interop.Excel
 
 Public Class Form_02_01_ResultadosColumnas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
@@ -12,7 +11,7 @@ Public Class Form_02_01_ResultadosColumnas
 
         Tabla_Resultados.Rows.Clear()
 
-        Dim Seccion = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text).Lista_Tramos_Columnas
+        Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text).Lista_Tramos_Columnas
         For i = 0 To (Seccion.Count - 1) * 2
             Tabla_Resultados.Rows.Add()
         Next
@@ -83,11 +82,11 @@ Public Class Form_02_01_ResultadosColumnas
         Form_ALR.Tabla_ALR.Columns.Clear()
 
         Form_ALR.Tabla_ALR.Columns.Add("Column1", "Piso")
-        For i = 0 To Proyecto.Columnas.Lista_Combinaciones_ALR.Count - 1
-            Form_ALR.Tabla_ALR.Columns.Add("Column" & i + 1, Proyecto.Columnas.Lista_Combinaciones_ALR(i).ToString)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
+            Form_ALR.Tabla_ALR.Columns.Add("Column" & i + 1, Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(i).ToString)
         Next
 
-        Dim Seccion = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text).Lista_Tramos_Columnas
+        Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text).Lista_Tramos_Columnas
         For i = 0 To Seccion.Count - 1
             Form_ALR.Tabla_ALR.Rows.Add()
         Next
@@ -95,14 +94,14 @@ Public Class Form_02_01_ResultadosColumnas
         For i = 0 To Seccion.Count - 1
             Form_ALR.Tabla_ALR.Rows(i).Cells(0).Value = Seccion(i).Piso
 
-            For j = 0 To Proyecto.Columnas.Lista_Combinaciones_ALR.Count - 1
+            For j = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
                 Dim ce As Integer = j
                 Form_ALR.Tabla_ALR.Rows(i).Cells(j + 1).Value = Math.Round(Math.Abs(Seccion(i).Lista_Combinaciones.Find(Function(p) p.Name = Form_ALR.Tabla_ALR.Columns(ce + 1).HeaderText).P) / (Seccion(i).fc * Seccion(i).B_Plano * Seccion(i).H_Plano * 1000), 2)
             Next
         Next
 
         For i = 0 To Seccion.Count - 1
-            For j = 0 To Proyecto.Columnas.Lista_Combinaciones_ALR.Count - 1
+            For j = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
                 If Form_ALR.Tabla_ALR.Rows(i).Cells(j + 1).Value > 0.4 Then
                     Funcion_Color_Cumple(Form_ALR.Tabla_ALR, i, j + 1, "No cumple")
                 End If
@@ -115,7 +114,7 @@ Public Class Form_02_01_ResultadosColumnas
     End Sub
 
     Private Sub Form_03_01_ResultadosColumnas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        If Proyecto.Columnas.Verificacion_ALR = True Then
+        If Proyecto.Elementos.Columnas.Verificacion_ALR = True Then
             Button1.Visible = True
         End If
     End Sub
@@ -182,8 +181,8 @@ Public Class Form_02_01_ResultadosColumnas
         Dim R_Ash_Min As Single = 1
         Dim Fc_Max As Single = 35
 
-        For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
-            Dim Columna = Proyecto.Columnas.Lista_Columnas(i)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
+            Dim Columna = Proyecto.Elementos.Columnas.Lista_Columnas(i)
             Hoja_Resultados.Cells(3 + i, 1) = Columna.Name_Label
             Hoja_Resultados.Cells(3 + i, 40) = Columna.Name_Label
             Hoja_Resultados.Cells(3 + i, 41) = Columna.Name_Elemento
@@ -318,11 +317,11 @@ Public Class Form_02_01_ResultadosColumnas
     Private Sub IngresarResultadosDeModeloToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Resultados_Modelo_Col.Click
         Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Clear()
 
-        For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
-            Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Label)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
+            Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
 
         Next
-        Form_02_01_02_ResultadosModelo.Combo_Elementos.Text = Proyecto.Columnas.Lista_Columnas(0).Name_Label
+        Form_02_01_02_ResultadosModelo.Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Label
         Form_02_01_02_ResultadosModelo.Show()
     End Sub
 
@@ -333,8 +332,8 @@ Public Class Form_02_01_ResultadosColumnas
     Private Sub RevisiónDeCortanteToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Cortante_Resultados.Click
         Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Clear()
 
-        For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
-            Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Label)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
+            Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
         Next
 
         Form_02_01_00_RevisionCortante.Combo_Elementos.Text = Combo_Elementos.Text

@@ -6,7 +6,7 @@ Public Class Form_Graficos
         Grafico.Series.Clear()
         Dim Fmax As Single
 
-        For i = 0 To Proyecto.Columnas.Lista_Combinaciones_Grafico_ALR.Count - 1
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR.Count - 1
 
             Dim Serie As New Series
             Serie.ChartType = SeriesChartType.Column
@@ -24,9 +24,9 @@ Public Class Form_Graficos
 
             Dim g = i
 
-            For j = 0 To Proyecto.Columnas.Lista_Columnas.Count() - 1
-                Dim Columna = Proyecto.Columnas.Lista_Columnas(j)
-                Dim ALR As Single = Proyecto.Columnas.Lista_Columnas(j).Lista_ALR.Find(Function(p) p.Combinacion = Proyecto.Columnas.Lista_Combinaciones_Grafico_ALR(g)).ALR
+            For j = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count() - 1
+                Dim Columna = Proyecto.Elementos.Columnas.Lista_Columnas(j)
+                Dim ALR As Single = Proyecto.Elementos.Columnas.Lista_Columnas(j).Lista_ALR.Find(Function(p) p.Combinacion = Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR(g)).ALR
 
                 Dim Punto As New DataPoint
                 Punto.AxisLabel = Columna.Name_Label
@@ -45,7 +45,7 @@ Public Class Form_Graficos
                 End If
             Next
 
-            Serie.LegendText = Proyecto.Columnas.Lista_Combinaciones_Grafico_ALR(i)
+            Serie.LegendText = Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR(i)
 
             Grafico.Series.Add(Serie)
         Next
@@ -54,7 +54,7 @@ Public Class Form_Graficos
 
         Grafico.ChartAreas("ChartArea1").AxisX.Minimum = 0
         Grafico.ChartAreas("ChartArea1").AxisY.Minimum = 0
-        Grafico.ChartAreas("ChartArea1").AxisX.Maximum = Proyecto.Columnas.Lista_Columnas.Count() + 1
+        Grafico.ChartAreas("ChartArea1").AxisX.Maximum = Proyecto.Elementos.Columnas.Lista_Columnas.Count() + 1
         Grafico.ChartAreas("ChartArea1").AxisY.Maximum = (Math.Round(Fmax * 10, 0) + 1) / 10
         'Grafico.ChartAreas("ChartArea1").AxisY.Interval = Math.Round((Math.Round(Fmax * 10, 0) + 1) / 10 / 10, 2)
         Grafico.ChartAreas("ChartArea1").AxisY.Interval = Math.Round(0.1, 2)
@@ -80,8 +80,8 @@ Public Class Form_Graficos
 
         Dim Fmax As Single
 
-        For i = 0 To Proyecto.Columnas.Lista_Columnas.Count() - 1
-            Dim Columna = Proyecto.Columnas.Lista_Columnas(i)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count() - 1
+            Dim Columna = Proyecto.Elementos.Columnas.Lista_Columnas(i)
             Dim Punto As New DataPoint
             Punto.AxisLabel = Columna.Name_Label
             Punto.XValue = i + 1
@@ -100,10 +100,10 @@ Public Class Form_Graficos
             End If
         Next
         Serie2.Points.AddXY(0, 0.9)
-        Serie2.Points.AddXY(Proyecto.Columnas.Lista_Columnas.Count() + 1, 0.9)
+        Serie2.Points.AddXY(Proyecto.Elementos.Columnas.Lista_Columnas.Count() + 1, 0.9)
 
         Grafico.ChartAreas("ChartArea1").AxisX.Minimum = 0
-        Grafico.ChartAreas("ChartArea1").AxisX.Maximum = Proyecto.Columnas.Lista_Columnas.Count() + 1
+        Grafico.ChartAreas("ChartArea1").AxisX.Maximum = Proyecto.Elementos.Columnas.Lista_Columnas.Count() + 1
         Grafico.ChartAreas("ChartArea1").AxisY.Title = "Capacidad/Demanda"
 
         Grafico.ChartAreas("ChartArea1").AxisY.Maximum = (Math.Round(Fmax * 10, 0) + 1) / 10
@@ -137,8 +137,8 @@ Public Class Form_Graficos
         Serie2.BorderDashStyle = ChartDashStyle.DashDot
         Dim Fmax As Single
 
-        For i = 0 To Proyecto.Columnas.Lista_Columnas.Count() - 1
-            Dim Columna = Proyecto.Columnas.Lista_Columnas(i)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count() - 1
+            Dim Columna = Proyecto.Elementos.Columnas.Lista_Columnas(i)
             Dim Punto As New DataPoint
             Punto.AxisLabel = Columna.Name_Label
             Punto.XValue = i + 1
@@ -159,10 +159,10 @@ Public Class Form_Graficos
         Next
 
         Serie2.Points.AddXY(0, 0.9)
-        Serie2.Points.AddXY(Proyecto.Columnas.Lista_Columnas.Count() + 1, 0.9)
+        Serie2.Points.AddXY(Proyecto.Elementos.Columnas.Lista_Columnas.Count() + 1, 0.9)
 
         Grafico.ChartAreas("ChartArea1").AxisX.Minimum = 0
-        Grafico.ChartAreas("ChartArea1").AxisX.Maximum = Proyecto.Columnas.Lista_Columnas.Count() + 1
+        Grafico.ChartAreas("ChartArea1").AxisX.Maximum = Proyecto.Elementos.Columnas.Lista_Columnas.Count() + 1
         Grafico.ChartAreas("ChartArea1").AxisY.Maximum = (Math.Round(Fmax * 10, 0) + 1) / 10
         Grafico.ChartAreas("ChartArea1").AxisY.Interval = Math.Round((Math.Round(Fmax * 10, 0) + 1) / 10 / 10, 2)
 
@@ -180,11 +180,11 @@ Public Class Form_Graficos
     End Sub
 
     Private Sub CombinacionesDeAnálisisToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CombinacionesDeAnálisisToolStripMenuItem.Click
-        For i = 0 To Proyecto.Columnas.Lista_Combinaciones_ALR.Count - 1
-            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Proyecto.Columnas.Lista_Combinaciones_ALR(i))
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(i))
         Next
-        For i = 0 To Proyecto.Columnas.Lista_Combinaciones_Grafico_ALR.Count - 1
-            Form_Opciones_Combinaciones.Lista_Cargas_Diseño.Items.Add(Proyecto.Columnas.Lista_Combinaciones_Grafico_ALR(i))
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR.Count - 1
+            Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR(i))
         Next
 
         Form_Opciones_Combinaciones.Show()

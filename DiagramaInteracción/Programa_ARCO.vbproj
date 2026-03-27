@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Microsoft.SqlServer.Types.160.1000.6\build\net462\Microsoft.SqlServer.Types.props" Condition="Exists('..\packages\Microsoft.SqlServer.Types.160.1000.6\build\net462\Microsoft.SqlServer.Types.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -15,7 +16,9 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
-    <PublishUrl>C:\Users\vidal\Desktop\Temporal\ARCO_Temporal\</PublishUrl>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <PublishUrl>C:\Users\vidal\Desktop\Temporal\ARCO\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
     <UpdateEnabled>false</UpdateEnabled>
@@ -26,12 +29,13 @@
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
     <TargetCulture>es-CO</TargetCulture>
-    <ProductName>StruCheck Columnas</ProductName>
+    <ProductName>ARCO</ProductName>
     <PublisherName>EstrucMed, Ingeniería Especializada</PublisherName>
-    <SuiteName>StruCheck</SuiteName>
-    <ApplicationRevision>3</ApplicationRevision>
+    <SuiteName>ARCO</SuiteName>
+    <ApplicationRevision>2</ApplicationRevision>
     <ApplicationVersion>2.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
+    <CreateDesktopShortcut>true</CreateDesktopShortcut>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -69,7 +73,7 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>LogoColumnaSinFondo_1.ico</ApplicationIcon>
+    <ApplicationIcon>1-75c67b13.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -120,20 +124,47 @@
     <Reference Include="BouncyCastle.Crypto, Version=1.8.9.0, Culture=neutral, PublicKeyToken=0e99375e54769942">
       <HintPath>..\packages\BouncyCastle.1.8.9\lib\BouncyCastle.Crypto.dll</HintPath>
     </Reference>
+    <Reference Include="BouncyCastle.Cryptography, Version=2.0.0.0, Culture=neutral, PublicKeyToken=072edcf4a5328938, processorArchitecture=MSIL">
+      <HintPath>..\packages\BouncyCastle.Cryptography.2.4.0\lib\net461\BouncyCastle.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="ClosedXML, Version=0.105.0.0, Culture=neutral, PublicKeyToken=fd1eb21b62ae805b, processorArchitecture=MSIL">
+      <HintPath>..\packages\ClosedXML.0.105.0\lib\netstandard2.0\ClosedXML.dll</HintPath>
+    </Reference>
+    <Reference Include="ClosedXML.Parser, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1d5f7376574c51ec, processorArchitecture=MSIL">
+      <HintPath>..\packages\ClosedXML.Parser.2.0.0\lib\netstandard2.0\ClosedXML.Parser.dll</HintPath>
+    </Reference>
+    <Reference Include="DocumentFormat.OpenXml, Version=3.1.1.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
+      <HintPath>..\packages\DocumentFormat.OpenXml.3.1.1\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
+    </Reference>
+    <Reference Include="DocumentFormat.OpenXml.Framework, Version=3.1.1.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
+      <HintPath>..\packages\DocumentFormat.OpenXml.Framework.3.1.1\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelDataReader, Version=3.8.0.0, Culture=neutral, PublicKeyToken=93517dbe6a4012fa, processorArchitecture=MSIL">
+      <HintPath>..\packages\ExcelDataReader.3.8.0\lib\net462\ExcelDataReader.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelDataReader.DataSet, Version=3.8.0.0, Culture=neutral, PublicKeyToken=93517dbe6a4012fa, processorArchitecture=MSIL">
+      <HintPath>..\packages\ExcelDataReader.DataSet.3.8.0\lib\net462\ExcelDataReader.DataSet.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelNumberFormat, Version=1.1.0.0, Culture=neutral, PublicKeyToken=23c6f5d73be07eca, processorArchitecture=MSIL">
+      <HintPath>..\packages\ExcelNumberFormat.1.1.0\lib\net20\ExcelNumberFormat.dll</HintPath>
+    </Reference>
     <Reference Include="FCB_Etabs">
       <HintPath>..\..\..\..\06_ProyectoEtabs\BibliotecaEtabs\FCB_Etabs\bin\Debug\FCB_Etabs.dll</HintPath>
     </Reference>
-    <Reference Include="itextsharp, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
-      <HintPath>..\packages\iTextSharp.5.5.13.2\lib\itextsharp.dll</HintPath>
+    <Reference Include="itextsharp, Version=5.5.13.4, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\iTextSharp.5.5.13.4\lib\net461\itextsharp.dll</HintPath>
     </Reference>
-    <Reference Include="itextsharp.pdfa, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
-      <HintPath>..\packages\itextsharp.pdfa.5.5.13.2\lib\itextsharp.pdfa.dll</HintPath>
+    <Reference Include="itextsharp.pdfa, Version=5.5.13.4, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\itextsharp.pdfa.5.5.13.4\lib\net461\itextsharp.pdfa.dll</HintPath>
     </Reference>
-    <Reference Include="itextsharp.xmlworker, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
-      <HintPath>..\packages\itextsharp.xmlworker.5.5.13.2\lib\itextsharp.xmlworker.dll</HintPath>
+    <Reference Include="itextsharp.xmlworker, Version=5.5.13.4, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\itextsharp.xmlworker.5.5.13.4\lib\net461\itextsharp.xmlworker.dll</HintPath>
     </Reference>
-    <Reference Include="itextsharp.xtra, Version=5.5.13.2, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
-      <HintPath>..\packages\itextsharp.xtra.5.5.13.2\lib\itextsharp.xtra.dll</HintPath>
+    <Reference Include="itextsharp.xtra, Version=5.5.13.4, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\itextsharp.xtra.5.5.13.4\lib\net461\itextsharp.xtra.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.HashCode, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Office.Interop.Excel1">
       <HintPath>C:\Program Files\Microsoft Office\root\Office16\ADDINS\PowerPivot Excel Add-in\Microsoft.Office.Interop.Excel.dll</HintPath>
@@ -164,16 +195,39 @@
       <HintPath>..\packages\Microsoft.ReportViewer.11.0.3366.16\lib\Microsoft.ReportViewer.WinForms.DLL</HintPath>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Data.Tools.ExceptionMessageBox, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.SqlServer.Types.14.0.1016.290\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
+    <Reference Include="Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.SqlServer.Types.160.1000.6\lib\net462\Microsoft.SqlServer.Types.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="RBush, Version=4.0.0.0, Culture=neutral, PublicKeyToken=c77e27b81f4d0187, processorArchitecture=MSIL">
+      <HintPath>..\packages\RBush.Signed.4.0.0\lib\net47\RBush.dll</HintPath>
+    </Reference>
+    <Reference Include="SixLabors.Fonts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d998eea7b14cab13, processorArchitecture=MSIL">
+      <HintPath>..\packages\SixLabors.Fonts.1.0.0\lib\netstandard2.0\SixLabors.Fonts.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.7.0\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.Services" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Windows.Forms.DataVisualization" />
@@ -200,19 +254,40 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApplicationEvents.vb" />
+    <Compile Include="Clases\cApoyo.vb" />
+    <Compile Include="Clases\cCombinacionBeamForce.vb" />
+    <Compile Include="Clases\cCombinacionZapata.vb" />
+    <Compile Include="Clases\cDisenoViga.vb" />
+    <Compile Include="Clases\cElementos.vb" />
+    <Compile Include="Clases\cEnvolventeMomento.vb" />
+    <Compile Include="Clases\cFrame.vb" />
+    <Compile Include="Clases\cGridLine.vb" />
+    <Compile Include="Clases\cInfoProyecto.vb" />
+    <Compile Include="Clases\cJoint.vb" />
     <Compile Include="Clases\Columnas\cColumnas.vb" />
     <Compile Include="Clases\Columnas\Columnas.vb" />
     <Compile Include="Clases\Columnas\Elemento_Columna.vb" />
+    <Compile Include="Clases\cParametrosSismicos.vb" />
+    <Compile Include="Clases\cResultadosGlobales.vb" />
+    <Compile Include="Clases\cTablasETABS.vb" />
+    <Compile Include="Clases\cViga.vb" />
+    <Compile Include="Clases\cVigas.vb" />
+    <Compile Include="Clases\cZapata.vb" />
+    <Compile Include="Clases\cZapatas.vb" />
     <Compile Include="Clases\Escaleras\Proyecto_Escaleras.vb" />
     <Compile Include="Clases\Funcion_Proyecto.vb" />
     <Compile Include="Clases\MurosNoEstructurales\Proyecto_MNE.vb" />
     <Compile Include="Clases\Muros\cMuros.vb" />
     <Compile Include="Clases\Muros\Muros.vb" />
     <Compile Include="Clases\Muros\SeccionMuro.vb" />
+    <Compile Include="Clases\Pilas\cCombinacionPila.vb" />
     <Compile Include="Clases\Pilas\cPilas.vb" />
     <Compile Include="Clases\Pilas\Elemento_Pila.vb" />
     <Compile Include="Clases\Losas\Proyecto_Losas.vb" />
     <Compile Include="Clases\Proyecto.vb" />
+    <Compile Include="Clases\Refuerzo.vb" />
+    <Compile Include="Clases\RefuerzoSimple.vb" />
+    <Compile Include="Clases\ResultadoZapata.vb" />
     <Compile Include="eNum\ColoresProyecto.vb" />
     <Compile Include="eNum\eDiccionarios.vb" />
     <Compile Include="eNum\eNum.vb" />
@@ -264,16 +339,28 @@
     <Compile Include="Formularios\06_Muros\R_ReporteInicial.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\Archivos.Designer.vb">
-      <DependentUpon>Archivos.vb</DependentUpon>
-    </Compile>
-    <Compile Include="Formularios\Archivos.vb">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
       <DependentUpon>Form_Logos.vb</DependentUpon>
     </Compile>
     <Compile Include="Formularios\Complementos\Form_Logos.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_07_Pag_Zapatas.Designer.vb">
+      <DependentUpon>Form_07_Pag_Zapatas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_07_Pag_Zapatas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_08_VigasFundacion.Designer.vb">
+      <DependentUpon>Form_08_VigasFundacion.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_08_VigasFundacion.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_09_Vigas.Designer.vb">
+      <DependentUpon>Form_09_Vigas.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\Form_09_Vigas.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_Derivas.Designer.vb">
@@ -340,9 +427,7 @@
     <Compile Include="Formularios\Complementos\Form_Combinaciones.Designer.vb">
       <DependentUpon>Form_Combinaciones.vb</DependentUpon>
     </Compile>
-    <Compile Include="Formularios\Complementos\Form_Combinaciones.vb">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Formularios\Complementos\Form_Combinaciones.vb" />
     <Compile Include="Formularios\02_Columnas\Form_02_00_PagInfoColumnas.Designer.vb">
       <DependentUpon>Form_02_00_PagInfoColumnas.vb</DependentUpon>
     </Compile>
@@ -392,10 +477,10 @@
     <Compile Include="Formularios\01_Pilas\Form_01_PagPilas.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\Form_05_FiguraRectangular.Designer.vb">
-      <DependentUpon>Form_05_FiguraRectangular.vb</DependentUpon>
+    <Compile Include="Formularios\SRectangular.Designer.vb">
+      <DependentUpon>SRectangular.vb</DependentUpon>
     </Compile>
-    <Compile Include="Formularios\Form_05_FiguraRectangular.vb">
+    <Compile Include="Formularios\SRectangular.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_12_PagPropRefuerzo.Designer.vb">
@@ -431,6 +516,7 @@
     <Compile Include="Funciones\Funciones_02_Columnas.vb" />
     <Compile Include="Funciones\Funciones_Muros.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
+    <Compile Include="Funciones\Funciones_Zapatas.vb" />
     <Compile Include="Funciones\ReporteInicial.vb" />
     <Compile Include="Microsofts\Office.vb" />
     <Compile Include="Funciones\Diagrama_Interaccion_Rectangular.vb" />
@@ -490,9 +576,6 @@
     <EmbeddedResource Include="Formularios\06_Muros\R_ReporteInicial.resx">
       <DependentUpon>R_ReporteInicial.vb</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Formularios\Archivos.resx">
-      <DependentUpon>Archivos.vb</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Complementos\Form_Fuerzas.resx">
       <DependentUpon>Form_Fuerzas.vb</DependentUpon>
     </EmbeddedResource>
@@ -535,6 +618,15 @@
     <EmbeddedResource Include="Formularios\02_Columnas\Form_02_00_PagInfoColumnas.resx">
       <DependentUpon>Form_02_00_PagInfoColumnas.vb</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_07_Pag_Zapatas.resx">
+      <DependentUpon>Form_07_Pag_Zapatas.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_08_VigasFundacion.resx">
+      <DependentUpon>Form_08_VigasFundacion.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\Form_09_Vigas.resx">
+      <DependentUpon>Form_09_Vigas.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Form_11_PagMateriales.resx">
       <DependentUpon>Form_11_PagMateriales.vb</DependentUpon>
     </EmbeddedResource>
@@ -544,8 +636,8 @@
     <EmbeddedResource Include="Formularios\01_Pilas\Form_01_PagPilas.resx">
       <DependentUpon>Form_01_PagPilas.vb</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Formularios\Form_05_FiguraRectangular.resx">
-      <DependentUpon>Form_05_FiguraRectangular.vb</DependentUpon>
+    <EmbeddedResource Include="Formularios\SRectangular.resx">
+      <DependentUpon>SRectangular.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Form_12_PagPropRefuerzo.resx">
       <DependentUpon>Form_12_PagPropRefuerzo.vb</DependentUpon>
@@ -731,6 +823,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="1-75c67b13.ico" />
+    <Content Include="ARCO_V04.ico" />
     <Content Include="Logo3.ico" />
     <Content Include="LogoColumnaSinFondo_1.ico" />
     <None Include="Resources\Im.png" />
@@ -738,20 +832,6 @@
     <None Include="Resources\ARCO_ICONOVERDE.ico" />
     <None Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_LOGOVerde.png" />
-    <Content Include="SqlServerTypes\Loader.cs" />
-    <Content Include="SqlServerTypes\readme.htm" />
-    <Content Include="SqlServerTypes\x64\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
@@ -759,4 +839,10 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>Este proyecto hace referencia a los paquetes NuGet que faltan en este equipo. Use la restauración de paquetes NuGet para descargarlos. Para obtener más información, consulte http://go.microsoft.com/fwlink/?LinkID=322105. El archivo que falta es {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Microsoft.SqlServer.Types.160.1000.6\build\net462\Microsoft.SqlServer.Types.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.SqlServer.Types.160.1000.6\build\net462\Microsoft.SqlServer.Types.props'))" />
+  </Target>
 </Project>

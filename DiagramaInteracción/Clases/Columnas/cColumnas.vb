@@ -18,8 +18,11 @@ Public Class cColumnas
     Public Lista_Pisos As List(Of String)
     Public Lista_fc As List(Of Single)
     Public Lista_Columnas As New List(Of Columna)
+
     Public Lista_Combinaciones As New List(Of String)
     Public Lista_Combinaciones_ALR As New List(Of String)
     Public Lista_Combinaciones_Grafico_ALR As New List(Of String)
+
+    Public ListA_Combinaciones_Design As New List(Of String)
 
 End Class

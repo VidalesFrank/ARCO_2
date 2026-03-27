@@ -195,7 +195,7 @@ Partial Class SeccionR
         Me.Label14.AutoSize = True
         Me.Label14.Location = New System.Drawing.Point(44, 66)
         Me.Label14.Name = "Label14"
-        Me.Label14.Size = New System.Drawing.Size(227, 16)
+        Me.Label14.Size = New System.Drawing.Size(226, 16)
         Me.Label14.TabIndex = 10
         Me.Label14.Text = "Capacidad de disipación de energía"
         '
@@ -204,7 +204,7 @@ Partial Class SeccionR
         Me.Label15.AutoSize = True
         Me.Label15.Location = New System.Drawing.Point(278, 36)
         Me.Label15.Name = "Label15"
-        Me.Label15.Size = New System.Drawing.Size(19, 16)
+        Me.Label15.Size = New System.Drawing.Size(18, 16)
         Me.Label15.TabIndex = 9
         Me.Label15.Text = "m"
         Me.Label15.Visible = False
@@ -223,7 +223,7 @@ Partial Class SeccionR
         Me.Label17.AutoSize = True
         Me.Label17.Location = New System.Drawing.Point(26, 34)
         Me.Label17.Name = "Label17"
-        Me.Label17.Size = New System.Drawing.Size(88, 16)
+        Me.Label17.Size = New System.Drawing.Size(87, 16)
         Me.Label17.TabIndex = 0
         Me.Label17.Text = "Longitud libre"
         '
@@ -245,7 +245,7 @@ Partial Class SeccionR
         Me.RadioButton3.AutoSize = True
         Me.RadioButton3.Location = New System.Drawing.Point(167, 48)
         Me.RadioButton3.Name = "RadioButton3"
-        Me.RadioButton3.Size = New System.Drawing.Size(72, 20)
+        Me.RadioButton3.Size = New System.Drawing.Size(71, 20)
         Me.RadioButton3.TabIndex = 2
         Me.RadioButton3.Text = "M2 - M3"
         Me.RadioButton3.UseVisualStyleBackColor = True
@@ -255,7 +255,7 @@ Partial Class SeccionR
         Me.RadioButton2.AutoSize = True
         Me.RadioButton2.Location = New System.Drawing.Point(75, 60)
         Me.RadioButton2.Name = "RadioButton2"
-        Me.RadioButton2.Size = New System.Drawing.Size(63, 20)
+        Me.RadioButton2.Size = New System.Drawing.Size(62, 20)
         Me.RadioButton2.TabIndex = 1
         Me.RadioButton2.Text = "P - M3"
         Me.RadioButton2.UseVisualStyleBackColor = True
@@ -265,7 +265,7 @@ Partial Class SeccionR
         Me.RadioButton1.AutoSize = True
         Me.RadioButton1.Location = New System.Drawing.Point(75, 33)
         Me.RadioButton1.Name = "RadioButton1"
-        Me.RadioButton1.Size = New System.Drawing.Size(63, 20)
+        Me.RadioButton1.Size = New System.Drawing.Size(62, 20)
         Me.RadioButton1.TabIndex = 0
         Me.RadioButton1.Text = "P - M2"
         Me.RadioButton1.UseVisualStyleBackColor = True
@@ -306,7 +306,7 @@ Partial Class SeccionR
         Me.Label13.AutoSize = True
         Me.Label13.Location = New System.Drawing.Point(47, 135)
         Me.Label13.Name = "Label13"
-        Me.Label13.Size = New System.Drawing.Size(105, 16)
+        Me.Label13.Size = New System.Drawing.Size(104, 16)
         Me.Label13.TabIndex = 15
         Me.Label13.Text = "Zona Intermedia"
         '
@@ -315,7 +315,7 @@ Partial Class SeccionR
         Me.Label12.AutoSize = True
         Me.Label12.Location = New System.Drawing.Point(47, 105)
         Me.Label12.Name = "Label12"
-        Me.Label12.Size = New System.Drawing.Size(103, 16)
+        Me.Label12.Size = New System.Drawing.Size(102, 16)
         Me.Label12.TabIndex = 14
         Me.Label12.Text = "Zona Confinada"
         '
@@ -334,7 +334,7 @@ Partial Class SeccionR
         Me.Label11.AutoSize = True
         Me.Label11.Location = New System.Drawing.Point(217, 135)
         Me.Label11.Name = "Label11"
-        Me.Label11.Size = New System.Drawing.Size(22, 16)
+        Me.Label11.Size = New System.Drawing.Size(21, 16)
         Me.Label11.TabIndex = 12
         Me.Label11.Text = "@"
         '
@@ -364,7 +364,7 @@ Partial Class SeccionR
         Me.Label10.AutoSize = True
         Me.Label10.Location = New System.Drawing.Point(217, 105)
         Me.Label10.Name = "Label10"
-        Me.Label10.Size = New System.Drawing.Size(22, 16)
+        Me.Label10.Size = New System.Drawing.Size(21, 16)
         Me.Label10.TabIndex = 9
         Me.Label10.Text = "@"
         '
@@ -384,7 +384,7 @@ Partial Class SeccionR
         Me.Label9.AutoSize = True
         Me.Label9.Location = New System.Drawing.Point(26, 73)
         Me.Label9.Name = "Label9"
-        Me.Label9.Size = New System.Drawing.Size(137, 16)
+        Me.Label9.Size = New System.Drawing.Size(136, 16)
         Me.Label9.TabIndex = 4
         Me.Label9.Text = "Refuerzo Transversal"
         '
@@ -393,7 +393,7 @@ Partial Class SeccionR
         Me.Label8.AutoSize = True
         Me.Label8.Location = New System.Drawing.Point(26, 36)
         Me.Label8.Name = "Label8"
-        Me.Label8.Size = New System.Drawing.Size(62, 16)
+        Me.Label8.Size = New System.Drawing.Size(61, 16)
         Me.Label8.TabIndex = 3
         Me.Label8.Text = "Refuerzo"
         '
@@ -430,7 +430,7 @@ Partial Class SeccionR
         Me.Label7.AutoSize = True
         Me.Label7.Location = New System.Drawing.Point(278, 91)
         Me.Label7.Name = "Label7"
-        Me.Label7.Size = New System.Drawing.Size(19, 16)
+        Me.Label7.Size = New System.Drawing.Size(18, 16)
         Me.Label7.TabIndex = 8
         Me.Label7.Text = "m"
         '
@@ -439,7 +439,7 @@ Partial Class SeccionR
         Me.Label6.AutoSize = True
         Me.Label6.Location = New System.Drawing.Point(278, 63)
         Me.Label6.Name = "Label6"
-        Me.Label6.Size = New System.Drawing.Size(19, 16)
+        Me.Label6.Size = New System.Drawing.Size(18, 16)
         Me.Label6.TabIndex = 7
         Me.Label6.Text = "m"
         '
@@ -448,7 +448,7 @@ Partial Class SeccionR
         Me.Label5.AutoSize = True
         Me.Label5.Location = New System.Drawing.Point(278, 36)
         Me.Label5.Name = "Label5"
-        Me.Label5.Size = New System.Drawing.Size(19, 16)
+        Me.Label5.Size = New System.Drawing.Size(18, 16)
         Me.Label5.TabIndex = 6
         Me.Label5.Text = "m"
         '
@@ -487,7 +487,7 @@ Partial Class SeccionR
         Me.Label4.AutoSize = True
         Me.Label4.Location = New System.Drawing.Point(26, 91)
         Me.Label4.Name = "Label4"
-        Me.Label4.Size = New System.Drawing.Size(95, 16)
+        Me.Label4.Size = New System.Drawing.Size(94, 16)
         Me.Label4.TabIndex = 2
         Me.Label4.Text = "Recubrimiento"
         '
@@ -496,7 +496,7 @@ Partial Class SeccionR
         Me.Label3.AutoSize = True
         Me.Label3.Location = New System.Drawing.Point(26, 63)
         Me.Label3.Name = "Label3"
-        Me.Label3.Size = New System.Drawing.Size(42, 16)
+        Me.Label3.Size = New System.Drawing.Size(41, 16)
         Me.Label3.TabIndex = 1
         Me.Label3.Text = "Altura"
         '
@@ -505,7 +505,7 @@ Partial Class SeccionR
         Me.Label2.AutoSize = True
         Me.Label2.Location = New System.Drawing.Point(26, 36)
         Me.Label2.Name = "Label2"
-        Me.Label2.Size = New System.Drawing.Size(40, 16)
+        Me.Label2.Size = New System.Drawing.Size(39, 16)
         Me.Label2.TabIndex = 0
         Me.Label2.Text = "Base"
         '
@@ -539,7 +539,7 @@ Partial Class SeccionR
         '
         Me.DatosDeExcelToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.TipoFrameToolStripMenuItem, Me.TipoPierToolStripMenuItem})
         Me.DatosDeExcelToolStripMenuItem.Name = "DatosDeExcelToolStripMenuItem"
-        Me.DatosDeExcelToolStripMenuItem.Size = New System.Drawing.Size(150, 22)
+        Me.DatosDeExcelToolStripMenuItem.Size = New System.Drawing.Size(149, 22)
         Me.DatosDeExcelToolStripMenuItem.Text = "Datos de Excel"
         '
         'TipoFrameToolStripMenuItem
@@ -559,13 +559,13 @@ Partial Class SeccionR
         Me.ExportarToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.DatosAExcelToolStripMenuItem})
         Me.ExportarToolStripMenuItem.Enabled = False
         Me.ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        Me.ExportarToolStripMenuItem.Size = New System.Drawing.Size(63, 20)
+        Me.ExportarToolStripMenuItem.Size = New System.Drawing.Size(62, 20)
         Me.ExportarToolStripMenuItem.Text = "Exportar"
         '
         'DatosAExcelToolStripMenuItem
         '
         Me.DatosAExcelToolStripMenuItem.Name = "DatosAExcelToolStripMenuItem"
-        Me.DatosAExcelToolStripMenuItem.Size = New System.Drawing.Size(143, 22)
+        Me.DatosAExcelToolStripMenuItem.Size = New System.Drawing.Size(142, 22)
         Me.DatosAExcelToolStripMenuItem.Text = "Datos a Excel"
         '
         'VerToolStripMenuItem

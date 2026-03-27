@@ -35,6 +35,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.IngresarDerivasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ModeloElasticoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ModeloAgrietadoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ImportarToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Ayuda = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
@@ -54,36 +55,51 @@ Partial Class Form_00_PaginaPrincipal
         Me.SoporteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.LicenciaToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
         Me.Panel2 = New System.Windows.Forms.Panel()
+        Me.Button2 = New System.Windows.Forms.Button()
+        Me.PictureBox8 = New System.Windows.Forms.PictureBox()
+        Me.Button1 = New System.Windows.Forms.Button()
+        Me.PictureBox3 = New System.Windows.Forms.PictureBox()
+        Me.PictureBox7 = New System.Windows.Forms.PictureBox()
+        Me.PictureBox6 = New System.Windows.Forms.PictureBox()
+        Me.PictureBox5 = New System.Windows.Forms.PictureBox()
+        Me.PictureBox4 = New System.Windows.Forms.PictureBox()
+        Me.PictureBox2 = New System.Windows.Forms.PictureBox()
+        Me.Panel4 = New System.Windows.Forms.Panel()
+        Me.Ref2 = New System.Windows.Forms.Label()
         Me.Label2 = New System.Windows.Forms.Label()
-        Me.Label1 = New System.Windows.Forms.Label()
         Me.Boton_Muros = New System.Windows.Forms.Button()
-        Me.Imag_MNE = New System.Windows.Forms.PictureBox()
-        Me.Imag_Escaleras = New System.Windows.Forms.PictureBox()
         Me.Boton_MNE = New System.Windows.Forms.Button()
         Me.Boton_Escaleras = New System.Windows.Forms.Button()
-        Me.Imag_Los = New System.Windows.Forms.PictureBox()
         Me.Boton_Losas = New System.Windows.Forms.Button()
         Me.Boton_Propiedades = New System.Windows.Forms.Button()
         Me.Imag_Col = New System.Windows.Forms.PictureBox()
         Me.Boton_Columnas = New System.Windows.Forms.Button()
         Me.Imag_Pilas = New System.Windows.Forms.PictureBox()
         Me.Boton_Pilas = New System.Windows.Forms.Button()
-        Me.Imag_Logo = New System.Windows.Forms.PictureBox()
-        Me.Ref2 = New System.Windows.Forms.Label()
         Me.PictureBox1 = New System.Windows.Forms.PictureBox()
-        Me.Ref1 = New System.Windows.Forms.Label()
         Me.SubTitulo = New System.Windows.Forms.Label()
         Me.Opcion1 = New System.Windows.Forms.RadioButton()
+        Me.Panel3 = New System.Windows.Forms.Panel()
+        Me.Label3 = New System.Windows.Forms.Label()
+        Me.Label1 = New System.Windows.Forms.Label()
+        Me.Imag_Logo = New System.Windows.Forms.PictureBox()
         Me.Panel1 = New System.Windows.Forms.Panel()
+        Me.Button3 = New System.Windows.Forms.Button()
         Me.Menu_Form00.SuspendLayout()
         Me.Panel2.SuspendLayout()
-        CType(Me.Imag_MNE, System.ComponentModel.ISupportInitialize).BeginInit()
-        CType(Me.Imag_Escaleras, System.ComponentModel.ISupportInitialize).BeginInit()
-        CType(Me.Imag_Los, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox8, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox3, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox7, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox6, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox5, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox4, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox2, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.Panel4.SuspendLayout()
         CType(Me.Imag_Col, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.Imag_Pilas, System.ComponentModel.ISupportInitialize).BeginInit()
-        CType(Me.Imag_Logo, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.Panel3.SuspendLayout()
+        CType(Me.Imag_Logo, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel1.SuspendLayout()
         Me.SuspendLayout()
         '
@@ -97,9 +113,9 @@ Partial Class Form_00_PaginaPrincipal
         Me.Menu_Form00.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ArchivoToolStripMenuItem1, Me.OpcionesToolStripMenuItem1, Me.Ayuda})
         Me.Menu_Form00.Location = New System.Drawing.Point(0, 0)
         Me.Menu_Form00.Name = "Menu_Form00"
-        Me.Menu_Form00.Padding = New System.Windows.Forms.Padding(5, 2, 0, 2)
+        Me.Menu_Form00.Padding = New System.Windows.Forms.Padding(4, 2, 0, 2)
         Me.Menu_Form00.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional
-        Me.Menu_Form00.Size = New System.Drawing.Size(1255, 43)
+        Me.Menu_Form00.Size = New System.Drawing.Size(1101, 35)
         Me.Menu_Form00.TabIndex = 0
         Me.Menu_Form00.Text = "MenuStrip1"
         '
@@ -109,7 +125,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ArchivoToolStripMenuItem1.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ArchivoToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.ArchivoToolStripMenuItem1.Name = "ArchivoToolStripMenuItem1"
-        Me.ArchivoToolStripMenuItem1.Size = New System.Drawing.Size(90, 39)
+        Me.ArchivoToolStripMenuItem1.Size = New System.Drawing.Size(71, 31)
         Me.ArchivoToolStripMenuItem1.Text = "Archivo"
         '
         'NuevoProyectoToolStripMenuItem
@@ -117,7 +133,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.NuevoProyectoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.NuevoProyectoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.NuevoProyectoToolStripMenuItem.Name = "NuevoProyectoToolStripMenuItem"
-        Me.NuevoProyectoToolStripMenuItem.Size = New System.Drawing.Size(224, 30)
+        Me.NuevoProyectoToolStripMenuItem.Size = New System.Drawing.Size(175, 24)
         Me.NuevoProyectoToolStripMenuItem.Text = "Nuevo"
         '
         'AbrirProyectoToolStripMenuItem
@@ -125,7 +141,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.AbrirProyectoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.AbrirProyectoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.AbrirProyectoToolStripMenuItem.Name = "AbrirProyectoToolStripMenuItem"
-        Me.AbrirProyectoToolStripMenuItem.Size = New System.Drawing.Size(224, 30)
+        Me.AbrirProyectoToolStripMenuItem.Size = New System.Drawing.Size(175, 24)
         Me.AbrirProyectoToolStripMenuItem.Text = "Abrir"
         '
         'GuardarToolStripMenuItem1
@@ -133,7 +149,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.GuardarToolStripMenuItem1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.GuardarToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.GuardarToolStripMenuItem1.Name = "GuardarToolStripMenuItem1"
-        Me.GuardarToolStripMenuItem1.Size = New System.Drawing.Size(224, 30)
+        Me.GuardarToolStripMenuItem1.Size = New System.Drawing.Size(175, 24)
         Me.GuardarToolStripMenuItem1.Text = "Guardar"
         '
         'GuardarComoToolStripMenuItem1
@@ -141,7 +157,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.GuardarComoToolStripMenuItem1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.GuardarComoToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.GuardarComoToolStripMenuItem1.Name = "GuardarComoToolStripMenuItem1"
-        Me.GuardarComoToolStripMenuItem1.Size = New System.Drawing.Size(224, 30)
+        Me.GuardarComoToolStripMenuItem1.Size = New System.Drawing.Size(175, 24)
         Me.GuardarComoToolStripMenuItem1.Text = "Guardar Como"
         '
         'SalirToolStripMenuItem1
@@ -149,16 +165,16 @@ Partial Class Form_00_PaginaPrincipal
         Me.SalirToolStripMenuItem1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.SalirToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.SalirToolStripMenuItem1.Name = "SalirToolStripMenuItem1"
-        Me.SalirToolStripMenuItem1.Size = New System.Drawing.Size(224, 30)
+        Me.SalirToolStripMenuItem1.Size = New System.Drawing.Size(175, 24)
         Me.SalirToolStripMenuItem1.Text = "Salir"
         '
         'OpcionesToolStripMenuItem1
         '
-        Me.OpcionesToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.InformaciónDeProyectoToolStripMenuItem, Me.IngresarDerivasToolStripMenuItem})
+        Me.OpcionesToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.InformaciónDeProyectoToolStripMenuItem, Me.IngresarDerivasToolStripMenuItem, Me.ImportarToolStripMenuItem})
         Me.OpcionesToolStripMenuItem1.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.OpcionesToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.OpcionesToolStripMenuItem1.Name = "OpcionesToolStripMenuItem1"
-        Me.OpcionesToolStripMenuItem1.Size = New System.Drawing.Size(105, 39)
+        Me.OpcionesToolStripMenuItem1.Size = New System.Drawing.Size(83, 31)
         Me.OpcionesToolStripMenuItem1.Text = "Opciones"
         '
         'InformaciónDeProyectoToolStripMenuItem
@@ -166,7 +182,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.InformaciónDeProyectoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.InformaciónDeProyectoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.InformaciónDeProyectoToolStripMenuItem.Name = "InformaciónDeProyectoToolStripMenuItem"
-        Me.InformaciónDeProyectoToolStripMenuItem.Size = New System.Drawing.Size(305, 30)
+        Me.InformaciónDeProyectoToolStripMenuItem.Size = New System.Drawing.Size(241, 24)
         Me.InformaciónDeProyectoToolStripMenuItem.Text = "Información de Proyecto"
         '
         'IngresarDerivasToolStripMenuItem
@@ -175,7 +191,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.IngresarDerivasToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ModeloElasticoToolStripMenuItem, Me.ModeloAgrietadoToolStripMenuItem})
         Me.IngresarDerivasToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.IngresarDerivasToolStripMenuItem.Name = "IngresarDerivasToolStripMenuItem"
-        Me.IngresarDerivasToolStripMenuItem.Size = New System.Drawing.Size(305, 30)
+        Me.IngresarDerivasToolStripMenuItem.Size = New System.Drawing.Size(241, 24)
         Me.IngresarDerivasToolStripMenuItem.Text = "Ingresar Derivas"
         '
         'ModeloElasticoToolStripMenuItem
@@ -183,7 +199,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ModeloElasticoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.ModeloElasticoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ModeloElasticoToolStripMenuItem.Name = "ModeloElasticoToolStripMenuItem"
-        Me.ModeloElasticoToolStripMenuItem.Size = New System.Drawing.Size(251, 30)
+        Me.ModeloElasticoToolStripMenuItem.Size = New System.Drawing.Size(201, 24)
         Me.ModeloElasticoToolStripMenuItem.Text = "Modelo Elastico"
         '
         'ModeloAgrietadoToolStripMenuItem
@@ -191,8 +207,16 @@ Partial Class Form_00_PaginaPrincipal
         Me.ModeloAgrietadoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.ModeloAgrietadoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ModeloAgrietadoToolStripMenuItem.Name = "ModeloAgrietadoToolStripMenuItem"
-        Me.ModeloAgrietadoToolStripMenuItem.Size = New System.Drawing.Size(251, 30)
+        Me.ModeloAgrietadoToolStripMenuItem.Size = New System.Drawing.Size(201, 24)
         Me.ModeloAgrietadoToolStripMenuItem.Text = "Modelo Agrietado"
+        '
+        'ImportarToolStripMenuItem
+        '
+        Me.ImportarToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.ImportarToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
+        Me.ImportarToolStripMenuItem.Size = New System.Drawing.Size(241, 24)
+        Me.ImportarToolStripMenuItem.Text = "Cargar Datos de Etabs"
         '
         'Ayuda
         '
@@ -200,7 +224,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Ayuda.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Ayuda.ForeColor = System.Drawing.Color.White
         Me.Ayuda.Name = "Ayuda"
-        Me.Ayuda.Size = New System.Drawing.Size(79, 39)
+        Me.Ayuda.Size = New System.Drawing.Size(63, 31)
         Me.Ayuda.Text = "Ayuda"
         '
         'ToolStripMenuItem1
@@ -209,7 +233,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem1.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
-        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(164, 30)
+        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(131, 24)
         Me.ToolStripMenuItem1.Text = "Ayuda"
         '
         'ToolStripMenuItem2
@@ -218,7 +242,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem2.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem2.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem2.Name = "ToolStripMenuItem2"
-        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(164, 30)
+        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(131, 24)
         Me.ToolStripMenuItem2.Text = "Soporte"
         '
         'ToolStripMenuItem3
@@ -227,7 +251,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem3.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem3.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem3.Name = "ToolStripMenuItem3"
-        Me.ToolStripMenuItem3.Size = New System.Drawing.Size(164, 30)
+        Me.ToolStripMenuItem3.Size = New System.Drawing.Size(131, 24)
         Me.ToolStripMenuItem3.Text = "Acerca"
         '
         'ArchivoToolStripMenuItem
@@ -244,7 +268,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.AbrirToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.AbrirToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.AbrirToolStripMenuItem.Name = "AbrirToolStripMenuItem"
-        Me.AbrirToolStripMenuItem.Size = New System.Drawing.Size(204, 28)
+        Me.AbrirToolStripMenuItem.Size = New System.Drawing.Size(161, 22)
         Me.AbrirToolStripMenuItem.Text = "Abrir"
         '
         'GuardarToolStripMenuItem
@@ -252,7 +276,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.GuardarToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.GuardarToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.GuardarToolStripMenuItem.Name = "GuardarToolStripMenuItem"
-        Me.GuardarToolStripMenuItem.Size = New System.Drawing.Size(204, 28)
+        Me.GuardarToolStripMenuItem.Size = New System.Drawing.Size(161, 22)
         Me.GuardarToolStripMenuItem.Text = "Guardar"
         '
         'GuardarComoToolStripMenuItem
@@ -260,7 +284,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.GuardarComoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.GuardarComoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.GuardarComoToolStripMenuItem.Name = "GuardarComoToolStripMenuItem"
-        Me.GuardarComoToolStripMenuItem.Size = New System.Drawing.Size(204, 28)
+        Me.GuardarComoToolStripMenuItem.Size = New System.Drawing.Size(161, 22)
         Me.GuardarComoToolStripMenuItem.Text = "Guardar como"
         '
         'SalirToolStripMenuItem
@@ -268,7 +292,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.SalirToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.SalirToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.SalirToolStripMenuItem.Name = "SalirToolStripMenuItem"
-        Me.SalirToolStripMenuItem.Size = New System.Drawing.Size(204, 28)
+        Me.SalirToolStripMenuItem.Size = New System.Drawing.Size(161, 22)
         Me.SalirToolStripMenuItem.Text = "Salir"
         '
         'DefinirToolStripMenuItem
@@ -285,7 +309,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.InformaciónGeneralToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.InformaciónGeneralToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.InformaciónGeneralToolStripMenuItem.Name = "InformaciónGeneralToolStripMenuItem"
-        Me.InformaciónGeneralToolStripMenuItem.Size = New System.Drawing.Size(250, 28)
+        Me.InformaciónGeneralToolStripMenuItem.Size = New System.Drawing.Size(194, 22)
         Me.InformaciónGeneralToolStripMenuItem.Text = "Información General"
         Me.InformaciónGeneralToolStripMenuItem.Visible = False
         '
@@ -294,7 +318,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.MaterialesToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.MaterialesToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.MaterialesToolStripMenuItem.Name = "MaterialesToolStripMenuItem"
-        Me.MaterialesToolStripMenuItem.Size = New System.Drawing.Size(250, 28)
+        Me.MaterialesToolStripMenuItem.Size = New System.Drawing.Size(194, 22)
         Me.MaterialesToolStripMenuItem.Text = "Materiales"
         '
         'OpcionesToolStripMenuItem
@@ -311,7 +335,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.RefuerzoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.RefuerzoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.RefuerzoToolStripMenuItem.Name = "RefuerzoToolStripMenuItem"
-        Me.RefuerzoToolStripMenuItem.Size = New System.Drawing.Size(161, 28)
+        Me.RefuerzoToolStripMenuItem.Size = New System.Drawing.Size(128, 22)
         Me.RefuerzoToolStripMenuItem.Text = "Refuerzo"
         '
         'AyudaToolStripMenuItem
@@ -328,7 +352,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.LicenciaToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.LicenciaToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.LicenciaToolStripMenuItem.Name = "LicenciaToolStripMenuItem"
-        Me.LicenciaToolStripMenuItem.Size = New System.Drawing.Size(154, 28)
+        Me.LicenciaToolStripMenuItem.Size = New System.Drawing.Size(123, 22)
         Me.LicenciaToolStripMenuItem.Text = "Ayuda"
         '
         'SoporteToolStripMenuItem
@@ -336,7 +360,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.SoporteToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.SoporteToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.SoporteToolStripMenuItem.Name = "SoporteToolStripMenuItem"
-        Me.SoporteToolStripMenuItem.Size = New System.Drawing.Size(154, 28)
+        Me.SoporteToolStripMenuItem.Size = New System.Drawing.Size(123, 22)
         Me.SoporteToolStripMenuItem.Text = "Soporte"
         '
         'LicenciaToolStripMenuItem1
@@ -344,174 +368,258 @@ Partial Class Form_00_PaginaPrincipal
         Me.LicenciaToolStripMenuItem1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.LicenciaToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.LicenciaToolStripMenuItem1.Name = "LicenciaToolStripMenuItem1"
-        Me.LicenciaToolStripMenuItem1.Size = New System.Drawing.Size(154, 28)
+        Me.LicenciaToolStripMenuItem1.Size = New System.Drawing.Size(123, 22)
         Me.LicenciaToolStripMenuItem1.Text = "Acerca"
         '
         'Panel2
         '
         Me.Panel2.BackColor = System.Drawing.Color.Gainsboro
+        Me.Panel2.Controls.Add(Me.Button3)
+        Me.Panel2.Controls.Add(Me.Button2)
+        Me.Panel2.Controls.Add(Me.PictureBox8)
+        Me.Panel2.Controls.Add(Me.Button1)
+        Me.Panel2.Controls.Add(Me.PictureBox3)
+        Me.Panel2.Controls.Add(Me.PictureBox7)
+        Me.Panel2.Controls.Add(Me.PictureBox6)
+        Me.Panel2.Controls.Add(Me.PictureBox5)
+        Me.Panel2.Controls.Add(Me.PictureBox4)
+        Me.Panel2.Controls.Add(Me.PictureBox2)
+        Me.Panel2.Controls.Add(Me.Panel4)
         Me.Panel2.Controls.Add(Me.Label2)
-        Me.Panel2.Controls.Add(Me.Label1)
         Me.Panel2.Controls.Add(Me.Boton_Muros)
-        Me.Panel2.Controls.Add(Me.Imag_MNE)
-        Me.Panel2.Controls.Add(Me.Imag_Escaleras)
         Me.Panel2.Controls.Add(Me.Boton_MNE)
         Me.Panel2.Controls.Add(Me.Boton_Escaleras)
-        Me.Panel2.Controls.Add(Me.Imag_Los)
         Me.Panel2.Controls.Add(Me.Boton_Losas)
         Me.Panel2.Controls.Add(Me.Boton_Propiedades)
         Me.Panel2.Controls.Add(Me.Imag_Col)
         Me.Panel2.Controls.Add(Me.Boton_Columnas)
         Me.Panel2.Controls.Add(Me.Imag_Pilas)
         Me.Panel2.Controls.Add(Me.Boton_Pilas)
-        Me.Panel2.Controls.Add(Me.Imag_Logo)
-        Me.Panel2.Controls.Add(Me.Ref2)
         Me.Panel2.Controls.Add(Me.PictureBox1)
-        Me.Panel2.Controls.Add(Me.Ref1)
         Me.Panel2.Controls.Add(Me.SubTitulo)
         Me.Panel2.Controls.Add(Me.Opcion1)
+        Me.Panel2.Controls.Add(Me.Panel3)
         Me.Panel2.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.Panel2.Location = New System.Drawing.Point(0, 43)
-        Me.Panel2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Panel2.Location = New System.Drawing.Point(0, 35)
         Me.Panel2.Name = "Panel2"
-        Me.Panel2.Size = New System.Drawing.Size(1255, 564)
+        Me.Panel2.Size = New System.Drawing.Size(1101, 497)
         Me.Panel2.TabIndex = 1
+        '
+        'Button2
+        '
+        Me.Button2.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Button2.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
+        Me.Button2.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.Button2.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button2.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Button2.ImageAlign = System.Drawing.ContentAlignment.TopCenter
+        Me.Button2.Location = New System.Drawing.Point(829, 200)
+        Me.Button2.Margin = New System.Windows.Forms.Padding(0)
+        Me.Button2.Name = "Button2"
+        Me.Button2.Size = New System.Drawing.Size(234, 65)
+        Me.Button2.TabIndex = 41
+        Me.Button2.Text = "         VIGAS  FUN"
+        Me.Button2.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Button2.UseVisualStyleBackColor = True
+        '
+        'PictureBox8
+        '
+        Me.PictureBox8.BackColor = System.Drawing.Color.White
+        Me.PictureBox8.Image = CType(resources.GetObject("PictureBox8.Image"), System.Drawing.Image)
+        Me.PictureBox8.Location = New System.Drawing.Point(593, 209)
+        Me.PictureBox8.Name = "PictureBox8"
+        Me.PictureBox8.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox8.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox8.TabIndex = 40
+        Me.PictureBox8.TabStop = False
+        '
+        'Button1
+        '
+        Me.Button1.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Button1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
+        Me.Button1.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.Button1.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button1.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Button1.ImageAlign = System.Drawing.ContentAlignment.TopCenter
+        Me.Button1.Location = New System.Drawing.Point(577, 200)
+        Me.Button1.Margin = New System.Windows.Forms.Padding(0)
+        Me.Button1.Name = "Button1"
+        Me.Button1.Size = New System.Drawing.Size(234, 65)
+        Me.Button1.TabIndex = 39
+        Me.Button1.Text = "         ZAPATAS"
+        Me.Button1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Button1.UseVisualStyleBackColor = True
+        '
+        'PictureBox3
+        '
+        Me.PictureBox3.BackColor = System.Drawing.Color.White
+        Me.PictureBox3.Image = CType(resources.GetObject("PictureBox3.Image"), System.Drawing.Image)
+        Me.PictureBox3.Location = New System.Drawing.Point(847, 287)
+        Me.PictureBox3.Name = "PictureBox3"
+        Me.PictureBox3.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox3.TabIndex = 38
+        Me.PictureBox3.TabStop = False
+        '
+        'PictureBox7
+        '
+        Me.PictureBox7.BackColor = System.Drawing.Color.White
+        Me.PictureBox7.Image = CType(resources.GetObject("PictureBox7.Image"), System.Drawing.Image)
+        Me.PictureBox7.Location = New System.Drawing.Point(341, 287)
+        Me.PictureBox7.Name = "PictureBox7"
+        Me.PictureBox7.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox7.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox7.TabIndex = 37
+        Me.PictureBox7.TabStop = False
+        '
+        'PictureBox6
+        '
+        Me.PictureBox6.BackColor = System.Drawing.Color.White
+        Me.PictureBox6.Image = CType(resources.GetObject("PictureBox6.Image"), System.Drawing.Image)
+        Me.PictureBox6.Location = New System.Drawing.Point(594, 287)
+        Me.PictureBox6.Name = "PictureBox6"
+        Me.PictureBox6.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox6.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox6.TabIndex = 36
+        Me.PictureBox6.TabStop = False
+        '
+        'PictureBox5
+        '
+        Me.PictureBox5.BackColor = System.Drawing.Color.White
+        Me.PictureBox5.Image = CType(resources.GetObject("PictureBox5.Image"), System.Drawing.Image)
+        Me.PictureBox5.Location = New System.Drawing.Point(848, 131)
+        Me.PictureBox5.Name = "PictureBox5"
+        Me.PictureBox5.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox5.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox5.TabIndex = 35
+        Me.PictureBox5.TabStop = False
+        '
+        'PictureBox4
+        '
+        Me.PictureBox4.BackColor = System.Drawing.Color.White
+        Me.PictureBox4.Image = CType(resources.GetObject("PictureBox4.Image"), System.Drawing.Image)
+        Me.PictureBox4.Location = New System.Drawing.Point(342, 131)
+        Me.PictureBox4.Name = "PictureBox4"
+        Me.PictureBox4.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox4.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox4.TabIndex = 34
+        Me.PictureBox4.TabStop = False
+        '
+        'PictureBox2
+        '
+        Me.PictureBox2.BackColor = System.Drawing.Color.White
+        Me.PictureBox2.Image = CType(resources.GetObject("PictureBox2.Image"), System.Drawing.Image)
+        Me.PictureBox2.Location = New System.Drawing.Point(594, 131)
+        Me.PictureBox2.Name = "PictureBox2"
+        Me.PictureBox2.Size = New System.Drawing.Size(37, 46)
+        Me.PictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox2.TabIndex = 32
+        Me.PictureBox2.TabStop = False
+        '
+        'Panel4
+        '
+        Me.Panel4.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Panel4.Controls.Add(Me.Ref2)
+        Me.Panel4.Dock = System.Windows.Forms.DockStyle.Bottom
+        Me.Panel4.Location = New System.Drawing.Point(259, 442)
+        Me.Panel4.Name = "Panel4"
+        Me.Panel4.Size = New System.Drawing.Size(842, 55)
+        Me.Panel4.TabIndex = 31
+        '
+        'Ref2
+        '
+        Me.Ref2.AutoSize = True
+        Me.Ref2.Font = New System.Drawing.Font("Segoe UI", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Ref2.ForeColor = System.Drawing.Color.White
+        Me.Ref2.Location = New System.Drawing.Point(30, 19)
+        Me.Ref2.Name = "Ref2"
+        Me.Ref2.Size = New System.Drawing.Size(546, 21)
+        Me.Ref2.TabIndex = 3
+        Me.Ref2.Text = "© 2026 EstrucMed, Ingeniería Especializada - Todos los Derechos Reservados."
         '
         'Label2
         '
         Me.Label2.AutoSize = True
         Me.Label2.Font = New System.Drawing.Font("DIN Next LT Pro", 14.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label2.Location = New System.Drawing.Point(401, 647)
-        Me.Label2.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
+        Me.Label2.Location = New System.Drawing.Point(301, 526)
         Me.Label2.Name = "Label2"
-        Me.Label2.Size = New System.Drawing.Size(324, 29)
+        Me.Label2.Size = New System.Drawing.Size(258, 23)
         Me.Label2.TabIndex = 29
         Me.Label2.Text = "Un producto desarrollado por:"
         '
-        'Label1
-        '
-        Me.Label1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.Label1.FlatStyle = System.Windows.Forms.FlatStyle.System
-        Me.Label1.Font = New System.Drawing.Font("DIN Next LT Pro", 8.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label1.ForeColor = System.Drawing.Color.White
-        Me.Label1.Location = New System.Drawing.Point(136, 500)
-        Me.Label1.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
-        Me.Label1.Name = "Label1"
-        Me.Label1.Size = New System.Drawing.Size(316, 21)
-        Me.Label1.TabIndex = 28
-        Me.Label1.Text = "Análisis y Revisión de Estructuras de Concreto."
-        Me.Label1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
-        '
         'Boton_Muros
         '
-        Me.Boton_Muros.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Boton_Muros.BackColor = System.Drawing.Color.White
         Me.Boton_Muros.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
         Me.Boton_Muros.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
-        Me.Boton_Muros.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Boton_Muros.Font = New System.Drawing.Font("DIN Next LT Pro Heavy", 18.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_Muros.ForeColor = System.Drawing.Color.White
+        Me.Boton_Muros.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Muros.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_Muros.ImageAlign = System.Drawing.ContentAlignment.TopCenter
-        Me.Boton_Muros.Location = New System.Drawing.Point(1028, 105)
+        Me.Boton_Muros.Location = New System.Drawing.Point(831, 122)
         Me.Boton_Muros.Margin = New System.Windows.Forms.Padding(0)
         Me.Boton_Muros.Name = "Boton_Muros"
-        Me.Boton_Muros.Size = New System.Drawing.Size(207, 74)
+        Me.Boton_Muros.Size = New System.Drawing.Size(234, 65)
         Me.Boton_Muros.TabIndex = 22
-        Me.Boton_Muros.Text = "MUROS"
-        Me.Boton_Muros.UseVisualStyleBackColor = False
-        '
-        'Imag_MNE
-        '
-        Me.Imag_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Imag_MNE.Image = CType(resources.GetObject("Imag_MNE.Image"), System.Drawing.Image)
-        Me.Imag_MNE.Location = New System.Drawing.Point(376, 762)
-        Me.Imag_MNE.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
-        Me.Imag_MNE.Name = "Imag_MNE"
-        Me.Imag_MNE.Size = New System.Drawing.Size(57, 54)
-        Me.Imag_MNE.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.Imag_MNE.TabIndex = 21
-        Me.Imag_MNE.TabStop = False
-        '
-        'Imag_Escaleras
-        '
-        Me.Imag_Escaleras.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Imag_Escaleras.Image = CType(resources.GetObject("Imag_Escaleras.Image"), System.Drawing.Image)
-        Me.Imag_Escaleras.Location = New System.Drawing.Point(523, 833)
-        Me.Imag_Escaleras.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
-        Me.Imag_Escaleras.Name = "Imag_Escaleras"
-        Me.Imag_Escaleras.Size = New System.Drawing.Size(59, 58)
-        Me.Imag_Escaleras.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.Imag_Escaleras.TabIndex = 20
-        Me.Imag_Escaleras.TabStop = False
+        Me.Boton_Muros.Text = "         MUROS"
+        Me.Boton_Muros.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Boton_Muros.UseVisualStyleBackColor = True
         '
         'Boton_MNE
         '
-        Me.Boton_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Boton_MNE.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Boton_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Boton_MNE.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
         Me.Boton_MNE.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
-        Me.Boton_MNE.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Boton_MNE.Font = New System.Drawing.Font("DIN Next LT Pro Heavy", 18.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_MNE.ForeColor = System.Drawing.Color.White
+        Me.Boton_MNE.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_MNE.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_MNE.ImageAlign = System.Drawing.ContentAlignment.TopCenter
-        Me.Boton_MNE.Location = New System.Drawing.Point(572, 191)
+        Me.Boton_MNE.Location = New System.Drawing.Point(577, 278)
         Me.Boton_MNE.Margin = New System.Windows.Forms.Padding(0)
         Me.Boton_MNE.Name = "Boton_MNE"
-        Me.Boton_MNE.Size = New System.Drawing.Size(207, 74)
+        Me.Boton_MNE.Size = New System.Drawing.Size(234, 65)
         Me.Boton_MNE.TabIndex = 19
-        Me.Boton_MNE.Text = "M.N.E"
-        Me.Boton_MNE.UseVisualStyleBackColor = False
+        Me.Boton_MNE.Text = "         M.N.E"
+        Me.Boton_MNE.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Boton_MNE.UseVisualStyleBackColor = True
         '
         'Boton_Escaleras
         '
-        Me.Boton_Escaleras.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Boton_Escaleras.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Boton_Escaleras.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Boton_Escaleras.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
         Me.Boton_Escaleras.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
-        Me.Boton_Escaleras.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Boton_Escaleras.Font = New System.Drawing.Font("DIN Next LT Pro Heavy", 18.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_Escaleras.ForeColor = System.Drawing.Color.White
+        Me.Boton_Escaleras.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Escaleras.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_Escaleras.ImageAlign = System.Drawing.ContentAlignment.TopCenter
-        Me.Boton_Escaleras.Location = New System.Drawing.Point(1028, 191)
+        Me.Boton_Escaleras.Location = New System.Drawing.Point(325, 278)
         Me.Boton_Escaleras.Margin = New System.Windows.Forms.Padding(0)
         Me.Boton_Escaleras.Name = "Boton_Escaleras"
-        Me.Boton_Escaleras.Size = New System.Drawing.Size(207, 74)
+        Me.Boton_Escaleras.Size = New System.Drawing.Size(234, 65)
         Me.Boton_Escaleras.TabIndex = 18
-        Me.Boton_Escaleras.Text = "ESCALERAS"
-        Me.Boton_Escaleras.UseVisualStyleBackColor = False
-        '
-        'Imag_Los
-        '
-        Me.Imag_Los.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Imag_Los.Image = CType(resources.GetObject("Imag_Los.Image"), System.Drawing.Image)
-        Me.Imag_Los.Location = New System.Drawing.Point(525, 757)
-        Me.Imag_Los.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
-        Me.Imag_Los.Name = "Imag_Los"
-        Me.Imag_Los.Size = New System.Drawing.Size(55, 59)
-        Me.Imag_Los.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.Imag_Los.TabIndex = 17
-        Me.Imag_Los.TabStop = False
+        Me.Boton_Escaleras.Text = "         ESCALERAS"
+        Me.Boton_Escaleras.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Boton_Escaleras.UseVisualStyleBackColor = True
         '
         'Boton_Losas
         '
-        Me.Boton_Losas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Boton_Losas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Boton_Losas.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Boton_Losas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
         Me.Boton_Losas.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
-        Me.Boton_Losas.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Boton_Losas.Font = New System.Drawing.Font("DIN Next LT Pro Heavy", 18.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_Losas.ForeColor = System.Drawing.Color.White
+        Me.Boton_Losas.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Losas.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_Losas.ImageAlign = System.Drawing.ContentAlignment.TopCenter
-        Me.Boton_Losas.Location = New System.Drawing.Point(800, 191)
+        Me.Boton_Losas.Location = New System.Drawing.Point(831, 278)
         Me.Boton_Losas.Margin = New System.Windows.Forms.Padding(0)
         Me.Boton_Losas.Name = "Boton_Losas"
-        Me.Boton_Losas.Size = New System.Drawing.Size(207, 74)
+        Me.Boton_Losas.Size = New System.Drawing.Size(234, 65)
         Me.Boton_Losas.TabIndex = 16
-        Me.Boton_Losas.Text = "LOSAS"
-        Me.Boton_Losas.UseVisualStyleBackColor = False
+        Me.Boton_Losas.Text = "         LOSAS"
+        Me.Boton_Losas.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Boton_Losas.UseVisualStyleBackColor = True
         '
         'Boton_Propiedades
         '
-        Me.Boton_Propiedades.Location = New System.Drawing.Point(747, 775)
-        Me.Boton_Propiedades.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Boton_Propiedades.Location = New System.Drawing.Point(560, 630)
         Me.Boton_Propiedades.Name = "Boton_Propiedades"
-        Me.Boton_Propiedades.Size = New System.Drawing.Size(157, 33)
+        Me.Boton_Propiedades.Size = New System.Drawing.Size(118, 27)
         Me.Boton_Propiedades.TabIndex = 15
         Me.Boton_Propiedades.Text = "Propiedades"
         Me.Boton_Propiedades.UseVisualStyleBackColor = True
@@ -521,151 +629,177 @@ Partial Class Form_00_PaginaPrincipal
         '
         Me.Imag_Col.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Imag_Col.Image = CType(resources.GetObject("Imag_Col.Image"), System.Drawing.Image)
-        Me.Imag_Col.Location = New System.Drawing.Point(120, 817)
-        Me.Imag_Col.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Imag_Col.Location = New System.Drawing.Point(90, 664)
         Me.Imag_Col.Name = "Imag_Col"
-        Me.Imag_Col.Size = New System.Drawing.Size(57, 57)
+        Me.Imag_Col.Size = New System.Drawing.Size(43, 46)
         Me.Imag_Col.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
         Me.Imag_Col.TabIndex = 8
         Me.Imag_Col.TabStop = False
         '
         'Boton_Columnas
         '
-        Me.Boton_Columnas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Boton_Columnas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Boton_Columnas.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Boton_Columnas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
         Me.Boton_Columnas.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
-        Me.Boton_Columnas.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Boton_Columnas.Font = New System.Drawing.Font("DIN Next LT Pro Heavy", 18.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_Columnas.ForeColor = System.Drawing.Color.White
+        Me.Boton_Columnas.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Columnas.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_Columnas.ImageAlign = System.Drawing.ContentAlignment.TopCenter
-        Me.Boton_Columnas.Location = New System.Drawing.Point(800, 105)
+        Me.Boton_Columnas.Location = New System.Drawing.Point(577, 122)
         Me.Boton_Columnas.Margin = New System.Windows.Forms.Padding(0)
         Me.Boton_Columnas.Name = "Boton_Columnas"
-        Me.Boton_Columnas.Size = New System.Drawing.Size(207, 74)
+        Me.Boton_Columnas.Size = New System.Drawing.Size(234, 65)
         Me.Boton_Columnas.TabIndex = 14
-        Me.Boton_Columnas.Text = "COLUMNAS"
-        Me.Boton_Columnas.UseVisualStyleBackColor = False
+        Me.Boton_Columnas.Text = "         COLUMNAS"
+        Me.Boton_Columnas.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Boton_Columnas.UseVisualStyleBackColor = True
         '
         'Imag_Pilas
         '
         Me.Imag_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Imag_Pilas.Image = CType(resources.GetObject("Imag_Pilas.Image"), System.Drawing.Image)
-        Me.Imag_Pilas.Location = New System.Drawing.Point(123, 737)
-        Me.Imag_Pilas.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Imag_Pilas.Location = New System.Drawing.Point(92, 599)
         Me.Imag_Pilas.Name = "Imag_Pilas"
-        Me.Imag_Pilas.Size = New System.Drawing.Size(51, 54)
+        Me.Imag_Pilas.Size = New System.Drawing.Size(38, 44)
         Me.Imag_Pilas.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
         Me.Imag_Pilas.TabIndex = 11
         Me.Imag_Pilas.TabStop = False
         '
         'Boton_Pilas
         '
-        Me.Boton_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.Boton_Pilas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Boton_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Boton_Pilas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
         Me.Boton_Pilas.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
-        Me.Boton_Pilas.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.Boton_Pilas.Font = New System.Drawing.Font("DIN Next LT Pro Heavy", 18.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_Pilas.ForeColor = System.Drawing.Color.White
+        Me.Boton_Pilas.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Pilas.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_Pilas.ImageAlign = System.Drawing.ContentAlignment.TopCenter
-        Me.Boton_Pilas.Location = New System.Drawing.Point(572, 105)
+        Me.Boton_Pilas.Location = New System.Drawing.Point(325, 122)
         Me.Boton_Pilas.Margin = New System.Windows.Forms.Padding(0)
         Me.Boton_Pilas.Name = "Boton_Pilas"
-        Me.Boton_Pilas.Size = New System.Drawing.Size(207, 74)
+        Me.Boton_Pilas.Size = New System.Drawing.Size(234, 65)
         Me.Boton_Pilas.TabIndex = 10
-        Me.Boton_Pilas.Text = "PILAS"
-        Me.Boton_Pilas.UseVisualStyleBackColor = False
-        '
-        'Imag_Logo
-        '
-        Me.Imag_Logo.Image = Global.ARCO.My.Resources.Resources.ARCO_LOGOGRIS
-        Me.Imag_Logo.Location = New System.Drawing.Point(12, 9)
-        Me.Imag_Logo.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
-        Me.Imag_Logo.Name = "Imag_Logo"
-        Me.Imag_Logo.Size = New System.Drawing.Size(545, 512)
-        Me.Imag_Logo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage
-        Me.Imag_Logo.TabIndex = 6
-        Me.Imag_Logo.TabStop = False
-        '
-        'Ref2
-        '
-        Me.Ref2.AutoSize = True
-        Me.Ref2.Font = New System.Drawing.Font("DIN Next LT Pro", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Ref2.Location = New System.Drawing.Point(233, 535)
-        Me.Ref2.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
-        Me.Ref2.Name = "Ref2"
-        Me.Ref2.Size = New System.Drawing.Size(724, 24)
-        Me.Ref2.TabIndex = 3
-        Me.Ref2.Text = "2015-2024 EstrucMed, Ingeniería Especializada.    Todos los Derechos Reservados."
+        Me.Boton_Pilas.Text = "         PILAS"
+        Me.Boton_Pilas.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Boton_Pilas.UseVisualStyleBackColor = True
         '
         'PictureBox1
         '
         Me.PictureBox1.Image = CType(resources.GetObject("PictureBox1.Image"), System.Drawing.Image)
-        Me.PictureBox1.Location = New System.Drawing.Point(857, 582)
-        Me.PictureBox1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox1.Location = New System.Drawing.Point(643, 473)
         Me.PictureBox1.Name = "PictureBox1"
-        Me.PictureBox1.Size = New System.Drawing.Size(372, 94)
+        Me.PictureBox1.Size = New System.Drawing.Size(279, 76)
         Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage
         Me.PictureBox1.TabIndex = 0
         Me.PictureBox1.TabStop = False
         '
-        'Ref1
-        '
-        Me.Ref1.AutoSize = True
-        Me.Ref1.Font = New System.Drawing.Font("DIN Next LT Pro", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Ref1.Location = New System.Drawing.Point(9, 535)
-        Me.Ref1.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
-        Me.Ref1.Name = "Ref1"
-        Me.Ref1.Size = New System.Drawing.Size(191, 24)
-        Me.Ref1.TabIndex = 2
-        Me.Ref1.Text = "Software de Revisión"
-        '
         'SubTitulo
         '
         Me.SubTitulo.FlatStyle = System.Windows.Forms.FlatStyle.System
-        Me.SubTitulo.Font = New System.Drawing.Font("DIN Next LT Pro Black", 50.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.SubTitulo.Font = New System.Drawing.Font("Segoe UI", 50.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.SubTitulo.ForeColor = System.Drawing.Color.FromArgb(CType(CType(61, Byte), Integer), CType(CType(61, Byte), Integer), CType(CType(61, Byte), Integer))
-        Me.SubTitulo.Location = New System.Drawing.Point(700, 9)
-        Me.SubTitulo.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
+        Me.SubTitulo.Location = New System.Drawing.Point(310, 14)
         Me.SubTitulo.Name = "SubTitulo"
-        Me.SubTitulo.Size = New System.Drawing.Size(407, 78)
+        Me.SubTitulo.Size = New System.Drawing.Size(364, 83)
         Me.SubTitulo.TabIndex = 3
-        Me.SubTitulo.Text = "MODULOS"
+        Me.SubTitulo.Text = "MÓDULOS"
         Me.SubTitulo.TextAlign = System.Drawing.ContentAlignment.TopCenter
         '
         'Opcion1
         '
         Me.Opcion1.AutoSize = True
-        Me.Opcion1.Font = New System.Drawing.Font("SansSerif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Opcion1.Location = New System.Drawing.Point(724, 737)
-        Me.Opcion1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Opcion1.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Opcion1.Location = New System.Drawing.Point(543, 599)
         Me.Opcion1.Name = "Opcion1"
-        Me.Opcion1.Size = New System.Drawing.Size(228, 27)
+        Me.Opcion1.Size = New System.Drawing.Size(188, 24)
         Me.Opcion1.TabIndex = 1
         Me.Opcion1.Text = "Rectangular/Cuadrada"
         Me.Opcion1.UseVisualStyleBackColor = True
+        '
+        'Panel3
+        '
+        Me.Panel3.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Panel3.Controls.Add(Me.Label3)
+        Me.Panel3.Controls.Add(Me.Label1)
+        Me.Panel3.Controls.Add(Me.Imag_Logo)
+        Me.Panel3.Dock = System.Windows.Forms.DockStyle.Left
+        Me.Panel3.Location = New System.Drawing.Point(0, 0)
+        Me.Panel3.Name = "Panel3"
+        Me.Panel3.Size = New System.Drawing.Size(259, 497)
+        Me.Panel3.TabIndex = 30
+        '
+        'Label3
+        '
+        Me.Label3.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Label3.FlatStyle = System.Windows.Forms.FlatStyle.System
+        Me.Label3.Font = New System.Drawing.Font("Segoe UI", 40.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label3.ForeColor = System.Drawing.Color.White
+        Me.Label3.Location = New System.Drawing.Point(3, 221)
+        Me.Label3.Name = "Label3"
+        Me.Label3.Size = New System.Drawing.Size(256, 79)
+        Me.Label3.TabIndex = 7
+        Me.Label3.Text = "ARCO"
+        Me.Label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+        '
+        'Label1
+        '
+        Me.Label1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.Label1.FlatStyle = System.Windows.Forms.FlatStyle.System
+        Me.Label1.Font = New System.Drawing.Font("Segoe UI", 15.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label1.ForeColor = System.Drawing.Color.White
+        Me.Label1.Location = New System.Drawing.Point(0, 296)
+        Me.Label1.Name = "Label1"
+        Me.Label1.Size = New System.Drawing.Size(256, 70)
+        Me.Label1.TabIndex = 28
+        Me.Label1.Text = "Análisis y Revisión de Estructuras de Concreto"
+        Me.Label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+        '
+        'Imag_Logo
+        '
+        Me.Imag_Logo.Image = Global.ARCO.My.Resources.Resources.ARCO_LOGOGRIS
+        Me.Imag_Logo.Location = New System.Drawing.Point(3, 0)
+        Me.Imag_Logo.Name = "Imag_Logo"
+        Me.Imag_Logo.Size = New System.Drawing.Size(255, 326)
+        Me.Imag_Logo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage
+        Me.Imag_Logo.TabIndex = 6
+        Me.Imag_Logo.TabStop = False
         '
         'Panel1
         '
         Me.Panel1.Controls.Add(Me.Menu_Form00)
         Me.Panel1.Dock = System.Windows.Forms.DockStyle.Top
         Me.Panel1.Location = New System.Drawing.Point(0, 0)
-        Me.Panel1.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
+        Me.Panel1.Margin = New System.Windows.Forms.Padding(2)
         Me.Panel1.Name = "Panel1"
-        Me.Panel1.Size = New System.Drawing.Size(1255, 43)
+        Me.Panel1.Size = New System.Drawing.Size(1101, 35)
         Me.Panel1.TabIndex = 23
+        '
+        'Button3
+        '
+        Me.Button3.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Button3.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
+        Me.Button3.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.Button3.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button3.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Button3.ImageAlign = System.Drawing.ContentAlignment.TopCenter
+        Me.Button3.Location = New System.Drawing.Point(325, 200)
+        Me.Button3.Margin = New System.Windows.Forms.Padding(0)
+        Me.Button3.Name = "Button3"
+        Me.Button3.Size = New System.Drawing.Size(234, 65)
+        Me.Button3.TabIndex = 42
+        Me.Button3.Text = "         VIGAS "
+        Me.Button3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.Button3.UseVisualStyleBackColor = True
         '
         'Form_00_PaginaPrincipal
         '
-        Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.BackColor = System.Drawing.SystemColors.Control
         Me.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
-        Me.ClientSize = New System.Drawing.Size(1255, 607)
+        Me.ClientSize = New System.Drawing.Size(1101, 532)
         Me.Controls.Add(Me.Panel2)
         Me.Controls.Add(Me.Panel1)
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.MainMenuStrip = Me.Menu_Form00
-        Me.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Name = "Form_00_PaginaPrincipal"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "ARCO"
@@ -673,13 +807,20 @@ Partial Class Form_00_PaginaPrincipal
         Me.Menu_Form00.PerformLayout()
         Me.Panel2.ResumeLayout(False)
         Me.Panel2.PerformLayout()
-        CType(Me.Imag_MNE, System.ComponentModel.ISupportInitialize).EndInit()
-        CType(Me.Imag_Escaleras, System.ComponentModel.ISupportInitialize).EndInit()
-        CType(Me.Imag_Los, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox8, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox3, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox7, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox6, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox5, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox4, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox2, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.Panel4.ResumeLayout(False)
+        Me.Panel4.PerformLayout()
         CType(Me.Imag_Col, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.Imag_Pilas, System.ComponentModel.ISupportInitialize).EndInit()
-        CType(Me.Imag_Logo, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.Panel3.ResumeLayout(False)
+        CType(Me.Imag_Logo, System.ComponentModel.ISupportInitialize).EndInit()
         Me.Panel1.ResumeLayout(False)
         Me.Panel1.PerformLayout()
         Me.ResumeLayout(False)
@@ -701,7 +842,6 @@ Partial Class Form_00_PaginaPrincipal
     Friend WithEvents LicenciaToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents SoporteToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents LicenciaToolStripMenuItem1 As ToolStripMenuItem
-    Friend WithEvents Ref1 As Label
     Friend WithEvents Ref2 As Label
     Friend WithEvents Imag_Logo As PictureBox
     Friend WithEvents OpcionesToolStripMenuItem As ToolStripMenuItem
@@ -713,11 +853,8 @@ Partial Class Form_00_PaginaPrincipal
     Friend WithEvents Boton_Columnas As Button
     Friend WithEvents Boton_Propiedades As Button
     Friend WithEvents Boton_Losas As Button
-    Friend WithEvents Imag_Los As PictureBox
     Friend WithEvents Boton_Escaleras As Button
     Friend WithEvents Boton_MNE As Button
-    Friend WithEvents Imag_Escaleras As PictureBox
-    Friend WithEvents Imag_MNE As PictureBox
     Private WithEvents Boton_Muros As Button
     Friend WithEvents Ayuda As ToolStripMenuItem
     Friend WithEvents ToolStripMenuItem1 As ToolStripMenuItem
@@ -737,4 +874,18 @@ Partial Class Form_00_PaginaPrincipal
     Friend WithEvents IngresarDerivasToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ModeloElasticoToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ModeloAgrietadoToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents Panel3 As Panel
+    Friend WithEvents Label3 As Label
+    Friend WithEvents Panel4 As Panel
+    Friend WithEvents ImportarToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents PictureBox6 As PictureBox
+    Friend WithEvents PictureBox5 As PictureBox
+    Friend WithEvents PictureBox4 As PictureBox
+    Friend WithEvents PictureBox2 As PictureBox
+    Friend WithEvents PictureBox3 As PictureBox
+    Friend WithEvents PictureBox7 As PictureBox
+    Friend WithEvents PictureBox8 As PictureBox
+    Friend WithEvents Button1 As Button
+    Friend WithEvents Button2 As Button
+    Friend WithEvents Button3 As Button
 End Class

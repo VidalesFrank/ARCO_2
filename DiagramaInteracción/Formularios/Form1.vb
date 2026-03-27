@@ -1,11 +1,5 @@
-﻿Imports System
-Imports System.Collections.Generic
-Imports System.Linq
-Imports System.Text
-Imports System.Threading.Tasks
-'Imports FCB_Etabs.Funciones
+﻿'Imports FCB_Etabs.Funciones
 'Imports FCB_Etabs.Elementos
-Imports System.Windows.Forms
 
 Public Class Form1
     'Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click

@@ -144,7 +144,7 @@ Public Class Funciones_01_Pilas
         Dim Ass As Single = AreaRefuerzo(Ref_Trans)
         Dim FT As Single = -1
 
-        If Proyecto.Pilas.Opcion_Elemento = "Punto" Then
+        If Proyecto.Elementos.Pilas.Opcion_Elemento = "Punto" Then
             FT = 1
         End If
 

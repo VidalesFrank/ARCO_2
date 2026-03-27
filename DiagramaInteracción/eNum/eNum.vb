@@ -54,11 +54,11 @@ Public Class eNumeradores
 
     Public Enum eResponsables
         Mayra
-        Marselo
+        Alejandra
         Frank
         Anlly
         Natali
-        Daniela
+        Otros
     End Enum
 
     Public Class Persona
@@ -68,7 +68,6 @@ Public Class eNumeradores
             Me.NombreCompleto = nombreCompleto
         End Sub
     End Class
-
 
     Public Enum ColumnaFuerzas
         Piso = 0
@@ -82,5 +81,66 @@ Public Class eNumeradores
         M2 = 8
         M3 = 9
     End Enum
+
+    Public Enum MallaTipo
+        None
+        D_84
+        D_106
+        D_131
+        D_158
+        D_188
+        D_221
+        D_257
+        D_295
+        D_335
+    End Enum
+
+    Public Enum BarraTipo
+        None
+        Num_2
+        Num_3
+        Num_4
+        Num_5
+        Num_6
+        Num_7
+        Num_8
+        Num_10
+        Users
+    End Enum
+
+    Public Enum T_Seccion
+        Rectangular
+        T
+        L
+        Circular
+    End Enum
+
+
+    Public Enum TipoCombinacion
+        ServicioEstatica
+        ServicioDinamica
+        UltimaEstatica
+        UltimaDinamica
+    End Enum
+
+    Public Property Tipo As TipoCombinacion
+
+
+    Public Enum eDireccionRefuerzo
+        L1
+        L2
+    End Enum
+
+    Public Enum eTipoRefuerzo
+        Superior
+        Inferior
+    End Enum
+
+    Public Enum PosicionTramoViga
+        Izquierda = 0
+        Centro = 1
+        Derecha = 2
+    End Enum
+
 
 End Class

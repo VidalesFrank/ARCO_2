@@ -1,5 +1,5 @@
-﻿Imports ARCO.Funciones_02_Columnas
-Imports ARCO.Funciones_00_Varias
+﻿Imports ARCO.Funciones_00_Varias
+Imports ARCO.Funciones_02_Columnas
 Public Class Form_02_00_PagInfoColumnas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Private Sub Combo_Elementos_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Combo_Elementos.SelectedIndexChanged
@@ -7,8 +7,8 @@ Public Class Form_02_00_PagInfoColumnas
         Try
             Tabla_Info_Seccion.Rows.Clear()
 
-            Dim Elemento As String = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Elemento
-            Dim Seccion = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
+            Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Elemento
+            Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
 
             For i = 0 To (Seccion.Count - 1) * 2
                 Tabla_Info_Seccion.Rows.Add()
@@ -22,7 +22,7 @@ Public Class Form_02_00_PagInfoColumnas
                 Tabla_Info_Seccion.Rows(i).Cells(4).Value = "Top"
                 Tabla_Info_Seccion.Rows(i + 1).Cells(4).Value = "Bottom"
 
-                If Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Ref_Modificado = False Then
+                If Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Ref_Modificado = False Then
                     For j = 5 To 12
                         Tabla_Info_Seccion.Rows(i).Cells(j).Value = 0
                         Tabla_Info_Seccion.Rows(i + 1).Cells(j).Value = 0
@@ -59,16 +59,16 @@ Public Class Form_02_00_PagInfoColumnas
 
         Catch ex As Exception
         Finally
-            T_Seccion.Text = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Label
+            T_Seccion.Text = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Label
         End Try
 
     End Sub
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         'Try
-        Dim Seccion = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
-        Dim Elemento As String = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Elemento
-        Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Label = T_Seccion.Text
+        Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
+        Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Elemento
+        Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Label = T_Seccion.Text
 
         For i = 0 To (Seccion.Count - 1) * 2 Step 2
             Seccion(i / 2).fc = Tabla_Info_Seccion.Rows(i).Cells(1).Value
@@ -174,20 +174,35 @@ Public Class Form_02_00_PagInfoColumnas
             Seccion(i / 2).Num_Ramas_Largo = Tabla_Info_Seccion.Rows(i).Cells(13).Value
             Seccion(i / 2).Num_Ramas_Corto = Tabla_Info_Seccion.Rows(i).Cells(14).Value
             Seccion(i / 2).Numero_Barras_Estribo = Tabla_Info_Seccion.Rows(i).Cells(15).Value
-            Seccion(i / 2).Separacion_Estribos = Tabla_Info_Seccion.Rows(i).Cells(16).Value
 
-            Seccion(i / 2).Ash_Col_Corto = Seccion(i / 2).Num_Ramas_Corto * AreaRefuerzo(Seccion(i / 2).Numero_Barras_Estribo)
-            Seccion(i / 2).Ash_Col_Largo = Seccion(i / 2).Num_Ramas_Largo * AreaRefuerzo(Seccion(i / 2).Numero_Barras_Estribo)
+            Dim area_ref_var As Single = 0
+            Dim area_var_Largo As Single = 0
+            Dim area_var_Corto As Single = 0
+            If Seccion(i / 2).Numero_Barras_Estribo = "User" Then
+                area_ref_var = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(16).Value)
+                area_var_Largo = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(16).Value)
+                area_var_Corto = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(17).Value)
+            Else
+                area_ref_var = AreaRefuerzo(Seccion(i / 2).Numero_Barras_Estribo)
+                area_var_Largo = area_ref_var
+                area_var_Corto = area_ref_var
+            End If
+
+            Seccion(i / 2).Separacion_Estribos = Tabla_Info_Seccion.Rows(i).Cells(18).Value
+            Seccion(i / 2).Separacion_Estribos_ZNC = Tabla_Info_Seccion.Rows(i).Cells(19).Value
+
+            Seccion(i / 2).Ash_Col_Corto = Seccion(i / 2).Num_Ramas_Corto * area_var_Corto
+            Seccion(i / 2).Ash_Col_Largo = Seccion(i / 2).Num_Ramas_Largo * area_var_Largo
         Next
 
         If Op_SeccionPrincipal.Checked = True Then
-            Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = True
+            Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = True
         End If
 
-        Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Ref_Modificado = True
+        Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Ref_Modificado = True
 
-        If Proyecto.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento) < Combo_Elementos.Items.Count - 1 Then
-            Combo_Elementos.Text = Proyecto.Columnas.Lista_Columnas(Proyecto.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento) + 1).Name_Elemento
+        If Proyecto.Elementos.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento) < Combo_Elementos.Items.Count - 1 Then
+            Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(Proyecto.Elementos.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento) + 1).Name_Elemento
         Else
             MessageBox.Show("Hecho.", "Información Ingresada", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
@@ -227,12 +242,12 @@ Public Class Form_02_00_PagInfoColumnas
 
     Private Sub Form_03_PagInfoColumnas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
-        If Proyecto.Columnas.Lista_Columnas.Count > 0 Then
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count > 0 Then
 
-            For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
-                Combo_Elementos.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Elemento)
+            For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
+                Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento)
             Next
-            Combo_Elementos.Text = Proyecto.Columnas.Lista_Columnas(0).Name_Elemento
+            Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Elemento
         End If
 
     End Sub
@@ -248,33 +263,33 @@ Public Class Form_02_00_PagInfoColumnas
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         Dim cont As Integer = 0
-        For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
-            For j = 0 To Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
-                If Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).As_Col_Top = 0 Then
-                    Form_Reportes.Lista_Reporte.Items.Add("- No se ha ingresado refuerzo Top en la sección " & Proyecto.Columnas.Lista_Columnas(i).Name_Label & " en el piso " & Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).Piso)
+        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
+            For j = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
+                If Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).As_Col_Top = 0 Then
+                    Form_Reportes.Lista_Reporte.Items.Add("- No se ha ingresado refuerzo Top en la sección " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label & " en el piso " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).Piso)
                     cont += 1
                 End If
-                If Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).As_Col_Bottom = 0 Then
-                    Form_Reportes.Lista_Reporte.Items.Add("- No se ha ingresado refuerzo Bottom en la sección " & Proyecto.Columnas.Lista_Columnas(i).Name_Label & " en el piso " & Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).Piso)
+                If Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).As_Col_Bottom = 0 Then
+                    Form_Reportes.Lista_Reporte.Items.Add("- No se ha ingresado refuerzo Bottom en la sección " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label & " en el piso " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).Piso)
                     cont += 1
                 End If
             Next
         Next
 
         If cont = 0 Then
-            For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
+            For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
                 Dim Lista(3, 2) : Lista(1, 1) = 100 : Lista(2, 1) = 100 : Lista(3, 1) = 100
-                Proyecto.Columnas.Lista_Columnas(i).Lista_F.Clear()
-                Proyecto.Columnas.Lista_Columnas(i).Lista_F_Piso.Clear()
+                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F.Clear()
+                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F_Piso.Clear()
 
-                If Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Count < Proyecto.Columnas.Lista_Columnas.Count Then
-                    Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Label)
-                    Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Label)
-                    Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Label)
+                If Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Count < Proyecto.Elementos.Columnas.Lista_Columnas.Count Then
+                    Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
+                    Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
+                    Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
                 End If
 
-                For j = 0 To Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
-                    Dim Seccion = Proyecto.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j)
+                For j = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
+                    Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j)
 
                     '--- Verificación a Flexo-Compresión -------
                     Seccion.F_Flexo_Top = Math.Round(Seccion.As_Col_Top / Seccion.As_Req_Top, 2)
@@ -333,26 +348,26 @@ Public Class Form_02_00_PagInfoColumnas
                 Next
 
                 For k = 1 To 3
-                    Proyecto.Columnas.Lista_Columnas(i).Lista_F.Add(Lista(k, 1))
-                    Proyecto.Columnas.Lista_Columnas(i).Lista_F_Piso.Add(Lista(k, 2))
+                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F.Add(Lista(k, 1))
+                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F_Piso.Add(Lista(k, 2))
                 Next
             Next
 
             '--------------- Debo verificar este proceso ya que arroja error --------------
-            Dim Columnas = Proyecto.Columnas.Lista_Columnas
+            Dim Columnas = Proyecto.Elementos.Columnas.Lista_Columnas
             For i = 0 To Columnas.Count() - 1
-                For j = 0 To Proyecto.Columnas.Lista_Combinaciones_ALR.Count - 1
+                For j = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
                     Dim Ce As Integer = j
 
                     Dim Valor_ALR As New Columna.ALR
-                    Valor_ALR.Combinacion = Proyecto.Columnas.Lista_Combinaciones_ALR(j)
-                    Valor_ALR.ALR = Math.Round(Math.Abs(Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).Lista_Combinaciones.Find(Function(p) p.Name = Proyecto.Columnas.Lista_Combinaciones_ALR(Ce)).P) / (Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).fc * Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).B_Plano * Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).H_Plano * 1000), 2)
+                    Valor_ALR.Combinacion = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(j)
+                    Valor_ALR.ALR = Math.Round(Math.Abs(Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).Lista_Combinaciones.Find(Function(p) p.Name = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(Ce)).P) / (Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).fc * Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).B_Plano * Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).H_Plano * 1000), 2)
 
                     Columnas(i).Lista_ALR.Add(Valor_ALR)
                 Next
             Next
 
-            Form_02_01_ResultadosColumnas.Combo_Elementos.Text = Proyecto.Columnas.Lista_Columnas(0).Name_Label
+            Form_02_01_ResultadosColumnas.Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Label
             Form_02_01_ResultadosColumnas.Show()
             MessageBox.Show("Análisis Finalizado con Éxito.", "Ejecución de Análisis", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Else
@@ -361,44 +376,44 @@ Public Class Form_02_00_PagInfoColumnas
 
     End Sub
 
-    Private Sub SecciónToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SecciónToolStripMenuItem.Click
-        If Proyecto.Columnas.Lista_Columnas.Count > 0 Then
-            Dim Columna = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text)
-            For i = 0 To Proyecto.Columnas.Lista_Columnas.Count - 1
-                If SRectangular.Combo_Seccion.Items.Count <= Proyecto.Columnas.Lista_Columnas.Count Then
-                    SRectangular.Combo_Seccion.Items.Add(Proyecto.Columnas.Lista_Columnas(i).Name_Label)
-                End If
-            Next
-            SRectangular.Combo_Seccion.Text = SRectangular.Combo_Seccion.Items(0)
-            For i = 0 To Columna.Lista_Tramos_Columnas.Count() - 1
-                If SRectangular.Combo_Tramos.Items.Count <= Columna.Lista_Tramos_Columnas.Count Then
-                    SRectangular.Combo_Tramos.Items.Add(Columna.Lista_Tramos_Columnas(i).Piso)
-                End If
-            Next
-            SRectangular.Combo_Tramos.Text = SRectangular.Combo_Tramos.Items(0)
-            If SRectangular.Combo_Estacion.Items.Count < 2 Then
-                SRectangular.Combo_Estacion.Items.Add("Top")
-                SRectangular.Combo_Estacion.Items.Add("Bottom")
-            End If
-            SRectangular.Combo_Estacion.Text = SRectangular.Combo_Estacion.Items(0)
+    'Private Sub SecciónToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SecciónToolStripMenuItem.Click
+    '    If Proyecto.Elementos.Columnas.Lista_Columnas.Count > 0 Then
+    '        Dim Columna = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text)
+    '        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
+    '            If SRectangular.Combo_Seccion.Items.Count <= Proyecto.Elementos.Columnas.Lista_Columnas.Count Then
+    '                SRectangular.Combo_Seccion.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
+    '            End If
+    '        Next
+    '        SRectangular.Combo_Seccion.Text = SRectangular.Combo_Seccion.Items(0)
+    '        For i = 0 To Columna.Lista_Tramos_Columnas.Count() - 1
+    '            If SRectangular.Combo_Tramos.Items.Count <= Columna.Lista_Tramos_Columnas.Count Then
+    '                SRectangular.Combo_Tramos.Items.Add(Columna.Lista_Tramos_Columnas(i).Piso)
+    '            End If
+    '        Next
+    '        SRectangular.Combo_Tramos.Text = SRectangular.Combo_Tramos.Items(0)
+    '        If SRectangular.Combo_Estacion.Items.Count < 2 Then
+    '            SRectangular.Combo_Estacion.Items.Add("Top")
+    '            SRectangular.Combo_Estacion.Items.Add("Bottom")
+    '        End If
+    '        SRectangular.Combo_Estacion.Text = SRectangular.Combo_Estacion.Items(0)
 
-            Dim PictureBox5 = SRectangular.PictureBox1
+    '        Dim PictureBox5 = SRectangular.PictureBox1
 
-            PictureBox5.Location = New Point(25, 70)
-            PictureBox5.Size = New Size(SRectangular.Panel1.Width - 50, SRectangular.Panel1.Height - 100)
-            PictureBox5.BackColor = Color.White
-            PictureBox5.Anchor = AnchorStyles.Left And AnchorStyles.Top And AnchorStyles.Right And AnchorStyles.Bottom
-            SRectangular.LbCuantia.BackColor = Color.White
-            SRectangular.Panel1.Controls.Add(PictureBox5)
-            AddHandler PictureBox5.Paint, AddressOf SRectangular.PictureBox5_Paint
-            PictureBox5.Refresh()
-        End If
-        SRectangular.Show()
-    End Sub
+    '        PictureBox5.Location = New Point(25, 70)
+    '        PictureBox5.Size = New Size(SRectangular.Panel1.Width - 50, SRectangular.Panel1.Height - 100)
+    '        PictureBox5.BackColor = Color.White
+    '        PictureBox5.Anchor = AnchorStyles.Left And AnchorStyles.Top And AnchorStyles.Right And AnchorStyles.Bottom
+    '        SRectangular.LbCuantia.BackColor = Color.White
+    '        SRectangular.Panel1.Controls.Add(PictureBox5)
+    '        AddHandler PictureBox5.Paint, AddressOf SRectangular.PictureBox5_Paint
+    '        PictureBox5.Refresh()
+    '    End If
+    '    SRectangular.Show()
+    'End Sub
 
     Private Sub Op_SeccionSimilar_CheckedChanged(sender As Object, e As EventArgs) Handles Op_SeccionSimilar.CheckedChanged
 
-        Dim Secciones_Principales = Proyecto.Columnas.Lista_Columnas.FindAll(Function(p) p.Secciones_Principal = True)
+        Dim Secciones_Principales = Proyecto.Elementos.Columnas.Lista_Columnas.FindAll(Function(p) p.Secciones_Principal = True)
         C_Lista_Secciones_Principales.Items.Clear()
 
         If Op_SeccionPrincipal.Checked = False Then
@@ -409,8 +424,8 @@ Public Class Form_02_00_PagInfoColumnas
                 For i = 0 To Secciones_Principales.Count - 1
                     C_Lista_Secciones_Principales.Items.Add(Secciones_Principales(i).Name_Label)
                 Next
-                Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Similar = True
-                Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = False
+                Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Similar = True
+                Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = False
                 C_Lista_Secciones_Principales.Enabled = True
             End If
         End If
@@ -419,8 +434,8 @@ Public Class Form_02_00_PagInfoColumnas
     Private Sub C_Lista_Secciones_Principales_SelectedIndexChanged(sender As Object, e As EventArgs) Handles C_Lista_Secciones_Principales.SelectedIndexChanged
         Tabla_Info_Seccion.Rows.Clear()
 
-        Dim Elemento As String = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Name_Elemento
-        Dim Seccion = Proyecto.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Lista_Tramos_Columnas
+        Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Name_Elemento
+        Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Lista_Tramos_Columnas
 
         For i = 0 To (Seccion.Count - 1) * 2
             Tabla_Info_Seccion.Rows.Add()
