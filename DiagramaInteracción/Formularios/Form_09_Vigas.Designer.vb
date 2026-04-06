@@ -796,7 +796,7 @@ Partial Class Form_09_Vigas
         Me.GroupBox7.Margin = New System.Windows.Forms.Padding(4)
         Me.GroupBox7.Name = "GroupBox7"
         Me.GroupBox7.Padding = New System.Windows.Forms.Padding(4)
-        Me.GroupBox7.Size = New System.Drawing.Size(1508, 461)
+        Me.GroupBox7.Size = New System.Drawing.Size(1390, 461)
         Me.GroupBox7.TabIndex = 35
         Me.GroupBox7.TabStop = False
         Me.GroupBox7.Text = "Flexión"
@@ -832,7 +832,7 @@ Partial Class Form_09_Vigas
         Me.Tabla_Resultados_Flexion.Name = "Tabla_Resultados_Flexion"
         Me.Tabla_Resultados_Flexion.RowHeadersVisible = False
         Me.Tabla_Resultados_Flexion.RowHeadersWidth = 51
-        Me.Tabla_Resultados_Flexion.Size = New System.Drawing.Size(1500, 432)
+        Me.Tabla_Resultados_Flexion.Size = New System.Drawing.Size(1382, 432)
         Me.Tabla_Resultados_Flexion.TabIndex = 5
         '
         'DataGridViewTextBoxColumn11

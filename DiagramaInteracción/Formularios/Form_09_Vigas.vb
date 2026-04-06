@@ -534,7 +534,6 @@ Public Class Form_09_Vigas
                     'Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Lines")
                     Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Definitions - Grid Lines")
 
-
                     Proyecto.Elementos.Vigas.BeamForces = DataTableToBeamForces(Proyecto.Elementos.Vigas.Tabla_BeamForces)
 
                     Proyecto.Elementos.Grids.GridLines = DataTableToGridLines(Table_Grids)
@@ -1226,39 +1225,89 @@ Public Class Form_09_Vigas
     ByRef envMax As List(Of Double),
     ByRef envMin As List(Of Double))
 
-        Dim dict As New Dictionary(Of Double, (Mmax As Double, Mmin As Double))
+
+        Dim dictMax As New Dictionary(Of Double, List(Of Double))
+        Dim dictMin As New Dictionary(Of Double, List(Of Double))
 
         For Each bf In bfFrame
 
-            Dim s As Double = bf.ElementStation
+            Dim s As Double = bf.Station
             Dim m As Double = bf.M3
+            Dim stepType As String = If(bf.stepType, "").Trim().ToUpper()
 
-            If Not dict.ContainsKey(s) Then
+            Select Case stepType
 
-                dict(s) = (m, m)
+                Case "MAX"
+                    If Not dictMax.ContainsKey(s) Then
+                        dictMax(s) = New List(Of Double)
+                    End If
+                    dictMax(s).Add(m)
 
-            Else
+                Case "MIN"
+                    If Not dictMin.ContainsKey(s) Then
+                        dictMin(s) = New List(Of Double)
+                    End If
 
-                Dim maxM = Math.Max(dict(s).Mmax, m)
-                Dim minM = Math.Min(dict(s).Mmin, m)
-
-                dict(s) = (maxM, minM)
-
-            End If
+                    dictMin(s).Add(m)
+                Case Else
+                    ' Opcional: ignorar o usar como fallback
+                    ' Aquí lo ignoramos
+            End Select
 
         Next
 
-        estaciones = dict.Keys.OrderBy(Function(x) x).ToList()
+        ' Unir estaciones de ambos diccionarios
+        estaciones = dictMax.Keys.Union(dictMin.Keys).OrderBy(Function(x) x).ToList()
 
         envMax = New List(Of Double)
         envMin = New List(Of Double)
 
         For Each s In estaciones
 
-            envMax.Add(dict(s).Mmax)
-            envMin.Add(dict(s).Mmin)
+            ' Si no existe, puedes poner 0 o Double.NaN
+            envMax.Add(If(dictMax.ContainsKey(s), dictMax(s).Max(), 0))
+            envMin.Add(If(dictMin.ContainsKey(s), dictMin(s).Min(), 0))
 
         Next
+
+        ''Dim dict As New Dictionary(Of Double, (Mmax As Double, Mmin As Double))
+
+        'Dim dictMax As New Dictionary(Of Double, Double)
+        'Dim dictMin As New Dictionary(Of Double, Double)
+
+
+        'For Each bf In bfFrame
+
+        '    Dim s As Double = bf.ElementStation
+        '    Dim m As Double = bf.M3
+        '    Dim stepType As String = If(bf.stepType, "").Trim().ToUpper()
+
+        '    If Not dict.ContainsKey(s) Then
+
+        '        dict(s) = (m, m)
+
+        '    Else
+
+        '        Dim maxM = Math.Max(dict(s).Mmax, m)
+        '        Dim minM = Math.Min(dict(s).Mmin, m)
+
+        '        dict(s) = (maxM, minM)
+
+        '    End If
+
+        'Next
+
+        'estaciones = dict.Keys.OrderBy(Function(x) x).ToList()
+
+        'envMax = New List(Of Double)
+        'envMin = New List(Of Double)
+
+        'For Each s In estaciones
+
+        '    envMax.Add(dict(s).Mmax)
+        '    envMin.Add(dict(s).Mmin)
+
+        'Next
 
     End Sub
 
@@ -1616,8 +1665,10 @@ Public Class Form_09_Vigas
         dgv.ReadOnly = True
         dgv.RowHeadersWidth = 160
         'dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
+
+        dgv.ScrollBars = ScrollBars.Both
 
         dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Regular)
         dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
