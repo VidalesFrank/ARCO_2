@@ -134,7 +134,7 @@ Public Class Funciones_00_Varias
 
         ' 🔹 Buscar las columnas esperadas
         Dim colStory = GetColumnName(columnas, "Story")
-        Dim colElementLabel = GetColumnName(columnas, "Element Label")
+        Dim colElementLabel = GetColumnName(columnas, "Element Name")
         Dim colObjectType = GetColumnName(columnas, "Object Type")
         Dim colObjectLabel = GetColumnName(columnas, "Object Label")
         Dim colGlobalX = GetColumnName(columnas, "Global X")
@@ -178,11 +178,11 @@ Public Class Funciones_00_Varias
 
         ' 🔹 Buscar las columnas esperadas
         Dim colStory = GetColumnName(columnas, "Story")
-        Dim colElementLabel = GetColumnName(columnas, "Element Label")
+        Dim colElementLabel = GetColumnName(columnas, "Element Name")
         Dim colObjectType = GetColumnName(columnas, "Object Type")
         Dim colObjectLabel = GetColumnName(columnas, "Object Label")
-        Dim colJointI = GetColumnName(columnas, "Joint I")
-        Dim colJointJ = GetColumnName(columnas, "Joint J")
+        Dim colJointI = GetColumnName(columnas, "Elm JtI")
+        Dim colJointJ = GetColumnName(columnas, "Elm JtJ")
 
         ' 🔹 Recorremos cada fila
         For Each r As DataRow In dt.Rows
@@ -268,7 +268,9 @@ Public Class Funciones_00_Varias
         Dim colStory = GetColumnName(columnas, "Story")
         Dim colBeam = GetColumnName(columnas, "Beam")
         Dim colUniqueName = GetColumnName(columnas, "Unique Name")
-        Dim colLoadCaseCombo = GetColumnName(columnas, "Load Case/Combo")
+        'Dim colLoadCaseCombo = GetColumnName(columnas, "Load Case/Combo")
+        Dim colLoadCaseCombo = GetColumnName(columnas, "Output Case")
+        Dim colStepType = GetColumnName(columnas, "Step Type")
         Dim colStation = GetColumnName(columnas, "Station")
         Dim colP = GetColumnName(columnas, "P")
         Dim colV2 = GetColumnName(columnas, "V2")
@@ -287,6 +289,7 @@ Public Class Funciones_00_Varias
             bf.Beam = SafeString(r, colBeam)
             bf.UniqueName = SafeString(r, colUniqueName)
             bf.LoadCaseCombo = SafeString(r, colLoadCaseCombo)
+            bf.stepType = SafeString(r, colStepType)
             bf.Station = SafeDouble(r, colStation)
             bf.P = SafeDouble(r, colP)
             bf.V2 = SafeDouble(r, colV2)
@@ -312,9 +315,9 @@ Public Class Funciones_00_Varias
         For Each r As DataRow In dt.Rows
 
             Dim g As New cGridLine With {
-            .GridSystem = r("Grid System").ToString(),
-            .Direction = r("Grid Direction").ToString().Trim(),
-            .GridID = r("Grid ID").ToString().Trim(),
+            .GridSystem = r("Name").ToString(),
+            .Direction = r("Grid Line Type").ToString().Trim()(0).ToString(),
+            .GridID = r("ID").ToString().Trim(),
             .Visible = r("Visible").ToString().Trim().ToLower() = "yes",
             .BubbleLocation = r("Bubble Location").ToString().Trim(),
             .Ordinate = CDbl(r("Ordinate"))
@@ -334,7 +337,7 @@ Public Class Funciones_00_Varias
 
             Dim story As String = row("Story").ToString().Trim()
             Dim label As String = row("Label").ToString().Trim()
-            Dim seccion As String = row("Analysis Section").ToString().Trim()
+            Dim seccion As String = row("Section Property").ToString().Trim()
 
             Dim key As String = story & "|" & label
 
@@ -351,8 +354,8 @@ Public Class Funciones_00_Varias
         For Each row As DataRow In dt_Frame_Sec.Rows
             Dim name As String = row("Name").ToString().Trim()
 
-            Dim t3 As Double = CDbl(row("t3"))
-            Dim t2 As Double = CDbl(row("t2"))
+            Dim t3 As Double = CDbl(row("Depth"))
+            Dim t2 As Double = CDbl(row("Width"))
             Dim material As String = row("Material").ToString().Trim()
 
             If Not dictFrameSec.ContainsKey(name) Then
@@ -365,11 +368,12 @@ Public Class Funciones_00_Varias
         Dim dictMaterial As New Dictionary(Of String, (E As Double, G As Double, Fc As Double))
 
         For Each row As DataRow In dt_Mat_Concrete.Rows
-            Dim name As String = row("Name").ToString().Trim()
+            Dim name As String = row("Material").ToString().Trim()
 
-            Dim E As Double = CDbl(row("E"))
-            Dim G As Double = CDbl(row("G"))
-            Dim Fc As Double = CDbl(row("Fc"))
+            Dim Fc As Double = CDbl(row("Fc")) / 1000
+
+            Dim E As Double = 4700 * Math.Sqrt(Fc) ' Relación empírica común para concreto: E = 4700 * sqrt(Fc)
+            Dim G As Double = E / (2 * (1 + 0.2))
 
             If Not dictMaterial.ContainsKey(name) Then
                 dictMaterial.Add(name, (E, G, Fc))

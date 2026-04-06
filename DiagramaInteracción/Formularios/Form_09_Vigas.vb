@@ -514,19 +514,25 @@ Public Class Form_09_Vigas
                         Proyecto.Elementos.Frames = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
 
                         ' APLICAR SECCIONES A FRAMES
-                        Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, "Frame Assignments - Sections")
-                        Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, "Frame Sections")
-                        Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, "Material Properties - Concrete")
+                        'Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, "Frame Assignments - Sections")
+                        'Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, "Frame Sections")
+                        'Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, "Material Properties - Concrete")
+
+                        Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, "Frame Assigns - Sect Prop")
+                        Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, "Frame Sec Def - Conc Rect")
+                        Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, "Mat Prop - Concrete Data")
 
                         DataTableToAsignFrame(Proyecto.Elementos.Frames, Data_Asig_Frame, Data_Frame_Section, Data_Material_Concrete)
 
                     End If
 
-                    Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, "Beam Forces")
+                    'Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, "Beam Forces")
+                    Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, "Element Forces - Beams")
 
                     MsgBox("Importación completada correctamente.", MsgBoxStyle.Information)
 
-                    Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Lines")
+                    'Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Lines")
+                    Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Definitions - Grid Lines")
 
 
                     Proyecto.Elementos.Vigas.BeamForces = DataTableToBeamForces(Proyecto.Elementos.Vigas.Tabla_BeamForces)
@@ -624,7 +630,7 @@ Public Class Form_09_Vigas
 
         ' Dibujos
         DibujarDiagramaMomentoFrames(viga, Diagrama_Momento)
-        DibujarDiagramaCortanteFrames(viga, Diagrama_Cortante)
+        'DibujarDiagramaCortanteFrames(viga, Diagrama_Cortante)
 
         ' Tablas
         ConstruirTablaResumen(viga, Tabla_Demandas)
@@ -943,19 +949,71 @@ Public Class Form_09_Vigas
 
                 If Not df.Combos.ContainsKey(combo) Then Continue For
 
-                Dim lista = df.Combos(combo)
+                'Dim lista = df.Combos(combo)
+                Dim listaTotal = df.Combos(combo)
 
-                Using penM As New Pen(colorCombo, 2)
+                ' 🔹 Separar por StepType
+                Dim listaMax As New List(Of cCombinacionBeamForce)
+                Dim listaMin As New List(Of cCombinacionBeamForce)
+                Dim listaNormal As New List(Of cCombinacionBeamForce)
 
-                    For i = 0 To lista.Count - 2
+                For Each item In listaTotal
+                    Select Case item.stepType
+                        Case "Max"
+                            listaMax.Add(item)
+                        Case "Min"
+                            listaMin.Add(item)
+                        Case Else
+                            listaNormal.Add(item)
+                    End Select
+                Next
 
-                        g.DrawLine(penM,
-                        TransformX(df.Offset + lista(i).ElementStation),
-                        TransformY(lista(i).M3),
-                        TransformX(df.Offset + lista(i + 1).ElementStation),
-                        TransformY(lista(i + 1).M3))
+                ' 🔸 Dibujar función reutilizable
+                Dim Dibujar = Sub(lista As List(Of cCombinacionBeamForce), pen As Pen)
 
-                    Next
+                                  If lista Is Nothing OrElse lista.Count < 2 Then Exit Sub
+
+                                  ' 🔹 Ordenar por estación (CLAVE)
+                                  lista = lista.OrderBy(Function(x) x.ElementStation).ToList()
+
+                                  For i = 0 To lista.Count - 2
+
+                                      Dim x1 = df.Offset + lista(i).ElementStation
+                                      Dim y1 = lista(i).M3
+                                      Dim x2 = df.Offset + lista(i + 1).ElementStation
+                                      Dim y2 = lista(i + 1).M3
+
+                                      ' 🔹 Validar valores (evita overflow)
+                                      ' 🔹 Validación compatible con .NET Framework
+                                      If (Double.IsNaN(x1) OrElse Double.IsInfinity(x1) OrElse
+                                            Double.IsNaN(y1) OrElse Double.IsInfinity(y1)) Then Continue For
+
+                                      If (Double.IsNaN(x2) OrElse Double.IsInfinity(x2) OrElse
+                                            Double.IsNaN(y2) OrElse Double.IsInfinity(y2)) Then Continue For
+
+                                      ' 🔹 Protección adicional (valores absurdos)
+                                      If Math.Abs(y1) > 1000000000.0 OrElse Math.Abs(y2) > 1000000000.0 Then Continue For
+
+                                      Try
+                                          g.DrawLine(pen, TransformX(x1), TransformY(y1), TransformX(x2), TransformY(y2))
+                                      Catch ex As OverflowException
+                                          ' Puedes loguear si quieres depurar
+                                          Debug.Print("Overflow en dibujo: " & ex.Message)
+                                      End Try
+
+                                  Next
+                              End Sub
+
+                ' 🔹 Dibujar según exista
+                Using pen As New Pen(colorCombo, 2)
+
+                    If listaMax.Count > 0 Then Dibujar(listaMax, pen)
+                    If listaMin.Count > 0 Then Dibujar(listaMin, pen)
+
+                    ' Si no hay max/min, dibuja la normal
+                    If listaMax.Count = 0 AndAlso listaMin.Count = 0 Then
+                        Dibujar(listaNormal, pen)
+                    End If
 
                 End Using
 
