@@ -330,7 +330,7 @@ Partial Class Form_09_Vigas
         Me.New_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.New_Pilas.ForeColor = System.Drawing.Color.White
         Me.New_Pilas.Name = "New_Pilas"
-        Me.New_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.New_Pilas.Size = New System.Drawing.Size(224, 28)
         Me.New_Pilas.Text = "Nuevo"
         '
         'Open_Pilas
@@ -338,7 +338,7 @@ Partial Class Form_09_Vigas
         Me.Open_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Open_Pilas.ForeColor = System.Drawing.Color.White
         Me.Open_Pilas.Name = "Open_Pilas"
-        Me.Open_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.Open_Pilas.Size = New System.Drawing.Size(224, 28)
         Me.Open_Pilas.Text = "Abrir"
         '
         'Save_Pilas
@@ -346,7 +346,7 @@ Partial Class Form_09_Vigas
         Me.Save_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Save_Pilas.ForeColor = System.Drawing.Color.White
         Me.Save_Pilas.Name = "Save_Pilas"
-        Me.Save_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.Save_Pilas.Size = New System.Drawing.Size(224, 28)
         Me.Save_Pilas.Text = "Guardar"
         '
         'SaveAs_Pilas
@@ -354,7 +354,7 @@ Partial Class Form_09_Vigas
         Me.SaveAs_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.SaveAs_Pilas.ForeColor = System.Drawing.Color.White
         Me.SaveAs_Pilas.Name = "SaveAs_Pilas"
-        Me.SaveAs_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.SaveAs_Pilas.Size = New System.Drawing.Size(224, 28)
         Me.SaveAs_Pilas.Text = "Guardar Como"
         '
         'Importar_Zapatas

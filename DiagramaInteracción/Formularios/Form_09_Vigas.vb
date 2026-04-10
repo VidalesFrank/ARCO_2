@@ -1,4 +1,5 @@
-﻿Imports System.Linq
+﻿Imports System.IO
+Imports System.Linq
 Imports ARCO.eNumeradores
 Imports ARCO.Funciones_00_Varias
 'Imports DocumentFormat.OpenXml.Presentation
@@ -1800,28 +1801,49 @@ Public Class Form_09_Vigas
         ' =================================================
         ' 🔹 FILAS (RESULTADOS)
         ' =================================================
-        dgv.Rows.Add("Sección")
-        dgv.Rows.Add("Longitud (m)")
-        dgv.Rows.Add("M- ENV (kN·m)")
-        dgv.Rows.Add("M+ ENV (kN·m)")
-        dgv.Rows.Add("As req (-)")
-        dgv.Rows.Add("As req (+)")
-        dgv.Rows.Add("As col (-)")
-        dgv.Rows.Add("As col (+)")
-        dgv.Rows.Add("F (-)")
-        dgv.Rows.Add("F (-)")
+        'dgv.Rows.Add("Sección")
+        'dgv.Rows.Add("Longitud (m)")
+        'dgv.Rows.Add("M- ENV (kN·m)")
+        'dgv.Rows.Add("M+ ENV (kN·m)")
+        'dgv.Rows.Add("As req (-)")
+        'dgv.Rows.Add("As req (+)")
+        'dgv.Rows.Add("As col (-)")
+        'dgv.Rows.Add("As col (+)")
+        'dgv.Rows.Add("F (-)")
+        'dgv.Rows.Add("F (+)")
 
-        ' Estilo
-        dgv.Rows(0).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(1).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(2).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(3).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(4).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(5).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(6).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(7).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(8).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(9).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        Dim nombresFilas As String() = {
+                                    "Sección",
+                                    "Longitud (m)",
+                                    "M- ENV (kN·m)",
+                                    "M+ ENV (kN·m)",
+                                    "As req (-)",
+                                    "As req (+)",
+                                    "As col (-)",
+                                    "As col (+)",
+                                    "F (-)",
+                                    "F (+)"
+                                }
+
+        For Each nombre In nombresFilas
+            Dim idx = dgv.Rows.Add()
+            dgv.Rows(idx).HeaderCell.Value = nombre
+        Next
+
+        dgv.RowHeadersVisible = True
+        dgv.RowHeadersWidth = 160
+
+        '' Estilo
+        'dgv.Rows(0).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(1).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(2).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(3).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(4).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(5).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(6).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(7).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(8).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        'dgv.Rows(9).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
 
     End Sub
 
@@ -2022,7 +2044,7 @@ Public Class Form_09_Vigas
 
     Private Sub LlenarTablaResultados(viga As cViga, dgv As DataGridView)
 
-        Dim colBase As Integer = 1 ' después de la columna "Resultado"
+        Dim colBase As Integer = 0 ' después de la columna "Resultado"
 
         For Each frame In viga.Frames
 
@@ -2164,6 +2186,7 @@ Public Class Form_09_Vigas
 
         Lista_Pisos.SelectedItem = vigaSel.Piso
         Nombre_Viga.Text = vigaSel.Name_Beam
+
         DibujarPlanta()
 
         CargarVigaCompleta(vigaSel)
@@ -2638,6 +2661,125 @@ Public Class Form_09_Vigas
             cell.Style.BackColor = ColorTranslator.FromHtml("#FFC7CE")
             cell.Style.ForeColor = ColorTranslator.FromHtml("#9C0006")
         End If
+
+    End Sub
+
+    Private Sub SaveAs_Pilas_Click(sender As Object, e As EventArgs) Handles SaveAs_Pilas.Click
+        SaveAs(Proyecto)
+    End Sub
+
+    Private Sub SaveAs(ByVal Objeto As Object)
+        Try
+            Dim SaveAs As New SaveFileDialog
+            SaveAs.Filter = "Archivo|*.esm"
+            SaveAs.Title = "Guardar Archivo"
+            SaveAs.FileName = Convert.ToString("RevisiónVigas_Proyecto-" & Proyecto.Info.Nombre)
+
+            If SaveAs.ShowDialog() = DialogResult.OK Then
+
+                Proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
+
+                Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
+
+                ' ✅ Mensaje de éxito
+                MessageBox.Show("El archivo se guardó correctamente.", "Guardar", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+            End If
+
+            'If SaveAs.FileName <> String.Empty Then
+            '    Proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
+            '    Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
+            'End If
+        Catch ex As Exception
+            ' ❌ Mensaje de error (MUY IMPORTANTE)
+            MessageBox.Show("Error al guardar el archivo: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+
+        End Try
+
+    End Sub
+
+    Private Sub Open_Pilas_Click(sender As Object, e As EventArgs) Handles Open_Pilas.Click
+        Open()
+    End Sub
+
+    Public Sub Open()
+
+        Try
+            Dim OpenFile As New OpenFileDialog
+            OpenFile.Filter = "Archivo|*.esm"
+            OpenFile.Title = "Abrir Archivo"
+
+            If OpenFile.ShowDialog() = DialogResult.OK Then
+
+                ' 🔥 Deserializar
+                Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(OpenFile.FileName)
+
+                ' 🔥 Cargar UI
+                CargarCombos(Proyecto)
+
+                ' ✅ Mensaje de éxito
+                MessageBox.Show("El archivo se abrió correctamente.", "Abrir", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+            End If
+
+        Catch ex As Exception
+
+            ' ❌ Mensaje de error claro
+            MessageBox.Show("Error al abrir el archivo. Puede estar dañado o incompatible." & vbCrLf & ex.Message,
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error)
+
+        End Try
+        'Dim Open As New OpenFileDialog
+        'Open.Filter = "Archivo|*.esm"
+        'Open.Title = "Abrir Archivo"
+
+
+        'Open.ShowDialog()
+        'If Open.FileName <> String.Empty Then
+        '    Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(Open.FileName)
+
+        '    CargarCombos(Proyecto)
+
+        'End If
+
+    End Sub
+
+    Private Sub CargarCombos(Proyecto As ARCO.Proyecto)
+
+        Dim vigas As List(Of cViga)
+        Dim Frames = Proyecto.Elementos.Frames
+
+        vigas = Proyecto.Elementos.Vigas.Vigas
+        _vigas = Proyecto.Elementos.Vigas.Vigas
+
+        Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
+        _joints = jointsDict
+
+        ' Combo de vigas
+        Lista_Vigas.DataSource = Nothing
+        Lista_Vigas.DataSource = vigas
+        Lista_Vigas.DisplayMember = "Nombre"
+
+        ' Combo de pisos
+        Dim stories As List(Of String) = Frames _
+            .Select(Function(f) f.Story) _
+            .Distinct() _
+            .OrderBy(Function(s) s) _
+            .ToList()
+
+        Lista_Pisos.DataSource = Nothing
+        Lista_Pisos.DataSource = stories
+
+        If Lista_Vigas.SelectedItem IsNot Nothing Then
+
+            Dim vigaSel As cViga = CType(Lista_Vigas.SelectedItem, cViga)
+
+            Lista_Pisos.SelectedItem = vigaSel.Piso
+
+        End If
+
 
     End Sub
 
