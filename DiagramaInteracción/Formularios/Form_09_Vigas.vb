@@ -757,13 +757,23 @@ Public Class Form_09_Vigas
 
                 ConstruirEnvolventeAnalisis(bfFrame, estaciones, envMax, envMin)
 
+                Dim MmaxAnalisis = New List(Of Double)(envMax)
+                Dim MminAnalisis = New List(Of Double)(envMin)
+
                 EnvolventeNSR10(estaciones, envMax, envMin)
 
+                Dim MmaxDesign = New List(Of Double)(envMax)
+                Dim MminDesign = New List(Of Double)(envMin)
+
                 frame.EnvolventeMomento = New cEnvolventeMomento With {
-                .Estaciones = estaciones,
-                .MmaxDesign = envMax,
-                .MminDesign = envMin
-            }
+                                            .Estaciones = estaciones,
+                                            .MmaxAnalisis = MmaxAnalisis,
+                                            .MminAnalisis = MminAnalisis,
+                                            .MmaxDesign = MmaxDesign,
+                                            .MminDesign = MminDesign
+                                                    }
+
+                CalcularValoresResumen(frame.EnvolventeMomento)
 
                 ' =====================================
                 ' 🔹 Guardar momentos por zona
@@ -826,6 +836,43 @@ Public Class Form_09_Vigas
             Next
 
         Next
+
+    End Sub
+
+    Private Sub CalcularValoresResumen(env As cEnvolventeMomento)
+
+        If env Is Nothing OrElse env.Estaciones.Count = 0 Then Exit Sub
+
+        Dim estaciones = env.Estaciones
+        Dim Mmax = env.MmaxDesign ' o Analisis según lo que quieras usar
+        Dim Mmin = env.MminDesign
+
+        ' ==================================================
+        ' 🔹 MOMENTO POSITIVO MÁXIMO
+        ' ==================================================
+        Dim maxVal As Double = Double.MinValue
+        Dim idxMax As Integer = -1
+
+        For i = 0 To Mmax.Count - 1
+            If Mmax(i) > maxVal Then
+                maxVal = Mmax(i)
+                idxMax = i
+            End If
+        Next
+
+        env.MomentoPositivoMax = If(maxVal > 0, maxVal, 0)
+        env.EstacionMomentoPositivoMax = If(idxMax >= 0, estaciones(idxMax), 0)
+
+        ' ==================================================
+        ' 🔹 MOMENTOS NEGATIVOS EN EXTREMOS
+        ' ==================================================
+        ' Izquierda → primer punto
+        Dim MnegIzq = Mmin.First()
+        env.MomentoNegativoIzq = If(MnegIzq < 0, MnegIzq, 0)
+
+        ' Derecha → último punto
+        Dim MnegDer = Mmin.Last()
+        env.MomentoNegativoDer = If(MnegDer < 0, MnegDer, 0)
 
     End Sub
 
@@ -1269,45 +1316,6 @@ Public Class Form_09_Vigas
             envMin.Add(If(dictMin.ContainsKey(s), dictMin(s).Min(), 0))
 
         Next
-
-        ''Dim dict As New Dictionary(Of Double, (Mmax As Double, Mmin As Double))
-
-        'Dim dictMax As New Dictionary(Of Double, Double)
-        'Dim dictMin As New Dictionary(Of Double, Double)
-
-
-        'For Each bf In bfFrame
-
-        '    Dim s As Double = bf.ElementStation
-        '    Dim m As Double = bf.M3
-        '    Dim stepType As String = If(bf.stepType, "").Trim().ToUpper()
-
-        '    If Not dict.ContainsKey(s) Then
-
-        '        dict(s) = (m, m)
-
-        '    Else
-
-        '        Dim maxM = Math.Max(dict(s).Mmax, m)
-        '        Dim minM = Math.Min(dict(s).Mmin, m)
-
-        '        dict(s) = (maxM, minM)
-
-        '    End If
-
-        'Next
-
-        'estaciones = dict.Keys.OrderBy(Function(x) x).ToList()
-
-        'envMax = New List(Of Double)
-        'envMin = New List(Of Double)
-
-        'For Each s In estaciones
-
-        '    envMax.Add(dict(s).Mmax)
-        '    envMin.Add(dict(s).Mmin)
-
-        'Next
 
     End Sub
 
@@ -1870,74 +1878,147 @@ Public Class Form_09_Vigas
 
     Private Sub LlenarTablaResumen(viga As cViga, dgv As DataGridView)
 
-        Dim colBase As Integer = 1 ' después de la columna "Resultado"
+        Dim colBase As Integer = 1
 
         For Each frame In viga.Frames
 
-            ' BeamForces del frame para combinaciones de diseño
-            Dim bfFrame As List(Of cCombinacionBeamForce) =
-                Proyecto.Elementos.Vigas.BeamForces _
-                .Where(Function(r) r.Beam = frame.ObjectLabel _
-                AndAlso r.Story = frame.Story _
-                AndAlso Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Contains(r.LoadCaseCombo)) _
-                .ToList()
-
-            If bfFrame.Count = 0 Then
+            Dim env = frame.EnvolventeMomento
+            If env Is Nothing OrElse env.Estaciones Is Nothing OrElse env.Estaciones.Count = 0 Then
                 colBase += 3
                 Continue For
             End If
 
-            ' Longitud del frame
-            Dim L As Single = bfFrame.Max(Function(bf) bf.ElementStation)
+            Dim estaciones = env.Estaciones
 
-            ' Estaciones objetivo
-            Dim sIzq As Single = 0
-            Dim sCen As Single = L / 2
-            Dim sDer As Single = L
-
-            ' ==================================================
-            ' 🔹 MOMENTO NEGATIVO (M−)
-            ' ==================================================
-            dgv.Rows(0).Cells(colBase).Value = Math.Abs(Math.Round(ObtenerMomentoNegativo(bfFrame, sIzq), 2))
-            dgv.Rows(0).Cells(colBase + 1).Value = Math.Abs(Math.Round(ObtenerMomentoNegativo(bfFrame, sCen), 2))
-            dgv.Rows(0).Cells(colBase + 2).Value = Math.Abs(Math.Round(ObtenerMomentoNegativo(bfFrame, sDer), 2))
+            Dim L As Double = estaciones.Last()
+            Dim sIzq As Double = 0
+            Dim sCen As Double = L / 2
+            Dim sDer As Double = L
 
             ' ==================================================
-            ' 🔹 MOMENTO POSITIVO (M+)
+            ' 🔹 ANALISIS
             ' ==================================================
-            dgv.Rows(1).Cells(colBase).Value = Math.Round(ObtenerMomentoPositivo(bfFrame, sIzq), 2)
-            dgv.Rows(1).Cells(colBase + 1).Value = Math.Round(ObtenerMomentoPositivo(bfFrame, sCen), 2)
-            dgv.Rows(1).Cells(colBase + 2).Value = Math.Round(ObtenerMomentoPositivo(bfFrame, sDer), 2)
 
-            Dim M1n = ObtenerMomentoNegativo(bfFrame, sIzq)
-            Dim M2n = ObtenerMomentoNegativo(bfFrame, sCen)
-            Dim M3n = ObtenerMomentoNegativo(bfFrame, sDer)
+            Dim tol As Double = 0.15 * L
 
-            Dim M1p = ObtenerMomentoPositivo(bfFrame, sIzq)
-            Dim M2p = ObtenerMomentoPositivo(bfFrame, sCen)
-            Dim M3p = ObtenerMomentoPositivo(bfFrame, sDer)
+            ' Negativos (usar MminAnalisis)
+            Dim M1n = ObtenerValorEnEstacion(estaciones, env.MminAnalisis, sIzq)
+            Dim M2n = ObtenerValorEnEstacion(estaciones, env.MminAnalisis, sCen)
+            Dim M3n = ObtenerValorEnEstacion(estaciones, env.MminAnalisis, sDer)
 
-            AplicarEnvolventeNSR(M1n, M1p, M2n, M2p, M3n, M3p)
+            ' Positivos (usar MmaxAnalisis)
+            Dim M1p = ObtenerValorEnEstacion(estaciones, env.MmaxAnalisis, sIzq)
+            Dim M2p = ObtenerValorEnEstacion(estaciones, env.MmaxAnalisis, sCen)
+            Dim M2p_Ventana = ObtenerExtremoEnVentana(estaciones, env.MmaxAnalisis, sCen, tol, True)
+            M2p = Math.Max(M2p, M2p_Ventana)
+            Dim M3p = ObtenerValorEnEstacion(estaciones, env.MmaxAnalisis, sDer)
 
-            dgv.Rows(2).Cells(colBase).Value = Math.Abs(Math.Round(M1n, 2))
-            dgv.Rows(2).Cells(colBase + 1).Value = Math.Abs(Math.Round(M2n, 2))
-            dgv.Rows(2).Cells(colBase + 2).Value = Math.Abs(Math.Round(M3n, 2))
+            ' Si no hay signo, poner 0
+            M1n = If(M1n < 0, M1n, 0)
+            M2n = If(M2n < 0, M2n, 0)
+            M3n = If(M3n < 0, M3n, 0)
 
-            dgv.Rows(3).Cells(colBase).Value = Math.Round(M1p, 2)
-            dgv.Rows(3).Cells(colBase + 1).Value = Math.Round(M2p, 2)
-            dgv.Rows(3).Cells(colBase + 2).Value = Math.Round(M3p, 2)
+            M1p = If(M1p > 0, M1p, 0)
+            M2p = If(M2p > 0, M2p, 0)
+            M3p = If(M3p > 0, M3p, 0)
+
+            dgv.Rows(0).Cells(colBase).Value = Math.Abs(Math.Round(M1n, 2))
+            dgv.Rows(0).Cells(colBase + 1).Value = Math.Abs(Math.Round(M2n, 2))
+            dgv.Rows(0).Cells(colBase + 2).Value = Math.Abs(Math.Round(M3n, 2))
+
+            dgv.Rows(1).Cells(colBase).Value = Math.Round(M1p, 2)
+            dgv.Rows(1).Cells(colBase + 1).Value = Math.Round(M2p, 2)
+            dgv.Rows(1).Cells(colBase + 2).Value = Math.Round(M3p, 2)
 
             ' ==================================================
-            ' 🔹 CORTANTE (V) → valor absoluto máximo
+            ' 🔹 DISEÑO (NSR-10)
             ' ==================================================
-            dgv.Rows(4).Cells(colBase).Value = Math.Round(ObtenerCortante(bfFrame, sIzq), 2)
-            dgv.Rows(4).Cells(colBase + 1).Value = Math.Round(ObtenerCortante(bfFrame, sCen), 2)
-            dgv.Rows(4).Cells(colBase + 2).Value = Math.Round(ObtenerCortante(bfFrame, sDer), 2)
+
+            Dim D1n = ObtenerValorEnEstacion(estaciones, env.MminDesign, sIzq)
+            Dim D2n = ObtenerValorEnEstacion(estaciones, env.MminDesign, sCen)
+            Dim D3n = ObtenerValorEnEstacion(estaciones, env.MminDesign, sDer)
+
+            Dim D1p = ObtenerValorEnEstacion(estaciones, env.MmaxDesign, sIzq)
+            Dim D2p = ObtenerValorEnEstacion(estaciones, env.MmaxDesign, sCen)
+            Dim D2p_Ventana = ObtenerExtremoEnVentana(estaciones, env.MmaxDesign, sCen, tol, True)
+            D2p = Math.Max(D2p, D2p_Ventana)
+
+            Dim D3p = ObtenerValorEnEstacion(estaciones, env.MmaxDesign, sDer)
+
+            ' Aplicar condición de signo
+            D1n = If(D1n < 0, D1n, 0)
+            D2n = If(D2n < 0, D2n, 0)
+            D3n = If(D3n < 0, D3n, 0)
+
+            D1p = If(D1p > 0, D1p, 0)
+            D2p = If(D2p > 0, D2p, 0)
+            D3p = If(D3p > 0, D3p, 0)
+
+            dgv.Rows(2).Cells(colBase).Value = Math.Abs(Math.Round(D1n, 2))
+            dgv.Rows(2).Cells(colBase + 1).Value = Math.Abs(Math.Round(D2n, 2))
+            dgv.Rows(2).Cells(colBase + 2).Value = Math.Abs(Math.Round(D3n, 2))
+
+            dgv.Rows(3).Cells(colBase).Value = Math.Round(D1p, 2)
+            dgv.Rows(3).Cells(colBase + 1).Value = Math.Round(D2p, 2)
+            dgv.Rows(3).Cells(colBase + 2).Value = Math.Round(D3p, 2)
+
+            ' ==================================================
+            ' 🔹 CORTANTE (puedes dejarlo como lo tienes o migrarlo igual)
+            ' ==================================================
 
             colBase += 3
 
         Next
+
     End Sub
+
+    Private Function ObtenerValorEnEstacion(estaciones As List(Of Double),
+                                        valores As List(Of Double),
+                                        sObjetivo As Double) As Double
+
+        If estaciones Is Nothing OrElse valores Is Nothing OrElse estaciones.Count = 0 Then Return 0
+
+        ' Buscar el índice más cercano a la estación objetivo
+        Dim idx = estaciones _
+        .Select(Function(s, i) New With {.Dist = Math.Abs(s - sObjetivo), .Index = i}) _
+        .OrderBy(Function(x) x.Dist) _
+        .First().Index
+
+        Return valores(idx)
+
+    End Function
+
+    Private Function ObtenerExtremoEnVentana(estaciones As List(Of Double),
+                                         valores As List(Of Double),
+                                         sCentro As Double,
+                                         tolerancia As Double,
+                                         buscarMax As Boolean) As Double
+
+        If estaciones Is Nothing OrElse valores Is Nothing OrElse estaciones.Count = 0 Then Return 0
+
+        ' Filtrar puntos dentro de la ventana
+        Dim indices = estaciones _
+        .Select(Function(s, i) New With {.s = s, .i = i}) _
+        .Where(Function(x) Math.Abs(x.s - sCentro) <= tolerancia) _
+        .Select(Function(x) x.i) _
+        .ToList()
+
+        ' Si no hay puntos en la ventana, usar el más cercano
+        If indices.Count = 0 Then
+            Return ObtenerValorEnEstacion(estaciones, valores, sCentro)
+        End If
+
+        ' Buscar extremo dentro de la ventana
+        Dim subset = indices.Select(Function(i) valores(i))
+
+        If buscarMax Then
+            Return subset.Max()
+        Else
+            Return subset.Min()
+        End If
+
+    End Function
+
 
     Private Sub LlenarTablaResultados(viga As cViga, dgv As DataGridView)
 
