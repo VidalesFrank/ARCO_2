@@ -668,6 +668,7 @@ Public Class Funciones_00_Varias
 
     End Function
 
+    <Serializable>
     Public Structure Vector3
         Public X As Double
         Public Y As Double
