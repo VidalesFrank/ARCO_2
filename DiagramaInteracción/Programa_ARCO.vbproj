@@ -349,6 +349,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\09_Vigas\DiagramaService.vb" />
+    <Compile Include="Formularios\09_Vigas\Form_AgrupacionManualVigas.vb" />
     <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">

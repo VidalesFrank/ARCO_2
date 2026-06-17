@@ -245,6 +245,8 @@ Public Class Form_00_PaginaPrincipal
         ' Agregar ítem "Reporte Completo..." en menú Opciones
         Dim sep As New ToolStripSeparator()
         Dim mnuReporte As New ToolStripMenuItem("Reporte Completo del Proyecto…")
+        mnuReporte.BackColor = Color.FromArgb(87, 87, 86)
+        mnuReporte.ForeColor = Color.White
         AddHandler mnuReporte.Click, Sub(s, ev) Form_Reporte_Proyecto_Completo.Mostrar(proyecto)
         OpcionesToolStripMenuItem1.DropDownItems.Add(sep)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporte)
@@ -300,7 +302,7 @@ Public Class Form_00_PaginaPrincipal
         PagInfoGeneral.T_Propietario.Text = If(proyecto.Info.Propietario, "")
         PagInfoGeneral.T_Disenador.Text = If(proyecto.Info.Designer, "")
         If proyecto.Info.Area > 0 Then PagInfoGeneral.T_AreaPlanta.Text = proyecto.Info.Area.ToString()
-        PagInfoGeneral.C_SE.Text = proyecto.Info.SistemaEstructural.ToString()
+        PagInfoGeneral.C_SE.Text = DirectorioSistemaEstructural.dSistemaEstructural(proyecto.Info.SistemaEstructural).NameSistema
         PagInfoGeneral.C_GU.Text = proyecto.Info.GrupoUso.ToString()
         PagInfoGeneral.C_TS.Text = proyecto.Info.TipoSuelo.ToString()
 

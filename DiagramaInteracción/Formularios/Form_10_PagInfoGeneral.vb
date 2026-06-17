@@ -21,12 +21,9 @@ Public Class PagInfoGeneral
                 p.Info.Area = areaVal
             End If
 
-            If C_SE.Text = "MCR" Then
-                p.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.MCR
-            ElseIf C_SE.Text = "Porticos" Then
-                p.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Porticos
-            Else
-                p.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Combinado
+            Dim seKvp = DirectorioSistemaEstructural.dSistemaEstructural.FirstOrDefault(Function(kv) kv.Value.NameSistema = C_SE.Text)
+            If Not String.IsNullOrEmpty(C_SE.Text) Then
+                p.Info.SistemaEstructural = seKvp.Key
             End If
 
             If Not String.IsNullOrEmpty(C_DM.Text) Then
@@ -82,6 +79,18 @@ Public Class PagInfoGeneral
         For Each kv As KeyValuePair(Of eSistemaEstructural, Sistema) In DirectorioSistemaEstructural.dSistemaEstructural
             C_SE.Items.Add(kv.Value.NameSistema)
         Next
+
+        ' Items.Clear() borró la selección que Form_00 ya había asignado antes del Show().
+        ' La restauramos aquí, donde los ítems ya están cargados.
+        Try
+            Dim p = Form_00_PaginaPrincipal.proyecto
+            C_SE.Text = DirectorioSistemaEstructural.dSistemaEstructural(p.Info.SistemaEstructural).NameSistema
+            Dim nombreResp As String = DirectorioResponsables.dResponsables(p.Info.Persona_Responsable).NombreCompleto
+            If C_Responsable.Items.Contains(nombreResp) Then
+                C_Responsable.SelectedItem = nombreResp
+            End If
+        Catch
+        End Try
     End Sub
 
 End Class

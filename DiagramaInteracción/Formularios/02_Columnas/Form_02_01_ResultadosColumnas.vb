@@ -329,6 +329,16 @@ Public Class Form_02_01_ResultadosColumnas
         Form_Graficos.Show()
     End Sub
 
+    Private Sub ReporteResultadosClick(sender As Object, e As EventArgs) Handles Reporte_Resultados_Col.Click
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show("No hay columnas procesadas. Ejecute el análisis primero.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim rpt As New Form_02_Reporte_Columnas
+        rpt.Columnas = Proyecto.Elementos.Columnas.Lista_Columnas
+        rpt.Show()
+    End Sub
+
     Private Sub RevisiónDeCortanteToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Cortante_Resultados.Click
         Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Clear()
 

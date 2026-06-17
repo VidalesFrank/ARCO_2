@@ -51,6 +51,7 @@ Partial Class Form_02_01_ResultadosColumnas
         Me.Reporte_Col_Excel = New System.Windows.Forms.ToolStripMenuItem()
         Me.Reporte_Col_PDF = New System.Windows.Forms.ToolStripMenuItem()
         Me.Resultados_Modelo_Col = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Reporte_Resultados_Col = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
         Me.Graficos_Resultados = New System.Windows.Forms.ToolStripMenuItem()
         Me.Cortante_Resultados = New System.Windows.Forms.ToolStripMenuItem()
@@ -267,7 +268,7 @@ Partial Class Form_02_01_ResultadosColumnas
         '
         'ToolStripMenuItem1
         '
-        Me.ToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem3, Me.Resultados_Modelo_Col})
+        Me.ToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem3, Me.Resultados_Modelo_Col, Me.Reporte_Resultados_Col})
         Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
         Me.ToolStripMenuItem1.Size = New System.Drawing.Size(95, 27)
@@ -305,6 +306,14 @@ Partial Class Form_02_01_ResultadosColumnas
         Me.Resultados_Modelo_Col.Name = "Resultados_Modelo_Col"
         Me.Resultados_Modelo_Col.Size = New System.Drawing.Size(313, 28)
         Me.Resultados_Modelo_Col.Text = "Ingresar Resultados de Etabs"
+        '
+        'Reporte_Resultados_Col
+        '
+        Me.Reporte_Resultados_Col.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.Reporte_Resultados_Col.ForeColor = System.Drawing.Color.White
+        Me.Reporte_Resultados_Col.Name = "Reporte_Resultados_Col"
+        Me.Reporte_Resultados_Col.Size = New System.Drawing.Size(313, 28)
+        Me.Reporte_Resultados_Col.Text = "Reporte de Resultados"
         '
         'ToolStripMenuItem2
         '
@@ -445,4 +454,5 @@ Partial Class Form_02_01_ResultadosColumnas
     Friend WithEvents ToolStripMenuItem2 As ToolStripMenuItem
     Friend WithEvents Graficos_Resultados As ToolStripMenuItem
     Friend WithEvents Cortante_Resultados As ToolStripMenuItem
+    Friend WithEvents Reporte_Resultados_Col As ToolStripMenuItem
 End Class

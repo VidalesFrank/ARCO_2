@@ -69,6 +69,11 @@ Public Class Form_09_Vigas
                 _vigaService.OrdenarFramesViga(v, jointsDict)
             Next
 
+            ' Reaplicar agrupaciones manuales previas del usuario
+            If Proyecto.Elementos.Vigas.GruposManual.Count > 0 Then
+                _vigaService.AplicarGruposManual(vigas, Proyecto.Elementos.Vigas.GruposManual, jointsDict)
+            End If
+
             Proyecto.Elementos.Vigas.Vigas = vigas
 
             _vigas = vigas
@@ -583,6 +588,12 @@ Public Class Form_09_Vigas
         AddHandler menuFiltroSec.Click, AddressOf AbrirFiltroSecciones
         OpcionesToolStripMenuItem.DropDownItems.Add(menuFiltroSec)
 
+        Dim menuAgrupacion As New ToolStripMenuItem("Editar Agrupación de Viga...")
+        menuAgrupacion.ForeColor = Color.White
+        menuAgrupacion.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuAgrupacion.Click, AddressOf AbrirEditorAgrupacion
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuAgrupacion)
+
         Dim menuReportes As New ToolStripMenuItem("Reportes")
         menuReportes.ForeColor = Color.White
         menuReportes.BackColor = Color.FromArgb(87, 87, 87)
@@ -931,6 +942,136 @@ Public Class Form_09_Vigas
         form.PisoActual = If(Lista_Pisos.SelectedItem IsNot Nothing,
                               Lista_Pisos.SelectedItem.ToString(), "")
         form.Show(Me)
+    End Sub
+
+    ' =========================================================================
+    ' AGRUPACIÓN MANUAL DE VIGAS
+    ' =========================================================================
+
+    Private Sub AbrirEditorAgrupacion(sender As Object, e As EventArgs)
+
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("Ejecute el cálculo de vigas primero.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        If _vigaActual Is Nothing Then
+            MessageBox.Show("Seleccione una viga en la lista antes de editar su agrupación.",
+                            "Sin selección", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim piso = _vigaActual.Piso
+
+        ' Abrir vista interactiva en modo agrupación
+        Dim frmPlanta As New Form_PlantaInteractiva()
+        frmPlanta.Vigas = _vigas
+        frmPlanta.Joints = _joints
+        frmPlanta.GridLines = Proyecto?.Elementos?.Grids?.GridLines
+        frmPlanta.PisoActual = piso
+        frmPlanta.VigaEditada = _vigaActual
+        frmPlanta.Text = $"Agrupación Manual — {_vigaActual.Nombre}  |  Piso: {piso}"
+        frmPlanta.ModoAgrupacion = True   ' pre-selecciona los frames de la viga y activa barra
+
+        If frmPlanta.ShowDialog(Me) <> DialogResult.OK Then Return
+
+        Dim nuevosLabels = New HashSet(Of String)(frmPlanta.FramesResultantes)
+        Dim labelsOriginales = New HashSet(Of String)(_vigaActual.Frames.Select(Function(f) f.ObjectLabel))
+
+        Dim labelsAgregar = nuevosLabels.Except(labelsOriginales).ToList()
+        Dim labelsQuitar = labelsOriginales.Except(nuevosLabels).ToList()
+
+        If labelsAgregar.Count = 0 AndAlso labelsQuitar.Count = 0 Then Return
+
+        ' Mover frames desde otras vigas hacia la viga actual
+        For Each label In labelsAgregar
+            Dim srcViga = _vigas.FirstOrDefault(Function(v) v.Frames.Any(Function(f) f.ObjectLabel = label))
+            If srcViga Is Nothing Then Continue For
+            Dim frame = srcViga.Frames.First(Function(f) f.ObjectLabel = label)
+            srcViga.Frames.Remove(frame)
+            _vigaActual.Frames.Add(frame)
+        Next
+
+        ' Retirar frames de la viga actual; cada uno queda en su propia viga residual
+        For Each label In labelsQuitar
+            Dim frame = _vigaActual.Frames.FirstOrDefault(Function(f) f.ObjectLabel = label)
+            If frame Is Nothing Then Continue For
+            _vigaActual.Frames.Remove(frame)
+
+            Dim residual As New cViga With {
+                .Piso = frame.Story,
+                .Nombre = "VIGA-TMP",
+                .Name_Beam = "VIGA-TMP"
+            }
+            residual.Frames.Add(frame)
+            Dim dir = _geo.VectorFrame(frame, _joints)
+            dir.Normalize()
+            residual.Direccion = dir
+            _vigas.Add(residual)
+        Next
+
+        ' Eliminar vigas que quedaron sin frames
+        _vigas.RemoveAll(Function(v) v.Frames.Count = 0)
+
+        ' Renumerar todas las vigas
+        For i = 0 To _vigas.Count - 1
+            _vigas(i).Nombre = "VIGA-" & (i + 1)
+            _vigas(i).Name_Beam = _vigas(i).Nombre
+        Next
+
+        ' Re-ordenar la viga editada
+        _vigaService.OrdenarFramesViga(_vigaActual, _joints)
+
+        ' Persistir el grupo manual (reemplaza si ya existía para esta viga)
+        Dim gruposManual = Proyecto.Elementos.Vigas.GruposManual
+        Dim currentLabels = _vigaActual.Frames.Select(Function(f) f.ObjectLabel).ToList()
+        gruposManual.RemoveAll(Function(g) g.Any(Function(lbl) currentLabels.Contains(lbl)))
+        If currentLabels.Count > 0 Then
+            gruposManual.Add(currentLabels)
+        End If
+
+        ' Recalcular todas las vigas afectadas
+        RecalcularListaVigas(_vigas)
+
+        ' Actualizar lista en UI
+        _cargando = True
+        Lista_Vigas.DataSource = Nothing
+        Lista_Vigas.DataSource = _vigas
+        Lista_Vigas.DisplayMember = "Nombre"
+        _cargando = False
+
+        Proyecto.Elementos.Vigas.Vigas = _vigas
+        HayCambios = True
+
+        ' Reseleccionar la viga editada
+        Dim idx = _vigas.IndexOf(_vigaActual)
+        If idx >= 0 Then Lista_Vigas.SelectedIndex = idx
+
+    End Sub
+
+    ''' <summary>
+    ''' Recalcula envolventes, diseño, refuerzo transversal y cortante para la lista dada.
+    ''' Útil después de modificar agrupaciones manualmente sin re-ejecutar todo el Calcular.
+    ''' </summary>
+    Private Sub RecalcularListaVigas(vigas As List(Of cViga))
+
+        Dim combsDesign = New HashSet(Of String)(
+            Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)))
+
+        _vigaService.CalcularEnvolventesVigas(vigas, Proyecto.Elementos.Vigas.BeamForces, combsDesign)
+        _vigaService.designVigas(vigas, Proyecto.Elementos.Joints)
+        _vigaService.AsignarRefuerzoTransversalAutomatico(vigas)
+
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+            Dim combsCortante = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)))
+            _vigaService.CalcularEnvolventeCortante(vigas, Proyecto.Elementos.Vigas.BeamForces, combsCortante)
+            _vigaService.CalcularCapacidadCortante(vigas)
+        End If
+
+        TriggerCortantePlastico(vigas)
+
     End Sub
 
     Private Sub CentrarBotonesRefuerzo()

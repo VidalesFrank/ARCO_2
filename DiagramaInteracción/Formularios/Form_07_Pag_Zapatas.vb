@@ -141,6 +141,8 @@ Public Class Form_07_Pag_Zapatas
         Dim combsEst = New HashSet(Of String)(Proyecto.Elementos.Zapatas.Lista_Combinaciones_Estaticas.Select(Function(c) NormalizarClaveCombo(c)))
         Dim combsDin = New HashSet(Of String)(Proyecto.Elementos.Zapatas.Lista_Combinaciones_Dinamicas.Select(Function(c) NormalizarClaveCombo(c)))
         Dim fontBold As New Font("Segoe UI", 9, FontStyle.Bold)
+        TablaResultados.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
+        Tabla_Reporte.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
         TablaResultados.SuspendLayout()
         Tabla_Reporte.SuspendLayout()
 

@@ -24,12 +24,46 @@ Public Class Form_PlantaInteractiva
     Private _hoveredViga As cViga = Nothing
     Private _hoveredFrame As cFrame = Nothing
 
+    ' ── Modo agrupación manual ────────────────────────────────
+    Private _modoAgrupacion As Boolean = False
+    Private ReadOnly _framesSeleccionados As New HashSet(Of String)
+    Private _clickPos As Point
+    Private _pnlAgrupacion As Panel
+    Private _lblSelInfo As Label
+
     ' ── Controles ─────────────────────────────────────────────
     Private WithEvents _panel As BufferedPanel
     Private _lblInfo As Label
     Private _btnFit As Button
     Private _chkAllFloors As CheckBox
     Private _lblZoom As Label
+
+    ' ── Propiedades para modo agrupación ──────────────────────
+    Public Property VigaEditada As cViga = Nothing
+    Public Property FramesResultantes As New List(Of String)
+
+    Public Property ModoAgrupacion As Boolean
+        Get
+            Return _modoAgrupacion
+        End Get
+        Set(value As Boolean)
+            _modoAgrupacion = value
+            If _pnlAgrupacion IsNot Nothing Then _pnlAgrupacion.Visible = value
+            If _chkAllFloors IsNot Nothing Then _chkAllFloors.Enabled = Not value
+            If value Then
+                _panel.Cursor = Cursors.Default
+                If VigaEditada IsNot Nothing Then
+                    _framesSeleccionados.Clear()
+                    For Each f In VigaEditada.Frames
+                        _framesSeleccionados.Add(f.ObjectLabel)
+                    Next
+                    ActualizarContadorSeleccion()
+                End If
+            Else
+                _panel.Cursor = Cursors.Hand
+            End If
+        End Set
+    End Property
 
     ' =====================================================================
     Public Sub New()
@@ -127,6 +161,76 @@ Public Class Form_PlantaInteractiva
         AddHandler _chkAllFloors.CheckedChanged, Sub() _panel.Invalidate()
         AddHandler Me.Shown, Sub() FitView()
 
+        ' ── Barra de modo agrupación (oculta por defecto) ─────
+        _pnlAgrupacion = New Panel With {
+            .Dock = DockStyle.Top,
+            .Height = 48,
+            .BackColor = Color.FromArgb(15, 70, 20),
+            .Visible = False,
+            .Padding = New Padding(8, 6, 8, 6)
+        }
+
+        _lblSelInfo = New Label With {
+            .Dock = DockStyle.Fill,
+            .ForeColor = Color.FromArgb(200, 240, 200),
+            .Font = New Font("Segoe UI", 9.5F),
+            .TextAlign = ContentAlignment.MiddleLeft,
+            .Text = "Clic en un frame para seleccionarlo o deseleccionarlo.  Rueda o arrastre (botón central) para navegar."
+        }
+
+        Dim btnConfirmar As New Button With {
+            .Dock = DockStyle.Right,
+            .Width = 138,
+            .Text = "✓  Confirmar",
+            .BackColor = Color.FromArgb(0, 140, 60),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Font = New Font("Segoe UI", 9.5F, FontStyle.Bold)
+        }
+        btnConfirmar.FlatAppearance.BorderSize = 0
+        AddHandler btnConfirmar.Click, Sub()
+            FramesResultantes = _framesSeleccionados.ToList()
+            Me.DialogResult = DialogResult.OK
+        End Sub
+
+        Dim btnLimpiar As New Button With {
+            .Dock = DockStyle.Right,
+            .Width = 110,
+            .Text = "Limpiar",
+            .BackColor = Color.FromArgb(130, 100, 20),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Font = New Font("Segoe UI", 9.5F)
+        }
+        btnLimpiar.FlatAppearance.BorderSize = 0
+        AddHandler btnLimpiar.Click, Sub()
+            _framesSeleccionados.Clear()
+            ActualizarContadorSeleccion()
+            _panel.Invalidate()
+        End Sub
+
+        Dim btnCancelarAgrup As New Button With {
+            .Dock = DockStyle.Right,
+            .Width = 110,
+            .Text = "Cancelar",
+            .BackColor = Color.FromArgb(120, 35, 35),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Font = New Font("Segoe UI", 9.5F)
+        }
+        btnCancelarAgrup.FlatAppearance.BorderSize = 0
+        AddHandler btnCancelarAgrup.Click, Sub()
+            Me.DialogResult = DialogResult.Cancel
+        End Sub
+
+        _pnlAgrupacion.Controls.Add(_lblSelInfo)
+        _pnlAgrupacion.Controls.Add(btnConfirmar)
+        _pnlAgrupacion.Controls.Add(btnLimpiar)
+        _pnlAgrupacion.Controls.Add(btnCancelarAgrup)
+
+        ' Agregar al final → se procesa primero en el docking (Dock=Top)
+        Me.Controls.Add(_pnlAgrupacion)
+
     End Sub
 
     ' =====================================================================
@@ -187,6 +291,16 @@ Public Class Form_PlantaInteractiva
     End Sub
 
     Private Sub Panel_MouseDown(sender As Object, e As MouseEventArgs)
+        If _modoAgrupacion Then
+            If e.Button = MouseButtons.Left Then
+                _clickPos = e.Location   ' registrar punto de inicio para detectar clic vs arrastre
+            ElseIf e.Button = MouseButtons.Middle OrElse e.Button = MouseButtons.Right Then
+                _isDragging = True
+                _lastMouse = e.Location
+                _panel.Cursor = Cursors.SizeAll
+            End If
+            Return
+        End If
         If e.Button = MouseButtons.Left OrElse e.Button = MouseButtons.Middle Then
             _isDragging = True
             _lastMouse = e.Location
@@ -207,6 +321,31 @@ Public Class Form_PlantaInteractiva
     End Sub
 
     Private Sub Panel_MouseUp(sender As Object, e As MouseEventArgs)
+        If _modoAgrupacion Then
+            If e.Button = MouseButtons.Left Then
+                ' Solo seleccionar si fue un clic (desplazamiento < 6px)
+                Dim dx = Math.Abs(e.X - _clickPos.X)
+                Dim dy = Math.Abs(e.Y - _clickPos.Y)
+                If dx < 6 AndAlso dy < 6 AndAlso
+                   _hoveredFrame IsNot Nothing AndAlso _hoveredViga IsNot Nothing Then
+                    Dim piso = _hoveredViga.Piso
+                    If String.IsNullOrEmpty(PisoActual) OrElse
+                       piso.Equals(PisoActual, StringComparison.OrdinalIgnoreCase) Then
+                        Dim lbl = _hoveredFrame.ObjectLabel
+                        If _framesSeleccionados.Contains(lbl) Then
+                            _framesSeleccionados.Remove(lbl)
+                        Else
+                            _framesSeleccionados.Add(lbl)
+                        End If
+                        ActualizarContadorSeleccion()
+                        _panel.Invalidate()
+                    End If
+                End If
+            End If
+            _isDragging = False
+            _panel.Cursor = Cursors.Default
+            Return
+        End If
         _isDragging = False
         _panel.Cursor = Cursors.Hand
     End Sub
@@ -258,6 +397,11 @@ Public Class Form_PlantaInteractiva
     End Sub
 
     Private Function MostrarViga(v As cViga) As Boolean
+        If _modoAgrupacion Then
+            ' En modo agrupación mostrar solo el piso que se está editando
+            Return String.IsNullOrEmpty(PisoActual) OrElse
+                   v.Piso.Equals(PisoActual, StringComparison.OrdinalIgnoreCase)
+        End If
         If _chkAllFloors.Checked Then Return True
         If String.IsNullOrEmpty(PisoActual) Then Return True
         Return v.Piso.Equals(PisoActual, StringComparison.OrdinalIgnoreCase)
@@ -303,14 +447,19 @@ Public Class Form_PlantaInteractiva
         End If
 
         DibujarGridLines(g)
-        DibujarVigas(g)
+
+        If _modoAgrupacion Then
+            DibujarVigasAgrupacion(g)
+        Else
+            DibujarVigas(g)
+            ' Tooltip solo en modo normal
+            If _hoveredViga IsNot Nothing AndAlso _hoveredFrame IsNot Nothing Then
+                DibujarTooltipElemento(g, _hoveredViga, _hoveredFrame)
+            End If
+        End If
+
         DibujarEjes(g)
         DibujarEscala(g)
-
-        ' Tooltip dibujado encima de todo
-        If _hoveredViga IsNot Nothing AndAlso _hoveredFrame IsNot Nothing Then
-            DibujarTooltipElemento(g, _hoveredViga, _hoveredFrame)
-        End If
     End Sub
 
     ' ─────────────────────────────────────────────────────────
@@ -685,6 +834,141 @@ Public Class Form_PlantaInteractiva
             End Using
         Catch ex As OverflowException
         End Try
+    End Sub
+
+    ' =====================================================================
+    ' DIBUJO — MODO AGRUPACIÓN
+    ' =====================================================================
+
+    Private Sub DibujarVigasAgrupacion(g As Graphics)
+        If Vigas Is Nothing OrElse Joints Is Nothing Then Return
+
+        For Each v In Vigas
+            If Not MostrarViga(v) Then Continue For
+
+            For Each f In v.Frames
+                If Not Joints.ContainsKey(f.JointI) OrElse Not Joints.ContainsKey(f.JointJ) Then Continue For
+
+                Dim ji = Joints(f.JointI), jj = Joints(f.JointJ)
+                Dim p1 = W2S(ji.GlobalX, ji.GlobalY)
+                Dim p2 = W2S(jj.GlobalX, jj.GlobalY)
+
+                Dim esSelec = _framesSeleccionados.Contains(f.ObjectLabel)
+                Dim esHover = (f Is _hoveredFrame)
+
+                Dim colorFrame As Color
+                Dim grosor As Single
+
+                If esSelec Then
+                    colorFrame = Color.FromArgb(30, 200, 80)   ' verde brillante = en la viga
+                    grosor = 4.5F
+                ElseIf esHover Then
+                    colorFrame = Color.FromArgb(255, 215, 0)   ' amarillo = hover
+                    grosor = 3.5F
+                Else
+                    colorFrame = Color.FromArgb(100, 115, 145)  ' gris azulado = disponible
+                    grosor = 1.8F
+                End If
+
+                Try
+                    If esSelec Then
+                        Using penHalo As New Pen(Color.FromArgb(80, 40, 220, 90), grosor + 6)
+                            g.DrawLine(penHalo, p1, p2)
+                        End Using
+                    ElseIf esHover Then
+                        Using penHalo As New Pen(Color.FromArgb(70, 255, 230, 0), grosor + 5)
+                            g.DrawLine(penHalo, p1, p2)
+                        End Using
+                    End If
+
+                    Using pen As New Pen(colorFrame, grosor)
+                        g.DrawLine(pen, p1, p2)
+                    End Using
+
+                    If (esSelec OrElse esHover) AndAlso _zoom > 12 Then
+                        DibujarEtiquetaFrame(g, ji, jj, f, colorFrame)
+                    End If
+                Catch ex As OverflowException
+                End Try
+            Next
+
+            If _zoom > 10 Then
+                DibujarNombreVigaAgrupacion(g, v)
+            End If
+        Next
+
+        DibujarLeyendaAgrupacion(g)
+    End Sub
+
+    Private Sub DibujarNombreVigaAgrupacion(g As Graphics, v As cViga)
+        If v.Frames.Count = 0 Then Return
+        Try
+            Dim midIdx = v.Frames.Count \ 2
+            Dim fMid = v.Frames(midIdx)
+            If Not Joints.ContainsKey(fMid.JointI) OrElse Not Joints.ContainsKey(fMid.JointJ) Then Return
+
+            Dim jiM = Joints(fMid.JointI), jjM = Joints(fMid.JointJ)
+            Dim pt = W2S((jiM.GlobalX + jjM.GlobalX) / 2, (jiM.GlobalY + jjM.GlobalY) / 2)
+
+            If pt.X < 0 OrElse pt.X > _panel.Width OrElse
+               pt.Y < 0 OrElse pt.Y > _panel.Height Then Return
+
+            Dim tieneSelec = v.Frames.Any(Function(f) _framesSeleccionados.Contains(f.ObjectLabel))
+            Dim clrNombre As Color = If(tieneSelec, Color.FromArgb(10, 130, 40), Color.FromArgb(90, 100, 120))
+
+            Using fnt As New Font("Segoe UI", 7.5F, FontStyle.Bold)
+                Dim sz = g.MeasureString(v.Nombre, fnt)
+                Dim rx = pt.X - sz.Width / 2 - 2
+                Dim ry = pt.Y + 5
+                Using bBg As New SolidBrush(Color.FromArgb(190, Color.White))
+                    g.FillRectangle(bBg, rx, ry, sz.Width + 4, sz.Height + 2)
+                End Using
+                g.DrawString(v.Nombre, fnt, New SolidBrush(clrNombre), rx + 2, ry + 1)
+            End Using
+        Catch ex As OverflowException
+        End Try
+    End Sub
+
+    Private Sub DibujarLeyendaAgrupacion(g As Graphics)
+        Dim items As New List(Of (clr As Color, texto As String)) From {
+            (Color.FromArgb(30, 200, 80), $"En esta viga ({_framesSeleccionados.Count} frames)"),
+            (Color.FromArgb(100, 115, 145), "Disponibles (clic para agregar)"),
+            (Color.FromArgb(255, 215, 0), "Frame bajo el cursor")
+        }
+
+        Dim padX As Single = 12, padY As Single = 12
+        Dim lineH As Single = 20
+        Dim boxH As Single = items.Count * lineH + padY * 2
+        Dim boxW As Single = 250
+        Dim ox As Single = _panel.Width - boxW - 10
+        Dim oy As Single = _panel.Height - boxH - 50
+
+        Using bFondo As New SolidBrush(Color.FromArgb(210, 255, 255, 255))
+            g.FillRectangle(bFondo, ox, oy, boxW, boxH)
+        End Using
+        Using penB As New Pen(Color.FromArgb(160, 160, 170), 1)
+            g.DrawRectangle(penB, ox, oy, boxW, boxH)
+        End Using
+
+        Dim y As Single = oy + padY
+        Using fnt As New Font("Segoe UI", 8)
+            For Each item In items
+                Using penLine As New Pen(item.clr, 3)
+                    g.DrawLine(penLine, ox + padX, y + 8, ox + padX + 20, y + 8)
+                End Using
+                g.DrawString(item.texto, fnt, New SolidBrush(Color.FromArgb(40, 40, 40)),
+                             ox + padX + 26, y)
+                y += lineH
+            Next
+        End Using
+    End Sub
+
+    Private Sub ActualizarContadorSeleccion()
+        If _lblSelInfo Is Nothing Then Return
+        _lblSelInfo.Text = $"Clic = seleccionar / deseleccionar frame.   " &
+                           $"Frames seleccionados: {_framesSeleccionados.Count}   " &
+                           $"|   Piso: {PisoActual}   " &
+                           $"|   Rueda o botón central = navegar"
     End Sub
 
     ' =====================================================================

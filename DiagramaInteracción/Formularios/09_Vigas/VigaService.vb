@@ -1202,7 +1202,6 @@ Public Class VigaService
             Dim f1 = v1.Frames(i)
             Dim f2 = v2.Frames(i)
 
-            ' Puedes hacer esto más estricto si quieres
             If Math.Abs(f1.Longitud - f2.Longitud) > 0.01 Then Return False
 
         Next
@@ -1211,6 +1210,53 @@ Public Class VigaService
 
     End Function
 
+    ''' <summary>
+    ''' Aplica agrupaciones manuales definidas por el usuario sobre las vigas ya auto-generadas.
+    ''' Para cada grupo manual, extrae los frames de sus vigas actuales y los une en una nueva viga.
+    ''' Las vigas que quedan vacías se eliminan y todas se renumeran al final.
+    ''' </summary>
+    Public Sub AplicarGruposManual(vigas As List(Of cViga),
+                                    gruposManual As List(Of List(Of String)),
+                                    jointsDict As Dictionary(Of String, cJoint))
 
+        If gruposManual Is Nothing OrElse gruposManual.Count = 0 Then Return
+
+        For Each grupo In gruposManual
+
+            If grupo Is Nothing OrElse grupo.Count = 0 Then Continue For
+
+            Dim framesGrupo As New List(Of cFrame)
+
+            For Each label In grupo
+                Dim vigaContenedora = vigas.FirstOrDefault(
+                    Function(v) v.Frames.Any(Function(f) f.ObjectLabel = label))
+                If vigaContenedora Is Nothing Then Continue For
+
+                Dim frame = vigaContenedora.Frames.First(Function(f) f.ObjectLabel = label)
+                vigaContenedora.Frames.Remove(frame)
+                framesGrupo.Add(frame)
+            Next
+
+            If framesGrupo.Count = 0 Then Continue For
+
+            Dim nuevaViga As New cViga With {.Piso = framesGrupo.First().Story}
+            nuevaViga.Frames.AddRange(framesGrupo)
+
+            Dim dir = _geo.VectorFrame(framesGrupo.First(), jointsDict)
+            dir.Normalize()
+            nuevaViga.Direccion = dir
+
+            OrdenarFramesViga(nuevaViga, jointsDict)
+            vigas.Add(nuevaViga)
+        Next
+
+        vigas.RemoveAll(Function(v) v.Frames.Count = 0)
+
+        For i = 0 To vigas.Count - 1
+            vigas(i).Nombre = "VIGA-" & (i + 1)
+            vigas(i).Name_Beam = vigas(i).Nombre
+        Next
+
+    End Sub
 
 End Class

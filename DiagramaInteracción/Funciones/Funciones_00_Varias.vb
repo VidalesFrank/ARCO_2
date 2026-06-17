@@ -468,6 +468,9 @@ Public Class Funciones_00_Varias
 
         For Each r As DataRow In dt.Rows
 
+            ' Las grillas diagonales de ETABS no tienen Ordinate — se omiten
+            If IsDBNull(r("Ordinate")) OrElse String.IsNullOrWhiteSpace(r("Ordinate").ToString()) Then Continue For
+
             Dim g As New cGridLine With {
             .GridSystem = r("Name").ToString(),
             .Direction = r("Grid Line Type").ToString().Trim()(0).ToString(),

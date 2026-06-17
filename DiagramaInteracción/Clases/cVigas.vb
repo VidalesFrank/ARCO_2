@@ -18,5 +18,10 @@ Public Class cVigas
     ''' <summary>Secciones que el usuario eligió incluir en el análisis. Vacío = todas.</summary>
     Public Property SeccionesSeleccionadas As New List(Of String)
 
+    ''' <summary>
+    ''' Agrupaciones manuales de frames. Cada elemento es la lista de ObjectLabels
+    ''' que forman una viga continua según el usuario. Se aplica después del auto-agrupamiento.
+    ''' </summary>
+    Public Property GruposManual As New List(Of List(Of String))
 
 End Class

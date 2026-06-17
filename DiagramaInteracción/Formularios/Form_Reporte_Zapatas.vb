@@ -14,6 +14,8 @@ Public Class Form_Reporte_Zapatas
     Private ReadOnly ColorMal As Color = ColorTranslator.FromHtml("#FFC7CE")
     Private ReadOnly ColorMalTexto As Color = ColorTranslator.FromHtml("#9C0006")
 
+    Private ReadOnly _fontBold As New Font("Segoe UI", 9.5, FontStyle.Bold)
+
     Private ReadOnly XlEncabezado As XLColor = XLColor.FromHtml("#575757")
     Private ReadOnly XlOKFondo As XLColor = XLColor.FromHtml("#C6EFCE")
     Private ReadOnly XlOKTexto As XLColor = XLColor.FromHtml("#006100")
@@ -91,6 +93,11 @@ Public Class Form_Reporte_Zapatas
         Me.Controls.Add(barra)
     End Sub
 
+    Protected Overrides Sub Dispose(disposing As Boolean)
+        If disposing Then _fontBold.Dispose()
+        MyBase.Dispose(disposing)
+    End Sub
+
     ' =========================================================================
     Private Sub CargarTodo()
         If _proyecto Is Nothing Then Return
@@ -103,6 +110,7 @@ Public Class Form_Reporte_Zapatas
     ' ── TAB 1: RESUMEN (peor caso entre todas las combinaciones) ─────────────
     Private Sub CargarResumen(tipos As List(Of cZapata))
         Dim dgv = DgvResumen
+        dgv.SuspendLayout()
         dgv.Columns.Clear() : dgv.Rows.Clear()
 
         Col(dgv, "Nombre",    "Zapata",       110)
@@ -157,11 +165,13 @@ Public Class Form_Reporte_Zapatas
             AsignarOk(row.Cells("Flexion"),   okFlex)
             AsignarOk(row.Cells("General"),   okGen)
         Next
+        dgv.ResumeLayout(True)
     End Sub
 
     ' ── TAB 2: DETALLE POR COMBINACIÓN ───────────────────────────────────────
     Private Sub CargarDetalle(tipos As List(Of cZapata))
         Dim dgv = DgvDetalle
+        dgv.SuspendLayout()
         dgv.Columns.Clear() : dgv.Rows.Clear()
 
         Col(dgv, "Nombre", "Zapata",      110)
@@ -214,6 +224,7 @@ Public Class Form_Reporte_Zapatas
                 fila += 1
             Next
         Next
+        dgv.ResumeLayout(True)
     End Sub
 
     ' ── EXPORTAR EXCEL ────────────────────────────────────────────────────────
@@ -357,7 +368,8 @@ Public Class Form_Reporte_Zapatas
         dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         dgv.EnableHeadersVisualStyles = False
         dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgv.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
+        dgv.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
+        dgv.RowTemplate.Height = 26
     End Sub
 
     Private Sub Col(dgv As DataGridView, name As String, header As String, width As Integer)
@@ -382,7 +394,7 @@ Public Class Form_Reporte_Zapatas
         cell.Value = If(cumple, "Cumple", "No cumple")
         cell.Style.BackColor = If(cumple, ColorOK, ColorMal)
         cell.Style.ForeColor = If(cumple, ColorOKTexto, ColorMalTexto)
-        cell.Style.Font = New Font("Segoe UI", 9.5, FontStyle.Bold)
+        cell.Style.Font = _fontBold
     End Sub
 
     ' ── HELPERS EXCEL ────────────────────────────────────────────────────────
