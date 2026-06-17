@@ -3,6 +3,17 @@ Imports System.IO
 
 Public Class Funciones_00_Varias
 
+    ''' <summary>Normaliza claves E17 ("Envolvente Min/Max") al formato canónico "Envolvente (Min/Max)".</summary>
+    Public Shared Function NormalizarClaveCombo(nombre As String) As String
+        If String.IsNullOrWhiteSpace(nombre) Then Return nombre
+        Dim t = nombre.Trim()
+        If t.EndsWith(" Max", StringComparison.OrdinalIgnoreCase) Then
+            Return t.Substring(0, t.Length - 4).TrimEnd() & " (Max)"
+        ElseIf t.EndsWith(" Min", StringComparison.OrdinalIgnoreCase) Then
+            Return t.Substring(0, t.Length - 4).TrimEnd() & " (Min)"
+        End If
+        Return t
+    End Function
 
     Public Shared Sub ImprimirEstructuraDataTable(dt As DataTable, Optional nombreTabla As String = "")
         If dt Is Nothing Then
@@ -91,6 +102,40 @@ Public Class Funciones_00_Varias
 
     End Function
 
+    ''' <summary>
+    ''' Devuelve todas las hojas disponibles en un archivo Excel.
+    ''' </summary>
+    Public Shared Function ObtenerHojasExcel(rutaArchivo As String) As List(Of String)
+        Dim hojas As New List(Of String)
+        Try
+            Dim cnStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & rutaArchivo &
+                        ";Extended Properties='Excel 12.0 Xml;HDR=NO;IMEX=1;'"
+            Using cn As New OleDbConnection(cnStr)
+                cn.Open()
+                Dim schema = cn.GetOleDbSchemaTable(OleDb.OleDbSchemaGuid.Tables, Nothing)
+                For Each row As DataRow In schema.Rows
+                    Dim nombre = row("TABLE_NAME").ToString().Replace("$", "").Replace("'", "").Trim()
+                    hojas.Add(nombre)
+                Next
+            End Using
+        Catch
+        End Try
+        Return hojas
+    End Function
+
+    ''' <summary>
+    ''' Resuelve el nombre real de una hoja probando candidatos en orden (E23 primero, E17 segundo).
+    ''' Si no encuentra ninguno, devuelve el primer candidato como fallback.
+    ''' </summary>
+    Public Shared Function ResolverNombreHoja(hojasDisponibles As List(Of String), ParamArray candidatos As String()) As String
+        For Each candidato In candidatos
+            Dim coincidencia = hojasDisponibles.FirstOrDefault(
+                Function(h) h.TrimEnd("$"c).Equals(candidato, StringComparison.OrdinalIgnoreCase))
+            If coincidencia IsNot Nothing Then Return coincidencia.TrimEnd("$"c)
+        Next
+        Return candidatos(0)
+    End Function
+
     ' 🔸 Función auxiliar para buscar nombres de columna de forma flexible
     Private Shared Function GetColumnName(cols As Dictionary(Of String, String), key As String) As String
         key = key.Trim().ToLower()
@@ -165,6 +210,48 @@ Public Class Funciones_00_Varias
         Return lista
     End Function
 
+    'Public Shared Function DataTableToFrames(dt As DataTable) As List(Of cFrame)
+
+    '    Dim lista As New List(Of cFrame)
+    '    If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return lista
+
+    '    ' 🔹 Normalizar nombres de columnas
+    '    Dim columnas = dt.Columns.Cast(Of DataColumn).ToDictionary(
+    '    Function(c) c.ColumnName.Trim().Replace(vbCrLf, "").Replace(vbLf, "").Replace(vbTab, "").ToLower(),
+    '    Function(c) c.ColumnName
+    ')
+
+    '    ' 🔹 Buscar las columnas esperadas
+    '    Dim colStory = GetColumnName(columnas, "Story")
+    '    Dim colElementLabel = GetColumnName(columnas, "Element Name")
+    '    Dim colObjectType = GetColumnName(columnas, "Object Type")
+    '    Dim colObjectLabel = GetColumnName(columnas, "Object Label")
+    '    Dim colJointI = GetColumnName(columnas, "Elm JtI")
+    '    Dim colJointJ = GetColumnName(columnas, "Elm JtJ")
+
+    '    ' 🔹 Recorremos cada fila
+    '    For Each r As DataRow In dt.Rows
+
+    '        Dim tipo As String = SafeString(r, colObjectType)
+    '        If Not String.Equals(tipo, "Frame", StringComparison.OrdinalIgnoreCase) Then
+    '            Continue For
+    '        End If
+
+    '        Dim f As New cFrame()
+
+    '        f.Story = SafeString(r, colStory)
+    '        f.ElementLabel = SafeString(r, colElementLabel)
+    '        f.ObjectType = SafeString(r, colObjectType)
+    '        f.ObjectLabel = SafeString(r, colObjectLabel)
+    '        f.JointI = SafeString(r, colJointI)
+    '        f.JointJ = SafeString(r, colJointJ)
+
+    '        lista.Add(f)
+    '    Next
+
+    '    Return lista
+    'End Function
+
     Public Shared Function DataTableToFrames(dt As DataTable) As List(Of cFrame)
 
         Dim lista As New List(Of cFrame)
@@ -176,7 +263,7 @@ Public Class Funciones_00_Varias
         Function(c) c.ColumnName
     )
 
-        ' 🔹 Buscar las columnas esperadas
+        ' 🔹 Buscar columnas
         Dim colStory = GetColumnName(columnas, "Story")
         Dim colElementLabel = GetColumnName(columnas, "Element Name")
         Dim colObjectType = GetColumnName(columnas, "Object Type")
@@ -184,27 +271,73 @@ Public Class Funciones_00_Varias
         Dim colJointI = GetColumnName(columnas, "Elm JtI")
         Dim colJointJ = GetColumnName(columnas, "Elm JtJ")
 
-        ' 🔹 Recorremos cada fila
-        For Each r As DataRow In dt.Rows
+        ' 🔹 Filtrar solo frames
+        Dim filasFrames = dt.AsEnumerable().
+        Where(Function(r) String.Equals(SafeString(r, colObjectType), "Frame", StringComparison.OrdinalIgnoreCase))
 
-            Dim tipo As String = SafeString(r, colObjectType)
-            If Not String.Equals(tipo, "Frame", StringComparison.OrdinalIgnoreCase) Then
-                Continue For
+        ' 🔹 Agrupar por Story + Object Label
+        Dim grupos = filasFrames.GroupBy(Function(r) New With {
+        Key .Story = SafeString(r, colStory),
+        Key .Label = SafeString(r, colObjectLabel)
+    })
+
+        ' 🔹 Procesar cada grupo (cada viga real)
+        For Each g In grupos
+
+            Dim nodos As New List(Of String)
+
+            For Each r In g
+                nodos.Add(SafeString(r, colJointI))
+                nodos.Add(SafeString(r, colJointJ))
+            Next
+
+            ' 🔹 Quitar duplicados
+            'nodos = nodos.Distinct().ToList()
+
+            ' 🔹 Contar ocurrencias
+            Dim conteo = nodos.
+            GroupBy(Function(n) n).
+            ToDictionary(Function(x) x.Key, Function(x) x.Count())
+
+            ' 🔹 Nodos extremos = aparecen una sola vez y no tienen "~"
+            'Dim extremos = conteo.
+            'Where(Function(kv) kv.Value = 1 AndAlso Not kv.Key.Contains("~")).
+            'Select(Function(kv) kv.Key).
+            'ToList()
+            Dim extremos = conteo.
+                Where(Function(kv) kv.Value = 1 AndAlso Not kv.Key.Contains("~")).
+                Select(Function(kv) kv.Key).
+                ToList()
+
+            ' 🔁 Si no encontró extremos (caso raro), usar solo por ocurrencia
+            If extremos.Count < 2 Then
+                extremos = conteo.
+                    Where(Function(kv) kv.Value = 1).
+                    Select(Function(kv) kv.Key).
+                    ToList()
             End If
 
+            If extremos.Count < 2 Then Continue For
+
+            ' 🔹 Crear el frame real
             Dim f As New cFrame()
 
-            f.Story = SafeString(r, colStory)
-            f.ElementLabel = SafeString(r, colElementLabel)
-            f.ObjectType = SafeString(r, colObjectType)
-            f.ObjectLabel = SafeString(r, colObjectLabel)
-            f.JointI = SafeString(r, colJointI)
-            f.JointJ = SafeString(r, colJointJ)
+            f.Story = g.Key.Story
+            f.ObjectLabel = g.Key.Label
+            f.ObjectType = "Frame"
+
+            ' Puedes tomar cualquier element label del grupo
+            f.ElementLabel = SafeString(g.First(), colElementLabel)
+
+            f.JointI = extremos(0)
+            f.JointJ = extremos(1)
 
             lista.Add(f)
+
         Next
 
         Return lista
+
     End Function
 
     Public Shared Function DataTableToReactions(dt As DataTable) As List(Of cCombinacionPila)
@@ -212,17 +345,27 @@ Public Class Funciones_00_Varias
         Dim lista As New List(Of cCombinacionPila)
         If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return lista
 
-        ' 🔹 Normalizar nombres de columnas
+        ' Normalizar nombres de columnas
         Dim columnas = dt.Columns.Cast(Of DataColumn).ToDictionary(
-        Function(c) c.ColumnName.Trim().Replace(vbCrLf, "").Replace(vbLf, "").Replace(vbTab, "").ToLower(),
-        Function(c) c.ColumnName
-    )
+            Function(c) c.ColumnName.Trim().Replace(vbCrLf, "").Replace(vbLf, "").Replace(vbTab, "").ToLower(),
+            Function(c) c.ColumnName
+        )
 
-        ' 🔹 Buscar las columnas esperadas
+        ' Detectar formato E23: tiene columna "Step Type"
+        Dim colStepType = GetColumnName(columnas, "Step Type")
+        Dim esE23 As Boolean = Not String.IsNullOrEmpty(colStepType)
+
+        ' E17: "Joint Label" / "Load Case/Combo"
+        ' E23: "Label"       / "Output Case"  +  "Step Type" (Max, Min o vacío)
+        Dim colJointLabel As String = If(esE23,
+                                         GetColumnName(columnas, "Label"),
+                                         GetColumnName(columnas, "Joint Label"))
+        Dim colLoadCaseBase As String = If(esE23,
+                                           GetColumnName(columnas, "Output Case"),
+                                           GetColumnName(columnas, "Load Case/Combo"))
+
         Dim colStory = GetColumnName(columnas, "Story")
-        Dim colJointLabel = GetColumnName(columnas, "Joint Label")
         Dim colUniqueName = GetColumnName(columnas, "Unique Name")
-        Dim colLoadCase = GetColumnName(columnas, "Load Case/Combo")
         Dim colFx = GetColumnName(columnas, "FX")
         Dim colFy = GetColumnName(columnas, "FY")
         Dim colFz = GetColumnName(columnas, "FZ")
@@ -230,7 +373,6 @@ Public Class Funciones_00_Varias
         Dim colMy = GetColumnName(columnas, "MY")
         Dim colMz = GetColumnName(columnas, "MZ")
 
-        ' 🔹 Recorremos cada fila
         For Each r As DataRow In dt.Rows
 
             Dim j As New cCombinacionPila()
@@ -238,7 +380,19 @@ Public Class Funciones_00_Varias
             j.Story = SafeString(r, colStory)
             j.JointLabel = SafeString(r, colJointLabel)
             j.UniqueName = SafeString(r, colUniqueName)
-            j.LoadCase = SafeString(r, colLoadCase)
+
+            Dim baseName As String = SafeString(r, colLoadCaseBase)
+            Dim stepVal As String = If(esE23, SafeString(r, colStepType), "")
+            If Not String.IsNullOrEmpty(stepVal) Then
+                j.LoadCase = baseName & " (" & stepVal & ")"
+            ElseIf baseName.EndsWith(" Max", StringComparison.OrdinalIgnoreCase) Then
+                j.LoadCase = baseName.Substring(0, baseName.Length - 4).TrimEnd() & " (Max)"
+            ElseIf baseName.EndsWith(" Min", StringComparison.OrdinalIgnoreCase) Then
+                j.LoadCase = baseName.Substring(0, baseName.Length - 4).TrimEnd() & " (Min)"
+            Else
+                j.LoadCase = baseName
+            End If
+
             j.FX = SafeDouble(r, colFx)
             j.FY = SafeDouble(r, colFy)
             j.FZ = SafeDouble(r, colFz)
@@ -601,19 +755,11 @@ Public Class Funciones_00_Varias
         Dim labelNorm = labelElemento.Trim()
 
 
-        ' 🔹 Paso 1: Filtramos TODAS las reacciones del elemento
+        ' 🔹 Paso 1: Filtramos TODAS las reacciones del elemento por JointLabel
         Dim delElemento = reacciones.
-            Where(Function(r) Not String.IsNullOrWhiteSpace(r.UniqueName) AndAlso
-                              String.Equals(r.UniqueName.Trim(), labelNorm, StringComparison.OrdinalIgnoreCase)).
+            Where(Function(r) Not String.IsNullOrWhiteSpace(r.JointLabel) AndAlso
+                              String.Equals(r.JointLabel.Trim(), labelNorm, StringComparison.OrdinalIgnoreCase)).
             ToList()
-
-        ' Si no encontró por UniqueName, intentamos con JointLabel
-        If delElemento.Count = 0 Then
-            delElemento = reacciones.
-                Where(Function(r) Not String.IsNullOrWhiteSpace(r.JointLabel) AndAlso
-                                  String.Equals(r.JointLabel.Trim(), labelNorm, StringComparison.OrdinalIgnoreCase)).
-                ToList()
-        End If
 
         If delElemento.Count = 0 Then
             If showDebug Then Debug.Print($"❌ No se encontraron reacciones para el elemento '{labelElemento}'")
@@ -621,7 +767,7 @@ Public Class Funciones_00_Varias
         End If
 
         ' 🔹 Paso 2: Filtramos las combinaciones válidas
-        Dim combosSet As New HashSet(Of String)(combinacionesValidas.Select(Function(c) c.Trim()), StringComparer.OrdinalIgnoreCase)
+        Dim combosSet As New HashSet(Of String)(combinacionesValidas.Select(Function(c) NormalizarClaveCombo(c)), StringComparer.OrdinalIgnoreCase)
 
         Dim filtradas = delElemento.
             Where(Function(r) Not String.IsNullOrWhiteSpace(r.LoadCase) AndAlso

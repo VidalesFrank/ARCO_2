@@ -4,6 +4,8 @@ Public Class Form_01_00_PagInfoPilas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
 
+        Proyecto = Form_01_PagPilas.Proyecto
+
         Form_01_PagPilas.ComboElementos.Items.Clear()
 
         Dim FT As Double = 1
@@ -74,11 +76,11 @@ Public Class Form_01_00_PagInfoPilas
                 Dim MU_Abs As Single = Math.Max(Math.Abs(r.MX), Math.Abs(r.MY))
                 Elemento.Matriz_MU.Add(MU_Abs)
 
-                ' FX → V2
-                Elemento.Matriz_V2.Add(r.FX)
+                ' FX → V2  (valor absoluto para chequeo de cortante)
+                Elemento.Matriz_V2.Add(Math.Abs(r.FX))
 
                 ' FY → V3
-                Elemento.Matriz_V3.Add(r.FY)
+                Elemento.Matriz_V3.Add(Math.Abs(r.FY))
 
                 Elemento.Matriz_Combinaciones.Add(r.LoadCase)
             Next
@@ -127,6 +129,11 @@ Public Class Form_01_00_PagInfoPilas
             '-------------------------- ANÁLISIS A FLEXO-COMPRESIÓN DE LOS ELEMENTOS -----------------------
             Dim FF As Double = 100
             Dim F_Co As Double = 100
+            If Elemento.Matriz_DI_PhiPn.Count = 0 Then
+                Elemento.Factor_Diagonal = 0
+                Elemento.Factor_CortesH = 0
+                GoTo SiguienteElemento
+            End If
             For fi = 0 To Elemento.Matriz_PU.Count - 1
                 Dim Pmax As Single = FT * Elemento.Matriz_PU(fi)
                 Dim Mmax As Single = Elemento.Matriz_MU(fi)
@@ -147,7 +154,9 @@ Public Class Form_01_00_PagInfoPilas
             Next
             Elemento.Factor_Diagonal = FF
             Elemento.Factor_CortesH = F_Co
+SiguienteElemento:
             Form_01_PagPilas.Tabla_ResumenVisual.Rows.Add()
+            Form_01_PagPilas.TablaRevi.Rows.Add()
         Next
 
         For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count - 1
@@ -234,15 +243,42 @@ Public Class Form_01_00_PagInfoPilas
         Form_01_PagPilas.Label20.Visible = True
 
         Form_01_PagPilas.ExportarToolStripMenuItem.Enabled = True
+        Form_01_PagPilas.VerToolStripMenuItem.Enabled = True
         MessageBox.Show("Análisis Finalizado con Éxito.", "Ejecución de Análisis", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
-    Private Sub Op_Seccion_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Tabla_Elementos.CellValueChanged
-        'If Tabla_Elementos.Rows.Count > 1 Then
-        '    For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count - 1
-        '        Tabla_Elementos.Rows(i).Cells(8).Value = AreaRefuerzo(Tabla_Elementos.Rows(i).Cells(7).Value)
-        '    Next
-        'End If
+    Private Sub Op_Seccion_SelectedIndexChanged(sender As Object, e As DataGridViewCellEventArgs) Handles Tabla_Elementos.CellValueChanged
+        If e.ColumnIndex = 7 AndAlso e.RowIndex >= 0 Then
+            Dim cellVal As Object = Tabla_Elementos.Rows(e.RowIndex).Cells(7).Value
+            Dim barVal As String = If(cellVal IsNot Nothing, cellVal.ToString().Trim(), "")
+            If barVal <> "Usuario" AndAlso Not String.IsNullOrEmpty(barVal) Then
+                Tabla_Elementos.Rows(e.RowIndex).Cells(8).Value = AreaRefuerzo(barVal)
+            End If
+        End If
+    End Sub
+
+    Private Sub Tabla_Elementos_KeyDown(sender As Object, e As KeyEventArgs) Handles Tabla_Elementos.KeyDown
+        If e.Control AndAlso e.KeyCode = Keys.V Then
+            Dim clipText As String = Clipboard.GetText()
+            If String.IsNullOrEmpty(clipText) Then Return
+
+            Dim rows() As String = clipText.TrimEnd(CChar(vbCr), CChar(vbLf)).Split(CChar(vbLf))
+            Dim startRow As Integer = If(Tabla_Elementos.CurrentCell IsNot Nothing, Tabla_Elementos.CurrentCell.RowIndex, 0)
+            Dim startCol As Integer = If(Tabla_Elementos.CurrentCell IsNot Nothing, Tabla_Elementos.CurrentCell.ColumnIndex, 0)
+
+            For r As Integer = 0 To rows.Length - 1
+                Dim targetRow As Integer = startRow + r
+                If targetRow >= Tabla_Elementos.Rows.Count Then Exit For
+                Dim cells() As String = rows(r).TrimEnd(CChar(vbCr)).Split(CChar(vbTab))
+                For c As Integer = 0 To cells.Length - 1
+                    Dim targetCol As Integer = startCol + c
+                    If targetCol >= Tabla_Elementos.Columns.Count Then Exit For
+                    If Tabla_Elementos.Columns(targetCol).ReadOnly Then Continue For
+                    Tabla_Elementos.Rows(targetRow).Cells(targetCol).Value = cells(c)
+                Next
+            Next
+            e.Handled = True
+        End If
     End Sub
 
     Private Sub Form_02_PagInfoPilas_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
@@ -252,5 +288,10 @@ Public Class Form_01_00_PagInfoPilas
 
     Private Sub Tabla_Elementos_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles Tabla_Elementos.CellContentClick
 
+    End Sub
+
+    Private Sub Tabla_Elementos_DataError(sender As Object, e As DataGridViewDataErrorEventArgs) Handles Tabla_Elementos.DataError
+        ' Silenciar errores de asignación en columnas ComboBox (p.ej. valor vacío al abrir proyecto)
+        e.Cancel = True
     End Sub
 End Class

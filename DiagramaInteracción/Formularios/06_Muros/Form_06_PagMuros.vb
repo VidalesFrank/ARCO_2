@@ -66,6 +66,19 @@ Public Class Form_06_PagMuros
                 End If
             Next
 
+            ' ── Detectar formato E17 / E23 desde la fila de unidades (DGV row 1) ──
+            ' E23: esfuerzos en kN/m²  →  dividir /1000 para obtener MPa
+            ' E23: Shear Rebar en m²/m →  multiplicar ×1.000.000 para obtener mm²/m
+            Dim esFormatoE23_Diseno As Boolean = False
+            If Tabla.Rows.Count > 1 AndAlso Tabla.Rows(1).Cells(Col_Esf_I).Value IsNot Nothing Then
+                Dim unidadEsf = Tabla.Rows(1).Cells(Col_Esf_I).Value.ToString().ToLower()
+                If unidadEsf.Contains("kn") OrElse unidadEsf.Contains("kpa") Then
+                    esFormatoE23_Diseno = True
+                End If
+            End If
+            Dim factorEsf As Single = If(esFormatoE23_Diseno, 0.001F, 1.0F)
+            Dim factorAsh As Single = If(esFormatoE23_Diseno, 1000000.0F, 1.0F)
+
             Dim Lista(2, 6) As Single
 
             For i = 2 To Tabla.Rows.Count() - 1 Step Salto
@@ -90,25 +103,24 @@ Public Class Form_06_PagMuros
                         .Piso = Tabla.Rows(i).Cells(Col_Piso).Value
                         .Seccion = Tabla.Rows(i).Cells(Col_Seccion).Value
 
-                        'Asignación de la cuantia leida de la hoja de Shear Wall Pier Summary
                         .Cuantia_Top_Req = Convert.ToSingle(Tabla.Rows(i).Cells(Col_As_Req).Value)
                         .Cuantia_Bot_Req = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_As_Req).Value)
 
-                        'Asignación de la cuantia volumetrica leida de la hoja de Shear Wall Pier Summary
-                        .AsH_Req_Top = Convert.ToSingle(Tabla.Rows(i).Cells(Col_Ash_Req).Value)
-                        .AsH_Req_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Ash_Req).Value)
+                        ' Shear Rebar: E17=mm²/m, E23=m²/m → normalizar a mm²/m
+                        .AsH_Req_Top = Convert.ToSingle(Tabla.Rows(i).Cells(Col_Ash_Req).Value) * factorAsh
+                        .AsH_Req_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Ash_Req).Value) * factorAsh
 
-                        'Asignación de los esfuerzos del muro leido de la hoja de Shear Wall Pier Summary
-                        .Esf_I_Top = Convert.ToSingle(Tabla.Rows(i).Cells(Col_Esf_I).Value)
-                        .Esf_I_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Esf_I).Value)
-                        .Esf_D_Top = Convert.ToSingle(Tabla.Rows(i).Cells(Col_Esf_D).Value)
-                        .Esf_D_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Esf_D).Value)
+                        ' Esfuerzos: E17=MPa, E23=kN/m² → normalizar a MPa
+                        .Esf_I_Top = Convert.ToSingle(Tabla.Rows(i).Cells(Col_Esf_I).Value) * factorEsf
+                        .Esf_I_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Esf_I).Value) * factorEsf
+                        .Esf_D_Top = Convert.ToSingle(Tabla.Rows(i).Cells(Col_Esf_D).Value) * factorEsf
+                        .Esf_D_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Esf_D).Value) * factorEsf
 
-                        'Asignación de la longitud del eje neutro del muro leido de la hoja de Shear Wall Pier Summary
-                        .C_I_Top = Convert.ToSingle(Lista(1, 0) / 1000)
-                        .C_I_Bot = Convert.ToSingle(Lista(2, 0) / 1000)
-                        .C_D_Top = Convert.ToSingle(Lista(1, 2) / 1000)
-                        .C_D_Bot = Convert.ToSingle(Lista(2, 2) / 1000)
+                        ' C Depth: ambas versiones en metros
+                        .C_I_Top = Convert.ToSingle(Lista(1, 0))
+                        .C_I_Bot = Convert.ToSingle(Lista(2, 0))
+                        .C_D_Top = Convert.ToSingle(Lista(1, 2))
+                        .C_D_Bot = Convert.ToSingle(Lista(2, 2))
                     End With
 
                     Muro.Lista_Secciones.Add(Seccion)
@@ -181,8 +193,8 @@ Public Class Form_06_PagMuros
                     Dim rowIndex As Integer = Tabla.Rows.Cast(Of DataGridViewRow)().ToList().FindIndex(Function(row) If(row.Cells(0).Value?.ToString() = Piso AndAlso
                             row.Cells(1).Value?.ToString() = Name, True, False))
 
-                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model = Math.Min(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value)) / 1000
-                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model = Math.Max(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value)) / 1000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model = Math.Min(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value))
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model = Math.Max(Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(rowIndex).Cells(Col_H).Value))
                     proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model
                     proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model
                     proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(rowIndex).Cells(Col_Material).Value, 1, 2))
@@ -201,8 +213,8 @@ Public Class Form_06_PagMuros
                     proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Coor_Z_Bot = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(12).Value)
                     proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Coor_Z_Top = Convert.ToSingle(Tabla.Rows(rowIndex).Cells(15).Value)
 
-                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 1000000
-                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 1000000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 10000
+                    proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 10000
 
                 Next
 
@@ -220,70 +232,101 @@ Public Class Form_06_PagMuros
         If proyecto.Elementos.Muros.Info_Fuerzas = True Then
             Tabla = Tabla_Fuerzas
 
-            Dim Col_Piso As Integer = Col_Fuerzas(0)
-            Dim Col_Label As Integer = Col_Fuerzas(1)
-            Dim Col_Combinacion As Integer = Col_Fuerzas(2)
+            Dim Col_Piso As Integer = Col_Fuerzas(0)      ' 0
+            Dim Col_Label As Integer = Col_Fuerzas(1)     ' 1
+            Dim Col_Combinacion As Integer = Col_Fuerzas(2) ' 2  (igual en E17 y E23)
             Dim Salto As Integer = Col_Fuerzas(3)
-            Dim Col_P As Integer = Col_Fuerzas(4)
-            Dim Col_V2 As Integer = Col_Fuerzas(5)
-            Dim Col_V3 As Integer = Col_Fuerzas(6)
-            Dim Col_T As Integer = Col_Fuerzas(7)
-            Dim Col_M2 As Integer = Col_Fuerzas(8)
-            Dim Col_M3 As Integer = Col_Fuerzas(9)
 
-            proyecto.Elementos.Muros.Lista_Combinaciones_Muros.Add(Tabla.Rows(2).Cells(Col_Combinacion).Value.ToString)
+            ' ── Detectar formato E23 por la presencia de "Case Type" en la fila de encabezados (DGV row 0) ──
+            ' E17: Story | Pier | Load Case/Combo | Location | P | V2 | V3 | T | M2 | M3
+            ' E23: Story | Pier | Output Case | Case Type | Step Type | Step Number | Location | P | V2 | ...
+            Dim esFormatoE23_Fuerzas As Boolean = False
+            If Tabla.Rows.Count > 0 Then
+                For ci = 0 To Math.Min(Tabla.Columns.Count - 1, 8)
+                    Dim header = If(Tabla.Rows(0).Cells(ci).Value?.ToString(), "")
+                    If header.Contains("Case Type") OrElse header.Contains("Step Type") Then
+                        esFormatoE23_Fuerzas = True
+                        Exit For
+                    End If
+                Next
+            End If
 
-            Dim valoresDistintos As List(Of String) = Tabla.Rows.OfType(Of DataGridViewRow)().Skip(1) _
-                    .Select(Function(row) If(row.Cells(Col_Combinacion).Value IsNot Nothing, row.Cells(Col_Combinacion).Value.ToString(), Nothing)) _
-                    .Where(Function(valor) Not String.IsNullOrEmpty(valor)).Distinct().ToList()
+            ' Columnas de fuerzas según formato detectado
+            Dim Col_P       As Integer = If(esFormatoE23_Fuerzas, 7, 4)
+            Dim Col_V2      As Integer = If(esFormatoE23_Fuerzas, 8, 5)
+            Dim Col_V3      As Integer = If(esFormatoE23_Fuerzas, 9, 6)
+            Dim Col_T       As Integer = If(esFormatoE23_Fuerzas, 10, 7)
+            Dim Col_M2      As Integer = If(esFormatoE23_Fuerzas, 11, 8)
+            Dim Col_M3      As Integer = If(esFormatoE23_Fuerzas, 12, 9)
+            ' E23: Step Type en col 4 distingue Max/Min para combinaciones sísmicas
+            ' E17: no existe Step Type → las combinaciones ya tienen sufijo "Max"/"Min" en el nombre
+            Dim Col_StepType As Integer = If(esFormatoE23_Fuerzas, 4, -1)
 
-            For Each Comb As String In valoresDistintos.Except(proyecto.Elementos.Muros.Lista_Combinaciones_Muros)
+            ' Helper: clave única de combinación.
+            ' E17: usa el nombre tal cual ("SismoX Max", "SismoX Min")
+            ' E23: si Step Type no está vacío lo añade como sufijo ("SismoX (Max)", "SismoX (Min)");
+            '      si está vacío (cargas gravitacionales LinStatic) usa solo el nombre.
+            Dim CombKey = Function(r As DataGridViewRow) As String
+                              Dim nombre = If(r.Cells(Col_Combinacion).Value?.ToString(), "")
+                              If esFormatoE23_Fuerzas AndAlso Col_StepType >= 0 Then
+                                  Dim stepVal = If(r.Cells(Col_StepType).Value?.ToString(), "").Trim()
+                                  If Not String.IsNullOrEmpty(stepVal) Then Return $"{nombre} ({stepVal})"
+                              End If
+                              Return nombre
+                          End Function
+
+            ' Extraer claves únicas de combinación (incluyendo sufijo Step Type para E23)
+            Dim valoresDistintos As List(Of String) = Tabla.Rows.OfType(Of DataGridViewRow)() _
+                    .Skip(1) _
+                    .Select(Function(r) CombKey(r)) _
+                    .Where(Function(v) Not String.IsNullOrEmpty(v)) _
+                    .Distinct().ToList()
+
+            proyecto.Elementos.Muros.Lista_Combinaciones_Muros.Clear()
+            For Each Comb As String In valoresDistintos
                 proyecto.Elementos.Muros.Lista_Combinaciones_Muros.Add(Comb)
             Next
 
-            ' Pre-filtrar los pisos y las combinaciones para no hacerlo en cada iteración
-            Dim PisosUnicos = proyecto.Elementos.Muros.Lista_Muros.SelectMany(Function(m) m.Lista_Secciones.Select(Function(s) s.Piso)).Distinct().ToList()
+            Dim PisosUnicos = proyecto.Elementos.Muros.Lista_Muros _
+                .SelectMany(Function(m) m.Lista_Secciones.Select(Function(s) s.Piso)) _
+                .Distinct().ToList()
             Dim CombinacionesUnicas = proyecto.Elementos.Muros.Lista_Combinaciones_Muros.ToList()
 
-            ' Crear un diccionario de búsqueda rápida para la tabla
-            ' Crear un diccionario de búsqueda rápida para la tabla usando la clase Key
+            ' Diccionario: clave = (Piso, Pier, CombKey) — clave ya incluye Step Type si E23
             Dim TablaDict = Tabla.Rows.Cast(Of DataGridViewRow)() _
-                .GroupBy(Function(row) New Key(
-                    If(row.Cells(eNumeradores.ColumnaFuerzas.Piso).Value?.ToString(), ""),  ' Manejo de nulos
-                    If(row.Cells(eNumeradores.ColumnaFuerzas.Label).Value?.ToString(), ""),  ' Manejo de nulos
-                    If(row.Cells(eNumeradores.ColumnaFuerzas.Combinacion).Value?.ToString(), "")  ' Manejo de nulos
+                .Where(Function(r) r.Cells(Col_Piso).Value IsNot Nothing) _
+                .GroupBy(Function(r) New Key(
+                    If(r.Cells(Col_Piso).Value?.ToString(), ""),
+                    If(r.Cells(Col_Label).Value?.ToString(), ""),
+                    CombKey(r)
                 )) _
                 .ToDictionary(Function(g) g.Key, Function(g) g.First())
 
-            ' Iteración sobre los elementos
             For Each Elemento As String In proyecto.Elementos.Muros.Lista_Muros.Select(Function(m) m.Name)
                 For Each Piso As String In PisosUnicos
                     For Each Combinacion As String In CombinacionesUnicas
-                        ' Crear la clave
                         Dim key = New Key(Piso, Elemento, Combinacion)
 
-                        ' Buscar en el diccionario
                         If TablaDict.ContainsKey(key) Then
                             Dim row = TablaDict(key)
                             Dim rowIndex As Integer = row.Index
 
-                            ' Procesar la fuerza de los elementos
+                            ' Tomar máximo absoluto entre Top (row) y Bottom (row+1)
                             Dim Fuerza As New SeccionMuro.Fuerzas_Elementos With {
                                 .Name = Combinacion,
-                                .P = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.P).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.P).Value))),
-                                .V2 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.V2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V2).Value))),
-                                .V3 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.V3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.V3).Value))),
-                                .T = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.T).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.T).Value))),
-                                .M2 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.M2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(eNumeradores.ColumnaFuerzas.M2).Value))),
-                                .M3 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.M3).Value)), Math.Abs(Convert.ToSingle(row.Cells(eNumeradores.ColumnaFuerzas.M3).Value)))
+                                .P  = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(Col_P).Value)),  Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(Col_P).Value))),
+                                .V2 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(Col_V2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(Col_V2).Value))),
+                                .V3 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(Col_V3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(Col_V3).Value))),
+                                .T  = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(Col_T).Value)),  Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(Col_T).Value))),
+                                .M2 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(Col_M2).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(Col_M2).Value))),
+                                .M3 = Math.Max(Math.Abs(Convert.ToSingle(row.Cells(Col_M3).Value)), Math.Abs(Convert.ToSingle(Tabla.Rows(rowIndex + 1).Cells(Col_M3).Value)))
                             }
 
-                            ' Obtener la sección correspondiente y agregar la fuerza
-                            Dim Seccion = proyecto.Elementos.Muros.Lista_Muros.FirstOrDefault(Function(m) m.Name = Elemento)?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
+                            Dim Seccion = proyecto.Elementos.Muros.Lista_Muros _
+                                .FirstOrDefault(Function(m) m.Name = Elemento) _
+                                ?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
                             If Seccion IsNot Nothing Then
                                 Seccion.Lista_Combinaciones.Add(Fuerza)
-
-                                ' Calcular el Vu máximo de todas las combinaciones
                                 If Seccion.Lista_Combinaciones.Any() Then
                                     Seccion.Vu = Seccion.Lista_Combinaciones.Max(Function(c) Math.Abs(c.V2))
                                 End If
@@ -336,6 +379,7 @@ Public Class Form_06_PagMuros
         'Finally
 
         Obtencion_Macroparametros()
+        _hayCambiosMuros = True
         Cursor = Cursors.Arrow
         MessageBox.Show("Información Cargada con Éxito.")
         'End Try
@@ -465,33 +509,53 @@ Public Class Form_06_PagMuros
 
     Private Sub SaveAs(ByVal Objeto As Object)
         Try
-            Dim SaveAs As New SaveFileDialog
-            SaveAs.Filter = "Archivo|*.esm"
-            SaveAs.Title = "Guardar Archivo"
-            SaveAs.FileName = Convert.ToString("RevisiónMuros_Proyecto - " & proyecto.Info.Nombre)
-            SaveAs.ShowDialog()
-            If SaveAs.FileName <> String.Empty Then
-                proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
-                Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
-            End If
+            Dim dlg As New SaveFileDialog
+            dlg.Filter = "Archivo|*.esm"
+            dlg.Title = "Guardar Archivo"
+            dlg.FileName = "Proyecto - " & If(proyecto.Info?.Nombre, "ARCO")
+            If dlg.ShowDialog() <> DialogResult.OK Then Exit Sub
+            proyecto.Ruta = Path.GetFullPath(dlg.FileName)
+            Form_00_PaginaPrincipal.proyecto = proyecto
+            Funciones_Programa.Serializar(dlg.FileName, Objeto)
+            _hayCambiosMuros = False
+            _ultimoGuardadoMuros = DateTime.Now
         Catch ex As Exception
-
+            MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
-
     End Sub
 
     Public Sub Open()
-        Dim Open As New OpenFileDialog
-        Open.Filter = "Archivo|*.esm"
-        Open.Title = "Abrir Archivo"
-        Open.ShowDialog()
-        If Open.FileName <> String.Empty Then
-            proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(Open.FileName)
+        Dim dlg As New OpenFileDialog
+        dlg.Filter = "Archivo|*.esm"
+        dlg.Title = "Abrir Archivo"
+        If dlg.ShowDialog() <> DialogResult.OK Then Exit Sub
 
-            Rellenar_Columnas()
+        Try
+            proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(dlg.FileName)
+        Catch
+            Try
+                Dim elementos = Funciones_Programa.DeSerializar(Of cElementos)(dlg.FileName)
+                proyecto = New Proyecto()
+                proyecto.Elementos = elementos
+            Catch ex As Exception
+                MessageBox.Show("No se pudo abrir el archivo." & vbCrLf & ex.Message,
+                                "Error al abrir", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End Try
+        End Try
 
-        End If
+        proyecto.Ruta = dlg.FileName
+        Form_00_PaginaPrincipal.proyecto = proyecto
+        _hayCambiosMuros = False
+        Rellenar_Columnas()
+    End Sub
 
+    Public Sub RefrescarDesdeProyecto()
+        proyecto = Form_00_PaginaPrincipal.proyecto
+        If proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then Return
+        Combo_Elementos.Items.Clear()
+        Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Clear()
+        Rellenar_Columnas()
     End Sub
 
     Public Sub Rellenar_Columnas()
@@ -512,15 +576,17 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub ToolStripMenuItem7_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem7.Click
-        Try
-            If proyecto.Ruta = String.Empty Then
-                SaveAs(proyecto)
-            Else
+        If String.IsNullOrEmpty(proyecto.Ruta) Then
+            SaveAs(proyecto)
+        Else
+            Try
                 Funciones_Programa.Serializar(proyecto.Ruta, proyecto)
-            End If
-        Catch ex As Exception
-
-        End Try
+                _hayCambiosMuros = False
+                _ultimoGuardadoMuros = DateTime.Now
+            Catch ex As Exception
+                MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End If
     End Sub
 
     Private Sub ToolStripMenuItem8_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem8.Click
@@ -649,10 +715,10 @@ Public Class Form_06_PagMuros
                         Seccion.Esf_D_Bot = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_Esf_D).Value)
 
                         'Asignación de la longitud del eje neutro del muro leido de la hoja de Shear Wall Pier Summary
-                        Seccion.C_I_Top = Convert.ToSingle(Lista(1, 0) / 1000)
-                        Seccion.C_I_Bot = Convert.ToSingle(Lista(2, 0) / 1000)
-                        Seccion.C_D_Top = Convert.ToSingle(Lista(1, 2) / 1000)
-                        Seccion.C_D_Bot = Convert.ToSingle(Lista(2, 2) / 1000)
+                        Seccion.C_I_Top = Convert.ToSingle(Lista(1, 0))
+                        Seccion.C_I_Bot = Convert.ToSingle(Lista(2, 0))
+                        Seccion.C_D_Top = Convert.ToSingle(Lista(1, 2))
+                        Seccion.C_D_Bot = Convert.ToSingle(Lista(2, 2))
                     End If
                 End If
             Next
@@ -661,6 +727,10 @@ Public Class Form_06_PagMuros
 
 
     End Sub
+
+    Private _hayCambiosMuros As Boolean = False
+    Private _ultimoGuardadoMuros As DateTime = DateTime.Now
+    Private _timerAutoSaveMuros As New Timer With {.Interval = 60000}
 
     Private Sub Form_06_PagMuros_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim nuevaFuente As Font = New Font("Microsoft Sans Serif", 10, FontStyle.Bold)
@@ -674,6 +744,63 @@ Public Class Form_06_PagMuros
             End If
         Next
 
+        Dim itemAyuda As New ToolStripMenuItem("? Tablas ETABS")
+        itemAyuda.ForeColor = Color.White
+        itemAyuda.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Muros")
+        Menu_Muros.Items.Add(itemAyuda)
+
+        AddHandler _timerAutoSaveMuros.Tick, AddressOf AutoSaveMuros_Tick
+        _timerAutoSaveMuros.Start()
+    End Sub
+
+    Private Sub AutoSaveMuros_Tick(sender As Object, e As EventArgs)
+        If Not _hayCambiosMuros Then Exit Sub
+        If String.IsNullOrEmpty(proyecto.Ruta) Then Exit Sub
+        If (DateTime.Now - _ultimoGuardadoMuros).TotalMinutes < 10 Then Exit Sub
+        Try
+            Funciones_Programa.Serializar(proyecto.Ruta, proyecto)
+            _ultimoGuardadoMuros = DateTime.Now
+            _hayCambiosMuros = False
+        Catch
+        End Try
+    End Sub
+
+    Private Sub Form_06_PagMuros_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        If Not _hayCambiosMuros Then Exit Sub
+        Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
+                                "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
+        If r = DialogResult.Yes Then ToolStripMenuItem7_Click(sender, e)
+        If r = DialogResult.Cancel Then e.Cancel = True
+    End Sub
+
+    Private Sub ReportesToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ReportesToolStripMenuItem.Click
+
+        If proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then
+            MessageBox.Show("Primero importe y procese los datos de muros.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim form As New Form_Reporte_Resumen_Muros() With {
+            .Muros = proyecto.Elementos.Muros.Lista_Muros
+        }
+        form.Show(Me)
+
+    End Sub
+
+    Private Sub ResumenEjecutivoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ResumenEjecutivoToolStripMenuItem.Click
+
+        If proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then
+            MessageBox.Show("Primero importe y procese los datos de muros.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim form As New Form_Reporte_Ejecutivo_Muros() With {
+            .Muros = proyecto.Elementos.Muros.Lista_Muros
+        }
+        form.Show(Me)
 
     End Sub
 
@@ -743,8 +870,8 @@ Public Class Form_06_PagMuros
                             End If
                             proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Altura = Convert.ToSingle(Tabla.Rows(j).Cells(15).Value)
 
-                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 1000000
-                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 1000000
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Top_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Top_Req * 10000
+                            proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).As_Bot_Req = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).tw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model * proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Cuantia_Bot_Req * 10000
 
                             Exit For
                         End If

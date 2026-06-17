@@ -2,10 +2,8 @@
 Imports System.Linq
 Imports ARCO.eNumeradores
 Imports ARCO.Funciones_00_Varias
-'Imports DocumentFormat.OpenXml.Presentation
-'Imports DocumentFormat.OpenXml.Drawing
-'Imports DocumentFormat.OpenXml.Drawing.Charts
-'Imports DocumentFormat.OpenXml.Drawing.Diagrams
+Imports DocumentFormat.OpenXml.Math
+Imports iTextSharp
 
 
 Public Class Form_09_Vigas
@@ -14,483 +12,171 @@ Public Class Form_09_Vigas
     Private _vigas As List(Of cViga)
     Private _joints As Dictionary(Of String, cJoint)
 
+    Private _vigaActual As cViga
+
+    Private Const FILA_MNEG = 2
+    Private Const FILA_MPOS = 3
+    Private Const FILA_AS_SUP = 4
+    Private Const FILA_AS_INF = 5
+    Private Const FILA_F_NEG = 8
+    Private Const FILA_F_POS = 9
+    Private Const FILA_RED_NEG = 10
+    Private Const FILA_RED_POS = 11
+
+    Private Const FILA_COR_SECCION = 0
+    Private Const FILA_COR_LONGITUD = 1
+    Private Const FILA_COR_H = 2
+    Private Const FILA_COR_D = 3
+    Private Const FILA_COR_ZONA = 4
+    Private Const FILA_COR_VU = 5
+    Private Const FILA_COR_VC = 6
+    Private Const FILA_COR_VS = 7
+    Private Const FILA_COR_PHIVN = 8
+    Private Const FILA_COR_FACTOR = 9
+
+    Private HayCambios As Boolean = False
+    Private UltimoGuardado As DateTime = DateTime.Now
+    Private _cargando As Boolean = False
+
+    Private _geo As New GeometryService()
+    Private _vigaService As VigaService
+    Private _DiagramaService As DiagramaService
+
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
 
-        'Try
-        '    ' 1. Cargar datos (si aplica)
+        Try
+            '    ' 1. Cargar datos (si aplica)
 
-        Dim Joints = Proyecto.Elementos.Joints
-        Dim Frames = Proyecto.Elementos.Frames
-        Dim beams As List(Of cFrame) = Frames.Where(Function(f) f.ObjectLabel.StartsWith("B")).ToList()
+            _cargando = True
 
-        Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
+            Dim Joints = Proyecto.Elementos.Joints
+            Dim Frames = Proyecto.Elementos.Frames
 
-        ' 2. Generar vigas a partir de joints y frames
-        Dim vigas As List(Of cViga) = GenerarVigas(beams, jointsDict)
+            ' Filtrar frames tipo beam y aplicar filtro de secciones del usuario
+            Dim seccFiltro = Proyecto.Elementos.Vigas.SeccionesSeleccionadas
+            Dim beams As List(Of cFrame) = Frames _
+                .Where(Function(f) f.ObjectLabel.StartsWith("B")) _
+                .Where(Function(f) seccFiltro.Count = 0 OrElse
+                                   (f.Section IsNot Nothing AndAlso seccFiltro.Contains(f.Section.Nombre))) _
+                .ToList()
 
-        For Each v In vigas
-            OrdenarFramesViga(v, jointsDict)
-        Next
+            Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
 
-        Proyecto.Elementos.Vigas.Vigas = vigas
+            ' 2. Generar vigas a partir de joints y frames
+            Dim vigas As List(Of cViga) = _vigaService.GenerarVigas(beams, jointsDict)
 
-        _vigas = GenerarVigas(beams, jointsDict)
-        _joints = jointsDict
+            For Each v In vigas
+                _vigaService.OrdenarFramesViga(v, jointsDict)
+            Next
 
-        For Each v In _vigas
-            OrdenarFramesViga(v, _joints)
-        Next
+            Proyecto.Elementos.Vigas.Vigas = vigas
 
-        CalcularEnvolventesVigas()
+            _vigas = vigas
+            _joints = jointsDict
 
-        designVigas()
+            _vigaService.CalcularEnvolventesVigas(vigas,
+                                                  Proyecto.Elementos.Vigas.BeamForces,
+                                                  New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c))))
 
-        Lista_Vigas.DataSource = Nothing
-        Lista_Vigas.DataSource = vigas
-        Lista_Vigas.DisplayMember = "Nombre"
+            _vigaService.designVigas(vigas, Proyecto.Elementos.Joints)
 
-        Dim stories As List(Of String) = Frames.Select(Function(f) f.Story).Distinct().OrderBy(Function(s) s).ToList()
+            _vigaService.AsignarRefuerzoTransversalAutomatico(vigas)
 
-        Lista_Pisos.DataSource = Nothing
-        Lista_Pisos.DataSource = stories
+            If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+                _vigaService.CalcularEnvolventeCortante(vigas,
+                                                        Proyecto.Elementos.Vigas.BeamForces,
+                                                        New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c))))
+                _vigaService.CalcularCapacidadCortante(vigas)
+            End If
 
-        If Lista_Vigas.SelectedItem IsNot Nothing Then
+            TriggerCortantePlastico(vigas)
 
-            Dim vigaSel As cViga = CType(Lista_Vigas.SelectedItem, cViga)
+            Lista_Vigas.DataSource = Nothing
+            Lista_Vigas.DataSource = vigas
+            Lista_Vigas.DisplayMember = "Nombre"
 
-            Lista_Pisos.SelectedItem = vigaSel.Piso
+            Dim stories As List(Of String) = Frames.Select(Function(f) f.Story).Distinct().OrderBy(Function(s) s).ToList()
 
-        End If
+            Lista_Pisos.DataSource = Nothing
+            Lista_Pisos.DataSource = stories
 
+            ' 🔥 FORZAR SELECCIÓN
+            If vigas.Count > 0 Then
+                Lista_Vigas.SelectedIndex = 0
+            End If
 
-        MessageBox.Show("Proceso finalizado correctamente", "OK",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            _cargando = False
 
-        'Catch ex As Exception
-        '    MessageBox.Show(ex.Message, "Error",
-        '                    MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'End Try
+            ' 🔥 LLAMADA MANUAL (CLAVE)
+            Dim vigaSel As cViga = TryCast(Lista_Vigas.SelectedItem, cViga)
 
+            If vigaSel IsNot Nothing Then
 
+                _vigaActual = vigaSel
+
+                Dim piso = vigaSel.Piso
+                Dim index = Lista_Pisos.Items.IndexOf(piso)
+
+                If index >= 0 Then
+                    Lista_Pisos.SelectedIndex = index
+                End If
+
+                Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+                If grids Is Nothing Then Exit Sub
+
+                _DiagramaService.DibujarPlanta(PictureBox1,
+                                       _vigas,
+                                       _joints,
+                                       grids,
+                                       Lista_Pisos.SelectedItem.ToString(),
+                                       vigaSel)
+
+                CargarVigaCompleta(vigaSel)
+
+            End If
+
+            MessageBox.Show("Proceso finalizado correctamente", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+
+        End Try
 
     End Sub
-
-    Function PuntoMedioFrame(f As cFrame,
-                          joints As Dictionary(Of String, cJoint)) As Vector3
-
-        Dim ji = joints(f.JointI)
-        Dim jj = joints(f.JointJ)
-
-        Return New Vector3(
-        (ji.GlobalX + jj.GlobalX) / 2.0,
-        (ji.GlobalY + jj.GlobalY) / 2.0,
-        (ji.GlobalZ + jj.GlobalZ) / 2.0
-    )
-    End Function
-
-    Sub OrdenarFramesViga(viga As cViga,
-                      joints As Dictionary(Of String, cJoint))
-
-        Dim dir = viga.Direccion
-        dir.Normalize()
-
-        viga.Frames = viga.Frames _
-        .OrderBy(Function(f)
-                     Dim p = PuntoMedioFrame(f, joints)
-                     Return Vector3.Dot(p, dir)
-                 End Function) _
-        .ToList()
-    End Sub
-
-    Function PuntoJoint(id As String, joints As Dictionary(Of String, cJoint)) As Vector3
-        Dim j = joints(id)
-        Return New Vector3(j.GlobalX, j.GlobalY, j.GlobalZ)
-    End Function
-
-    Function VectorFrame(f As cFrame, joints As Dictionary(Of String, cJoint)) As Vector3
-        Return PuntoJoint(f.JointJ, joints) - PuntoJoint(f.JointI, joints)
-    End Function
-
-    Function SonColineales(f As cFrame,
-                       dirViga As Vector3,
-                       joints As Dictionary(Of String, cJoint),
-                       tol As Double) As Boolean
-
-        Dim v = VectorFrame(f, joints)
-        v.Normalize()
-
-        ' Producto cruz con la dirección de la viga
-        Dim cross = Vector3.Cross(v, dirViga)
-
-        Return cross.Length < tol
-    End Function
-
-    Function CompartenJoint(f1 As cFrame, f2 As cFrame) As Boolean
-        Return f1.JointI = f2.JointI OrElse
-           f1.JointI = f2.JointJ OrElse
-           f1.JointJ = f2.JointI OrElse
-           f1.JointJ = f2.JointJ
-    End Function
-
-    Private Function Distancia(f As cFrame,
-                       joints As Dictionary(Of String, cJoint)) As Double
-
-        ' Obtener joints I y J desde el diccionario
-        Dim j1 As cJoint = Nothing
-        Dim j2 As cJoint = Nothing
-
-        If Not joints.TryGetValue(f.JointI, j1) Then
-            Throw New Exception($"No se encontró el Joint I: {f.JointI}")
-        End If
-
-        If Not joints.TryGetValue(f.JointJ, j2) Then
-            Throw New Exception($"No se encontró el Joint J: {f.JointJ}")
-        End If
-
-        ' Calcular distancia 3D
-        Return Math.Sqrt(
-        (j1.GlobalX - j2.GlobalX) ^ 2 +
-        (j1.GlobalY - j2.GlobalY) ^ 2 +
-        (j1.GlobalZ - j2.GlobalZ) ^ 2
-    )
-    End Function
-
-    Function GenerarVigas(frames As List(Of cFrame),
-                      joints As Dictionary(Of String, cJoint)) _
-                      As List(Of cViga)
-
-        Dim vigas As New List(Of cViga)
-        Dim framesPendientes As New HashSet(Of cFrame)(frames)
-        Dim tol As Double = 0.01
-
-        While framesPendientes.Any()
-
-            Dim fBase = framesPendientes.First()
-            framesPendientes.Remove(fBase)
-
-            Dim viga As New cViga With {
-            .Nombre = $"VIGA-{vigas.Count + 1}",
-            .Piso = fBase.Story
-        }
-
-            viga.Name_Beam = viga.Nombre
-
-            viga.Frames.Add(fBase)
-
-            Dim dir = VectorFrame(fBase, joints)
-            dir.Normalize()
-            viga.Direccion = dir
-
-            Dim agrego As Boolean
-
-            Do
-                agrego = False
-
-                For Each f In framesPendientes.ToList()
-
-                    If f.Section.Nombre <> fBase.Section.Nombre Then Continue For
-                    If f.Story <> fBase.Story Then Continue For
-
-                    If viga.Frames.Any(Function(fv) CompartenJoint(fv, f)) AndAlso
-                                                    SonColineales(f, viga.Direccion, joints, tol) Then
-
-                        viga.Frames.Add(f)
-                        framesPendientes.Remove(f)
-                        agrego = True
-                    End If
-
-                Next
-
-            Loop While agrego
-
-            vigas.Add(viga)
-
-        End While
-
-        Return vigas
-    End Function
 
     Private Sub Lista_Pisos_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Lista_Pisos.SelectedIndexChanged
 
         If Me.DesignMode Then Return
 
+        ' 🔹 validar piso
         If Lista_Pisos.SelectedItem Is Nothing Then Exit Sub
 
-        DibujarPlanta()
+        ' 🔹 validar viga (MUY IMPORTANTE)
+        Dim vigaSel As cViga = TryCast(Lista_Vigas.SelectedItem, cViga)
 
-    End Sub
+        ' puede ser Nothing si el evento se dispara antes
+        If vigaSel Is Nothing Then Exit Sub
 
-    Private Sub DibujarPlanta()
-
+        ' 🔹 validar datos base
         If _vigas Is Nothing OrElse _vigas.Count = 0 Then Exit Sub
-        If Lista_Pisos.SelectedItem Is Nothing Then Exit Sub
-        Dim vigaSeleccionada As cViga = TryCast(Lista_Vigas.SelectedItem, cViga)
-
-        Dim pisoSeleccionado As String = Lista_Pisos.SelectedItem.ToString()
-
-        ' Filtrar vigas del piso seleccionado
-        Dim vigasPiso = _vigas.Where(Function(v) v.Frames.Any(Function(f) f.Story = pisoSeleccionado)).ToList()
-        If vigasPiso.Count = 0 Then Exit Sub
-
-        ' Crear imagen
-        PictureBox1.Image = New Bitmap(PictureBox1.Width, PictureBox1.Height)
-
-        Using g As Graphics = Graphics.FromImage(PictureBox1.Image)
-
-            g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-            g.Clear(Color.White)
-
-            ' Calcular Bounding Box de todos los joints del piso
-            Dim bbox = CalcularBoundingBox(vigasPiso)
-
-            ' 🔹 1. Dibujar ejes
-            DibujarGridLines(g, Proyecto.Elementos.Grids.GridLines, bbox)
-
-            ' Dibujar cada viga
-            For Each v In vigasPiso
-                Dim esSeleccionada As Boolean = False
-
-                If vigaSeleccionada IsNot Nothing Then
-                    esSeleccionada = (v.Name_Beam = vigaSeleccionada.Name_Beam)
-                End If
-
-                DibujarViga(g, v, bbox, esSeleccionada)
-            Next
-
-        End Using
-
-        PictureBox1.Refresh()
-    End Sub
-
-    Private Sub DibujarGridLines(
-    g As Graphics,
-    grids As List(Of cGridLine),
-    bbox As RectangleF)
-
-        If grids Is Nothing OrElse grids.Count = 0 Then Exit Sub
-
-        Dim penGrid As New Pen(Color.Gray, 1)
-        penGrid.DashStyle = Drawing2D.DashStyle.Dash
-
-        Dim fontGrid As New Font("Segoe UI", 8.5F, FontStyle.Bold)
-        Dim brushText As Brush = Brushes.Black
-        Dim brushBubble As Brush = Brushes.White
-        Dim penBubble As New Pen(Color.Gray, 1)
-
-        ' 🔹 Rango real del modelo
-        Dim minX As Double = _joints.Values.Min(Function(j) j.GlobalX)
-        Dim maxX As Double = _joints.Values.Max(Function(j) j.GlobalX)
-        Dim minY As Double = _joints.Values.Min(Function(j) j.GlobalY)
-        Dim maxY As Double = _joints.Values.Max(Function(j) j.GlobalY)
-
-        ' 🔹 Extensión real del grid (metros)
-        Dim margen As Double = 1.5
-        Dim radioBurbuja As Single = 7.5
-
-        For Each gl In grids
-
-            If Not gl.Visible Then Continue For
-            If String.IsNullOrWhiteSpace(gl.GridID) Then Continue For
-
-            If gl.Direction = "X" Then
-                ' ============================================
-                ' 🔹 GRID X → LÍNEA VERTICAL
-                ' ============================================
-                Dim p1 = Transformar(New Vector3(gl.Ordinate, minY - margen, 0), bbox)
-                Dim p2 = Transformar(New Vector3(gl.Ordinate, maxY + margen, 0), bbox)
-
-                g.DrawLine(penGrid, p1, p2)
-
-                ' 🔹 Posición del ID (arriba o abajo)
-                Dim yTexto As Single =
-                If(gl.BubbleLocation.ToLower() = "start", p2.Y + 15, p1.Y - 15)
-
-                Dim pTexto As New PointF(p1.X, yTexto)
-
-                DibujarBurbujaGrid(g, pTexto, gl.GridID, fontGrid, penBubble, brushBubble, brushText, gl.Direction)
-
-            ElseIf gl.Direction = "Y" Then
-                ' ============================================
-                ' 🔹 GRID Y → LÍNEA HORIZONTAL
-                ' ============================================
-                Dim p1 = Transformar(New Vector3(minX - margen, gl.Ordinate, 0), bbox)
-                Dim p2 = Transformar(New Vector3(maxX + margen, gl.Ordinate, 0), bbox)
-
-                g.DrawLine(penGrid, p1, p2)
-
-                ' 🔹 Posición del ID (izq o der)
-                Dim xTexto As Single =
-                If(gl.BubbleLocation.ToLower() = "start", p1.X - 15, p2.X + 15)
-
-                Dim pTexto As New PointF(xTexto, p1.Y)
-
-                DibujarBurbujaGrid(g, pTexto, gl.GridID, fontGrid, penBubble, brushBubble, brushText, gl.Direction)
-            End If
-        Next
-    End Sub
-
-    Private Sub DibujarBurbujaGrid(g As Graphics, centro As PointF, texto As String, font As Font, pen As Pen, fondo As Brush, textoBrush As Brush, Gl_Dir As String)
-
-        Dim radio As Single = 10
-
-        Dim Sig_Dir = 1
-
-        If Gl_Dir = "Y" Then
-            Sig_Dir = -1
-        End If
-
-        Dim rect As New RectangleF(
-        centro.X - radio,
-        centro.Y + Sig_Dir * radio,
-        radio * 2,
-        radio * 2)
-
-        ' Burbuja
-        g.FillEllipse(fondo, rect)
-        g.DrawEllipse(pen, rect)
-
-        ' Texto centrado
-        Dim sf As New StringFormat With {
-        .Alignment = StringAlignment.Center,
-        .LineAlignment = StringAlignment.Center
-    }
-
-        g.DrawString(texto, font, textoBrush, rect, sf)
-    End Sub
-
-
-    Private Function CalcularBoundingBox(vigasPiso As List(Of cViga)) As RectangleF
-        Dim xs As New List(Of Double)
-        Dim ys As New List(Of Double)
-
-        For Each v In vigasPiso
-            For Each f In v.Frames
-                Dim ji = _joints(f.JointI)
-                Dim jj = _joints(f.JointJ)
-                xs.Add(ji.GlobalX) : xs.Add(jj.GlobalX)
-                ys.Add(ji.GlobalY) : ys.Add(jj.GlobalY)
-            Next
-        Next
-
-        Return New RectangleF(CSng(xs.Min()), CSng(ys.Min()),
-                          CSng(xs.Max() - xs.Min()), CSng(ys.Max() - ys.Min()))
-    End Function
-
-
-    Private Sub DibujarViga(g As Graphics, viga As cViga, bbox As RectangleF, Optional seleccionada As Boolean = False)
-
-        Dim font As New Font("Segoe UI", 9.0F, FontStyle.Bold)
-        Dim brushTexto As Brush = Brushes.Black
-
-        Dim colorViga As Color = Color.DarkBlue
-        Dim espesor As Single = 2
-
-        If seleccionada Then
-            colorViga = Color.Red
-            espesor = 3
-        End If
-
-        ' =====================================================
-        ' 🔹 Dibujar frames de la viga
-        ' =====================================================
-        For Each f In viga.Frames
-
-            Dim ji = _joints(f.JointI)
-            Dim jj = _joints(f.JointJ)
-
-            Dim p1 As PointF = Transformar(New Vector3(ji.GlobalX, ji.GlobalY, 0), bbox)
-            Dim p2 As PointF = Transformar(New Vector3(jj.GlobalX, jj.GlobalY, 0), bbox)
-
-            ' Halo de selección (más profesional)
-            If seleccionada Then
-                Using penHalo As New Pen(Color.Yellow, espesor + 4)
-                    g.DrawLine(penHalo, p1, p2)
-                End Using
-            End If
-
-            Using pen As New Pen(colorViga, espesor)
-                g.DrawLine(pen, p1, p2)
-            End Using
-
-        Next
-
-        ' =====================================================
-        ' 🔹 Calcular punto medio de la viga
-        ' =====================================================
-        Dim minX As Single = Single.MaxValue
-        Dim maxX As Single = Single.MinValue
-        Dim minY As Single = Single.MaxValue
-        Dim maxY As Single = Single.MinValue
-
-        For Each f In viga.Frames
-
-            Dim ji = _joints(f.JointI)
-            Dim jj = _joints(f.JointJ)
-
-            minX = Math.Min(minX, Math.Min(ji.GlobalX, jj.GlobalX))
-            maxX = Math.Max(maxX, Math.Max(ji.GlobalX, jj.GlobalX))
-            minY = Math.Min(minY, Math.Min(ji.GlobalY, jj.GlobalY))
-            maxY = Math.Max(maxY, Math.Max(ji.GlobalY, jj.GlobalY))
-
-        Next
-
-        Dim midPoint As New Vector3((minX + maxX) / 2, (minY + maxY) / 2, 0)
-        Dim pMid As PointF = Transformar(midPoint, bbox)
-
-        ' =====================================================
-        ' 🔹 Calcular orientación de la viga
-        ' =====================================================
-        Dim fRef = viga.Frames(0)
-
-        Dim jiRef = _joints(fRef.JointI)
-        Dim jjRef = _joints(fRef.JointJ)
-
-        Dim dx As Single = jjRef.GlobalX - jiRef.GlobalX
-        Dim dy As Single = jjRef.GlobalY - jiRef.GlobalY
-
-        Dim angle As Single = CSng(Math.Atan2(dy, dx) * 180 / Math.PI)
-
-        ' =====================================================
-        ' 🔹 Dibujar nombre de la viga
-        ' =====================================================
-        g.TranslateTransform(pMid.X, pMid.Y)
-        g.RotateTransform(angle)
-
-        Dim size = g.MeasureString(viga.Nombre, font)
-
-        Dim rectTexto As New RectangleF(
-        -size.Width / 2,
-        -size.Height / 2,
-        size.Width,
-        size.Height)
-
-        ' Fondo blanco para legibilidad
-        Using brushFondo As New SolidBrush(Color.FromArgb(200, Color.White))
-            g.FillRectangle(brushFondo, rectTexto)
-        End Using
-
-        g.DrawString(viga.Nombre, font, brushTexto, rectTexto.Location)
-
-        g.ResetTransform()
+        If _joints Is Nothing OrElse _joints.Count = 0 Then Exit Sub
+
+        ' 🔹 validar grids
+        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+        If grids Is Nothing Then Exit Sub
+
+        ' 🔹 dibujar
+        _DiagramaService.DibujarPlanta(
+                                    PictureBox1,
+                                    _vigas,
+                                    _joints,
+                                    grids,
+                                    Lista_Pisos.SelectedItem.ToString(),
+                                    vigaSel
+                                )
 
     End Sub
-
-    Private Function Transformar(p As Vector3, bbox As RectangleF) As PointF
-        Dim canvasWidth As Single = PictureBox1.Width
-        Dim canvasHeight As Single = PictureBox1.Height
-        Dim margin As Single = 40
-
-        ' Escala proporcional
-        Dim scaleX = (canvasWidth - 2 * margin) / bbox.Width
-        Dim scaleY = (canvasHeight - 2 * margin) / bbox.Height
-        Dim scale = Math.Min(scaleX, scaleY)
-
-        ' Ajustar para centrar
-        Dim x As Single = (p.X - bbox.Left) * scale + margin + (canvasWidth - 2 * margin - bbox.Width * scale) / 2
-        Dim y As Single = canvasHeight - ((p.Y - bbox.Top) * scale + margin + (canvasHeight - 2 * margin - bbox.Height * scale) / 2)
-
-        Return New PointF(x, y)
-    End Function
 
     Private Sub ImportarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarDemandasToolStripMenuItem.Click
 
@@ -505,59 +191,101 @@ Public Class Form_09_Vigas
                 Me.Cursor = Cursors.WaitCursor
 
                 Try
-                    ' Leer cada hoja
+                    ' Detectar hojas disponibles (E23 vs E17)
+                    Dim hojas = ObtenerHojasExcel(path)
 
                     If Proyecto.Elementos.Frames.Count = 0 Then
-                        Proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(path, "Objects and Elements - Joints")
-                        Proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(path, "Objects and Elements - Frames")
+                        Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
+                        Dim hFrames = ResolverNombreHoja(hojas, "Objects and Elements - Frames", "Connectivity - Frame")
+                        Proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(path, hJoints)
+                        Proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(path, hFrames)
 
                         Proyecto.Elementos.Joints = DataTableToJoints(Proyecto.TablasEtabs.TablaOEJoints)
                         Proyecto.Elementos.Frames = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
 
-                        ' APLICAR SECCIONES A FRAMES
-                        'Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, "Frame Assignments - Sections")
-                        'Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, "Frame Sections")
-                        'Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, "Material Properties - Concrete")
+                        Dim hAsigFrame = ResolverNombreHoja(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
+                        Dim hSecDef = ResolverNombreHoja(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
+                        Dim hMaterial = ResolverNombreHoja(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
 
-                        Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, "Frame Assigns - Sect Prop")
-                        Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, "Frame Sec Def - Conc Rect")
-                        Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, "Mat Prop - Concrete Data")
+                        Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, hAsigFrame)
+                        Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, hSecDef)
+                        Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, hMaterial)
 
                         DataTableToAsignFrame(Proyecto.Elementos.Frames, Data_Asig_Frame, Data_Frame_Section, Data_Material_Concrete)
 
                     End If
 
-                    'Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, "Beam Forces")
-                    Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, "Element Forces - Beams")
+                    Dim hBeamForces = ResolverNombreHoja(hojas, "Element Forces - Beams", "Beam Forces")
+                    Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, hBeamForces)
 
-                    MsgBox("Importación completada correctamente.", MsgBoxStyle.Information)
-
-                    'Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Lines")
-                    Dim Table_Grids As DataTable = LeerHojaExcel(path, "Grid Definitions - Grid Lines")
+                    Dim hGrids = ResolverNombreHoja(hojas, "Grid Definitions - Grid Lines", "Grid Lines")
+                    Dim Table_Grids As DataTable = LeerHojaExcel(path, hGrids)
 
                     Proyecto.Elementos.Vigas.BeamForces = DataTableToBeamForces(Proyecto.Elementos.Vigas.Tabla_BeamForces)
 
                     Proyecto.Elementos.Grids.GridLines = DataTableToGridLines(Table_Grids)
 
 
-                    ' 🔹 Extraer combinaciones únicas
-                    Proyecto.Elementos.Vigas.Lista_Combinaciones = Proyecto.Elementos.Vigas.BeamForces.Select(Function(r) r.LoadCaseCombo) _
+                    ' 🔹 Extraer combinaciones únicas usando clave canónica (Output Case + Step Type)
+                    Proyecto.Elementos.Vigas.Lista_Combinaciones = Proyecto.Elementos.Vigas.BeamForces.Select(Function(r) r.LoadCaseKey) _
                                                         .Where(Function(x) Not String.IsNullOrWhiteSpace(x)) _
                                                         .Distinct() _
                                                         .OrderBy(Function(x) x) _
                                                         .ToList()
 
-                    For Each Combinacion As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
-                        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Combinacion)
+                    ' Flexión — pre-popula selecciones anteriores
+                    Dim formDiseno As New Form_Opciones_Combinaciones()
+                    For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
+                        If Not Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Contains(comb) Then
+                            formDiseno.Lista_Combinaciones.Items.Add(comb)
+                        End If
                     Next
+                    For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones_Design
+                        formDiseno.Lista_Cargas_Design.Items.Add(comb)
+                    Next
+                    formDiseno.OpcionLlamado = "Vigas"
+                    formDiseno.GroupBox2.Text = "Combinaciones Diseño a Flexión de Vigas"
+                    formDiseno.ShowDialog()
 
-                    Form_Opciones_Combinaciones.OpcionLlamado = "Vigas"
+                    ' Cortante — pre-popula selecciones anteriores
+                    Dim formCortante As New Form_Opciones_Combinaciones()
+                    For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
+                        If Not Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Contains(comb) Then
+                            formCortante.Lista_Combinaciones.Items.Add(comb)
+                        End If
+                    Next
+                    For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante
+                        formCortante.Lista_Cargas_Design.Items.Add(comb)
+                    Next
+                    formCortante.OpcionLlamado = "VigasCortante"
+                    formCortante.GroupBox2.Text = "Combinaciones Diseño a Cortante de Vigas"
+                    formCortante.ShowDialog()
 
-                    Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Diseño de Vigas"
+                    ' Cortante Plástico — pre-popula selecciones anteriores
+                    Dim formPlastico As New Form_Opciones_Combinaciones()
+                    For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
+                        If Not Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Contains(comb) Then
+                            formPlastico.Lista_Combinaciones.Items.Add(comb)
+                        End If
+                    Next
+                    For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico
+                        formPlastico.Lista_Cargas_Design.Items.Add(comb)
+                    Next
+                    formPlastico.OpcionLlamado = "CortantePlastico"
+                    formPlastico.GroupBox2.Text = "Combinación Gravitacional — Cortante Plástico (wu)"
+                    formPlastico.ShowDialog()
 
-                    Form_Opciones_Combinaciones.ShowDialog()
+                    ' Filtro de tipos de sección
+                    Dim seccionesActuales = Proyecto.Elementos.Vigas.SeccionesSeleccionadas
+                    Dim seccionesNuevas As List(Of String) = Nothing
+                    Form_FiltroSecciones.Mostrar(Proyecto.Elementos.Frames,
+                                                 seccionesActuales,
+                                                 seccionesNuevas)
+                    If seccionesNuevas IsNot Nothing Then
+                        Proyecto.Elementos.Vigas.SeccionesSeleccionadas = seccionesNuevas
+                    End If
 
-
+                    HayCambios = True
                     MsgBox("Importación completada.", MsgBoxStyle.Information)
 
                 Catch ex As Exception
@@ -571,86 +299,66 @@ Public Class Form_09_Vigas
 
     End Sub
 
-    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-
-        If Lista_Vigas.SelectedItem Is Nothing Then Exit Sub
-        Dim Elemento As cViga = CType(Lista_Vigas.SelectedItem, cViga)
-        Elemento.Name_Beam = Nombre_Viga.Text
-
-        Lista_Vigas.Refresh()
-
-        If Elemento Is Nothing Then Return
-
-        DibujarDiagramaMomentoFrames(Elemento, Diagrama_Momento)
-        DibujarDiagramaCortanteFrames(Elemento, Diagrama_Cortante)
-
-        ConstruirTablaResumen(Elemento, Tabla_Demandas)
-
-        ConstruirTablaRefuerzo(Elemento, Ref_Superior)
-        ConstruirTablaRefuerzo(Elemento, Ref_Inferior)
-
-        CargarRefuerzoTabla(Elemento, Ref_Superior, eTipoRefuerzo.Superior)
-        CargarRefuerzoTabla(Elemento, Ref_Inferior, eTipoRefuerzo.Inferior)
-
-        ConstruirTablaResultadosFlexion(Elemento, Tabla_Resultados_Flexion)
-
-        LlenarTablaResumen(Elemento, Tabla_Demandas)
-        LlenarTablaResultados(Elemento, Tabla_Resultados_Flexion)
-
-    End Sub
-
-    Private Sub CargarVigaSeleccionada()
-
-        If Lista_Vigas.SelectedItem Is Nothing Then Exit Sub
-
-        Dim Elemento As cViga = CType(Lista_Vigas.SelectedItem, cViga)
-
-        DibujarDiagramaMomentoFrames(Elemento, Diagrama_Momento)
-        DibujarDiagramaCortanteFrames(Elemento, Diagrama_Cortante)
-
-        ConstruirTablaResumen(Elemento, Tabla_Demandas)
-
-        ConstruirTablaRefuerzo(Elemento, Ref_Superior)
-        ConstruirTablaRefuerzo(Elemento, Ref_Inferior)
-
-        ConstruirTablaResultadosFlexion(Elemento, Tabla_Resultados_Flexion)
-
-        LlenarTablaResumen(Elemento, Tabla_Demandas)
-        LlenarTablaResultados(Elemento, Tabla_Resultados_Flexion)
-
-        ' 🔥 cargar refuerzo guardado
-        CargarRefuerzoTabla(Elemento, Ref_Superior, eTipoRefuerzo.Superior)
-        CargarRefuerzoTabla(Elemento, Ref_Inferior, eTipoRefuerzo.Inferior)
-
-    End Sub
-
     Private Sub CargarVigaCompleta(viga As cViga)
 
         If viga Is Nothing Then Exit Sub
 
-        ' Dibujos
-        DibujarDiagramaMomentoFrames(viga, Diagrama_Momento)
-        'DibujarDiagramaCortanteFrames(viga, Diagrama_Cortante)
+        Dim combinaciones = New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)))
 
-        ' Tablas
+        Dim beamForces = Proyecto.Elementos.Vigas.BeamForces _
+            .Where(Function(bf) combinaciones.Contains(bf.LoadCaseKey)) _
+            .ToList()
+
+        ' Dibujos (fuera del SuspendLayout para no bloquear el render)
+        _DiagramaService.DibujarDiagramaMomentoFrames(viga, Diagrama_Momento, beamForces, combinaciones)
+
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+            Dim combsCortante_cv = New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)))
+            Dim bfCortante = Proyecto.Elementos.Vigas.BeamForces _
+                .Where(Function(bf) combsCortante_cv.Contains(bf.LoadCaseKey)) _
+                .ToList()
+            _DiagramaService.DibujarDiagramaCortanteFrames(viga, Diagrama_Cortante, bfCortante, combsCortante_cv)
+        End If
+
+        ' Todas las operaciones de tabla en un solo bloque suspendido
+        Tabla_Demandas.SuspendLayout()
+        Ref_Superior.SuspendLayout()
+        Ref_Inferior.SuspendLayout()
+        Tabla_Resultados_Flexion.SuspendLayout()
+        Ref_Transversal.SuspendLayout()
+        Tabla_Resultados_Cortante.SuspendLayout()
+
         ConstruirTablaResumen(viga, Tabla_Demandas)
-
         ConstruirTablaRefuerzo(viga, Ref_Superior)
         ConstruirTablaRefuerzo(viga, Ref_Inferior)
-
         ConstruirTablaResultadosFlexion(viga, Tabla_Resultados_Flexion)
+        ConstruirTablaRefuerzoTransversal(viga, Ref_Transversal)
+        ConstruirTablaCortante(viga, Tabla_Resultados_Cortante)
 
         LlenarTablaResumen(viga, Tabla_Demandas)
         LlenarTablaResultados(viga, Tabla_Resultados_Flexion)
 
-        ' 🔥 MUY IMPORTANTE: recargar refuerzo guardado
         CargarRefuerzoTabla(viga, Ref_Superior, eTipoRefuerzo.Superior)
         CargarRefuerzoTabla(viga, Ref_Inferior, eTipoRefuerzo.Inferior)
+        CargarRefuerzoTransversalTabla(viga, Ref_Transversal)
+
+        Tabla_Demandas.ResumeLayout(False)
+        Ref_Superior.ResumeLayout(False)
+        Ref_Inferior.ResumeLayout(False)
+        Tabla_Resultados_Flexion.ResumeLayout(False)
+        Ref_Transversal.ResumeLayout(False)
+        Tabla_Resultados_Cortante.ResumeLayout(False)
+
+        If viga.Frames.Any(Function(f) f.RevisionCortante.Count > 0) Then
+            MostrarResultadosCortante(viga)
+        End If
 
         If ExisteRefuerzo(viga) Then
-            GuardarRefuerzoTabla(viga, Ref_Superior, eTipoRefuerzo.Superior)
-            GuardarRefuerzoTabla(viga, Ref_Inferior, eTipoRefuerzo.Inferior)
-            CalcularFlexionViga(viga)
+            Dim datosSup = ExtraerRefuerzoDesdeGrid(Ref_Superior)
+            Dim datosInf = ExtraerRefuerzoDesdeGrid(Ref_Inferior)
+            _vigaService.GuardarRefuerzo(viga, datosSup, eTipoRefuerzo.Superior)
+            _vigaService.GuardarRefuerzo(viga, datosInf, eTipoRefuerzo.Inferior)
+            _vigaService.CalcularFlexionViga(viga)
             MostrarResultadosFlexion(viga)
         End If
 
@@ -738,784 +446,6 @@ Public Class Form_09_Vigas
 
     End Sub
 
-    Private Sub CalcularEnvolventesVigas()
-
-        For Each viga In Proyecto.Elementos.Vigas.Vigas
-
-            For Each frame In viga.Frames
-
-                Dim bfFrame = Proyecto.Elementos.Vigas.BeamForces _
-                .Where(Function(r) r.Beam = frame.ObjectLabel _
-                AndAlso r.Story = frame.Story _
-                AndAlso Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Contains(r.LoadCaseCombo)) _
-                .ToList()
-
-                If bfFrame.Count = 0 Then Continue For
-
-                Dim estaciones As List(Of Double)
-                Dim envMax As List(Of Double)
-                Dim envMin As List(Of Double)
-
-                ConstruirEnvolventeAnalisis(bfFrame, estaciones, envMax, envMin)
-
-                Dim MmaxAnalisis = New List(Of Double)(envMax)
-                Dim MminAnalisis = New List(Of Double)(envMin)
-
-                EnvolventeNSR10(estaciones, envMax, envMin)
-
-                Dim MmaxDesign = New List(Of Double)(envMax)
-                Dim MminDesign = New List(Of Double)(envMin)
-
-                frame.EnvolventeMomento = New cEnvolventeMomento With {
-                                            .Estaciones = estaciones,
-                                            .MmaxAnalisis = MmaxAnalisis,
-                                            .MminAnalisis = MminAnalisis,
-                                            .MmaxDesign = MmaxDesign,
-                                            .MminDesign = MminDesign
-                                                    }
-
-                CalcularValoresResumen(frame.EnvolventeMomento)
-
-                ' =====================================
-                ' 🔹 Guardar momentos por zona
-                ' =====================================
-
-                frame.RevisionFlexion.Clear()
-
-                Dim iIzq As Integer = 0
-                Dim iDer As Integer = estaciones.Count - 1
-
-                ' buscar estación más cercana al centro
-                Dim L As Double = estaciones.Last()
-
-                Dim iCen As Integer = 0
-                Dim distMin As Double = Double.MaxValue
-
-                For i As Integer = 0 To estaciones.Count - 1
-
-                    Dim dist = Math.Abs(estaciones(i) - L / 2)
-
-                    If dist < distMin Then
-                        distMin = dist
-                        iCen = i
-                    End If
-
-                Next
-
-                ' ==============================
-                ' IZQUIERDA
-                ' ==============================
-
-                frame.RevisionFlexion.Add(New cRevisionFlexionZona With {
-                    .Posicion = PosicionTramoViga.Izquierda,
-                    .MomentoPositivo = envMax(iIzq),
-                    .MomentoNegativo = envMin(iIzq)
-                })
-
-                ' ==============================
-                ' CENTRO
-                ' ==============================
-
-                frame.RevisionFlexion.Add(New cRevisionFlexionZona With {
-                    .Posicion = PosicionTramoViga.Centro,
-                    .MomentoPositivo = envMax(iCen),
-                    .MomentoNegativo = envMin(iCen)
-                })
-
-                ' ==============================
-                ' DERECHA
-                ' ==============================
-
-                frame.RevisionFlexion.Add(New cRevisionFlexionZona With {
-                    .Posicion = PosicionTramoViga.Derecha,
-                    .MomentoPositivo = envMax(iDer),
-                    .MomentoNegativo = envMin(iDer)
-                })
-
-
-
-            Next
-
-        Next
-
-    End Sub
-
-    Private Sub CalcularValoresResumen(env As cEnvolventeMomento)
-
-        If env Is Nothing OrElse env.Estaciones.Count = 0 Then Exit Sub
-
-        Dim estaciones = env.Estaciones
-        Dim Mmax = env.MmaxDesign ' o Analisis según lo que quieras usar
-        Dim Mmin = env.MminDesign
-
-        ' ==================================================
-        ' 🔹 MOMENTO POSITIVO MÁXIMO
-        ' ==================================================
-        Dim maxVal As Double = Double.MinValue
-        Dim idxMax As Integer = -1
-
-        For i = 0 To Mmax.Count - 1
-            If Mmax(i) > maxVal Then
-                maxVal = Mmax(i)
-                idxMax = i
-            End If
-        Next
-
-        env.MomentoPositivoMax = If(maxVal > 0, maxVal, 0)
-        env.EstacionMomentoPositivoMax = If(idxMax >= 0, estaciones(idxMax), 0)
-
-        ' ==================================================
-        ' 🔹 MOMENTOS NEGATIVOS EN EXTREMOS
-        ' ==================================================
-        ' Izquierda → primer punto
-        Dim MnegIzq = Mmin.First()
-        env.MomentoNegativoIzq = If(MnegIzq < 0, MnegIzq, 0)
-
-        ' Derecha → último punto
-        Dim MnegDer = Mmin.Last()
-        env.MomentoNegativoDer = If(MnegDer < 0, MnegDer, 0)
-
-    End Sub
-
-    Private Function ObtenerCombinacionesFrame(frame As cFrame) _
-    As Dictionary(Of String, List(Of cCombinacionBeamForce))
-
-        Dim bfFrame = Proyecto.Elementos.Vigas.BeamForces _
-        .Where(Function(r) r.Beam = frame.ObjectLabel _
-        AndAlso r.Story = frame.Story _
-        AndAlso Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Contains(r.LoadCaseCombo)) _
-        .ToList()
-
-        Return bfFrame _
-        .GroupBy(Function(bf) bf.LoadCaseCombo) _
-        .ToDictionary(Function(gp) gp.Key,
-                      Function(gp) gp.OrderBy(Function(bf) bf.ElementStation).ToList())
-
-    End Function
-
-    Private Sub DibujarDiagramaMomentoFrames(viga As cViga, pictureBox As PictureBox)
-
-        If viga.Frames Is Nothing OrElse viga.Frames.Count = 0 Then Exit Sub
-
-        Dim bmp As New Bitmap(pictureBox.Width, pictureBox.Height)
-        Dim g As Graphics = Graphics.FromImage(bmp)
-
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-        g.Clear(Color.White)
-
-        Dim margin As Single = 50
-
-        Dim colores As Color() =
-    {
-        Color.Red, Color.Blue, Color.DarkOrange,
-        Color.Purple, Color.Brown, Color.DarkCyan
-    }
-
-        Dim datosFrame As New List(Of Object)
-        Dim todasX As New List(Of Single)
-        Dim todasY As New List(Of Double)
-
-        Dim xOffset As Single = 0
-
-        ' =========================================================
-        ' 🔹 Preparar datos
-        ' =========================================================
-        For Each frame In viga.Frames
-
-            If frame.EnvolventeMomento Is Nothing Then Continue For
-
-            Dim estaciones = frame.EnvolventeMomento.Estaciones
-            Dim envMax = frame.EnvolventeMomento.MmaxDesign
-            Dim envMin = frame.EnvolventeMomento.MminDesign
-
-            Dim combos = ObtenerCombinacionesFrame(frame)
-
-            Dim L As Double = estaciones.Last()
-
-            For Each s In estaciones
-                todasX.Add(xOffset + s)
-            Next
-
-            For Each m In envMax
-                todasY.Add(m)
-            Next
-
-            For Each m In envMin
-                todasY.Add(m)
-            Next
-
-            datosFrame.Add(New With {
-            .Frame = frame,
-            .Estaciones = estaciones,
-            .EnvMax = envMax,
-            .EnvMin = envMin,
-            .Combos = combos,
-            .L = L,
-            .Offset = xOffset
-        })
-
-            xOffset += L
-
-        Next
-
-        If todasX.Count = 0 Then Exit Sub
-
-        ' =========================================================
-        ' 🔹 Escala
-        ' =========================================================
-        Dim minX = todasX.Min()
-        Dim maxX = todasX.Max()
-
-        Dim maxAbsY = Math.Max(Math.Abs(todasY.Min()), Math.Abs(todasY.Max()))
-
-        Dim scaleX As Single = CSng((pictureBox.Width - 2 * margin) / (maxX - minX))
-        Dim scaleY As Single = CSng((pictureBox.Height / 2 - margin) / maxAbsY)
-
-        Dim yZero As Single = pictureBox.Height / 2
-
-        Dim TransformX = Function(x As Single) margin + (x - minX) * scaleX
-        Dim TransformY = Function(y As Single) yZero + y * scaleY
-
-        ' =========================================================
-        ' 🔹 Eje cero
-        ' =========================================================
-        Using penZero As New Pen(Color.Black, 1)
-            penZero.DashStyle = Drawing2D.DashStyle.Dash
-            g.DrawLine(penZero, margin, yZero, pictureBox.Width - margin, yZero)
-        End Using
-
-        ' =========================================================
-        ' 🔹 Dibujar combinaciones
-        ' =========================================================
-        For iComb = 0 To Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Count - 1
-
-            Dim combo = Proyecto.Elementos.Vigas.Lista_Combinaciones_Design(iComb)
-            Dim colorCombo = colores(iComb Mod colores.Length)
-
-            For Each df In datosFrame
-
-                If Not df.Combos.ContainsKey(combo) Then Continue For
-
-                'Dim lista = df.Combos(combo)
-                Dim listaTotal = df.Combos(combo)
-
-                ' 🔹 Separar por StepType
-                Dim listaMax As New List(Of cCombinacionBeamForce)
-                Dim listaMin As New List(Of cCombinacionBeamForce)
-                Dim listaNormal As New List(Of cCombinacionBeamForce)
-
-                For Each item In listaTotal
-                    Select Case item.stepType
-                        Case "Max"
-                            listaMax.Add(item)
-                        Case "Min"
-                            listaMin.Add(item)
-                        Case Else
-                            listaNormal.Add(item)
-                    End Select
-                Next
-
-                ' 🔸 Dibujar función reutilizable
-                Dim Dibujar = Sub(lista As List(Of cCombinacionBeamForce), pen As Pen)
-
-                                  If lista Is Nothing OrElse lista.Count < 2 Then Exit Sub
-
-                                  ' 🔹 Ordenar por estación (CLAVE)
-                                  lista = lista.OrderBy(Function(x) x.ElementStation).ToList()
-
-                                  For i = 0 To lista.Count - 2
-
-                                      Dim x1 = df.Offset + lista(i).ElementStation
-                                      Dim y1 = lista(i).M3
-                                      Dim x2 = df.Offset + lista(i + 1).ElementStation
-                                      Dim y2 = lista(i + 1).M3
-
-                                      ' 🔹 Validar valores (evita overflow)
-                                      ' 🔹 Validación compatible con .NET Framework
-                                      If (Double.IsNaN(x1) OrElse Double.IsInfinity(x1) OrElse
-                                            Double.IsNaN(y1) OrElse Double.IsInfinity(y1)) Then Continue For
-
-                                      If (Double.IsNaN(x2) OrElse Double.IsInfinity(x2) OrElse
-                                            Double.IsNaN(y2) OrElse Double.IsInfinity(y2)) Then Continue For
-
-                                      ' 🔹 Protección adicional (valores absurdos)
-                                      If Math.Abs(y1) > 1000000000.0 OrElse Math.Abs(y2) > 1000000000.0 Then Continue For
-
-                                      Try
-                                          g.DrawLine(pen, TransformX(x1), TransformY(y1), TransformX(x2), TransformY(y2))
-                                      Catch ex As OverflowException
-                                          ' Puedes loguear si quieres depurar
-                                          Debug.Print("Overflow en dibujo: " & ex.Message)
-                                      End Try
-
-                                  Next
-                              End Sub
-
-                ' 🔹 Dibujar según exista
-                Using pen As New Pen(colorCombo, 2)
-
-                    If listaMax.Count > 0 Then Dibujar(listaMax, pen)
-                    If listaMin.Count > 0 Then Dibujar(listaMin, pen)
-
-                    ' Si no hay max/min, dibuja la normal
-                    If listaMax.Count = 0 AndAlso listaMin.Count = 0 Then
-                        Dibujar(listaNormal, pen)
-                    End If
-
-                End Using
-
-            Next
-
-        Next
-
-        ' =========================================================
-        ' 🔹 Dibujar envolvente NSR
-        ' =========================================================
-        Using penEnv As New Pen(Color.Green, 3)
-
-            For Each df In datosFrame
-
-                Dim estaciones = df.Estaciones
-                Dim envMax = df.EnvMax
-                Dim envMin = df.EnvMin
-
-                Dim puntosSup As New List(Of PointF)
-                Dim puntosInf As New List(Of PointF)
-
-                For i = 0 To estaciones.Count - 1
-
-                    puntosSup.Add(New PointF(
-                    TransformX(df.Offset + estaciones(i)),
-                    TransformY(envMax(i))))
-
-                Next
-
-                For i = estaciones.Count - 1 To 0 Step -1
-
-                    puntosInf.Add(New PointF(
-                    TransformX(df.Offset + estaciones(i)),
-                    TransformY(envMin(i))))
-
-                Next
-
-                Dim puntos = puntosSup.Concat(puntosInf).ToArray()
-
-                Using brushEnv As New SolidBrush(Color.FromArgb(60, Color.Green))
-                    g.FillPolygon(brushEnv, puntos)
-                End Using
-
-                For i = 0 To estaciones.Count - 2
-
-                    g.DrawLine(penEnv,
-                    TransformX(df.Offset + estaciones(i)),
-                    TransformY(envMax(i)),
-                    TransformX(df.Offset + estaciones(i + 1)),
-                    TransformY(envMax(i + 1)))
-
-                    g.DrawLine(penEnv,
-                    TransformX(df.Offset + estaciones(i)),
-                    TransformY(envMin(i)),
-                    TransformX(df.Offset + estaciones(i + 1)),
-                    TransformY(envMin(i + 1)))
-
-                Next
-
-                ' =========================================================
-                ' 🔹 Etiquetas
-                ' =========================================================
-                Dim sInicio = estaciones(0)
-                Dim sFinal = estaciones(estaciones.Count - 1)
-
-                Dim MnegIzq = envMin(0)
-                Dim MnegDer = envMin(envMin.Count - 1)
-
-                DibujarEtiquetaMomento(g,
-                Math.Round(MnegIzq, 1).ToString(),
-                TransformX(df.Offset + sInicio / 2),
-                TransformY(MnegIzq))
-
-                DibujarEtiquetaMomento(g,
-                Math.Round(MnegDer, 1).ToString(),
-                TransformX(df.Offset + df.L - (df.L - sFinal) / 2),
-                TransformY(MnegDer))
-
-                Dim Mpos As Double = Double.MinValue
-                Dim iMax As Integer = 0
-
-                For i = 0 To envMax.Count - 1
-
-                    If envMax(i) > Mpos Then
-                        Mpos = envMax(i)
-                        iMax = i
-                    End If
-
-                Next
-
-                Dim sPos = estaciones(iMax)
-
-                DibujarEtiquetaMomento(g,
-                Math.Round(Mpos, 1).ToString(),
-                TransformX(df.Offset + sPos),
-                TransformY(Mpos))
-
-            Next
-
-        End Using
-
-        ' =========================================================
-        ' 🔹 Dibujar apoyos
-        ' =========================================================
-        For i = 0 To datosFrame.Count - 1
-
-            Dim df = datosFrame(i)
-
-            Dim estaciones = df.Estaciones
-            Dim L = df.L
-            Dim offset = df.Offset
-
-            Dim sInicio = estaciones(0)
-            Dim sFinal = estaciones(estaciones.Count - 1)
-
-            If i = 0 Then
-
-                DibujarApoyo(g,
-                TransformX(offset),
-                TransformX(offset + sInicio),
-                pictureBox.Height,
-                margin)
-
-            End If
-
-            If i < datosFrame.Count - 1 Then
-
-                Dim dfNext = datosFrame(i + 1)
-                Dim estacionesNext = dfNext.Estaciones
-                Dim sInicioNext = estacionesNext(0)
-
-                Dim x1 = offset + sFinal
-                Dim x2 = offset + L + sInicioNext
-
-                DibujarApoyo(g,
-                TransformX(x1),
-                TransformX(x2),
-                pictureBox.Height,
-                margin)
-
-            Else
-
-                DibujarApoyo(g,
-                TransformX(offset + sFinal),
-                TransformX(offset + L),
-                pictureBox.Height,
-                margin)
-
-            End If
-
-            Using penTramo As New Pen(Color.Gray, 1)
-
-                penTramo.DashStyle = Drawing2D.DashStyle.Dot
-
-                g.DrawLine(penTramo,
-                TransformX(df.Offset + df.L),
-                margin,
-                TransformX(df.Offset + df.L),
-                pictureBox.Height - margin)
-
-            End Using
-
-        Next
-
-        pictureBox.Image = bmp
-
-    End Sub
-
-
-    Private Sub DibujarApoyo(g As Graphics,
-                         x1 As Single,
-                         x2 As Single,
-                         pictureHeight As Integer,
-                         margin As Single)
-
-        Dim rect As New RectangleF(
-        x1,
-        margin,
-        x2 - x1,
-        pictureHeight - 2 * margin)
-
-        Using brush As New SolidBrush(Color.FromArgb(90, Color.Gray))
-            g.FillRectangle(brush, rect)
-        End Using
-
-    End Sub
-
-    Private Sub DibujarEtiquetaMomento(
-    g As Graphics,
-    texto As String,
-    x As Single,
-    y As Single)
-
-        Using f As New Font("Segoe UI", 8, FontStyle.Bold)
-
-            Dim size = g.MeasureString(texto, f)
-
-            g.DrawString(texto, f, Brushes.Black,
-                     x - size.Width / 2,
-                     y - size.Height - 4)
-
-        End Using
-
-    End Sub
-
-
-    Private Sub ConstruirEnvolventeAnalisis(
-    bfFrame As List(Of cCombinacionBeamForce),
-    ByRef estaciones As List(Of Double),
-    ByRef envMax As List(Of Double),
-    ByRef envMin As List(Of Double))
-
-
-        Dim dictMax As New Dictionary(Of Double, List(Of Double))
-        Dim dictMin As New Dictionary(Of Double, List(Of Double))
-
-        For Each bf In bfFrame
-
-            Dim s As Double = bf.Station
-            Dim m As Double = bf.M3
-            Dim stepType As String = If(bf.stepType, "").Trim().ToUpper()
-
-            Select Case stepType
-
-                Case "MAX"
-                    If Not dictMax.ContainsKey(s) Then
-                        dictMax(s) = New List(Of Double)
-                    End If
-                    dictMax(s).Add(m)
-
-                Case "MIN"
-                    If Not dictMin.ContainsKey(s) Then
-                        dictMin(s) = New List(Of Double)
-                    End If
-
-                    dictMin(s).Add(m)
-                Case Else
-                    ' Opcional: ignorar o usar como fallback
-                    ' Aquí lo ignoramos
-            End Select
-
-        Next
-
-        ' Unir estaciones de ambos diccionarios
-        estaciones = dictMax.Keys.Union(dictMin.Keys).OrderBy(Function(x) x).ToList()
-
-        envMax = New List(Of Double)
-        envMin = New List(Of Double)
-
-        For Each s In estaciones
-
-            ' Si no existe, puedes poner 0 o Double.NaN
-            envMax.Add(If(dictMax.ContainsKey(s), dictMax(s).Max(), 0))
-            envMin.Add(If(dictMin.ContainsKey(s), dictMin(s).Min(), 0))
-
-        Next
-
-    End Sub
-
-    Private Sub EnvolventeNSR10(
-    estaciones As List(Of Double),
-    envMax As List(Of Double),
-    envMin As List(Of Double))
-
-        Dim n As Integer = estaciones.Count - 1
-
-        If n < 1 Then Exit Sub
-
-        ' momentos en apoyos
-        Dim M1n As Double = envMin(0)
-        Dim M1p As Double = envMax(0)
-
-        Dim M3n As Double = envMin(n)
-        Dim M3p As Double = envMax(n)
-
-        ' máximo positivo del tramo
-        Dim M2p As Double = envMax.Max()
-
-        ' ============================
-        ' REGLA NSR-10 EN APOYOS
-        ' ============================
-        M1p = Math.Max(M1p, Math.Abs(M1n) / 3)
-        M3p = Math.Max(M3p, Math.Abs(M3n) / 3)
-
-        envMax(0) = M1p
-        envMax(n) = M3p
-
-        ' ============================
-        ' MOMENTO DE REFERENCIA
-        ' ============================
-        Dim Mref As Double = Math.Max(
-        Math.Abs(M1n),
-        Math.Max(Math.Abs(M1p),
-        Math.Max(Math.Abs(M3n),
-        Math.Max(Math.Abs(M3p), Math.Abs(M2p)))))
-
-        Dim Mlim As Double = Mref / 5
-
-        ' ============================
-        ' AJUSTE EN TODO EL TRAMO
-        ' ============================
-        For i As Integer = 1 To n - 1
-
-            If envMax(i) < Mlim Then
-                envMax(i) = Mlim
-            End If
-
-            If envMin(i) > -Mlim Then
-                envMin(i) = -Mlim
-            End If
-
-        Next
-
-    End Sub
-
-    Private Sub DibujarDiagramaCortanteFrames(viga As cViga, pictureBox As PictureBox)
-
-        If viga.Frames Is Nothing OrElse viga.Frames.Count = 0 Then Return
-
-        Dim bmp As New Bitmap(pictureBox.Width, pictureBox.Height)
-        Dim g As Graphics = Graphics.FromImage(bmp)
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-        g.Clear(Color.White)
-
-        Dim margin As Single = 50
-
-        ' 🔹 Colores por combinación
-        Dim colores As Color() = {
-        Color.Red, Color.Blue, Color.Green, Color.DarkOrange,
-        Color.Purple, Color.Brown, Color.DarkCyan
-    }
-
-        ' =====================================================
-        ' 🔹 1. OBTENER RANGO GLOBAL (X y V)
-        ' =====================================================
-        Dim todasX As New List(Of Single)
-        Dim todasV As New List(Of Single)
-
-        For Each combo In Proyecto.Elementos.Vigas.Lista_Combinaciones_Design
-            Dim xOffset As Single = 0
-
-            For Each frame In viga.Frames.OrderBy(Function(f) f.JointI)
-
-                Dim bfFrame = Proyecto.Elementos.Vigas.BeamForces.
-                Where(Function(r) r.LoadCaseCombo = combo AndAlso r.Beam = frame.ObjectLabel AndAlso r.Story = frame.Story).
-                ToList()
-
-                If bfFrame.Count = 0 Then Continue For
-
-                Dim L As Single = bfFrame.Max(Function(bf) bf.ElementStation)
-
-                For Each bf In bfFrame
-                    todasX.Add(xOffset + bf.ElementStation)
-                    todasV.Add(bf.V2)   ' 👈 CORTANTE (cambia a V3 si aplica)
-                Next
-
-                xOffset += L
-            Next
-        Next
-
-        If todasX.Count < 2 Then Return
-
-        Dim minX As Single = todasX.Min()
-        Dim maxX As Single = todasX.Max()
-        Dim maxAbsV As Single = Math.Max(Math.Abs(todasV.Min()), Math.Abs(todasV.Max()))
-
-        Dim scaleX As Single = (pictureBox.Width - 2 * margin) / (maxX - minX)
-        Dim scaleY As Single = (pictureBox.Height / 2 - margin) / maxAbsV
-        Dim yZero As Single = pictureBox.Height / 2
-
-        Dim TransformX = Function(x As Single) margin + (x - minX) * scaleX
-        Dim TransformY = Function(v As Single) yZero + v * scaleY   ' + abajo / - arriba
-
-        ' =====================================================
-        ' 🔹 2. EJE HORIZONTAL V = 0
-        ' =====================================================
-        Using penZero As New Pen(Color.Black, 1)
-            penZero.DashStyle = Drawing2D.DashStyle.Dash
-            g.DrawLine(penZero, margin, yZero, pictureBox.Width - margin, yZero)
-        End Using
-
-        ' =====================================================
-        ' 🔹 3. DIBUJAR COMBINACIONES (FRAME POR FRAME)
-        ' =====================================================
-        For iComb As Integer = 0 To Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Count - 1
-
-            Dim combo = Proyecto.Elementos.Vigas.Lista_Combinaciones_Design(iComb)
-            Dim colorCombo As Color = colores(iComb Mod colores.Length)
-
-            Dim xOffset As Single = 0
-
-            For Each frame In viga.Frames
-
-                Dim bfFrame = Proyecto.Elementos.Vigas.BeamForces.
-                Where(Function(r) r.LoadCaseCombo = combo AndAlso r.Beam = frame.ObjectLabel AndAlso r.Story = frame.Story).
-                OrderBy(Function(bf) bf.ElementStation).
-                ToList()
-
-                If bfFrame.Count = 0 Then Continue For
-
-                Dim L As Single = bfFrame.Max(Function(bf) bf.ElementStation)
-
-                ' 🔹 Línea vertical en apoyo
-                If xOffset > 0 Then
-                    Using penApoyo As New Pen(Color.Gray, 1)
-                        penApoyo.DashStyle = Drawing2D.DashStyle.Dot
-                        g.DrawLine(penApoyo,
-                               TransformX(xOffset), margin,
-                               TransformX(xOffset), pictureBox.Height - margin)
-                    End Using
-                End If
-
-                ' 🔹 Dibujar cortante SOLO del frame
-                Using penV As New Pen(colorCombo, 2)
-                    For i As Integer = 0 To bfFrame.Count - 2
-                        g.DrawLine(penV,
-                        TransformX(xOffset + bfFrame(i).ElementStation),
-                        TransformY(bfFrame(i).V2),
-                        TransformX(xOffset + bfFrame(i + 1).ElementStation),
-                        TransformY(bfFrame(i + 1).V2))
-                    Next
-                End Using
-
-                ' 🔹 Máximo y mínimo del frame
-                Dim bfMax = bfFrame.OrderByDescending(Function(bf) bf.V2).First()
-                Dim bfMin = bfFrame.OrderBy(Function(bf) bf.V2).First()
-
-                DibujarEtiquetaCortante(g, TransformX, TransformY, xOffset, bfMax)
-                DibujarEtiquetaCortante(g, TransformX, TransformY, xOffset, bfMin)
-
-                xOffset += L
-            Next
-        Next
-
-        pictureBox.Image = bmp
-    End Sub
-
-    Private Sub DibujarEtiquetaCortante(
-    g As Graphics,
-    TransformX As Func(Of Single, Single),
-    TransformY As Func(Of Single, Single),
-    xOffset As Single,
-    bf As cCombinacionBeamForce)
-
-        Dim x As Single = TransformX(xOffset + bf.ElementStation)
-        Dim y As Single = TransformY(bf.V2)   ' 👈 V2 o V3
-
-        g.FillEllipse(Brushes.Black, x - 3, y - 3, 6, 6)
-
-        g.DrawString(Math.Round(bf.V2, 2).ToString(),
-                 New System.Drawing.Font("Arial", 8.0F, FontStyle.Bold),
-                 Brushes.Black,
-                 x + 5,
-                 If(bf.V2 < 0, y - 15, y + 2))
-    End Sub
 
     Private Sub Ref_Superior_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles Ref_Superior.CellValueChanged
 
@@ -1633,11 +563,374 @@ Public Class Form_09_Vigas
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        _vigaService = New VigaService(_geo)
+        _DiagramaService = New DiagramaService(_geo)
 
         ActivarCopiarPegar(Ref_Inferior)
         ActivarCopiarPegar(Ref_Superior)
         CentrarBotonesRefuerzo()
+        TimerAutoSave.Start()
 
+        Dim menuVista As New ToolStripMenuItem("Vista Interactiva Planta")
+        menuVista.ForeColor = Color.White
+        menuVista.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuVista.Click, AddressOf AbrirVistaInteractiva
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuVista)
+
+        Dim menuFiltroSec As New ToolStripMenuItem("Filtro de Secciones...")
+        menuFiltroSec.ForeColor = Color.White
+        menuFiltroSec.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuFiltroSec.Click, AddressOf AbrirFiltroSecciones
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuFiltroSec)
+
+        Dim menuReportes As New ToolStripMenuItem("Reportes")
+        menuReportes.ForeColor = Color.White
+        menuReportes.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuReportes.Click, AddressOf AbrirReportes
+        MenuStrip1.Items.Add(menuReportes)
+
+        ' ── Nivel de Disipación (DMO / DES) ──────────────────────────────────
+        ' Declarar ambas variables antes de asignar handlers (los lambdas se capturan mutuamente)
+        Dim menuDisipacion As New ToolStripMenuItem("Disipación: DMO")
+        menuDisipacion.ForeColor = Color.White
+        menuDisipacion.BackColor = Color.FromArgb(87, 87, 87)
+        menuDisipacion.Name = "MenuDisipacion"
+
+        Dim itemDMO As New ToolStripMenuItem("DMO  (fy × 1.0)")
+        itemDMO.BackColor = Color.FromArgb(87, 87, 87)
+        itemDMO.ForeColor = Color.White
+        itemDMO.Checked = True
+
+        Dim itemDES As New ToolStripMenuItem("DES  (fy × 1.25)")
+        itemDES.BackColor = Color.FromArgb(87, 87, 87)
+        itemDES.ForeColor = Color.White
+
+        AddHandler itemDMO.Click,
+            Sub(s, ev)
+                Proyecto.Elementos.Vigas.NivelDisipacion = "DMO"
+                itemDMO.Checked = True
+                itemDES.Checked = False
+                menuDisipacion.Text = "Disipación: DMO"
+            End Sub
+
+        AddHandler itemDES.Click,
+            Sub(s, ev)
+                Proyecto.Elementos.Vigas.NivelDisipacion = "DES"
+                itemDES.Checked = True
+                itemDMO.Checked = False
+                menuDisipacion.Text = "Disipación: DES"
+            End Sub
+
+        menuDisipacion.DropDownItems.Add(itemDMO)
+        menuDisipacion.DropDownItems.Add(itemDES)
+        MenuStrip1.Items.Add(menuDisipacion)
+
+        ' ── Combinaciones (recarga sin re-importar) ───────────────────────────
+        Dim menuCombinaciones As New ToolStripMenuItem("Combinaciones")
+        menuCombinaciones.ForeColor = Color.White
+        menuCombinaciones.BackColor = Color.FromArgb(87, 87, 87)
+
+        Dim itemCombDiseno As New ToolStripMenuItem("Diseño a Flexión...")
+        itemCombDiseno.BackColor = Color.FromArgb(87, 87, 87)
+        itemCombDiseno.ForeColor = Color.White
+        AddHandler itemCombDiseno.Click, AddressOf ReseleccionarCombinacionesDiseno
+
+        Dim itemCombCortante As New ToolStripMenuItem("Diseño a Cortante...")
+        itemCombCortante.BackColor = Color.FromArgb(87, 87, 87)
+        itemCombCortante.ForeColor = Color.White
+        AddHandler itemCombCortante.Click, AddressOf ReseleccionarCombinacionesCortante
+
+        Dim itemCombPlastico As New ToolStripMenuItem("Cortante Plástico...")
+        itemCombPlastico.BackColor = Color.FromArgb(87, 87, 87)
+        itemCombPlastico.ForeColor = Color.White
+        AddHandler itemCombPlastico.Click, AddressOf ReseleccionarCombinacionesPlastico
+
+        menuCombinaciones.DropDownItems.Add(itemCombDiseno)
+        menuCombinaciones.DropDownItems.Add(itemCombCortante)
+        menuCombinaciones.DropDownItems.Add(itemCombPlastico)
+        MenuStrip1.Items.Add(menuCombinaciones)
+
+        ' ── Ayuda: Tablas requeridas ──────────────────────────────────────────
+        Dim menuAyuda As New ToolStripMenuItem("? Tablas ETABS")
+        menuAyuda.ForeColor = Color.White
+        menuAyuda.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Vigas")
+        MenuStrip1.Items.Add(menuAyuda)
+
+        ' ── TabPage4: Cortante Plástico ───────────────────────────────────────
+        CrearTabCortantePlastico()
+
+    End Sub
+
+    ' ── Variables del TabPage4 ────────────────────────────────────────────────
+    Private _tabPlastico As TabPage
+    Private _dgvPlastico As DataGridView
+    Private _lblDisipacionPlastico As Label
+
+    Private Sub CrearTabCortantePlastico()
+
+        _tabPlastico = New TabPage("Cortante Plástico") With {
+            .BackColor = SystemColors.Control,
+            .Name = "TabPage4"
+        }
+
+        ' Panel de información superior
+        Dim panelInfo As New Panel() With {
+            .Dock = DockStyle.Top,
+            .Height = 42,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .Padding = New Padding(10, 8, 10, 8)
+        }
+
+        _lblDisipacionPlastico = New Label() With {
+            .AutoSize = True,
+            .ForeColor = Color.White,
+            .Font = New Font("Segoe UI", 10, FontStyle.Bold),
+            .Location = New Point(10, 10),
+            .Text = "Chequeo por Capacidad — NSR-10 C.21.5.4  |  Nivel de disipación: DMO (fy × 1.0)"
+        }
+        panelInfo.Controls.Add(_lblDisipacionPlastico)
+
+        ' DataGridView principal
+        _dgvPlastico = New DataGridView() With {
+            .Dock = DockStyle.Fill,
+            .AllowUserToAddRows = False,
+            .ReadOnly = True,
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            .MultiSelect = False,
+            .RowHeadersVisible = False,
+            .BackgroundColor = Color.White,
+            .BorderStyle = BorderStyle.None,
+            .CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+            .GridColor = Color.FromArgb(210, 210, 210),
+            .ScrollBars = ScrollBars.Both,
+            .AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+            .ColumnHeadersHeight = 52,
+            .ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+            .EnableHeadersVisualStyles = False
+        }
+        _dgvPlastico.RowTemplate.Height = 26
+
+        With _dgvPlastico.ColumnHeadersDefaultCellStyle
+            .BackColor = Color.FromArgb(87, 87, 87)
+            .ForeColor = Color.White
+            .Font = New Font("Segoe UI", 9, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
+            .WrapMode = DataGridViewTriState.True
+        End With
+        With _dgvPlastico.DefaultCellStyle
+            .Font = New Font("Segoe UI", 9)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
+            .SelectionBackColor = Color.FromArgb(200, 225, 255)
+            .SelectionForeColor = Color.Black
+        End With
+
+        ConstruirColumnasCortantePlastico()
+
+        _tabPlastico.Controls.Add(_dgvPlastico)
+        _tabPlastico.Controls.Add(panelInfo)
+
+        TabControl1.TabPages.Add(_tabPlastico)
+
+    End Sub
+
+    Private Sub ConstruirColumnasCortantePlastico()
+
+        _dgvPlastico.Columns.Clear()
+
+        Dim cols As (Name As String, Header As String, W As Integer)() = {
+            ("Piso", "Piso", 80),
+            ("Viga", "Viga", 105),
+            ("Frame", "Frame", 75),
+            ("b", "b" & vbCrLf & "(m)", 65),
+            ("d", "d" & vbCrLf & "(m)", 65),
+            ("Ln", "Ln" & vbCrLf & "(m)", 65),
+            ("fyFactor", "fy ×", 60),
+            ("MnNegIzq", "Mn⁻ izq" & vbCrLf & "(kN·m)", 90),
+            ("MnPosIzq", "Mn⁺ izq" & vbCrLf & "(kN·m)", 90),
+            ("MnNegDer", "Mn⁻ der" & vbCrLf & "(kN·m)", 90),
+            ("MnPosDer", "Mn⁺ der" & vbCrLf & "(kN·m)", 90),
+            ("VeA", "Ve_A (→)" & vbCrLf & "(kN)", 80),
+            ("VeB", "Ve_B (←)" & vbCrLf & "(kN)", 80),
+            ("VgIzq", "Vg izq" & vbCrLf & "(kN)", 75),
+            ("VgDer", "Vg der" & vbCrLf & "(kN)", 75),
+            ("VuIzq", "Vu izq" & vbCrLf & "(kN)", 80),
+            ("VcVsIzq", "Vc+Vs izq" & vbCrLf & "(kN)", 90),
+            ("phiVnIzq", "φVn izq" & vbCrLf & "(kN)", 80),
+            ("FIzq", "F izq", 65),
+            ("CumpleIzq", "✓ izq", 55),
+            ("VuDer", "Vu der" & vbCrLf & "(kN)", 80),
+            ("VcVsDer", "Vc+Vs der" & vbCrLf & "(kN)", 90),
+            ("phiVnDer", "φVn der" & vbCrLf & "(kN)", 80),
+            ("FDer", "F der", 65),
+            ("CumpleDer", "✓ der", 55)
+        }
+
+        For Each c In cols
+            Dim col As New DataGridViewTextBoxColumn() With {.Name = c.Name, .HeaderText = c.Header, .Width = c.W}
+            _dgvPlastico.Columns.Add(col)
+        Next
+
+    End Sub
+
+    ' =========================================================================
+    ' CORTANTE PLÁSTICO — Orquestación y tabla
+    ' =========================================================================
+
+    Private Sub TriggerCortantePlastico(vigas As List(Of cViga))
+
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Count = 0 Then Return
+
+        Dim fy_factor As Double = If(Proyecto.Elementos.Vigas.NivelDisipacion = "DES", 1.25, 1.0)
+
+        _vigaService.CalcularCortantePlastico(
+            vigas,
+            Proyecto.Elementos.Vigas.BeamForces,
+            New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Select(Function(c) NormalizarClaveCombo(c))),
+            fy_factor)
+
+        ActualizarTablaCortantePlastico()
+
+    End Sub
+
+    Private Sub ActualizarTablaCortantePlastico()
+
+        If _dgvPlastico Is Nothing Then Return
+
+        Dim nivelTexto = If(Proyecto.Elementos.Vigas.NivelDisipacion = "DES",
+                            "DES (fy × 1.25)", "DMO (fy × 1.0)")
+        _lblDisipacionPlastico.Text =
+            "Chequeo por Capacidad — NSR-10 C.21.5.4  |  Nivel de disipación: " & nivelTexto
+
+        _dgvPlastico.Rows.Clear()
+
+        If _vigas Is Nothing Then Return
+
+        Dim fmtN2 = "F2"
+        Dim idx As Integer = 0
+
+        For Each viga In _vigas
+
+            For Each frame In viga.Frames
+
+                If frame.CortantePlastico Is Nothing Then Continue For
+
+                Dim cp = frame.CortantePlastico
+                Dim r = _dgvPlastico.Rows.Add()
+                Dim row = _dgvPlastico.Rows(r)
+
+                row.Cells("Piso").Value = viga.Piso
+                row.Cells("Viga").Value = If(String.IsNullOrWhiteSpace(viga.NombrePlano), viga.Nombre, viga.NombrePlano)
+                row.Cells("Frame").Value = frame.ObjectLabel
+                row.Cells("b").Value = Math.Round(frame.Section.b, 3).ToString(fmtN2)
+                row.Cells("d").Value = Math.Round(frame.Section.d, 3).ToString(fmtN2)
+                row.Cells("Ln").Value = Math.Round(cp.Ln, 3).ToString(fmtN2)
+                row.Cells("fyFactor").Value = cp.fy_factor.ToString("F2")
+                row.Cells("MnNegIzq").Value = Math.Round(cp.Mn_neg_izq, 1).ToString(fmtN2)
+                row.Cells("MnPosIzq").Value = Math.Round(cp.Mn_pos_izq, 1).ToString(fmtN2)
+                row.Cells("MnNegDer").Value = Math.Round(cp.Mn_neg_der, 1).ToString(fmtN2)
+                row.Cells("MnPosDer").Value = Math.Round(cp.Mn_pos_der, 1).ToString(fmtN2)
+                row.Cells("VeA").Value = Math.Round(cp.Ve_A, 1).ToString(fmtN2)
+                row.Cells("VeB").Value = Math.Round(cp.Ve_B, 1).ToString(fmtN2)
+                row.Cells("VgIzq").Value = Math.Round(cp.ZonaIzq.Vg, 1).ToString(fmtN2)
+                row.Cells("VgDer").Value = Math.Round(cp.ZonaDer.Vg, 1).ToString(fmtN2)
+
+                PintarZonaCortantePlastico(row, cp.ZonaIzq, "VuIzq", "VcVsIzq", "phiVnIzq", "FIzq", "CumpleIzq")
+                PintarZonaCortantePlastico(row, cp.ZonaDer, "VuDer", "VcVsDer", "phiVnDer", "FDer", "CumpleDer")
+
+                If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
+                idx += 1
+
+            Next
+        Next
+
+        ' Resaltar cabeceras de grupo por viga (primer frame de cada viga → fondo más oscuro)
+        Dim vigaAnterior As String = ""
+        For Each row As DataGridViewRow In _dgvPlastico.Rows
+            Dim nombreViga = Convert.ToString(row.Cells("Viga").Value)
+            If nombreViga <> vigaAnterior Then
+                row.DefaultCellStyle.BackColor = Color.FromArgb(230, 235, 245)
+                row.DefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                vigaAnterior = nombreViga
+            End If
+        Next
+
+    End Sub
+
+    Private Sub PintarZonaCortantePlastico(row As DataGridViewRow,
+                                            zona As cRevisionCortantePlasticoZona,
+                                            colVu As String, colVcVs As String,
+                                            colPhiVn As String, colF As String, colCumple As String)
+
+        Dim fmtN2 = "F2"
+
+        row.Cells(colVu).Value = Math.Round(zona.Vu_diseno, 1).ToString(fmtN2)
+        row.Cells(colVcVs).Value = Math.Round(zona.Vc + zona.Vs, 1).ToString(fmtN2)
+        row.Cells(colPhiVn).Value = Math.Round(zona.phiVn, 1).ToString(fmtN2)
+
+        Dim f = Math.Round(zona.Factor, 2)
+        row.Cells(colF).Value = f.ToString(fmtN2)
+        row.Cells(colCumple).Value = If(zona.Cumple, "OK", "NO")
+
+        Dim fondoF = If(zona.Cumple, ColorTranslator.FromHtml("#C6EFCE"), ColorTranslator.FromHtml("#FFC7CE"))
+        Dim textoF = If(zona.Cumple, ColorTranslator.FromHtml("#006100"), ColorTranslator.FromHtml("#9C0006"))
+
+        row.Cells(colF).Style.BackColor = fondoF
+        row.Cells(colF).Style.ForeColor = textoF
+        row.Cells(colF).Style.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+        row.Cells(colCumple).Style.BackColor = fondoF
+        row.Cells(colCumple).Style.ForeColor = textoF
+        row.Cells(colCumple).Style.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+
+    End Sub
+
+    Private Sub AbrirFiltroSecciones(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Frames.Count = 0 Then
+            MessageBox.Show("Primero importe los datos de ETABS.", "Sin datos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Exit Sub
+        End If
+        Dim seccionesNuevas As List(Of String) = Nothing
+        If Form_FiltroSecciones.Mostrar(Proyecto.Elementos.Frames,
+                                        Proyecto.Elementos.Vigas.SeccionesSeleccionadas,
+                                        seccionesNuevas) Then
+            Proyecto.Elementos.Vigas.SeccionesSeleccionadas = seccionesNuevas
+            HayCambios = True
+            MessageBox.Show($"Filtro actualizado: {seccionesNuevas.Count} sección(es) seleccionada(s)." & vbCrLf &
+                            "Haz clic en 'Generar Vigas' para aplicar el nuevo filtro.",
+                            "Filtro actualizado", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
+    End Sub
+
+    Private Sub AbrirReportes(sender As Object, e As EventArgs)
+
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("Primero calcula las vigas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim form As New Form_Reporte_Resumen()
+        form.Vigas = _vigas
+        form.Show(Me)
+
+    End Sub
+
+    Private Sub AbrirVistaInteractiva(sender As Object, e As EventArgs)
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("Primero carga y calcula las vigas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim form As New Form_PlantaInteractiva()
+        form.Vigas = _vigas
+        form.Joints = _joints
+        form.GridLines = Proyecto?.Elementos?.Grids?.GridLines
+        form.VigaSeleccionada = _vigaActual
+        form.PisoActual = If(Lista_Pisos.SelectedItem IsNot Nothing,
+                              Lista_Pisos.SelectedItem.ToString(), "")
+        form.Show(Me)
     End Sub
 
     Private Sub CentrarBotonesRefuerzo()
@@ -1668,50 +961,106 @@ Public Class Form_09_Vigas
 
     Private Sub ConstruirTablaResumen(viga As cViga, dgv As DataGridView)
 
+        ' =================================================
+        ' 🔹 CONFIGURACIÓN GENERAL
+        ' =================================================
         dgv.Columns.Clear()
         dgv.Rows.Clear()
+
         dgv.AllowUserToAddRows = False
         dgv.ReadOnly = True
-        dgv.RowHeadersWidth = 160
-        'dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
 
+        dgv.RowHeadersVisible = True
+        dgv.RowHeadersWidth = 180
+
+        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         dgv.ScrollBars = ScrollBars.Both
 
-        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Regular)
+        dgv.BorderStyle = BorderStyle.None
+        dgv.CellBorderStyle = DataGridViewCellBorderStyle.Single
+        dgv.GridColor = Color.FromArgb(210, 210, 210)
+
+        dgv.EnableHeadersVisualStyles = False
+
+        ' =================================================
+        ' 🔹 TIPOGRAFÍA
+        ' =================================================
+        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10)
         dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
         dgv.RowHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
 
         ' =================================================
-        ' 🔹 PRIMERA COLUMNA (CONCEPTO)
+        ' 🔹 COLORES (estilo software)
         ' =================================================
-        dgv.Columns.Add("Concepto", "Resultado")
+        dgv.BackgroundColor = Color.White
+
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.Black
+
+        dgv.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245)
+
+        dgv.DefaultCellStyle.BackColor = Color.White
+        dgv.DefaultCellStyle.ForeColor = Color.Black
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 220, 240)
+        dgv.DefaultCellStyle.SelectionForeColor = Color.Black
 
         ' =================================================
-        ' 🔹 COLUMNAS POR FRAME (3 POR FRAME)
+        ' 🔹 ALINEACIÓN
+        ' =================================================
+        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+
+        ' =================================================
+        ' 🔹 ALTURA DE FILAS Y HEADER
+        ' =================================================
+        dgv.ColumnHeadersHeight = 45
+        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
+
+        dgv.RowTemplate.Height = 28
+
+        ' =================================================
+        ' 🔹 COLUMNAS (3 por frame)
         ' =================================================
         For Each frame In viga.Frames
 
             Dim frameName As String = frame.ObjectLabel
 
-            dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
-            dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
-            dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+            Dim colL = dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
+            Dim colC = dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
+            Dim colR = dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+
+            dgv.Columns(colL).Width = 70
+            dgv.Columns(colC).Width = 70
+            dgv.Columns(colR).Width = 70
         Next
 
         ' =================================================
         ' 🔹 FILAS (RESULTADOS)
         ' =================================================
-        dgv.Rows.Add("M− (kN·m)")
-        dgv.Rows.Add("M+ (kN·m)")
-        dgv.Rows.Add("M- ENV (kN·m)")
-        dgv.Rows.Add("M+ ENV (kN·m)")
-        dgv.Rows.Add("V (kN)")
+        Dim nombresFilas As String() = {
+        "M− (kN·m)",
+        "M+ (kN·m)",
+        "M- ENV (kN·m)",
+        "M+ ENV (kN·m)",
+        "V (kN)"
+    }
 
-        ' Estilo
-        dgv.Rows(0).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        dgv.Rows(1).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        For Each nombre In nombresFilas
+            Dim idx = dgv.Rows.Add()
+            dgv.Rows(idx).HeaderCell.Value = nombre
+        Next
+
+        ' =================================================
+        ' 🔹 EFECTO ZEBRA (lectura fácil)
+        ' =================================================
+        For i As Integer = 0 To dgv.Rows.Count - 1
+            If i Mod 2 = 0 Then
+                dgv.Rows(i).DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            End If
+        Next
+
     End Sub
 
     Private Sub ConstruirTablaRefuerzo(viga As cViga, dgv As DataGridView)
@@ -1721,129 +1070,328 @@ Public Class Form_09_Vigas
 
         dgv.AllowUserToAddRows = False
         dgv.ReadOnly = False
-        dgv.RowHeadersWidth = 70
-        'dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+        dgv.RowHeadersVisible = True
+        dgv.RowHeadersWidth = 120
+
+        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgv.ScrollBars = ScrollBars.Both
+
         dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.EnableHeadersVisualStyles = False
 
-        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Regular)
-        dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
-        dgv.RowHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
-
+        dgv.BorderStyle = BorderStyle.None
+        dgv.CellBorderStyle = DataGridViewCellBorderStyle.Single
+        dgv.GridColor = Color.FromArgb(210, 210, 210)
 
         ' ============================================
-        ' COLUMNAS POR FRAME
+        ' TIPOGRAFÍA
+        ' ============================================
+        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10)
+        dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
+        dgv.RowHeadersDefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+
+        ' ============================================
+        ' COLORES
+        ' ============================================
+        dgv.BackgroundColor = Color.White
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        dgv.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245)
+
+        dgv.DefaultCellStyle.BackColor = Color.White
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 220, 240)
+
+        ' ============================================
+        ' ALINEACIÓN
+        ' ============================================
+        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+        ' ============================================
+        ' ALTURAS
+        ' ============================================
+        dgv.ColumnHeadersHeight = 45
+        dgv.RowTemplate.Height = 26
+
+        ' ============================================
+        ' COLUMNAS
         ' ============================================
         For Each frame In viga.Frames
 
             Dim frameName As String = frame.ObjectLabel
 
-            dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
-            dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
-            dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+            Dim c1 = dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
+            Dim c2 = dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
+            Dim c3 = dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+
+            dgv.Columns(c1).Width = 65
+            dgv.Columns(c2).Width = 65
+            dgv.Columns(c3).Width = 65
 
         Next
 
         ' ============================================
-        ' FILAS = DIÁMETROS DE BARRAS
+        ' FILAS (BARRAS)
         ' ============================================
         Dim barras = {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#9", "#10"}
 
         For Each barra In barras
 
             Dim rowIndex As Integer = dgv.Rows.Add()
-
-            ' título de fila
             dgv.Rows(rowIndex).HeaderCell.Value = barra
 
-            ' inicializar en 0
             For i As Integer = 0 To dgv.Columns.Count - 1
                 dgv.Rows(rowIndex).Cells(i).Value = 0
             Next
 
         Next
 
+        ' ============================================
+        ' ZEBRA SUAVE
+        ' ============================================
+        For i As Integer = 0 To dgv.Rows.Count - 1
+            If i Mod 2 = 0 Then
+                dgv.Rows(i).DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            End If
+        Next
+
+    End Sub
+
+    Private Sub ConstruirTablaRefuerzoTransversal(viga As cViga, dgv As DataGridView)
+
+        dgv.Columns.Clear()
+        dgv.Rows.Clear()
+
+        dgv.AllowUserToAddRows = False
+        dgv.ReadOnly = False
+
+        dgv.RowHeadersVisible = True
+        dgv.RowHeadersWidth = 120
+
+        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgv.ScrollBars = ScrollBars.Both
+
+        dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
+        dgv.EnableHeadersVisualStyles = False
+
+        dgv.BorderStyle = BorderStyle.None
+        dgv.CellBorderStyle = DataGridViewCellBorderStyle.Single
+        dgv.GridColor = Color.FromArgb(210, 210, 210)
+
+        ' ============================================
+        ' TIPOGRAFÍA
+        ' ============================================
+        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10)
+        dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
+        dgv.RowHeadersDefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+
+        ' ============================================
+        ' COLORES
+        ' ============================================
+        dgv.BackgroundColor = Color.White
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        dgv.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245)
+
+        dgv.DefaultCellStyle.BackColor = Color.White
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 220, 240)
+
+        ' ============================================
+        ' ALINEACIÓN
+        ' ============================================
+        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+        ' ============================================
+        ' ALTURAS
+        ' ============================================
+        dgv.ColumnHeadersHeight = 45
+        dgv.RowTemplate.Height = 26
+
+        ' ============================================
+        ' COLUMNAS (una por tramo: Izq, Centro, Der)
+        ' ============================================
+        For Each frame In viga.Frames
+
+            Dim frameName As String = frame.ObjectLabel
+
+            Dim c1 = dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
+            Dim c2 = dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
+            Dim c3 = dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+
+            dgv.Columns(c1).Width = 65
+            dgv.Columns(c2).Width = 65
+            dgv.Columns(c3).Width = 65
+
+        Next
+
+        ' ============================================
+        ' FILAS (propiedades del estribo)
+        ' ============================================
+        Dim filas() As String = {"Num. Estribos", "# Barra", "Cant. Ramas", "Separación (m)"}
+        Dim valoresDefault() As Object = {10, 3, 2, 0.1}
+
+        For f As Integer = 0 To filas.Length - 1
+
+            Dim rowIndex As Integer = dgv.Rows.Add()
+            dgv.Rows(rowIndex).HeaderCell.Value = filas(f)
+
+            For i As Integer = 0 To dgv.Columns.Count - 1
+                dgv.Rows(rowIndex).Cells(i).Value = valoresDefault(f)
+            Next
+
+        Next
+
+        ' ============================================
+        ' VALIDACIÓN FILA #Barra (solo enteros 2–10)
+        ' ============================================
+        For i As Integer = 0 To dgv.Columns.Count - 1
+            Dim cell = TryCast(dgv.Rows(0).Cells(i), DataGridViewTextBoxCell)
+            If cell IsNot Nothing Then
+                cell.Style.ForeColor = Color.FromArgb(30, 100, 200)
+                cell.Style.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+            End If
+        Next
+
+        ' ============================================
+        ' ZEBRA SUAVE
+        ' ============================================
+        For i As Integer = 0 To dgv.Rows.Count - 1
+            If i Mod 2 = 0 Then
+                dgv.Rows(i).DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            End If
+        Next
+
     End Sub
 
     Private Sub ConstruirTablaResultadosFlexion(viga As cViga, dgv As DataGridView)
 
+        ' =================================================
+        ' 🔹 CONFIGURACIÓN GENERAL
+        ' =================================================
         dgv.Columns.Clear()
         dgv.Rows.Clear()
+
         dgv.AllowUserToAddRows = False
-        dgv.ReadOnly = True
-        dgv.RowHeadersWidth = 160
-        'dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgv.ReadOnly = False ' ← editable
         dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
 
-        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Regular)
+        dgv.RowHeadersVisible = True
+        dgv.RowHeadersWidth = 180
+
+        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgv.ScrollBars = ScrollBars.Both
+
+        dgv.BorderStyle = BorderStyle.None
+        dgv.CellBorderStyle = DataGridViewCellBorderStyle.Single
+        dgv.GridColor = Color.FromArgb(210, 210, 210)
+
+        dgv.EnableHeadersVisualStyles = False
+
+        ' =================================================
+        ' 🔹 TIPOGRAFÍA
+        ' =================================================
+        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10)
         dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
         dgv.RowHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
 
         ' =================================================
-        ' 🔹 PRIMERA COLUMNA (CONCEPTO)
+        ' 🔹 COLORES
         ' =================================================
-        dgv.Columns.Add("Concepto", "Resultado")
+        dgv.BackgroundColor = Color.White
+
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        dgv.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245)
+
+        dgv.DefaultCellStyle.BackColor = Color.White
+        dgv.DefaultCellStyle.ForeColor = Color.Black
+
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 220, 240)
+        dgv.DefaultCellStyle.SelectionForeColor = Color.Black
 
         ' =================================================
-        ' 🔹 COLUMNAS POR FRAME (3 POR FRAME)
+        ' 🔹 ALINEACIÓN
+        ' =================================================
+        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+
+        ' =================================================
+        ' 🔹 ALTURAS
+        ' =================================================
+        dgv.ColumnHeadersHeight = 45
+        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
+
+        dgv.RowTemplate.Height = 28
+
+        ' =================================================
+        ' 🔹 COLUMNAS (3 POR FRAME)
         ' =================================================
         For Each frame In viga.Frames
 
             Dim frameName As String = frame.ObjectLabel
 
-            dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
-            dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
-            dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+            Dim colL = dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
+            Dim colC = dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
+            Dim colR = dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+
+            dgv.Columns(colL).Width = 75
+            dgv.Columns(colC).Width = 75
+            dgv.Columns(colR).Width = 75
         Next
 
         ' =================================================
-        ' 🔹 FILAS (RESULTADOS)
+        ' 🔹 FILAS
         ' =================================================
-        'dgv.Rows.Add("Sección")
-        'dgv.Rows.Add("Longitud (m)")
-        'dgv.Rows.Add("M- ENV (kN·m)")
-        'dgv.Rows.Add("M+ ENV (kN·m)")
-        'dgv.Rows.Add("As req (-)")
-        'dgv.Rows.Add("As req (+)")
-        'dgv.Rows.Add("As col (-)")
-        'dgv.Rows.Add("As col (+)")
-        'dgv.Rows.Add("F (-)")
-        'dgv.Rows.Add("F (+)")
-
         Dim nombresFilas As String() = {
-                                    "Sección",
-                                    "Longitud (m)",
-                                    "M- ENV (kN·m)",
-                                    "M+ ENV (kN·m)",
-                                    "As req (-)",
-                                    "As req (+)",
-                                    "As col (-)",
-                                    "As col (+)",
-                                    "F (-)",
-                                    "F (+)"
-                                }
+        "Sección",
+        "Longitud (m)",
+        "M- ENV (kN·m)",
+        "M+ ENV (kN·m)",
+        "As req (-)",
+        "As req (+)",
+        "As col (-)",
+        "As col (+)",
+        "F (-)",
+        "F (+)",
+        "Redistribución (-)",
+        "Redistribución (+)",
+        "F_Final (-)",
+        "F_Final (+)"
+    }
 
         For Each nombre In nombresFilas
             Dim idx = dgv.Rows.Add()
             dgv.Rows(idx).HeaderCell.Value = nombre
         Next
 
-        dgv.RowHeadersVisible = True
-        dgv.RowHeadersWidth = 160
+        ' =================================================
+        ' 🔹 ZEBRA (mejora lectura)
+        ' =================================================
+        For i As Integer = 0 To dgv.Rows.Count - 1
+            If i Mod 2 = 0 Then
+                dgv.Rows(i).DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            End If
+        Next
 
-        '' Estilo
-        'dgv.Rows(0).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(1).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(2).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(3).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(4).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(5).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(6).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(7).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(8).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
-        'dgv.Rows(9).DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        ' =================================================
+        ' 🔹 FILAS EDITABLES (REDISTRIBUCIÓN)
+        ' =================================================
+        dgv.Rows(FILA_RED_NEG).DefaultCellStyle.BackColor = Color.FromArgb(255, 248, 220) ' amarillo suave
+        dgv.Rows(FILA_RED_POS).DefaultCellStyle.BackColor = Color.FromArgb(255, 248, 220)
+
+        dgv.Rows(FILA_RED_NEG).DefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+        dgv.Rows(FILA_RED_POS).DefaultCellStyle.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+
+        ' =================================================
+        ' 🔹 OPCIONAL: BLOQUE VISUAL POR FRAME
+        ' =================================================
+        For i = 0 To dgv.Columns.Count - 1
+            If (i \ 3) Mod 2 = 0 Then
+                dgv.Columns(i).DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
+            End If
+        Next
 
     End Sub
 
@@ -1900,7 +1448,7 @@ Public Class Form_09_Vigas
 
     Private Sub LlenarTablaResumen(viga As cViga, dgv As DataGridView)
 
-        Dim colBase As Integer = 1
+        Dim colBase As Integer = 0
 
         For Each frame In viga.Frames
 
@@ -2064,10 +1612,12 @@ Public Class Form_09_Vigas
                     dgv.Rows(1).Cells(colBase).Value = Math.Round(frame.Longitud, 2)
                 End If
 
-                dgv.Rows(2).Cells(colBase).Value = Math.Abs(Math.Round(revision.MomentoNegativo, 2))
-                dgv.Rows(3).Cells(colBase).Value = Math.Round(revision.MomentoPositivo, 2)
-                dgv.Rows(4).Cells(colBase).Value = Math.Round(revision.AsReqSup, 0)
-                dgv.Rows(5).Cells(colBase).Value = Math.Round(revision.AsReqInf, 0)
+                Dim res = revision.ResultadoBase
+
+                dgv.Rows(2).Cells(colBase).Value = Math.Abs(Math.Round(res.MomentoNegativo, 2))
+                dgv.Rows(3).Cells(colBase).Value = Math.Round(res.MomentoPositivo, 2)
+                dgv.Rows(4).Cells(colBase).Value = Math.Round(res.AsReqSup, 0)
+                dgv.Rows(5).Cells(colBase).Value = Math.Round(res.AsReqInf, 0)
 
                 colBase += 1
 
@@ -2077,121 +1627,69 @@ Public Class Form_09_Vigas
     End Sub
 
 
-    Private Sub designVigas()
 
-        Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
-
-        For Each viga In Proyecto.Elementos.Vigas.Vigas
-
-            For Each frame In viga.Frames
-
-                Dim h As Double = frame.Section.h
-                Dim b As Double = frame.Section.b
-                Dim d As Double = frame.Section.d
-                Dim fc As Double = frame.Section.fc
-                Dim fy As Double = frame.Section.fy
-                Dim phi As Double = 0.9
-
-                Dim factorComun As Double = 0.85 * fc / fy
-                Dim denominador As Double = 0.85 * phi * b * (d * d) * (fc * 1000)
-
-                ' Lista de posiciones a evaluar
-                Dim posiciones = {
-                        PosicionTramoViga.Izquierda,
-                        PosicionTramoViga.Centro,
-                        PosicionTramoViga.Derecha
-                    }
-
-                For Each pos In posiciones
-
-                    ' Buscar o crear revisión
-                    Dim revision = frame.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = pos)
-
-                    If revision Is Nothing Then
-                        revision = New cRevisionFlexionZona With {
-                    .Posicion = pos
-                }
-                        frame.RevisionFlexion.Add(revision)
-                    End If
-
-                    ' Momentos
-                    Dim Mu_neg As Double = Math.Abs(revision.MomentoNegativo)
-                    Dim Mu_pos As Double = Math.Abs(revision.MomentoPositivo)
-
-                    ' Cálculo rho
-                    Dim raiz_neg = Math.Sqrt(1 - (2 * Mu_neg / denominador))
-                    Dim raiz_pos = Math.Sqrt(1 - (2 * Mu_pos / denominador))
-
-                    Dim rho_neg As Double = factorComun * (1 - raiz_neg)
-                    Dim rho_pos As Double = factorComun * (1 - raiz_pos)
-
-                    ' Acero requerido
-                    revision.AsReqSup = rho_neg * b * d * 1000000.0
-                    revision.AsReqInf = rho_pos * b * d * 1000000.0
-
-                Next
-
-                frame.Longitud = Distancia(frame, jointsDict)
-
-            Next
-        Next
-
-    End Sub
-
-
-    Private Sub AplicarEnvolventeNSR(
-    ByRef M1n As Double,
-    ByRef M1p As Double,
-    ByRef M2n As Double,
-    ByRef M2p As Double,
-    ByRef M3n As Double,
-    ByRef M3p As Double)
-
-        ' ===============================
-        ' REGLA 1 – MOMENTO POSITIVO APOYO
-        ' ===============================
-        M1p = Math.Max(M1p, Math.Abs(M1n) / 3)
-        M3p = Math.Max(M3p, Math.Abs(M3n) / 3)
-
-        ' ===============================
-        ' REGLA 2 – MOMENTO MINIMO TRAMO
-        ' ===============================
-        Dim Mmax As Double =
-        Math.Max(Math.Abs(M1n),
-        Math.Max(Math.Abs(M1p),
-        Math.Max(Math.Abs(M3n), Math.Abs(M3p))))
-
-        Dim Mmin As Double = Mmax / 5
-
-        If Math.Abs(M2n) < Mmin Then
-            M2n = -Mmin
-        End If
-
-        If Math.Abs(M2p) < Mmin Then
-            M2p = Mmin
-        End If
-
-    End Sub
 
     Private Sub Form_09_Vigas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Proyecto = Form_00_PaginaPrincipal.proyecto
+        If Proyecto.Elementos.Vigas.Vigas IsNot Nothing AndAlso Proyecto.Elementos.Vigas.Vigas.Count > 0 Then
+            RefrescarDesdeProyecto()
+        End If
     End Sub
 
     Private Sub Lista_Vigas_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Lista_Vigas.SelectedIndexChanged
+
+        If _cargando Then Exit Sub
 
         If Me.DesignMode Then Return
         If Lista_Vigas.SelectedItem Is Nothing Then Exit Sub
 
         Dim vigaSel As cViga = CType(Lista_Vigas.SelectedItem, cViga)
+        _vigaActual = TryCast(Lista_Vigas.SelectedItem, cViga)
 
-        Lista_Pisos.SelectedItem = vigaSel.Piso
-        Nombre_Viga.Text = vigaSel.Name_Beam
+        Dim piso As String = vigaSel.Piso
 
-        DibujarPlanta()
+        If String.IsNullOrEmpty(piso) Then Exit Sub
+
+        Dim index = Lista_Pisos.Items.IndexOf(piso)
+        If index >= 0 Then
+            Lista_Pisos.SelectedIndex = index
+        Else
+            Exit Sub
+        End If
+
+        _cargando = True
+        Nombre_Viga.Text = If(String.IsNullOrWhiteSpace(vigaSel.NombrePlano), vigaSel.Nombre, vigaSel.NombrePlano)
+        _cargando = False
+
+        ' 🔹 Validaciones antes de dibujar
+        If Lista_Pisos.SelectedItem Is Nothing Then Exit Sub
+        If _vigas Is Nothing OrElse _joints Is Nothing Then Exit Sub
+
+        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+        If grids Is Nothing Then Exit Sub
+
+        _DiagramaService.DibujarPlanta(PictureBox1,
+                                       _vigas,
+                                       _joints,
+                                       grids,
+                                       Lista_Pisos.SelectedItem.ToString(),
+                                       vigaSel)
 
         CargarVigaCompleta(vigaSel)
 
     End Sub
+
+    Private Sub Nombre_Viga_TextChanged(sender As Object, e As EventArgs) Handles Nombre_Viga.TextChanged
+        If _cargando Then Return
+        Dim viga = TryCast(Lista_Vigas.SelectedItem, cViga)
+        If viga Is Nothing Then Return
+        viga.NombrePlano = Nombre_Viga.Text.Trim()
+    End Sub
+
+    ' Devuelve el nombre para reportes: NombrePlano si el usuario lo definió, si no Nombre.
+    Private Function NombreReporte(viga As cViga) As String
+        Return If(String.IsNullOrWhiteSpace(viga.NombrePlano), viga.Nombre, viga.NombrePlano)
+    End Function
 
     Private Sub Boton_Aplicar_Click(sender As Object, e As EventArgs) Handles Boton_Aplicar.Click
         '====================================================================
@@ -2209,188 +1707,130 @@ Public Class Form_09_Vigas
         Next
 
         ' Guardar refuerzo superior
-        GuardarRefuerzoTabla(viga, Ref_Superior, eTipoRefuerzo.Superior)
+        Dim datosSup = ExtraerRefuerzoDesdeGrid(Ref_Superior)
+        _vigaService.GuardarRefuerzo(viga, datosSup, eTipoRefuerzo.Superior)
 
         ' Guardar refuerzo inferior
-        GuardarRefuerzoTabla(viga, Ref_Inferior, eTipoRefuerzo.Inferior)
+        Dim datosInf = ExtraerRefuerzoDesdeGrid(Ref_Inferior)
+        _vigaService.GuardarRefuerzo(viga, datosInf, eTipoRefuerzo.Inferior)
 
-        CalcularFlexionViga(viga)
+        ' Guardar refuerzo transversal
+        Dim datosTransv = ExtraerEstribosDesdeGrid(Ref_Transversal)
+        _vigaService.GuardarRefuerzoTransversal(viga, datosTransv)
 
+        _vigaService.CalcularFlexionViga(viga)
         MostrarResultadosFlexion(viga)
 
+        ' Recalcular cortante con el nuevo refuerzo transversal (zonas N×s)
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+            Dim combsCortante_ap = New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)))
+            Dim listaViga As New List(Of cViga) From {viga}
+            _vigaService.CalcularEnvolventeCortante(listaViga,
+                                                    Proyecto.Elementos.Vigas.BeamForces,
+                                                    combsCortante_ap)
+            _vigaService.CalcularCapacidadCortante(listaViga)
+            MostrarResultadosCortante(viga)
 
-        'Dim dgv As DataGridView = Tabla_Resultados_Flexion
-        'Dim colBase As Integer = 1
+            Dim bfCortante = Proyecto.Elementos.Vigas.BeamForces _
+                .Where(Function(bf) combsCortante_ap.Contains(bf.LoadCaseKey)) _
+                .ToList()
+            _DiagramaService.DibujarDiagramaCortanteFrames(viga, Diagrama_Cortante, bfCortante, combsCortante_ap)
+        End If
 
-        'For Each frame In viga.Frames
-        '    ' Lista de posiciones a evaluar
-        '    Dim posiciones = {
-        '            PosicionTramoViga.Izquierda,
-        '            PosicionTramoViga.Centro,
-        '            PosicionTramoViga.Derecha
-        '        }
+        ' Cortante plástico para la viga actual (si aplica)
+        TriggerCortantePlastico(New List(Of cViga) From {viga})
 
-        '    For Each pos In posiciones
-
-        '        Dim revision = frame.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = pos)
-
-        '        dgv.Rows(6).Cells(colBase).Value = Math.Round(revision.AsProvSup, 0)
-        '        dgv.Rows(7).Cells(colBase).Value = Math.Round(revision.AsProvInf, 0)
-
-        '        dgv.Rows(8).Cells(colBase).Value = Math.Round(Math.Min(revision.AsProvSup / revision.AsReqSup, 9.99), 2)
-        '        dgv.Rows(9).Cells(colBase).Value = Math.Round(Math.Min(revision.AsProvInf / revision.AsReqInf, 9.99), 2)
-
-        '        Dim cell = dgv.Rows(8).Cells(colBase)
-        '        If Math.Min(revision.AsProvSup / revision.AsReqSup, 9.99) >= 0.9 Then
-        '            cell.Style.BackColor = ColorTranslator.FromHtml("#C6EFCE")
-        '            cell.Style.ForeColor = ColorTranslator.FromHtml("#006100")
-        '        Else
-        '            cell.Style.BackColor = ColorTranslator.FromHtml("#FFC7CE")
-        '            cell.Style.ForeColor = ColorTranslator.FromHtml("#9C0006")
-        '        End If
-
-        '        cell = dgv.Rows(9).Cells(colBase)
-        '        If Math.Min(revision.AsProvInf / revision.AsReqInf, 9.99) >= 0.9 Then
-        '            cell.Style.BackColor = ColorTranslator.FromHtml("#C6EFCE")
-        '            cell.Style.ForeColor = ColorTranslator.FromHtml("#006100")
-        '        Else
-        '            cell.Style.BackColor = ColorTranslator.FromHtml("#FFC7CE")
-        '            cell.Style.ForeColor = ColorTranslator.FromHtml("#9C0006")
-        '        End If
-
-
-        '        colBase += 1
-
-        '    Next
-
-        'Next
+        HayCambios = True
 
         MessageBox.Show("Refuerzo guardado correctamente",
                     "Información",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information)
 
+    End Sub
+
+
+    'Private Sub AplicarYCalcularViga(viga As cViga,
+    '                        dgvSup As DataGridView,
+    '                        dgvInf As DataGridView)
+
+    '    ' Limpiar
+    '    For Each f In viga.Frames
+    '        f.RefuerzoSuperior.Clear()
+    '        f.RefuerzoInferior.Clear()
+    '    Next
+
+
+    '    ' Guardar desde tablas
+    '    GuardarRefuerzoTabla(viga, dgvSup, eTipoRefuerzo.Superior)
+    '    GuardarRefuerzoTabla(viga, dgvInf, eTipoRefuerzo.Inferior)
+
+    '    ' 🔥 Calcular
+    '    _vigaService.CalcularFlexionViga(viga)
+
+    'End Sub
+
+    Private Sub AplicarYCalcularViga(viga As cViga,
+                                dgvSup As DataGridView,
+                                dgvInf As DataGridView)
+
+        ' 🔹 limpiar
+        For Each f In viga.Frames
+            f.RefuerzoSuperior.Clear()
+            f.RefuerzoInferior.Clear()
+        Next
+
+        ' 🔹 extraer
+        Dim datosSup = ExtraerRefuerzoDesdeGrid(dgvSup)
+        Dim datosInf = ExtraerRefuerzoDesdeGrid(dgvInf)
+
+        ' 🔹 guardar
+        _vigaService.GuardarRefuerzo(viga, datosSup, eTipoRefuerzo.Superior)
+        _vigaService.GuardarRefuerzo(viga, datosInf, eTipoRefuerzo.Inferior)
+
+        ' 🔥 calcular
+        _vigaService.CalcularFlexionViga(viga)
 
     End Sub
 
-    Private Sub GuardarRefuerzoTabla(viga As cViga,
-                                 dgv As DataGridView,
-                                 tipo As eTipoRefuerzo)
+    Private Function ExtraerRefuerzoDesdeGrid(dgv As DataGridView) _
+    As List(Of (FrameLabel As String, Posicion As PosicionTramoViga, Barras As Dictionary(Of String, Integer)))
+
+        Dim lista As New List(Of (String, PosicionTramoViga, Dictionary(Of String, Integer)))
 
         For col As Integer = 0 To dgv.Columns.Count - 1
 
-            Dim header As String = dgv.Columns(col).HeaderText
-            Dim partes = header.Split({vbCrLf}, StringSplitOptions.None)
+            Dim partes = dgv.Columns(col).HeaderText.Split({vbCrLf}, StringSplitOptions.None)
 
-            Dim frameLabel As String = partes(0).Trim()
-            Dim posicionTexto As String = partes(1).Trim()
+            Dim frameLabel = partes(0).Trim()
+            Dim posicionTexto = partes(1).Trim()
 
-            Dim posicion As PosicionTramoViga
+            Dim posicion As PosicionTramoViga =
+            If(posicionTexto = "Izq", PosicionTramoViga.Izquierda,
+            If(posicionTexto = "Centro", PosicionTramoViga.Centro,
+                                          PosicionTramoViga.Derecha))
 
-            Select Case posicionTexto
-                Case "Izq"
-                    posicion = PosicionTramoViga.Izquierda
-                Case "Centro"
-                    posicion = PosicionTramoViga.Centro
-                Case "Der"
-                    posicion = PosicionTramoViga.Derecha
-            End Select
-
-            Dim frame = viga.Frames.Find(Function(f) f.ObjectLabel = frameLabel)
-
-            If frame Is Nothing Then Continue For
-
-            Dim tramo As New cRefuerzoTramo
-            tramo.Posicion = posicion
-
-            Dim AsTotal As Double = 0
+            Dim barras As New Dictionary(Of String, Integer)
 
             For row As Integer = 0 To dgv.Rows.Count - 1
 
-                Dim barra As String = dgv.Rows(row).HeaderCell.Value.ToString()
+                Dim barra = dgv.Rows(row).HeaderCell.Value.ToString()
                 Dim valor = dgv.Rows(row).Cells(col).Value
 
                 Dim cantidad As Integer = 0
+                If valor IsNot Nothing Then Integer.TryParse(valor.ToString(), cantidad)
 
-                If valor IsNot Nothing Then
-                    Integer.TryParse(valor.ToString(), cantidad)
-                End If
-
-                If cantidad > 0 Then
-                    tramo.Barras(barra) = cantidad
-
-                    ' 🔹 calcular área de acero
-                    Dim areaBarra As Double = AreaRefuerzo(barra)
-
-                    AsTotal += cantidad * areaBarra
-
-                End If
+                If cantidad > 0 Then barras(barra) = cantidad
 
             Next
 
-            ' 🔹 guardar lista de barras
-            If tipo = eTipoRefuerzo.Superior Then
-                frame.RefuerzoSuperior.Add(tramo)
-            Else
-                frame.RefuerzoInferior.Add(tramo)
-            End If
-
-            '' 🔹 guardar As total en el frame según posición
-            'If tipo = eTipoRefuerzo.Superior Then
-
-            '    Select Case posicion
-            '        Case PosicionTramoViga.Izquierda
-            '            frame.AsSupIzq = AsTotal
-
-            '        Case PosicionTramoViga.Centro
-            '            frame.AsSupCen = AsTotal
-
-            '        Case PosicionTramoViga.Derecha
-            '            frame.AsSupDer = AsTotal
-            '    End Select
-
-            'Else
-
-            '    Select Case posicion
-            '        Case PosicionTramoViga.Izquierda
-            '            frame.AsInfIzq = AsTotal
-
-            '        Case PosicionTramoViga.Centro
-            '            frame.AsInfCen = AsTotal
-
-            '        Case PosicionTramoViga.Derecha
-            '            frame.AsInfDer = AsTotal
-            '    End Select
-
-            'End If
-
-
-            ' ================================
-            ' Guardar As provisto en revisión
-            ' ================================
-
-            Dim revision = frame.RevisionFlexion.Find(Function(r) r.Posicion = posicion)
-
-            If revision Is Nothing Then
-
-                revision = New cRevisionFlexionZona
-                revision.Posicion = posicion
-
-                frame.RevisionFlexion.Add(revision)
-
-            End If
-
-            If tipo = eTipoRefuerzo.Superior Then
-                revision.AsProvSup = AsTotal
-            Else
-                revision.AsProvInf = AsTotal
-            End If
+            lista.Add((frameLabel, posicion, barras))
 
         Next
 
-    End Sub
+        Return lista
 
-
+    End Function
     Private Function ObtenerAsProvista(lista As List(Of cRefuerzoTramo),
                                    posicion As PosicionTramoViga) As Double
 
@@ -2509,23 +1949,7 @@ Public Class Form_09_Vigas
     End Sub
 
 
-    Public Function SonVigasCompatibles(v1 As cViga, v2 As cViga) As Boolean
 
-        If v1.Frames.Count <> v2.Frames.Count Then Return False
-
-        For i = 0 To v1.Frames.Count - 1
-
-            Dim f1 = v1.Frames(i)
-            Dim f2 = v2.Frames(i)
-
-            ' Puedes hacer esto más estricto si quieres
-            If Math.Abs(f1.Longitud - f2.Longitud) > 0.01 Then Return False
-
-        Next
-
-        Return True
-
-    End Function
 
 
     Public Sub CopiarRefuerzoEntreVigas(origen As cViga, destino As cViga)
@@ -2566,61 +1990,11 @@ Public Class Form_09_Vigas
 
     End Function
 
-    Private Sub CalcularFlexionViga(viga As cViga)
-
-        For Each frame In viga.Frames
-
-            Dim posiciones = {
-                PosicionTramoViga.Izquierda,
-                PosicionTramoViga.Centro,
-                PosicionTramoViga.Derecha
-            }
-
-            For Each pos In posiciones
-
-                Dim revision = frame.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = pos)
-
-                If revision Is Nothing Then Continue For
-
-                ' 🔥 Aquí ya tienes AsProv calculado desde GuardarRefuerzoTabla
-                ' Solo aseguras que exista comparación
-                If revision.AsReqSup > 0 Then
-                    revision.RatioSup = Math.Min(revision.AsProvSup / revision.AsReqSup, 9.99)
-                End If
-
-                If revision.AsReqInf > 0 Then
-                    revision.RatioInf = Math.Min(revision.AsProvInf / revision.AsReqInf, 9.99)
-                End If
-
-            Next
-
-        Next
-
-    End Sub
-
-    Private Sub AplicarYCalcularViga(viga As cViga,
-                                dgvSup As DataGridView,
-                                dgvInf As DataGridView)
-
-        ' Limpiar
-        For Each f In viga.Frames
-            f.RefuerzoSuperior.Clear()
-            f.RefuerzoInferior.Clear()
-        Next
-
-        ' Guardar desde tablas
-        GuardarRefuerzoTabla(viga, dgvSup, eTipoRefuerzo.Superior)
-        GuardarRefuerzoTabla(viga, dgvInf, eTipoRefuerzo.Inferior)
-
-        ' 🔥 Calcular
-        CalcularFlexionViga(viga)
-
-    End Sub
 
     Private Sub MostrarResultadosFlexion(viga As cViga)
 
         Dim dgv As DataGridView = Tabla_Resultados_Flexion
-        Dim colBase As Integer = 1
+        Dim colBase As Integer = 0
 
         For Each frame In viga.Frames
 
@@ -2634,15 +2008,42 @@ Public Class Form_09_Vigas
 
                 Dim revision = frame.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = pos)
 
-                dgv.Rows(6).Cells(colBase).Value = Math.Round(revision.AsProvSup, 0)
-                dgv.Rows(7).Cells(colBase).Value = Math.Round(revision.AsProvInf, 0)
+                Dim res = revision.ResultadoBase
 
-                dgv.Rows(8).Cells(colBase).Value = Math.Round(revision.RatioSup, 2)
-                dgv.Rows(9).Cells(colBase).Value = Math.Round(revision.RatioInf, 2)
+                dgv.Rows(6).Cells(colBase).Value = Math.Round(res.AsProvSup, 0)
+                dgv.Rows(7).Cells(colBase).Value = Math.Round(res.AsProvInf, 0)
+
+                dgv.Rows(8).Cells(colBase).Value = Math.Round(res.RatioSup, 2)
+                dgv.Rows(9).Cells(colBase).Value = Math.Round(res.RatioInf, 2)
 
                 ' Colores (igual que ya tienes)
-                PintarCelda(dgv.Rows(8).Cells(colBase), revision.RatioSup)
-                PintarCelda(dgv.Rows(9).Cells(colBase), revision.RatioInf)
+                PintarCelda(dgv.Rows(8).Cells(colBase), res.RatioSup)
+                PintarCelda(dgv.Rows(9).Cells(colBase), res.RatioInf)
+
+                Dim factor As Double = Math.Round(revision.FactorRedistribucion, 2)
+
+                ' Limpiar primero (evita basura visual)
+                dgv.Rows(10).Cells(colBase).Value = ""
+                dgv.Rows(11).Cells(colBase).Value = ""
+
+                Select Case pos
+
+                    Case PosicionTramoViga.Izquierda, PosicionTramoViga.Derecha
+                        dgv.Rows(10).Cells(colBase).Value = factor
+
+                    Case PosicionTramoViga.Centro
+                        dgv.Rows(11).Cells(colBase).Value = factor
+
+                End Select
+
+                Dim res_act = revision.ResultadoActual
+
+                dgv.Rows(12).Cells(colBase).Value = Math.Round(res_act.RatioSup, 2)
+                dgv.Rows(13).Cells(colBase).Value = Math.Round(res_act.RatioInf, 2)
+
+                ' 🔹 Color 
+                PintarCelda(dgv.Rows(12).Cells(colBase), res_act.RatioSup)
+                PintarCelda(dgv.Rows(13).Cells(colBase), res_act.RatioInf)
 
                 colBase += 1
 
@@ -2678,7 +2079,7 @@ Public Class Form_09_Vigas
             If SaveAs.ShowDialog() = DialogResult.OK Then
 
                 Proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
-
+                Form_00_PaginaPrincipal.proyecto = Proyecto
                 Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
 
                 ' ✅ Mensaje de éxito
@@ -2686,13 +2087,33 @@ Public Class Form_09_Vigas
 
             End If
 
-            'If SaveAs.FileName <> String.Empty Then
-            '    Proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
-            '    Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
-            'End If
         Catch ex As Exception
             ' ❌ Mensaje de error (MUY IMPORTANTE)
             MessageBox.Show("Error al guardar el archivo: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+
+        End Try
+
+    End Sub
+
+    Private Sub Guardar()
+
+        Try
+
+            If String.IsNullOrEmpty(Proyecto.Ruta) Then
+                SaveAs(Proyecto)
+                Exit Sub
+            End If
+
+            Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+
+            UltimoGuardado = DateTime.Now
+            HayCambios = False
+
+            MessageBox.Show("Cambios guardados correctamente.", "Guardar", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+
+            MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
 
         End Try
 
@@ -2704,84 +2125,506 @@ Public Class Form_09_Vigas
 
     Public Sub Open()
 
+        Dim OpenFile As New OpenFileDialog
+        OpenFile.Filter = "Archivo|*.esm"
+        OpenFile.Title = "Abrir Archivo"
+
+        If OpenFile.ShowDialog() <> DialogResult.OK Then Exit Sub
+
         Try
-            Dim OpenFile As New OpenFileDialog
-            OpenFile.Filter = "Archivo|*.esm"
-            OpenFile.Title = "Abrir Archivo"
-
-            If OpenFile.ShowDialog() = DialogResult.OK Then
-
-                ' 🔥 Deserializar
-                Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(OpenFile.FileName)
-
-                ' 🔥 Cargar UI
-                CargarCombos(Proyecto)
-
-                ' ✅ Mensaje de éxito
-                MessageBox.Show("El archivo se abrió correctamente.", "Abrir", MessageBoxButtons.OK, MessageBoxIcon.Information)
-
-            End If
-
-        Catch ex As Exception
-
-            ' ❌ Mensaje de error claro
-            MessageBox.Show("Error al abrir el archivo. Puede estar dañado o incompatible." & vbCrLf & ex.Message,
-                            "Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error)
-
+            Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(OpenFile.FileName)
+        Catch
+            ' Fallback: archivos guardados antes de la clase Proyecto (solo cElementos)
+            Try
+                Dim elementos = Funciones_Programa.DeSerializar(Of cElementos)(OpenFile.FileName)
+                Proyecto = New Proyecto()
+                Proyecto.Elementos = elementos
+            Catch ex As Exception
+                MessageBox.Show("Error al abrir el archivo. Puede estar dañado o ser incompatible." & vbCrLf & ex.Message,
+                                "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Exit Sub
+            End Try
         End Try
-        'Dim Open As New OpenFileDialog
-        'Open.Filter = "Archivo|*.esm"
-        'Open.Title = "Abrir Archivo"
 
-
-        'Open.ShowDialog()
-        'If Open.FileName <> String.Empty Then
-        '    Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(Open.FileName)
-
-        '    CargarCombos(Proyecto)
-
-        'End If
+        Proyecto.Ruta = OpenFile.FileName
+        Form_00_PaginaPrincipal.proyecto = Proyecto
+        CargarCombos(Proyecto)
+        HayCambios = False
+        MessageBox.Show("El archivo se abrió correctamente.", "Abrir", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
     End Sub
 
     Private Sub CargarCombos(Proyecto As ARCO.Proyecto)
 
-        Dim vigas As List(Of cViga)
-        Dim Frames = Proyecto.Elementos.Frames
+        _cargando = True
+        Me.SuspendLayout()
 
-        vigas = Proyecto.Elementos.Vigas.Vigas
-        _vigas = Proyecto.Elementos.Vigas.Vigas
+        Dim vigas As List(Of cViga) = Proyecto.Elementos.Vigas.Vigas
+        _vigas = vigas
+        _vigaActual = vigas.FirstOrDefault()
 
-        Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
-        _joints = jointsDict
+        _joints = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
 
-        ' Combo de vigas
+        Lista_Vigas.BeginUpdate()
         Lista_Vigas.DataSource = Nothing
         Lista_Vigas.DataSource = vigas
         Lista_Vigas.DisplayMember = "Nombre"
+        Lista_Vigas.EndUpdate()
 
-        ' Combo de pisos
-        Dim stories As List(Of String) = Frames _
+        Dim stories As List(Of String) = Proyecto.Elementos.Frames _
             .Select(Function(f) f.Story) _
             .Distinct() _
             .OrderBy(Function(s) s) _
             .ToList()
 
+        Lista_Pisos.BeginUpdate()
         Lista_Pisos.DataSource = Nothing
         Lista_Pisos.DataSource = stories
+        Lista_Pisos.EndUpdate()
 
-        If Lista_Vigas.SelectedItem IsNot Nothing Then
+        If vigas.Count > 0 Then Lista_Vigas.SelectedIndex = 0
 
-            Dim vigaSel As cViga = CType(Lista_Vigas.SelectedItem, cViga)
+        _cargando = False
+        Me.ResumeLayout(False)
 
-            Lista_Pisos.SelectedItem = vigaSel.Piso
+        If _vigaActual IsNot Nothing Then
+            Dim piso = _vigaActual.Piso
+            Dim idx = Lista_Pisos.Items.IndexOf(piso)
+            If idx >= 0 Then Lista_Pisos.SelectedIndex = idx
 
+            Dim grids = Proyecto.Elementos?.Grids?.GridLines
+            If grids IsNot Nothing Then
+                _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, piso, _vigaActual)
+            End If
+
+            CargarVigaCompleta(_vigaActual)
         End If
-
 
     End Sub
 
+    Private Sub Tabla_Resultados_Flexion_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles Tabla_Resultados_Flexion.CellEndEdit
+
+        If e.RowIndex = FILA_RED_NEG Or e.RowIndex = FILA_RED_POS Then
+
+            Dim val As Double = 0
+            Double.TryParse(Tabla_Resultados_Flexion.Rows(e.RowIndex).Cells(e.ColumnIndex).Value?.ToString(), val)
+
+            ' limitar
+            If val < 0 Then val = 0
+            If val > 0.2 Then val = 0.2
+
+            Tabla_Resultados_Flexion.Rows(e.RowIndex).Cells(e.ColumnIndex).Value = val
+
+            ' =========================================
+            ' 🔥 IDENTIFICAR FRAME Y POSICIÓN
+            ' =========================================
+
+            Dim frameIndex As Integer = e.ColumnIndex \ 3
+            Dim posIndex As Integer = e.ColumnIndex Mod 3
+
+            Dim viga As cViga = _vigaActual
+            Dim frame As cFrame = viga.Frames(frameIndex)
+
+            Dim posicion As PosicionTramoViga
+
+            Select Case posIndex
+                Case 0
+                    posicion = PosicionTramoViga.Izquierda
+                Case 1
+                    posicion = PosicionTramoViga.Centro
+                Case 2
+                    posicion = PosicionTramoViga.Derecha
+            End Select
+
+            ' =========================================
+            ' 🔥 APLICAR REDISTRIBUCIÓN
+            ' =========================================
+
+            Dim mensaje = _vigaService.AplicarRedistribucion(frame, posicion, val, e.RowIndex = FILA_RED_NEG)
+
+            If mensaje IsNot Nothing Then
+                MessageBox.Show(mensaje, "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Exit Sub
+            End If
+
+            _vigaService.CalcularFlexionViga(viga)
+            MostrarResultadosFlexion(viga)
+
+            HayCambios = True
+
+        End If
+
+    End Sub
+
+    Private Function ObtenerValor(fila As Integer, col As Integer) As Double
+        Dim val As Double = 0
+        If Tabla_Resultados_Flexion.Rows(fila).Cells(col).Value IsNot Nothing Then
+            Double.TryParse(Tabla_Resultados_Flexion.Rows(fila).Cells(col).Value.ToString(), val)
+        End If
+        Return val
+    End Function
+
+    Private Sub Tabla_Demandas_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles Tabla_Demandas.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Ref_Superior_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles Ref_Superior.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Ref_Inferior_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles Ref_Inferior.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+    Private Sub Tabla_Resultados_Flexion_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles Tabla_Resultados_Flexion.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub PintarLineasCada3Columnas(sender As Object, e As DataGridViewCellPaintingEventArgs)
+
+        If e.RowIndex < 0 Then Return
+
+        e.Paint(e.CellBounds, DataGridViewPaintParts.All)
+
+        ' Línea gruesa cada 3 columnas
+        If (e.ColumnIndex + 1) Mod 3 = 0 Then
+            Using pen As New Pen(Color.Black, 2)
+                Dim x = e.CellBounds.Right - 1
+                e.Graphics.DrawLine(pen, x, e.CellBounds.Top, x, e.CellBounds.Bottom)
+            End Using
+        End If
+
+        e.Handled = True
+
+    End Sub
+
+    Private Sub TimerAutoSave_Tick(sender As Object, e As EventArgs) Handles TimerAutoSave.Tick
+
+        If HayCambios Then
+
+            Dim minutos As Double = (DateTime.Now - UltimoGuardado).TotalMinutes
+
+            If minutos >= 10 Then
+
+                If Not String.IsNullOrEmpty(Proyecto.Ruta) Then
+                    Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+
+                    UltimoGuardado = DateTime.Now
+                    HayCambios = False
+
+                    ' Opcional: indicador en UI
+                    ' LabelEstado.Text = "AutoGuardado ✔"
+                End If
+
+            End If
+
+        End If
+
+    End Sub
+
+    Public Sub RefrescarDesdeProyecto()
+        Proyecto = Form_00_PaginaPrincipal.proyecto
+        If Proyecto.Elementos.Vigas.Vigas Is Nothing OrElse Proyecto.Elementos.Vigas.Vigas.Count = 0 Then Return
+        CargarCombos(Proyecto)
+    End Sub
+
+    Private Sub Save_Pilas_Click(sender As Object, e As EventArgs) Handles Save_Pilas.Click
+        Guardar()
+    End Sub
+
+    Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        If e.CloseReason <> CloseReason.UserClosing Then Return
+
+        If HayCambios Then
+            Dim result As DialogResult = MessageBox.Show(
+                "Hay cambios sin guardar. ¿Deseas guardarlos antes de salir?",
+                "Salir",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning)
+
+            If result = DialogResult.Yes Then
+                Guardar()
+            ElseIf result = DialogResult.Cancel Then
+                e.Cancel = True
+                Return
+            End If
+        End If
+
+        e.Cancel = True
+        Me.Hide()
+    End Sub
+
+    Private Sub Ref_Transversal_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles Ref_Transversal.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Tabla_Resultados_Cortante_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles Tabla_Resultados_Cortante.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    ' =========================================================
+    ' EXTRACCION ESTRIBOS DESDE GRID
+    ' =========================================================
+
+    Private Function ExtraerEstribosDesdeGrid(dgv As DataGridView) _
+        As List(Of (FrameLabel As String, Posicion As PosicionTramoViga, NumEstribos As Integer, NumBarra As Integer, CantEstribos As Integer, Separacion As Double))
+
+        Dim lista As New List(Of (String, PosicionTramoViga, Integer, Integer, Integer, Double))
+
+        For col As Integer = 0 To dgv.Columns.Count - 1
+
+            Dim partes = dgv.Columns(col).HeaderText.Split({vbCrLf}, StringSplitOptions.None)
+            If partes.Length < 2 Then Continue For
+
+            Dim frameLabel = partes(0).Trim()
+            Dim posicionTexto = partes(1).Trim()
+
+            Dim posicion As PosicionTramoViga = If(posicionTexto = "Izq", PosicionTramoViga.Izquierda,
+                                                If(posicionTexto = "Centro", PosicionTramoViga.Centro,
+                                                                              PosicionTramoViga.Derecha))
+
+            Dim numEstribos As Integer = 10
+            Dim numBarra As Integer = 3
+            Dim cantEstribos As Integer = 2
+            Dim separacion As Double = 0.1
+
+            If dgv.Rows(0).Cells(col).Value IsNot Nothing Then Integer.TryParse(dgv.Rows(0).Cells(col).Value.ToString(), numEstribos)
+            If dgv.Rows(1).Cells(col).Value IsNot Nothing Then Integer.TryParse(dgv.Rows(1).Cells(col).Value.ToString(), numBarra)
+            If dgv.Rows(2).Cells(col).Value IsNot Nothing Then Integer.TryParse(dgv.Rows(2).Cells(col).Value.ToString(), cantEstribos)
+            If dgv.Rows(3).Cells(col).Value IsNot Nothing Then Double.TryParse(dgv.Rows(3).Cells(col).Value.ToString(), separacion)
+
+            lista.Add((frameLabel, posicion, numEstribos, numBarra, cantEstribos, separacion))
+
+        Next
+
+        Return lista
+
+    End Function
+
+    ' =========================================================
+    ' CARGAR REFUERZO TRANSVERSAL DESDE MODELO
+    ' =========================================================
+
+    Private Sub CargarRefuerzoTransversalTabla(viga As cViga, dgv As DataGridView)
+
+        For col As Integer = 0 To dgv.Columns.Count - 1
+
+            Dim partes = dgv.Columns(col).HeaderText.Split({vbCrLf}, StringSplitOptions.None)
+            If partes.Length < 2 Then Continue For
+
+            Dim frameLabel As String = partes(0).Trim()
+            Dim posicionTexto As String = partes(1).Trim()
+
+            Dim posicion As PosicionTramoViga
+            Select Case posicionTexto
+                Case "Izq" : posicion = PosicionTramoViga.Izquierda
+                Case "Centro" : posicion = PosicionTramoViga.Centro
+                Case "Der" : posicion = PosicionTramoViga.Derecha
+                Case Else : Continue For
+            End Select
+
+            Dim frame = viga.Frames.Find(Function(f) f.ObjectLabel = frameLabel)
+            If frame Is Nothing Then Continue For
+
+            Dim zona = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = posicion)
+            If zona Is Nothing Then Continue For
+
+            dgv.Rows(0).Cells(col).Value = zona.NumEstribos
+            dgv.Rows(1).Cells(col).Value = zona.NumeroBarra
+            dgv.Rows(2).Cells(col).Value = zona.CantEstribos
+            dgv.Rows(3).Cells(col).Value = zona.Separacion
+
+        Next
+
+    End Sub
+
+    ' =========================================================
+    ' TABLA RESULTADOS CORTANTE
+    ' =========================================================
+
+    Private Sub ConstruirTablaCortante(viga As cViga, dgv As DataGridView)
+
+        dgv.Columns.Clear()
+        dgv.Rows.Clear()
+
+        dgv.AllowUserToAddRows = False
+        dgv.ReadOnly = True
+        dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
+
+        dgv.RowHeadersVisible = True
+        dgv.RowHeadersWidth = 180
+
+        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgv.ScrollBars = ScrollBars.Both
+
+        dgv.BorderStyle = BorderStyle.None
+        dgv.CellBorderStyle = DataGridViewCellBorderStyle.Single
+        dgv.GridColor = Color.FromArgb(210, 210, 210)
+
+        dgv.EnableHeadersVisualStyles = False
+
+        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 10)
+        dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
+        dgv.RowHeadersDefaultCellStyle.Font = New Font("Segoe UI", 11, FontStyle.Bold)
+
+        dgv.BackgroundColor = Color.White
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240)
+        dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.Black
+        dgv.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245)
+        dgv.DefaultCellStyle.BackColor = Color.White
+        dgv.DefaultCellStyle.ForeColor = Color.Black
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 220, 240)
+        dgv.DefaultCellStyle.SelectionForeColor = Color.Black
+
+        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        dgv.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+
+        dgv.ColumnHeadersHeight = 45
+        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
+        dgv.RowTemplate.Height = 28
+
+        For Each frame In viga.Frames
+            Dim frameName As String = frame.ObjectLabel
+            Dim c1 = dgv.Columns.Add($"{frameName}_L", $"{frameName}" & vbCrLf & "Izq")
+            Dim c2 = dgv.Columns.Add($"{frameName}_C", $"{frameName}" & vbCrLf & "Centro")
+            Dim c3 = dgv.Columns.Add($"{frameName}_R", $"{frameName}" & vbCrLf & "Der")
+            dgv.Columns(c1).Width = 75
+            dgv.Columns(c2).Width = 75
+            dgv.Columns(c3).Width = 75
+        Next
+
+        Dim nombresFilas As String() = {
+            "Sección",
+            "Longitud (m)",
+            "H (m)",
+            "d (m)",
+            "Zona 2H (m)",
+            "Vu (kN)",
+            "Vc (kN)",
+            "Vs (kN)",
+            "φVn (kN)",
+            "F = φVn/Vu"
+        }
+
+        For Each nombre In nombresFilas
+            Dim idx = dgv.Rows.Add()
+            dgv.Rows(idx).HeaderCell.Value = nombre
+        Next
+
+        For i As Integer = 0 To dgv.Rows.Count - 1
+            If i Mod 2 = 0 Then
+                dgv.Rows(i).DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            End If
+        Next
+
+    End Sub
+
+    Private Sub MostrarResultadosCortante(viga As cViga)
+
+        Dim dgv As DataGridView = Tabla_Resultados_Cortante
+        Dim colBase As Integer = 0
+
+        For Each frame In viga.Frames
+
+            Dim posiciones = {
+                PosicionTramoViga.Izquierda,
+                PosicionTramoViga.Centro,
+                PosicionTramoViga.Derecha
+            }
+
+            For Each pos In posiciones
+
+                Dim zonaCor = frame.RevisionCortante.FirstOrDefault(Function(z) z.Posicion = pos)
+
+                If pos = PosicionTramoViga.Centro Then
+                    dgv.Rows(FILA_COR_SECCION).Cells(colBase).Value = frame.Section.LabelSec
+                    dgv.Rows(FILA_COR_LONGITUD).Cells(colBase).Value = Math.Round(frame.Longitud, 2)
+                    dgv.Rows(FILA_COR_H).Cells(colBase).Value = Math.Round(frame.Section.h, 3)
+                    dgv.Rows(FILA_COR_D).Cells(colBase).Value = Math.Round(frame.Section.d, 3)
+                    dgv.Rows(FILA_COR_ZONA).Cells(colBase).Value = Math.Round(2.0 * frame.Section.h, 3)
+                End If
+
+                If zonaCor IsNot Nothing Then
+
+                    dgv.Rows(FILA_COR_VU).Cells(colBase).Value = Math.Round(zonaCor.Vu, 2)
+
+                    If zonaCor.phiVn > 0 Then
+                        dgv.Rows(FILA_COR_VC).Cells(colBase).Value = Math.Round(zonaCor.Vc, 2)
+                        dgv.Rows(FILA_COR_VS).Cells(colBase).Value = Math.Round(zonaCor.Vs, 2)
+                        dgv.Rows(FILA_COR_PHIVN).Cells(colBase).Value = Math.Round(zonaCor.phiVn, 2)
+
+                        dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Value = Math.Round(zonaCor.Factor, 2)
+                        PintarCelda(dgv.Rows(FILA_COR_FACTOR).Cells(colBase), zonaCor.Factor)
+                    End If
+
+                End If
+
+                colBase += 1
+            Next
+
+        Next
+
+    End Sub
+
+    ' =========================================================
+    ' RECARGA DE COMBINACIONES (sin re-importar)
+    ' =========================================================
+
+    Private Sub ReseleccionarCombinacionesDiseno(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones.Count = 0 Then
+            MessageBox.Show("No hay combinaciones cargadas. Importe las demandas primero.", "Combinaciones", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim form As New Form_Opciones_Combinaciones()
+        For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
+            If Not Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Contains(comb) Then
+                form.Lista_Combinaciones.Items.Add(comb)
+            End If
+        Next
+        For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones_Design
+            form.Lista_Cargas_Design.Items.Add(comb)
+        Next
+        form.OpcionLlamado = "Vigas"
+        form.GroupBox2.Text = "Combinaciones Diseño a Flexión de Vigas"
+        form.ShowDialog()
+    End Sub
+
+    Private Sub ReseleccionarCombinacionesCortante(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones.Count = 0 Then
+            MessageBox.Show("No hay combinaciones cargadas. Importe las demandas primero.", "Combinaciones", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim form As New Form_Opciones_Combinaciones()
+        For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
+            If Not Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Contains(comb) Then
+                form.Lista_Combinaciones.Items.Add(comb)
+            End If
+        Next
+        For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante
+            form.Lista_Cargas_Design.Items.Add(comb)
+        Next
+        form.OpcionLlamado = "VigasCortante"
+        form.GroupBox2.Text = "Combinaciones Diseño a Cortante de Vigas"
+        form.ShowDialog()
+    End Sub
+
+    Private Sub ReseleccionarCombinacionesPlastico(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones.Count = 0 Then
+            MessageBox.Show("No hay combinaciones cargadas. Importe las demandas primero.", "Combinaciones", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim form As New Form_Opciones_Combinaciones()
+        For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones
+            If Not Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Contains(comb) Then
+                form.Lista_Combinaciones.Items.Add(comb)
+            End If
+        Next
+        For Each comb As String In Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico
+            form.Lista_Cargas_Design.Items.Add(comb)
+        Next
+        form.OpcionLlamado = "CortantePlastico"
+        form.GroupBox2.Text = "Combinación Gravitacional — Cortante Plástico (wu)"
+        form.ShowDialog()
+    End Sub
 
 End Class

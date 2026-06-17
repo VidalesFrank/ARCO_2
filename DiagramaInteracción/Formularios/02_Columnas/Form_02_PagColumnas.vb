@@ -57,8 +57,9 @@ Public Class Form_02_PagColumnas
                         Seccion.Piso = Tabla.Rows(i).Cells(Col_Piso).Value
                         Seccion.Seccion = Tabla.Rows(i).Cells(Col_Seccion).Value
 
-                        Seccion.As_Req_Bottom = Convert.ToSingle(Tabla.Rows(i).Cells(Col_As_Req).Value)
-                        Seccion.As_Req_Top = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_As_Req).Value)
+                        ' E23: As viene en m², convertir a mm²
+                        Seccion.As_Req_Bottom = Convert.ToSingle(Tabla.Rows(i).Cells(Col_As_Req).Value) * 1000000
+                        Seccion.As_Req_Top = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_As_Req).Value) * 1000000
 
                         Columna.Lista_Tramos_Columnas.Add(Seccion)
 
@@ -97,16 +98,14 @@ Public Class Form_02_PagColumnas
 
                         For j = 2 To Tabla.Rows.Count - 1
                             If Tabla.Rows(j).Cells(Col_Name).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Name).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Seccion Then
-                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo = Math.Min(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value) / 1000, Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value) / 1000)
-                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo = Math.Max(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value) / 1000, Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value) / 1000)
+                                ' E23: dimensiones en m (Depth=H, Width=B)
+                                Dim valB As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value)
+                                Dim valH As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo = Math.Min(valB, valH)
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo = Math.Max(valB, valH)
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Plano = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Plano = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value, 1, 2))
-                                Dim fc As Single = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).fc
-                                'If Proyecto.Elementos.Columnas.Lista_fc.Exists(Function(p) p = fc) Then
-                                'Else
-                                '    Proyecto.Elementos.Columnas.Lista_fc.Add(fc)
-                                'End If
                             End If
                         Next
                     Next
@@ -119,62 +118,74 @@ Public Class Form_02_PagColumnas
                 Dim Col_Piso As Integer = Col_Fuerzas(0)
                 Dim Col_Label As Integer = Col_Fuerzas(1)
                 Dim Col_Combinacion As Integer = Col_Fuerzas(2)
-                Dim Salto As Integer = Col_Fuerzas(3)
                 Dim Col_P As Integer = Col_Fuerzas(4)
                 Dim Col_V2 As Integer = Col_Fuerzas(5)
                 Dim Col_V3 As Integer = Col_Fuerzas(6)
                 Dim Col_T As Integer = Col_Fuerzas(7)
                 Dim Col_M2 As Integer = Col_Fuerzas(8)
                 Dim Col_M3 As Integer = Col_Fuerzas(9)
+                Dim Col_StepType As Integer = Col_Fuerzas(10)
 
-                'Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(2).Cells(Col_Combinacion).Value.ToString)
+                ' 1. Registrar combinaciones únicas (con clave compuesta si Step Type no está vacío)
                 For j = 2 To Tabla.Rows.Count - 1
-                    If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty Then
-                        Dim F As Integer = j
-                        If Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = Tabla.Rows(F).Cells(Col_Combinacion).Value) Then
-                            Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString)
+                    If Tabla.Rows(j).Cells(Col_Piso).Value IsNot Nothing AndAlso
+                       Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> String.Empty Then
+                        Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
+                        Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                        Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
+                        If clave <> "" AndAlso Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = clave) Then
+                            Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(clave)
                         End If
                     End If
                 Next
 
+                ' 2. Asignar fuerzas con envolvente por estación (todas las estaciones por elemento-combo)
                 For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
                     Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento
 
                     For Np = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
+                        Dim pisoTramo As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso
 
-                        For NC = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones.Count - 1
+                        For j = 2 To Tabla.Rows.Count - 1
+                            If Tabla.Rows(j).Cells(Col_Piso).Value Is Nothing OrElse
+                               Tabla.Rows(j).Cells(Col_Piso).Value.ToString = String.Empty Then Continue For
+                            If Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> pisoTramo Then Continue For
+                            If If(Tabla.Rows(j).Cells(Col_Label).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Label).Value.ToString(), "") <> Elemento Then Continue For
 
-                            For j = 2 To Tabla_Fuerzas.Rows.Count - 1 Step Salto
-                                If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Piso).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso And Tabla.Rows(j).Cells(Col_Label).Value = Elemento And Tabla.Rows(j).Cells(Col_Combinacion).Value = Proyecto.Elementos.Columnas.Lista_Combinaciones(NC).ToString Then
-                                    Dim Fuerza As New Tramo_Columna.Fuerzas_Elementos
+                            Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
+                            Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                            Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
 
-                                    Fuerza.Name = Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString
-                                    Fuerza.P = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
-                                    Fuerza.V2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
-                                    Fuerza.V3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
-                                    Fuerza.T = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
-                                    Fuerza.M2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
-                                    Fuerza.M3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
+                            Dim nuevoP As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
+                            Dim nuevoV2 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
+                            Dim nuevoV3 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
+                            Dim nuevoT As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
+                            Dim nuevoM2 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
+                            Dim nuevoM3 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
 
-                                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(Fuerza)
+                            Dim existente = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Find(Function(f) f.Name = clave)
 
-                                    If Fuerza.Name.Contains("Cortante") Then
-                                        If Math.Abs(Fuerza.V2) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2) Then
-                                            Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2 = Fuerza.V2
-                                            If Fuerza.P < 0 Then
-                                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V2 = Fuerza.P
-                                            End If
-                                        End If
-                                        If Math.Abs(Fuerza.V3) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3) Then
-                                            Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3 = Fuerza.V3
-                                            If Fuerza.P < 0 Then
-                                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V3 = Fuerza.P
-                                            End If
-                                        End If
-                                    End If
-                                End If
-                            Next
+                            If existente IsNot Nothing Then
+                                ' Envolvente: máximo valor absoluto de cada componente
+                                If Math.Abs(nuevoP) > Math.Abs(existente.P) Then existente.P = nuevoP
+                                If Math.Abs(nuevoV2) > Math.Abs(existente.V2) Then existente.V2 = nuevoV2
+                                If Math.Abs(nuevoV3) > Math.Abs(existente.V3) Then existente.V3 = nuevoV3
+                                If Math.Abs(nuevoT) > Math.Abs(existente.T) Then existente.T = nuevoT
+                                If Math.Abs(nuevoM2) > Math.Abs(existente.M2) Then existente.M2 = nuevoM2
+                                If Math.Abs(nuevoM3) > Math.Abs(existente.M3) Then existente.M3 = nuevoM3
+                            Else
+                                Dim Fuerza As New Tramo_Columna.Fuerzas_Elementos
+                                Fuerza.Name = clave
+                                Fuerza.P = nuevoP
+                                Fuerza.V2 = nuevoV2
+                                Fuerza.V3 = nuevoV3
+                                Fuerza.T = nuevoT
+                                Fuerza.M2 = nuevoM2
+                                Fuerza.M3 = nuevoM3
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(Fuerza)
+                            End If
                         Next
+
                     Next
                 Next
             End If
@@ -246,15 +257,17 @@ Public Class Form_02_PagColumnas
                     For Np = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
                         For j = 2 To Tabla.Rows.Count - 1
                             If Tabla.Rows(j).Cells(Col_Name).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Name).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Seccion And Tabla.Rows(j).Cells(Col_Piso).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso Then
-                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo = Math.Min(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)) / 1000
-                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo = Math.Max(Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value), Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)) / 1000
+                                ' E23: dimensiones en m (Width=B, Thickness=H)
+                                Dim valB As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value)
+                                Dim valH As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo = Math.Min(valB, valH)
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo = Math.Max(valB, valH)
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Plano = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Plano = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value, 1, 2))
-
+                                ' As_Req = B(m) × H(m) × Cuantia(%) × 10000 → mm²
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).As_Req_Bottom = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Cuantia_Req_Bottom * 10000
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).As_Req_Top = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Cuantia_Req_Top * 10000
-
                                 Exit For
                             End If
                         Next
@@ -268,62 +281,73 @@ Public Class Form_02_PagColumnas
                 Dim Col_Piso As Integer = Col_Fuerzas(0)
                 Dim Col_Label As Integer = Col_Fuerzas(1)
                 Dim Col_Combinacion As Integer = Col_Fuerzas(2)
-                Dim Salto As Integer = Col_Fuerzas(3)
                 Dim Col_P As Integer = Col_Fuerzas(4)
                 Dim Col_V2 As Integer = Col_Fuerzas(5)
                 Dim Col_V3 As Integer = Col_Fuerzas(6)
                 Dim Col_T As Integer = Col_Fuerzas(7)
                 Dim Col_M2 As Integer = Col_Fuerzas(8)
                 Dim Col_M3 As Integer = Col_Fuerzas(9)
+                Dim Col_StepType As Integer = Col_Fuerzas(10)
 
-                'Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(2).Cells(Col_Combinacion).Value.ToString)
+                ' 1. Registrar combinaciones únicas con clave compuesta si Step Type no está vacío
                 For j = 2 To Tabla.Rows.Count - 1
-                    If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty Then
-                        Dim F As Integer = j
-                        If Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = Tabla.Rows(F).Cells(Col_Combinacion).Value) Then
-                            Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString)
+                    If Tabla.Rows(j).Cells(Col_Piso).Value IsNot Nothing AndAlso
+                       Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> String.Empty Then
+                        Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
+                        Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                        Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
+                        If clave <> "" AndAlso Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = clave) Then
+                            Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(clave)
                         End If
                     End If
                 Next
 
+                ' 2. Asignar fuerzas con envolvente Top/Bottom por elemento-piso-combo
                 For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
                     Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento
 
                     For Np = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
+                        Dim pisoTramo As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso
 
-                        For NC = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones.Count - 1
+                        For j = 2 To Tabla.Rows.Count - 1
+                            If Tabla.Rows(j).Cells(Col_Piso).Value Is Nothing OrElse
+                               Tabla.Rows(j).Cells(Col_Piso).Value.ToString = String.Empty Then Continue For
+                            If Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> pisoTramo Then Continue For
+                            If If(Tabla.Rows(j).Cells(Col_Label).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Label).Value.ToString(), "") <> Elemento Then Continue For
 
-                            For j = 2 To Tabla.Rows.Count - 1 Step Salto
-                                If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Piso).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso And Tabla.Rows(j).Cells(Col_Label).Value = Elemento And Tabla.Rows(j).Cells(Col_Combinacion).Value = Proyecto.Elementos.Columnas.Lista_Combinaciones(NC).ToString Then
-                                    Dim Fuerza As New Tramo_Columna.Fuerzas_Elementos
+                            Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
+                            Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                            Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
 
-                                    Fuerza.Name = Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString
-                                    Fuerza.P = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
-                                    Fuerza.V2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
-                                    Fuerza.V3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
-                                    Fuerza.T = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
-                                    Fuerza.M2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
-                                    Fuerza.M3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
+                            Dim nuevoP As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
+                            Dim nuevoV2 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
+                            Dim nuevoV3 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
+                            Dim nuevoT As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
+                            Dim nuevoM2 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
+                            Dim nuevoM3 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
 
-                                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(Fuerza)
+                            Dim existente = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Find(Function(f) f.Name = clave)
 
-                                    If Fuerza.Name.Contains("Cortante") Then
-                                        If Math.Abs(Fuerza.V2) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2) Then
-                                            Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2 = Fuerza.V2
-                                            If Fuerza.P < 0 Then
-                                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V2 = Fuerza.P
-                                            End If
-                                        End If
-                                        If Math.Abs(Fuerza.V3) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3) Then
-                                            Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3 = Fuerza.V3
-                                            If Fuerza.P < 0 Then
-                                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V3 = Fuerza.P
-                                            End If
-                                        End If
-                                    End If
-                                End If
-                            Next
+                            If existente IsNot Nothing Then
+                                If Math.Abs(nuevoP) > Math.Abs(existente.P) Then existente.P = nuevoP
+                                If Math.Abs(nuevoV2) > Math.Abs(existente.V2) Then existente.V2 = nuevoV2
+                                If Math.Abs(nuevoV3) > Math.Abs(existente.V3) Then existente.V3 = nuevoV3
+                                If Math.Abs(nuevoT) > Math.Abs(existente.T) Then existente.T = nuevoT
+                                If Math.Abs(nuevoM2) > Math.Abs(existente.M2) Then existente.M2 = nuevoM2
+                                If Math.Abs(nuevoM3) > Math.Abs(existente.M3) Then existente.M3 = nuevoM3
+                            Else
+                                Dim Fuerza As New Tramo_Columna.Fuerzas_Elementos
+                                Fuerza.Name = clave
+                                Fuerza.P = nuevoP
+                                Fuerza.V2 = nuevoV2
+                                Fuerza.V3 = nuevoV3
+                                Fuerza.T = nuevoT
+                                Fuerza.M2 = nuevoM2
+                                Fuerza.M3 = nuevoM3
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(Fuerza)
+                            End If
                         Next
+
                     Next
                 Next
             End If
@@ -343,15 +367,91 @@ Public Class Form_02_PagColumnas
         '    Form_Combinaciones.Show()
         'End If
 
-        If Proyecto.Elementos.Columnas.Info_Diseño = True Then
+        If Proyecto.Elementos.Columnas.Info_Diseño = True AndAlso
+           Proyecto.Elementos.Columnas.Lista_Columnas.Count > 0 Then
             Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Elemento
         End If
-        'Catch ex As exception
-        '    messagebox.show("error al leer la información.", "error", messageboxbuttons.ok, messageboxicon.error)
-        'Finally
-        Cursor = Cursors.Arrow
-        'End Try
 
+        Cursor = Cursors.Arrow
+
+        ' Selección secuencial de combinaciones después de importar
+        If Proyecto.Elementos.Columnas.Lista_Combinaciones.Count > 0 Then
+            ' 1 — Combinaciones de Diseño
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+            Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+            For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(combo)
+            Next
+            For Each combo As String In Proyecto.Elementos.Columnas.ListA_Combinaciones_Design
+                If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(combo) Then
+                    Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(combo)
+                    Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(combo)
+                End If
+            Next
+            Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasDiseño"
+            Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones de Diseño"
+            Form_Opciones_Combinaciones.ShowDialog()
+
+            ' 2 — Combinaciones de Cortante
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+            Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+            For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(combo)
+            Next
+            For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante
+                If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(combo) Then
+                    Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(combo)
+                    Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(combo)
+                End If
+            Next
+            Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasCortante"
+            Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Cortante"
+            Form_Opciones_Combinaciones.ShowDialog()
+
+            ' 3 — Combinaciones de ALR
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+            Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+            For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(combo)
+            Next
+            For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR
+                If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(combo) Then
+                    Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(combo)
+                    Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(combo)
+                End If
+            Next
+            Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasALR"
+            Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones ALR"
+            Form_Opciones_Combinaciones.ShowDialog()
+        End If
+
+        ' Validación automática: muestra reporte en ventana no-modal para no bloquear el flujo
+        Dim reporte As String = ValidarImportacionColumnas()
+        Dim frm As New Form With {
+            .Text = "Validación — Datos de Columnas",
+            .Size = New Size(560, 460),
+            .StartPosition = FormStartPosition.CenterParent,
+            .MinimizeBox = False,
+            .MaximizeBox = False
+        }
+        Dim txt As New RichTextBox With {
+            .Dock = DockStyle.Fill,
+            .ReadOnly = True,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.FromArgb(220, 220, 220),
+            .Font = New Font("Consolas", 9.5),
+            .Text = reporte,
+            .BorderStyle = BorderStyle.None
+        }
+        Dim btnCerrar As New Button With {
+            .Text = "Cerrar",
+            .Dock = DockStyle.Bottom,
+            .Height = 32
+        }
+        AddHandler btnCerrar.Click, Sub(s, ev) frm.Close()
+        frm.Controls.Add(txt)
+        frm.Controls.Add(btnCerrar)
+        frm.Show(Me)
 
     End Sub
 
@@ -434,6 +534,7 @@ Public Class Form_02_PagColumnas
     End Sub
 
     Private Sub SeccionesToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Insertar_Secciones_Col.Click
+        Form_02_00_PagInfoColumnas.RefrescarCombo()
         Form_02_00_PagInfoColumnas.Show()
     End Sub
 
@@ -530,58 +631,90 @@ Public Class Form_02_PagColumnas
     Public Function Importar_Datos_de_Excel(ByRef path As String,
                                             ByVal Datagrid As DataGridView,
                                             ByVal Op As String,
-                                            ByVal Elemento As String)
+                                            ByVal Elemento As String) As Boolean
         Try
             Me.Cursor = Cursors.WaitCursor
             Dim Ds As New DataSet
             Dim Da As New OleDbDataAdapter
             Dim Dt As New DataTable
-            Dim stConexion As String = ("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & (path & ";Extended Properties='Excel 12.0 Xml;HDR=YES;IMEX=1;';"))
+            Dim stConexion As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & path & ";Extended Properties='Excel 12.0 Xml;HDR=YES;IMEX=1;';"
             Dim cnConex As New OleDbConnection(stConexion)
             cnConex.Open()
 
+            ' Obtener todas las hojas para auto-detectar versión ETABS
+            Dim schemaTables = cnConex.GetOleDbSchemaTable(OleDb.OleDbSchemaGuid.Tables, Nothing)
+            Dim sheetNames = schemaTables.Rows.Cast(Of DataRow)().Select(Function(r) r("TABLE_NAME").ToString()).ToList()
+
+            Dim nombreHoja As String = ""
+
             If Op = "Diseño" Then
                 If Elemento = "Frame" Then
-                    Dim Cmd As New OleDbCommand("Select * From [Concrete Column Summary - ACI 3$]")
-                    Cmd.Connection = cnConex
-                    Da.SelectCommand = Cmd
+                    ' E23: "Conc Col Sum - ACI 318-14"  |  E17: "Concrete Column Summary - ACI 3"
+                    If sheetNames.Any(Function(s) s.Contains("Conc Col Sum")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Conc Col Sum"))
+                    ElseIf sheetNames.Any(Function(s) s.Contains("Concrete Column Summary")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Concrete Column Summary"))
+                    End If
                 Else
-                    Dim Cmd As New OleDbCommand("Select * From [Shear Wall Pier Summary - ACI 3$]")
-                    Cmd.Connection = cnConex
-                    Da.SelectCommand = Cmd
+                    ' E23: "Pier Dgn Sum"  |  E17: "Shear Wall Pier Summary"
+                    If sheetNames.Any(Function(s) s.Contains("Pier Dgn Sum")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Pier Dgn Sum"))
+                    ElseIf sheetNames.Any(Function(s) s.Contains("Shear Wall Pier Summary")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Shear Wall Pier Summary"))
+                    End If
                 End If
+
             ElseIf Op = "Secciones" Then
                 If Elemento = "Frame" Then
-                    Dim Cmd As New OleDbCommand("Select * From [Frame Sections$]")
-                    Cmd.Connection = cnConex
-                    Da.SelectCommand = Cmd
+                    ' E23: "Frame Sec Def - Conc Rect"  |  E17: "Frame Sections"
+                    If sheetNames.Any(Function(s) s.Contains("Frame Sec Def - Conc Rect")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Frame Sec Def - Conc Rect"))
+                    ElseIf sheetNames.Any(Function(s) s.Contains("Frame Sections")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Frame Sections"))
+                    End If
                 Else
-                    Dim Cmd As New OleDbCommand("Select * From [Pier Section Properties$]")
-                    Cmd.Connection = cnConex
-                    Da.SelectCommand = Cmd
+                    If sheetNames.Any(Function(s) s.Contains("Pier Section Properties")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Pier Section Properties"))
+                    End If
                 End If
+
             ElseIf Op = "Fuerzas" Then
                 If Elemento = "Frame" Then
-                    Dim Cmd As New OleDbCommand("Select * From [Column Forces$]")
-                    Cmd.Connection = cnConex
-                    Da.SelectCommand = Cmd
+                    ' E23: "Element Forces - Columns"  |  E17: "Column Forces"
+                    If sheetNames.Any(Function(s) s.Contains("Element Forces - Columns")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Element Forces - Columns"))
+                    ElseIf sheetNames.Any(Function(s) s.Contains("Column Forces")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Column Forces"))
+                    End If
                 Else
-                    Dim Cmd As New OleDbCommand("Select * From [Pier Forces$]")
-                    Cmd.Connection = cnConex
-                    Da.SelectCommand = Cmd
+                    If sheetNames.Any(Function(s) s.Contains("Pier Forces")) Then
+                        nombreHoja = sheetNames.First(Function(s) s.Contains("Pier Forces"))
+                    End If
                 End If
             End If
+
+            If String.IsNullOrEmpty(nombreHoja) Then
+                cnConex.Close()
+                MsgBox($"No se encontró la hoja de {Op} ({Elemento}) en el archivo.{vbCrLf}Verifique que el archivo corresponde al tipo correcto.", MsgBoxStyle.Exclamation, "Hoja no encontrada")
+                Return False
+            End If
+
+            Dim Cmd As New OleDbCommand($"Select * From [{nombreHoja}]")
+            Cmd.Connection = cnConex
+            Da.SelectCommand = Cmd
             Da.Fill(Ds)
             Dt = Ds.Tables(0)
             Datagrid.Columns.Clear()
             Datagrid.DataSource = Dt
             cnConex.Close()
+            _hayCambiosColumnas = True
+            Return True
         Catch ex As Exception
-            MsgBox(ex.Message, MsgBoxStyle.Critical, "Error")
+            MsgBox(ex.Message, MsgBoxStyle.Critical, "Error al importar")
+            Return False
         Finally
             Me.Cursor = Cursors.Arrow
         End Try
-        Return True
     End Function
 
     Private Sub Button1_Click(sender As Object, e As EventArgs)
@@ -602,18 +735,49 @@ Public Class Form_02_PagColumnas
     End Sub
 
     Public Sub Open()
-        Dim Open As New OpenFileDialog
-        Open.Filter = "Archivo|*.esm"
-        Open.Title = "Abrir Archivo"
-        Open.ShowDialog()
-        If Open.FileName <> String.Empty Then
-            Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(Open.FileName)
+        Dim dlg As New OpenFileDialog
+        dlg.Filter = "Archivo|*.esm"
+        dlg.Title = "Abrir Archivo"
+        If dlg.ShowDialog() <> DialogResult.OK Then Exit Sub
 
-            Rellenar_Columnas()
+        Try
+            Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(dlg.FileName)
+        Catch
+            Try
+                Dim elementos = Funciones_Programa.DeSerializar(Of cElementos)(dlg.FileName)
+                Proyecto = New Proyecto()
+                Proyecto.Elementos = elementos
+            Catch ex As Exception
+                MessageBox.Show("No se pudo abrir el archivo." & vbCrLf & ex.Message,
+                                "Error al abrir", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End Try
+        End Try
 
-            VerToolStripMenuItem.Enabled = True
-        End If
+        Proyecto.Ruta = dlg.FileName
+        Form_00_PaginaPrincipal.proyecto = Proyecto
+        Form_02_00_PagInfoColumnas.Proyecto = Proyecto
+        Form_02_01_ResultadosColumnas.Proyecto = Proyecto
+        Form_02_01_00_RevisionCortante.Proyecto = Proyecto
+        Form_02_01_02_ResultadosModelo.Proyecto = Proyecto
+        _hayCambiosColumnas = False
 
+        Rellenar_Columnas()
+        VerToolStripMenuItem.Enabled = True
+    End Sub
+
+    Public Sub RefrescarDesdeProyecto()
+        Proyecto = Form_00_PaginaPrincipal.proyecto
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then Return
+        Combo_Elementos.Items.Clear()
+        Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Clear()
+        Form_02_00_PagInfoColumnas.Proyecto = Proyecto
+        Form_02_01_ResultadosColumnas.Proyecto = Proyecto
+        Form_02_01_00_RevisionCortante.Proyecto = Proyecto
+        Form_02_01_02_ResultadosModelo.Proyecto = Proyecto
+        Rellenar_Columnas()
+        Form_02_00_PagInfoColumnas.RefrescarCombo()
+        VerToolStripMenuItem.Enabled = True
     End Sub
 
     Public Sub Borrar()
@@ -623,30 +787,33 @@ Public Class Form_02_PagColumnas
 
     Private Sub SaveAs(ByVal Objeto As Object)
         Try
-            Dim SaveAs As New SaveFileDialog
-            SaveAs.Filter = "Archivo|*.esm"
-            SaveAs.Title = "Guardar Archivo"
-            SaveAs.FileName = Convert.ToString("RevisiónColumnas_Proyecto - " & PagInfoGeneral.NameProject.Text)
-            SaveAs.ShowDialog()
-            If SaveAs.FileName <> String.Empty Then
-                Proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
-                Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
-            End If
+            Dim dlg As New SaveFileDialog
+            dlg.Filter = "Archivo|*.esm"
+            dlg.Title = "Guardar Archivo"
+            dlg.FileName = "Proyecto - " & If(Proyecto.Info?.Nombre, "ARCO")
+            If dlg.ShowDialog() <> DialogResult.OK Then Exit Sub
+            Proyecto.Ruta = Path.GetFullPath(dlg.FileName)
+            Form_00_PaginaPrincipal.proyecto = Proyecto
+            Funciones_Programa.Serializar(dlg.FileName, Objeto)
+            _hayCambiosColumnas = False
+            _ultimoGuardadoColumnas = DateTime.Now
         Catch ex As Exception
-
+            MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
-
     End Sub
-    Private Sub GuardarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Save_Columnas.Click
-        Try
-            If Proyecto.Ruta = String.Empty Then
-                SaveAs(Proyecto)
-            Else
-                Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
-            End If
-        Catch ex As Exception
 
-        End Try
+    Private Sub GuardarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Save_Columnas.Click
+        If String.IsNullOrEmpty(Proyecto.Ruta) Then
+            SaveAs(Proyecto)
+        Else
+            Try
+                Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+                _hayCambiosColumnas = False
+                _ultimoGuardadoColumnas = DateTime.Now
+            Catch ex As Exception
+                MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End If
     End Sub
     Private Sub GuardarComoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SaveAs_Columnas.Click
         SaveAs(Proyecto)
@@ -665,6 +832,16 @@ Public Class Form_02_PagColumnas
         Form_02_01_ResultadosColumnas.Show()
     End Sub
 
+    Private Sub Reporte_Col_Click(sender As Object, e As EventArgs) Handles Reporte_Col.Click
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show("No hay columnas procesadas. Ejecute el análisis primero.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim rpt As New Form_02_Reporte_Columnas
+        rpt.Columnas = Proyecto.Elementos.Columnas.Lista_Columnas
+        rpt.Show()
+    End Sub
+
     Private Sub GráficasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Graficos_Col.Click
         Form_Graficos.Show()
     End Sub
@@ -672,250 +849,366 @@ Public Class Form_02_PagColumnas
     Private Sub FrameToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FrameToolStripMenuItem.Click
         Proyecto.Elementos.Columnas.Elementos_Frame = True
         Proyecto.Elementos.Columnas.Info_Fuerzas = True
-        Tabla_Fuerzas.Rows.Clear()
 
-        Dim OpenFileDialog As New OpenFileDialog
-        Dim openFD As New OpenFileDialog()
-        With openFD
-            .Title = "Seleccionar archivos"
-            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*xlsx|Todos los archivos(*.*)|*.*"
+        Dim openFD As New OpenFileDialog With {
+            .Title = "Seleccionar archivo Excel (Frame)",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
             .Multiselect = False
-            If .ShowDialog = Windows.Forms.DialogResult.OK Then
-                Importar_Datos_de_Excel(.FileName, Tabla_Fuerzas, "Fuerzas", "Frame")
-            End If
-        End With
-
-        Dim Tabla As DataGridView
-
-        Tabla = Tabla_Fuerzas
-        Dim Col_Fuerzas = Columnas_Fuerzas("Frame")
-
-        Dim Col_Piso As Integer = Col_Fuerzas(0)
-        Dim Col_Label As Integer = Col_Fuerzas(1)
-        Dim Col_Combinacion As Integer = Col_Fuerzas(2)
-        Dim Salto As Integer = Col_Fuerzas(3)
-        Dim Col_P As Integer = Col_Fuerzas(4)
-        Dim Col_V2 As Integer = Col_Fuerzas(5)
-        Dim Col_V3 As Integer = Col_Fuerzas(6)
-        Dim Col_T As Integer = Col_Fuerzas(7)
-        Dim Col_M2 As Integer = Col_Fuerzas(8)
-        Dim Col_M3 As Integer = Col_Fuerzas(9)
-
-        'Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(2).Cells(Col_Combinacion).Value.ToString)
-        For j = 2 To Tabla.Rows.Count - 1
-            If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty Then
-                Dim F As Integer = j
-                If Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = Tabla.Rows(F).Cells(Col_Combinacion).Value) Then
-                    Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString)
-                End If
-            End If
-        Next
-
-        For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
-            Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento
-
-            For Np = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
-
-                For NC = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones.Count - 1
-
-                    For j = 2 To Tabla_Fuerzas.Rows.Count - 1 Step Salto
-                        If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Piso).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso And Tabla.Rows(j).Cells(Col_Label).Value = Elemento And Tabla.Rows(j).Cells(Col_Combinacion).Value = Proyecto.Elementos.Columnas.Lista_Combinaciones(NC).ToString Then
-                            Dim Fuerza As New Tramo_Columna.Fuerzas_Elementos
-
-                            Fuerza.Name = Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString
-                            Fuerza.P = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
-                            Fuerza.V2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
-                            Fuerza.V3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
-                            Fuerza.T = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
-                            Fuerza.M2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
-                            Fuerza.M3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
-
-                            Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(Fuerza)
-
-                            If Fuerza.Name.Contains("Cortante") Then
-                                If Math.Abs(Fuerza.V2) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2) Then
-                                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2 = Fuerza.V2
-                                    If Fuerza.P < 0 Then
-                                        Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V2 = Fuerza.P
-                                    End If
-                                End If
-                                If Math.Abs(Fuerza.V3) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3) Then
-                                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3 = Fuerza.V3
-                                    If Fuerza.P < 0 Then
-                                        Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V3 = Fuerza.P
-                                    End If
-                                End If
-                            End If
-                        End If
-                    Next
-                Next
-            Next
-        Next
-
-
-
-
+        }
+        If openFD.ShowDialog = Windows.Forms.DialogResult.OK Then
+            Importar_Datos_de_Excel(openFD.FileName, Tabla_Fuerzas, "Fuerzas", "Frame")
+            ProcesarFuerzasEnvolvente(Tabla_Fuerzas, "Frame")
+        End If
     End Sub
 
     Private Sub PierToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles PierToolStripMenuItem.Click
         Proyecto.Elementos.Columnas.Elementos_Pier = True
         Proyecto.Elementos.Columnas.Info_Fuerzas = True
-        Tabla_Fuerzas_Pier.Rows.Clear()
-        Dim OpenFileDialog As New OpenFileDialog
-        Dim openFD As New OpenFileDialog()
-        With openFD
-            .Title = "Seleccionar archivos"
-            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*xlsx|Todos los archivos(*.*)|*.*"
+
+        Dim openFD As New OpenFileDialog With {
+            .Title = "Seleccionar archivo Excel (Pier)",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
             .Multiselect = False
-            If .ShowDialog = Windows.Forms.DialogResult.OK Then
-                Importar_Datos_de_Excel(.FileName, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
-            End If
-        End With
+        }
+        If openFD.ShowDialog = Windows.Forms.DialogResult.OK Then
+            Importar_Datos_de_Excel(openFD.FileName, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
+            ProcesarFuerzasEnvolvente(Tabla_Fuerzas_Pier, "Pier")
+        End If
+    End Sub
 
-        Dim Tabla As DataGridView
+    ''' <summary>Lógica de envolvente compartida para Frame y Pier. Registra combinaciones y asigna fuerzas.</summary>
+    Private Sub ProcesarFuerzasEnvolvente(ByVal Tabla As DataGridView, ByVal tipoElemento As String)
+        Dim cf = Columnas_Fuerzas(tipoElemento)
+        Dim Col_Piso As Integer = cf(0)
+        Dim Col_Label As Integer = cf(1)
+        Dim Col_Combinacion As Integer = cf(2)
+        Dim Col_P As Integer = cf(4)
+        Dim Col_V2 As Integer = cf(5)
+        Dim Col_V3 As Integer = cf(6)
+        Dim Col_T As Integer = cf(7)
+        Dim Col_M2 As Integer = cf(8)
+        Dim Col_M3 As Integer = cf(9)
+        Dim Col_StepType As Integer = cf(10)
 
-        Tabla = Tabla_Fuerzas_Pier
-        Dim Col_Fuerzas = Columnas_Fuerzas("Pier")
-
-        Dim Col_Piso As Integer = Col_Fuerzas(0)
-        Dim Col_Label As Integer = Col_Fuerzas(1)
-        Dim Col_Combinacion As Integer = Col_Fuerzas(2)
-        Dim Salto As Integer = Col_Fuerzas(3)
-        Dim Col_P As Integer = Col_Fuerzas(4)
-        Dim Col_V2 As Integer = Col_Fuerzas(5)
-        Dim Col_V3 As Integer = Col_Fuerzas(6)
-        Dim Col_T As Integer = Col_Fuerzas(7)
-        Dim Col_M2 As Integer = Col_Fuerzas(8)
-        Dim Col_M3 As Integer = Col_Fuerzas(9)
-
+        ' Registrar combinaciones únicas
         For j = 2 To Tabla.Rows.Count - 1
-            If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty Then
-                Dim F As Integer = j
-                If Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = Tabla.Rows(F).Cells(Col_Combinacion).Value) Then
-                    Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString)
+            If Tabla.Rows(j).Cells(Col_Piso).Value IsNot Nothing AndAlso
+               Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> String.Empty Then
+                Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
+                Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
+                If clave <> "" AndAlso Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = clave) Then
+                    Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(clave)
                 End If
             End If
         Next
 
+        ' Asignar fuerzas con envolvente
         For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
             Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento
-
             For Np = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
+                Dim pisoTramo As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso
+                For j = 2 To Tabla.Rows.Count - 1
+                    If Tabla.Rows(j).Cells(Col_Piso).Value Is Nothing OrElse Tabla.Rows(j).Cells(Col_Piso).Value.ToString = String.Empty Then Continue For
+                    If Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> pisoTramo Then Continue For
+                    If If(Tabla.Rows(j).Cells(Col_Label).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Label).Value.ToString(), "") <> Elemento Then Continue For
 
-                For NC = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones.Count - 1
-
-                    For j = 2 To Tabla.Rows.Count - 1 Step Salto
-                        If Tabla.Rows(j).Cells(Col_Piso).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Piso).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Piso And Tabla.Rows(j).Cells(Col_Label).Value = Elemento And Tabla.Rows(j).Cells(Col_Combinacion).Value = Proyecto.Elementos.Columnas.Lista_Combinaciones(NC).ToString Then
-                            Dim Fuerza As New Tramo_Columna.Fuerzas_Elementos
-
-                            Fuerza.Name = Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString
-                            Fuerza.P = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
-                            Fuerza.V2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
-                            Fuerza.V3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
-                            Fuerza.T = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
-                            Fuerza.M2 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
-                            Fuerza.M3 = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
-
-                            Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(Fuerza)
-
-                            If Fuerza.Name.Contains("Cortante") Then
-                                If Math.Abs(Fuerza.V2) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2) Then
-                                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V2 = Fuerza.V2
-                                    If Fuerza.P < 0 Then
-                                        Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V2 = Fuerza.P
-                                    End If
-                                End If
-                                If Math.Abs(Fuerza.V3) > Math.Abs(Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3) Then
-                                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).V3 = Fuerza.V3
-                                    If Fuerza.P < 0 Then
-                                        Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Pu_V3 = Fuerza.P
-                                    End If
-                                End If
-                            End If
-                        End If
-                    Next
+                    Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
+                    Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                    Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
+                    Dim valP As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
+                    Dim valV2 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V2).Value)
+                    Dim valV3 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_V3).Value)
+                    Dim valT As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_T).Value)
+                    Dim valM2 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M2).Value)
+                    Dim valM3 As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_M3).Value)
+                    Dim existente = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Find(Function(f) f.Name = clave)
+                    If existente IsNot Nothing Then
+                        If Math.Abs(valP) > Math.Abs(existente.P) Then existente.P = valP
+                        If Math.Abs(valV2) > Math.Abs(existente.V2) Then existente.V2 = valV2
+                        If Math.Abs(valV3) > Math.Abs(existente.V3) Then existente.V3 = valV3
+                        If Math.Abs(valT) > Math.Abs(existente.T) Then existente.T = valT
+                        If Math.Abs(valM2) > Math.Abs(existente.M2) Then existente.M2 = valM2
+                        If Math.Abs(valM3) > Math.Abs(existente.M3) Then existente.M3 = valM3
+                    Else
+                        Dim fz As New Tramo_Columna.Fuerzas_Elementos With {.Name = clave, .P = valP, .V2 = valV2, .V3 = valV3, .T = valT, .M2 = valM2, .M3 = valM3}
+                        Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Lista_Combinaciones.Add(fz)
+                    End If
                 Next
             Next
         Next
-
-
     End Sub
 
     Private Sub Importar_Col_Frame_Click(sender As Object, e As EventArgs) Handles Importar_Col_Frame.Click
-
         Dim ofd As New OpenFileDialog With {
-        .Title = "Seleccionar archivo Excel",
-        .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
-        .Multiselect = False
-    }
+            .Title = "Importar columnas como Frame (ETABS E23)",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
+            .Multiselect = False
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
 
-        If ofd.ShowDialog() = DialogResult.OK Then
+        Dim path As String = ofd.FileName
+        Me.Cursor = Cursors.WaitCursor
 
-            Dim path As String = ofd.FileName
+        Dim okDiseno = Importar_Datos_de_Excel(path, Tabla_Diseño_Flexo, "Diseño", "Frame")
+        Dim okSecciones = Importar_Datos_de_Excel(path, Tabla_secciones, "Secciones", "Frame")
+        Dim okFuerzas = Importar_Datos_de_Excel(path, Tabla_Fuerzas, "Fuerzas", "Frame")
 
-            Dim okDiseno = Importar_Datos_de_Excel(path, Tabla_Diseño_Flexo, "Diseño", "Frame")
-            Dim okSecciones = Importar_Datos_de_Excel(path, Tabla_secciones, "Secciones", "Frame")
-            Dim okFuerzas = Importar_Datos_de_Excel(path, Tabla_Fuerzas, "Fuerzas", "Frame")
+        Proyecto.Elementos.Columnas.Elementos_Frame = True
+        If okDiseno Then Proyecto.Elementos.Columnas.Info_Diseño = True
+        If okSecciones Then Proyecto.Elementos.Columnas.Info_Secciones = True
+        If okFuerzas Then Proyecto.Elementos.Columnas.Info_Fuerzas = True
 
-            ' Activar banderas
-            Proyecto.Elementos.Columnas.Info_Diseño = True
-            Proyecto.Elementos.Columnas.Info_Secciones = True
-            Proyecto.Elementos.Columnas.Info_Fuerzas = True
+        Me.Cursor = Cursors.Arrow
 
-            ' --- Construir mensaje final ---
-            Dim mensaje As String = "Resultado de la importación:" & vbCrLf & vbCrLf
+        Dim msg As String = "─── Resultado de la importación ───" & vbCrLf & vbCrLf
+        msg &= $"  Diseño (Conc Col Sum)....  {If(okDiseno, "✔ OK  — " & (Tabla_Diseño_Flexo.Rows.Count - 2) & " filas", "✘ No encontrado")}" & vbCrLf
+        msg &= $"  Secciones (Frame Sec)....  {If(okSecciones, "✔ OK  — " & (Tabla_secciones.Rows.Count - 2) & " secciones", "✘ No encontrado")}" & vbCrLf
+        msg &= $"  Fuerzas (Elem Forces)....  {If(okFuerzas, "✔ OK  — " & (Tabla_Fuerzas.Rows.Count - 2) & " registros", "✘ No encontrado")}" & vbCrLf
 
-            mensaje &= $"Diseño........... {If(okDiseno, "✔ Importado", "✘ No encontrado")}" & vbCrLf
-            mensaje &= $"Secciones....... {If(okSecciones, "✔ Importado", "✘ No encontrado")}" & vbCrLf
-            mensaje &= $"Fuerzas.......... {If(okFuerzas, "✔ Importado", "✘ No encontrado")}" & vbCrLf
-
-            ' --- Mostrar mensaje ---
-            If okDiseno AndAlso okSecciones AndAlso okFuerzas Then
-                MsgBox(mensaje, MsgBoxStyle.Information, "Importación exitosa")
-            Else
-                MsgBox(mensaje, MsgBoxStyle.Exclamation, "Importación incompleta")
-            End If
-
+        If okDiseno AndAlso okSecciones AndAlso okFuerzas Then
+            msg &= vbCrLf & "Listo. Ejecute 'Calcular' para procesar los datos."
+            MsgBox(msg, MsgBoxStyle.Information, "Importación exitosa — Frame")
+        Else
+            msg &= vbCrLf & "Verifique que el archivo sea un export de ETABS E23 de columnas Frame."
+            MsgBox(msg, MsgBoxStyle.Exclamation, "Importación incompleta — Frame")
         End If
-
-
     End Sub
 
     Private Sub Importar_Col_Pier_Click(sender As Object, e As EventArgs) Handles Importar_Col_Pier.Click
-
         Dim ofd As New OpenFileDialog With {
-             .Title = "Seleccionar archivo Excel",
-             .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
-             .Multiselect = False
-            }
+            .Title = "Importar columnas como Pier (ETABS E23)",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
+            .Multiselect = False
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
 
-        If ofd.ShowDialog() = DialogResult.OK Then
+        Dim path As String = ofd.FileName
+        Me.Cursor = Cursors.WaitCursor
 
-            Dim path As String = ofd.FileName
+        Dim okDiseno = Importar_Datos_de_Excel(path, Tabla_Diseño_Pier, "Diseño", "Pier")
+        Dim okSecciones = Importar_Datos_de_Excel(path, Tabla_Secciones_Pier, "Secciones", "Pier")
+        Dim okFuerzas = Importar_Datos_de_Excel(path, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
 
-            Dim okDiseno = Importar_Datos_de_Excel(path, Tabla_Diseño_Pier, "Diseño", "Pier")
-            Dim okSecciones = Importar_Datos_de_Excel(path, Tabla_Secciones_Pier, "Secciones", "Pier")
-            Dim okFuerzas = Importar_Datos_de_Excel(path, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
+        Proyecto.Elementos.Columnas.Elementos_Pier = True
+        If okDiseno Then Proyecto.Elementos.Columnas.Info_Diseño = True
+        If okSecciones Then Proyecto.Elementos.Columnas.Info_Secciones = True
+        If okFuerzas Then Proyecto.Elementos.Columnas.Info_Fuerzas = True
 
-            ' Activar banderas
-            Proyecto.Elementos.Columnas.Info_Diseño = True
-            Proyecto.Elementos.Columnas.Info_Secciones = True
-            Proyecto.Elementos.Columnas.Info_Fuerzas = True
+        Me.Cursor = Cursors.Arrow
 
-            ' --- Construir mensaje final ---
-            Dim mensaje As String = "Resultado de la importación:" & vbCrLf & vbCrLf
+        Dim msg As String = "─── Resultado de la importación ───" & vbCrLf & vbCrLf
+        msg &= $"  Diseño (Pier Dgn Sum)....  {If(okDiseno, "✔ OK  — " & (Tabla_Diseño_Pier.Rows.Count - 2) & " filas", "✘ No encontrado")}" & vbCrLf
+        msg &= $"  Secciones (Pier Sec)....   {If(okSecciones, "✔ OK  — " & (Tabla_Secciones_Pier.Rows.Count - 2) & " secciones", "✘ No encontrado")}" & vbCrLf
+        msg &= $"  Fuerzas (Pier Forces)....  {If(okFuerzas, "✔ OK  — " & (Tabla_Fuerzas_Pier.Rows.Count - 2) & " registros", "✘ No encontrado")}" & vbCrLf
 
-            mensaje &= $"Diseño........... {If(okDiseno, "✔ Importado", "✘ No encontrado")}" & vbCrLf
-            mensaje &= $"Secciones....... {If(okSecciones, "✔ Importado", "✘ No encontrado")}" & vbCrLf
-            mensaje &= $"Fuerzas.......... {If(okFuerzas, "✔ Importado", "✘ No encontrado")}" & vbCrLf
-
-            ' --- Mostrar mensaje ---
-            If okDiseno AndAlso okSecciones AndAlso okFuerzas Then
-                MsgBox(mensaje, MsgBoxStyle.Information, "Importación exitosa")
-            Else
-                MsgBox(mensaje, MsgBoxStyle.Exclamation, "Importación incompleta")
-            End If
-
+        If okDiseno AndAlso okSecciones AndAlso okFuerzas Then
+            msg &= vbCrLf & "Listo. Ejecute 'Calcular' para procesar los datos."
+            MsgBox(msg, MsgBoxStyle.Information, "Importación exitosa — Pier")
+        Else
+            msg &= vbCrLf & "Verifique que el archivo sea un export de ETABS E23 de columnas Pier."
+            MsgBox(msg, MsgBoxStyle.Exclamation, "Importación incompleta — Pier")
         End If
     End Sub
+
+    ''' <summary>
+    ''' Valida la consistencia de los datos procesados. Retorna un reporte de texto.
+    ''' Llamar después de Button2_Click para verificar que todo se cargó correctamente.
+    ''' </summary>
+    Public Function ValidarImportacionColumnas() As String
+        Dim sb As New System.Text.StringBuilder
+        Dim cols = Proyecto.Elementos.Columnas.Lista_Columnas
+        Dim combos = Proyecto.Elementos.Columnas.Lista_Combinaciones
+
+        sb.AppendLine("════════ VALIDACIÓN DE IMPORTACIÓN ════════")
+        sb.AppendLine($"Tipo: {If(Proyecto.Elementos.Columnas.Elementos_Frame, "Frame", "")} {If(Proyecto.Elementos.Columnas.Elementos_Pier, "Pier", "")}")
+        sb.AppendLine($"Elementos (columnas): {cols.Count}")
+        sb.AppendLine($"Combinaciones registradas: {combos.Count}")
+        sb.AppendLine()
+
+        If cols.Count = 0 Then
+            sb.AppendLine("⚠ Sin elementos. Verifique que se ejecutó 'Calcular' después de importar.")
+            Return sb.ToString()
+        End If
+
+        ' — Tramos por elemento
+        Dim minTramos = cols.Min(Function(c) c.Lista_Tramos_Columnas.Count)
+        Dim maxTramos = cols.Max(Function(c) c.Lista_Tramos_Columnas.Count)
+        sb.AppendLine($"Tramos por elemento: min={minTramos}, max={maxTramos}")
+
+        ' — Validar As_Req (detectar error de unidades: valor < 0.1 mm² indica que quedó en m²)
+        Dim asMin As Single = Single.MaxValue
+        Dim asMax As Single = 0
+        For Each col In cols
+            For Each tramo In col.Lista_Tramos_Columnas
+                asMin = Math.Min(asMin, Math.Max(tramo.As_Req_Bottom, tramo.As_Req_Top))
+                asMax = Math.Max(asMax, Math.Max(tramo.As_Req_Bottom, tramo.As_Req_Top))
+            Next
+        Next
+        sb.AppendLine($"As_Req: min={Math.Round(asMin, 1)} mm²  max={Math.Round(asMax, 1)} mm²")
+        If asMax < 1 Then sb.AppendLine("  ⚠ As muy pequeño — posible error de unidades (esperado > 100 mm²)")
+        If asMax > 500000 Then sb.AppendLine("  ⚠ As muy grande — posible error de unidades")
+
+        ' — Validar dimensiones (B, H deben ser > 0 y razonables en metros)
+        Dim bMin As Single = Single.MaxValue
+        Dim hMax As Single = 0
+        Dim sinSeccion As Integer = 0
+        For Each col In cols
+            For Each tramo In col.Lista_Tramos_Columnas
+                If tramo.B_Modelo = 0 Then sinSeccion += 1
+                If tramo.B_Modelo > 0 Then bMin = Math.Min(bMin, tramo.B_Modelo)
+                hMax = Math.Max(hMax, tramo.H_Modelo)
+            Next
+        Next
+        If sinSeccion > 0 Then sb.AppendLine($"  ⚠ {sinSeccion} tramo(s) sin dimensiones asignadas (revisar nombres de sección)")
+        If bMin < Single.MaxValue Then sb.AppendLine($"Dimensiones: B_min={Math.Round(bMin, 3)} m  H_max={Math.Round(hMax, 3)} m")
+        If hMax > 5 Then sb.AppendLine("  ⚠ H muy grande — ¿unidades en mm en lugar de m?")
+
+        ' — Validar fuerzas
+        Dim sinFuerzas As Integer = 0
+        Dim maxP As Single = 0
+        Dim maxV As Single = 0
+        Dim conStepType As Integer = 0
+        For Each col In cols
+            For Each tramo In col.Lista_Tramos_Columnas
+                If tramo.Lista_Combinaciones.Count = 0 Then sinFuerzas += 1
+                For Each f In tramo.Lista_Combinaciones
+                    maxP = Math.Max(maxP, Math.Abs(f.P))
+                    maxV = Math.Max(maxV, Math.Max(Math.Abs(f.V2), Math.Abs(f.V3)))
+                    If f.Name.Contains("(Max)") OrElse f.Name.Contains("(Min)") Then conStepType += 1
+                Next
+            Next
+        Next
+        If sinFuerzas > 0 Then sb.AppendLine($"  ⚠ {sinFuerzas} tramo(s) sin fuerzas asignadas")
+        sb.AppendLine($"Fuerzas máx.: |P|={Math.Round(maxP, 1)} kN  |V|={Math.Round(maxV, 1)} kN")
+        If conStepType > 0 Then sb.AppendLine($"Combinaciones con Step Type (Max/Min): {conStepType}")
+
+        ' — Muestra de primeras 3 combinaciones
+        sb.AppendLine()
+        sb.AppendLine("Primeras combinaciones:")
+        For k = 0 To Math.Min(4, combos.Count - 1)
+            sb.AppendLine($"  {k + 1}. {combos(k)}")
+        Next
+        If combos.Count > 5 Then sb.AppendLine($"  ... ({combos.Count - 5} más)")
+
+        sb.AppendLine()
+        sb.AppendLine("════════════════════════════════════════")
+        Return sb.ToString()
+    End Function
+
+    Public Sub ActualizarCortanteDesdeSeleccion()
+        For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+            For Each tramo In col.Lista_Tramos_Columnas
+                tramo.V2 = 0
+                tramo.V3 = 0
+                tramo.Pu_V2 = 0
+                tramo.Pu_V3 = 0
+                For Each f In tramo.Lista_Combinaciones
+                    If Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante.Contains(f.Name) Then
+                        If Math.Abs(f.V2) > Math.Abs(tramo.V2) Then
+                            tramo.V2 = f.V2
+                            If f.P < 0 Then tramo.Pu_V2 = f.P
+                        End If
+                        If Math.Abs(f.V3) > Math.Abs(tramo.V3) Then
+                            tramo.V3 = f.V3
+                            If f.P < 0 Then tramo.Pu_V3 = f.P
+                        End If
+                    End If
+                Next
+            Next
+        Next
+    End Sub
+
+    Private Sub Comb_Diseno_Columnas_Click(sender As Object, e As EventArgs) Handles Comb_Diseno_Columnas.Click
+        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+        For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(combo)
+        Next
+        For Each combo As String In Proyecto.Elementos.Columnas.ListA_Combinaciones_Design
+            If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(combo) Then
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(combo)
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(combo)
+            End If
+        Next
+
+        Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasDiseño"
+        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones de Diseño"
+        Form_Opciones_Combinaciones.ShowDialog()
+    End Sub
+
+    Private Sub Comb_ALR_Columnas_Click(sender As Object, e As EventArgs) Handles Comb_ALR_Columnas.Click
+        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+        For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(combo)
+        Next
+        For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR
+            If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(combo) Then
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(combo)
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(combo)
+            End If
+        Next
+
+        Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasALR"
+        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones ALR"
+        Form_Opciones_Combinaciones.ShowDialog()
+    End Sub
+
+    Private Sub Comb_Cortante_Columnas_Click(sender As Object, e As EventArgs) Handles Comb_Cortante_Columnas.Click
+        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+
+        For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(combo)
+        Next
+        For Each combo As String In Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante
+            If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(combo) Then
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(combo)
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(combo)
+            End If
+        Next
+
+        Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasCortante"
+        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Cortante"
+        Form_Opciones_Combinaciones.ShowDialog()
+    End Sub
+
+    Private _hayCambiosColumnas As Boolean = False
+    Private _ultimoGuardadoColumnas As DateTime = DateTime.Now
+    Private _timerAutoSaveColumnas As New Timer With {.Interval = 60000}
+
+    Private Sub Form_02_PagColumnas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Dim itemAyuda As New ToolStripMenuItem("? Tablas ETABS")
+        itemAyuda.ForeColor = Color.White
+        itemAyuda.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Columnas")
+        Menu_Columnas.Items.Add(itemAyuda)
+
+        AddHandler _timerAutoSaveColumnas.Tick, AddressOf AutoSaveColumnas_Tick
+        _timerAutoSaveColumnas.Start()
+    End Sub
+
+    Private Sub AutoSaveColumnas_Tick(sender As Object, e As EventArgs)
+        If Not _hayCambiosColumnas Then Exit Sub
+        If String.IsNullOrEmpty(Proyecto.Ruta) Then Exit Sub
+        If (DateTime.Now - _ultimoGuardadoColumnas).TotalMinutes < 10 Then Exit Sub
+        Try
+            Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+            _ultimoGuardadoColumnas = DateTime.Now
+            _hayCambiosColumnas = False
+        Catch
+        End Try
+    End Sub
+
+    Private Sub Form_02_PagColumnas_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        If Not _hayCambiosColumnas Then Exit Sub
+        Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
+                                "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
+        If r = DialogResult.Yes Then GuardarToolStripMenuItem_Click(sender, e)
+        If r = DialogResult.Cancel Then e.Cancel = True
+    End Sub
+
 End Class

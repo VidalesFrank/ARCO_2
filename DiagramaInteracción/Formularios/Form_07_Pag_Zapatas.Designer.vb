@@ -40,6 +40,8 @@ Partial Class Form_07_Pag_Zapatas
         Me.ImportarDemandasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Exportar_Zapatas = New System.Windows.Forms.ToolStripMenuItem()
         Me.Exportar_Excel = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Ver_Zapatas = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ReporteZapatas_MenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.OpcionesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ActualizarDemandasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.TabControl1 = New System.Windows.Forms.TabControl()
@@ -201,7 +203,7 @@ Partial Class Form_07_Pag_Zapatas
         Me.MenuStrip1.Dock = System.Windows.Forms.DockStyle.Fill
         Me.MenuStrip1.Font = New System.Drawing.Font("Segoe UI", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.MenuStrip1.ImageScalingSize = New System.Drawing.Size(20, 20)
-        Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Archivo_Zapatas, Me.Importar_Zapatas, Me.Exportar_Zapatas, Me.OpcionesToolStripMenuItem})
+        Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Archivo_Zapatas, Me.Importar_Zapatas, Me.Ver_Zapatas, Me.Exportar_Zapatas, Me.OpcionesToolStripMenuItem})
         Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
         Me.MenuStrip1.Name = "MenuStrip1"
         Me.MenuStrip1.Padding = New System.Windows.Forms.Padding(5, 2, 0, 2)
@@ -280,6 +282,22 @@ Partial Class Form_07_Pag_Zapatas
         Me.Exportar_Excel.Name = "Exportar_Excel"
         Me.Exportar_Excel.Size = New System.Drawing.Size(215, 28)
         Me.Exportar_Excel.Text = "Exportar a Excel"
+        '
+        'Ver_Zapatas
+        '
+        Me.Ver_Zapatas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteZapatas_MenuItem})
+        Me.Ver_Zapatas.ForeColor = System.Drawing.Color.White
+        Me.Ver_Zapatas.Name = "Ver_Zapatas"
+        Me.Ver_Zapatas.Size = New System.Drawing.Size(50, 33)
+        Me.Ver_Zapatas.Text = "Ver"
+        '
+        'ReporteZapatas_MenuItem
+        '
+        Me.ReporteZapatas_MenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.ReporteZapatas_MenuItem.ForeColor = System.Drawing.Color.White
+        Me.ReporteZapatas_MenuItem.Name = "ReporteZapatas_MenuItem"
+        Me.ReporteZapatas_MenuItem.Size = New System.Drawing.Size(215, 28)
+        Me.ReporteZapatas_MenuItem.Text = "Reporte de Zapatas"
         '
         'OpcionesToolStripMenuItem
         '
@@ -1637,6 +1655,8 @@ Partial Class Form_07_Pag_Zapatas
     Friend WithEvents ImportarDemandasToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents Exportar_Zapatas As ToolStripMenuItem
     Friend WithEvents Exportar_Excel As ToolStripMenuItem
+    Friend WithEvents Ver_Zapatas As ToolStripMenuItem
+    Friend WithEvents ReporteZapatas_MenuItem As ToolStripMenuItem
     Friend WithEvents OpcionesToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ActualizarDemandasToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents GroupBox2 As GroupBox

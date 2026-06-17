@@ -150,30 +150,18 @@ Public Class Funciones_Muros
         End If
     End Function
 
-    Public Shared Function StringToBarraTipo(ByVal BarraString As String) As MallaTipo
+    Public Shared Function StringToBarraTipo(ByVal BarraString As String) As BarraTipo
         Select Case BarraString
-            Case "D-84"
-                Return MallaTipo.D_84
-            Case "D-106"
-                Return MallaTipo.D_106
-            Case "D-131"
-                Return MallaTipo.D_131
-            Case "D-158"
-                Return MallaTipo.D_158
-            Case "D-188"
-                Return MallaTipo.D_188
-            Case "D-221"
-                Return MallaTipo.D_221
-            Case "D-257"
-                Return MallaTipo.D_257
-            Case "D-295"
-                Return MallaTipo.D_295
-            Case "D-335"
-                Return MallaTipo.D_335
-            Case "None"
-                Return MallaTipo.None
-            Case Else
-                Throw New ArgumentOutOfRangeException("BarraString", "Cadena de Barra no soportada")
+            Case "#2"  : Return BarraTipo.Num_2
+            Case "#3"  : Return BarraTipo.Num_3
+            Case "#4"  : Return BarraTipo.Num_4
+            Case "#5"  : Return BarraTipo.Num_5
+            Case "#6"  : Return BarraTipo.Num_6
+            Case "#7"  : Return BarraTipo.Num_7
+            Case "#8"  : Return BarraTipo.Num_8
+            Case "#10" : Return BarraTipo.Num_10
+            Case "None" : Return BarraTipo.None
+            Case Else  : Return BarraTipo.None
         End Select
     End Function
 
@@ -1420,105 +1408,95 @@ Public Class Funciones_Muros
 
     End Sub
 
-    Public Shared Function CalculoFactorCapacidad(solicitaciones As List(Of SeccionMuro.Fuerzas_Elementos), Lista_Mn As List(Of Single), lista_Pn As List(Of Single)) As (String, Single)
+    ' Intersección de rayo desde origen en dirección (Md, Pd) con la envolvente.
+    ' Retorna t tal que el punto de intersección es (t*Md, t*Pd).
+    ' Factor = t: si t < 1 la demanda supera la capacidad; si t > 1 está dentro.
+    Private Shared Function FactorInteraccionDireccion(Md As Single, Pd As Single,
+                                                        Lista_Mn As List(Of Single),
+                                                        lista_Pn As List(Of Single)) As Single
+        Dim t_mejor As Single = 100
 
-        Dim m_demanda As Single
-        Dim dist_demanda As Single
-        Dim dist_capacidad As Single
-        Dim Factor_demanda As Single = 100
-        Dim Solicitacion_Pr As String
+        For i As Integer = 0 To Lista_Mn.Count - 2
+            Dim M1 As Single = Lista_Mn(i)
+            Dim P1 As Single = lista_Pn(i)
+            Dim dM As Single = Lista_Mn(i + 1) - M1
+            Dim dP As Single = lista_Pn(i + 1) - P1
 
-        For Each solicitacion As SeccionMuro.Fuerzas_Elementos In solicitaciones
+            ' Denominador del sistema rayo (t*Md, t*Pd) vs segmento (M1+s*dM, P1+s*dP)
+            Dim denom As Single = Pd * dM - Md * dP
+            If Math.Abs(denom) < 1.0E-9F Then Continue For
 
-            m_demanda = solicitacion.P / solicitacion.M3
-            dist_demanda = Math.Sqrt(solicitacion.P ^ 2 + solicitacion.M3 ^ 2)
+            Dim t As Single = (P1 * dM - M1 * dP) / denom
+            If t <= 0 Then Continue For
 
-            For i As Integer = 1 To Lista_Mn.Count - 3
+            ' Parámetro s en el segmento
+            Dim s As Single = If(Math.Abs(dM) >= Math.Abs(dP),
+                                 If(Math.Abs(dM) > 1.0E-10F, (t * Md - M1) / dM, 0),
+                                 If(Math.Abs(dP) > 1.0E-10F, (t * Pd - P1) / dP, 0))
 
-                Dim m1 As Single = lista_Pn(i) / Lista_Mn(i)
-                Dim m2 As Single = lista_Pn(i + 1) / Lista_Mn(i + 1)
-
-                If m_demanda <= m1 AndAlso m_demanda >= m2 Then
-
-                    Dim m_aux As Single = (lista_Pn(i + 1) - lista_Pn(i)) / (Lista_Mn(i + 1) - Lista_Mn(i))
-
-                    Dim x As Single = (lista_Pn(i + 1) - m_aux * Lista_Mn(i + 1)) / (m_demanda - m_aux)
-                    Dim y As Single = m_demanda * x
-
-                    dist_capacidad = Math.Sqrt(y ^ 2 + x ^ 2)
-
-                    Dim Factor As Single = dist_capacidad / dist_demanda
-
-                    If Factor < Factor_demanda Then
-
-                        Factor_demanda = Factor
-                        Solicitacion_Pr = solicitacion.Name
-
-                    End If
-
-                    Exit For
-
-                End If
-
-            Next
-
+            If s >= -0.001F AndAlso s <= 1.001F AndAlso t < t_mejor Then
+                t_mejor = t
+            End If
         Next
 
-        Return (Solicitacion_Pr, Factor_demanda)
-
+        Return t_mejor
     End Function
 
-    Public Shared Function RectaCapacidadDemanda(solicitacion As SeccionMuro.Fuerzas_Elementos, Lista_Mn As List(Of Single), lista_Pn As List(Of Single)) As (List(Of Single), List(Of Single))
-
-        Dim m_demanda As Single
-        Dim dist_demanda As Single
-        Dim dist_capacidad As Single
+    Public Shared Function CalculoFactorCapacidad(solicitaciones As List(Of SeccionMuro.Fuerzas_Elementos),
+                                                   Lista_Mn As List(Of Single),
+                                                   lista_Pn As List(Of Single)) As (String, Single)
         Dim Factor_demanda As Single = 100
-        Dim Solicitacion_Pr As String
+        Dim Solicitacion_Pr As String = ""
 
-        Dim List_X As New List(Of Single)
-        Dim List_Y As New List(Of Single)
+        If solicitaciones Is Nothing OrElse solicitaciones.Count = 0 OrElse
+           Lista_Mn Is Nothing OrElse Lista_Mn.Count < 2 Then
+            Return (If(solicitaciones IsNot Nothing AndAlso solicitaciones.Count > 0,
+                       solicitaciones(0).Name, ""), Factor_demanda)
+        End If
 
-        List_X.Add(0)
-        List_Y.Add(0)
+        For Each solicitacion As SeccionMuro.Fuerzas_Elementos In solicitaciones
+            If solicitacion Is Nothing Then Continue For
 
-        m_demanda = solicitacion.P / solicitacion.M3
-        dist_demanda = Math.Sqrt(solicitacion.P ^ 2 + solicitacion.M3 ^ 2)
+            Dim Md As Single = Math.Abs(solicitacion.M3)
+            Dim Pd As Single = solicitacion.P
+            If Md < 0.0001F Then Continue For
 
-        For i As Integer = 1 To Lista_Mn.Count - 3
+            Dim Factor As Single = FactorInteraccionDireccion(Md, Pd, Lista_Mn, lista_Pn)
 
-            Dim m1 As Single = lista_Pn(i) / Lista_Mn(i)
-            Dim m2 As Single = lista_Pn(i + 1) / Lista_Mn(i + 1)
-
-            If m_demanda <= m1 AndAlso m_demanda >= m2 Then
-
-                Dim m_aux As Single = (lista_Pn(i + 1) - lista_Pn(i)) / (Lista_Mn(i + 1) - Lista_Mn(i))
-
-                Dim x As Single = (lista_Pn(i + 1) - m_aux * Lista_Mn(i + 1)) / (m_demanda - m_aux)
-                Dim y As Single = m_demanda * x
-
-                dist_capacidad = Math.Sqrt(y ^ 2 + x ^ 2)
-
-                Dim Factor As Single = dist_capacidad / dist_demanda
-
-                If Factor < Factor_demanda Then
-
-                    Factor_demanda = Factor
-                    Solicitacion_Pr = solicitacion.Name
-
-                    List_X.Add(x)
-                    List_Y.Add(y)
-
-                End If
-
-                Exit For
-
+            If Factor < Factor_demanda Then
+                Factor_demanda = Factor
+                Solicitacion_Pr = solicitacion.Name
             End If
-
         Next
 
-        Return (List_X, List_Y)
+        If String.IsNullOrEmpty(Solicitacion_Pr) Then Solicitacion_Pr = solicitaciones(0).Name
 
+        Return (Solicitacion_Pr, Factor_demanda)
+    End Function
+
+    Public Shared Function RectaCapacidadDemanda(solicitacion As SeccionMuro.Fuerzas_Elementos,
+                                                  Lista_Mn As List(Of Single),
+                                                  lista_Pn As List(Of Single)) As (List(Of Single), List(Of Single))
+        Dim List_X As New List(Of Single)
+        Dim List_Y As New List(Of Single)
+        List_X.Add(0) : List_Y.Add(0)
+
+        If solicitacion Is Nothing OrElse Lista_Mn Is Nothing OrElse Lista_Mn.Count < 2 Then
+            Return (List_X, List_Y)
+        End If
+
+        Dim Md As Single = Math.Abs(solicitacion.M3)
+        Dim Pd As Single = solicitacion.P
+        If Md < 0.0001F Then Return (List_X, List_Y)
+
+        Dim t As Single = FactorInteraccionDireccion(Md, Pd, Lista_Mn, lista_Pn)
+
+        If t < 100 Then
+            List_X.Add(t * Md)
+            List_Y.Add(t * Pd)
+        End If
+
+        Return (List_X, List_Y)
     End Function
 
 

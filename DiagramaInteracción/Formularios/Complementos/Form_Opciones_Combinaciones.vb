@@ -2,6 +2,10 @@
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Public OpcionLlamado As String
     Public Evaluacion As String
+
+    Private _geo As New GeometryService()
+    Private _vigaService As New VigaService(_geo)
+
     Private Sub Boton_ALR_Click(sender As Object, e As EventArgs) Handles Boton_ALR.Click
 
         'For i = 0 To Lista_Combinaciones.SelectedItems.Count - 1
@@ -56,7 +60,27 @@
 
     Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
 
-        If OpcionLlamado = "Columna" Then
+        If OpcionLlamado = "ColumnasDiseño" Then
+            Proyecto.Elementos.Columnas.ListA_Combinaciones_Design.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Columnas.ListA_Combinaciones_Design.Add(Lista_Cargas_Design.Items(i).ToString())
+            Next
+
+        ElseIf OpcionLlamado = "ColumnasCortante" Then
+            Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante.Add(Lista_Cargas_Design.Items(i).ToString())
+            Next
+            ' Actualizar V2/V3 de diseño para todos los tramos con las nuevas combos
+            Form_02_PagColumnas.ActualizarCortanteDesdeSeleccion()
+
+        ElseIf OpcionLlamado = "ColumnasALR" Then
+            Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Add(Lista_Cargas_Design.Items(i).ToString())
+            Next
+
+        ElseIf OpcionLlamado = "Columna" Then
             For i = 0 To Lista_Cargas_Design.Items.Count - 1
                 Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR.Add(Lista_Cargas_Design.Items(i))
             Next
@@ -131,6 +155,16 @@
             For i = 0 To Lista_Cargas_Design.Items.Count - 1
                 Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Add(Lista_Cargas_Design.Items(i))
             Next
+        ElseIf OpcionLlamado = "VigasCortante" Then
+            Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Add(Lista_Cargas_Design.Items(i))
+            Next
+        ElseIf OpcionLlamado = "CortantePlastico" Then
+            Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Add(Lista_Cargas_Design.Items(i))
+            Next
         ElseIf OpcionLlamado = "ReplicarRefuerzo" Then
 
             Dim vigaOrigen As cViga = CType(Me.Tag, cViga)
@@ -140,7 +174,7 @@
                 Dim vigaDestino As cViga = CType(Lista_Cargas_Design.Items(i), cViga)
 
                 ' 🔥 VALIDACIÓN (MUY IMPORTANTE)
-                If Not ARCO.Form_09_Vigas.SonVigasCompatibles(vigaOrigen, vigaDestino) Then
+                If Not _vigaService.SonVigasCompatibles(vigaOrigen, vigaDestino) Then
                     MessageBox.Show($"La viga {vigaDestino.Name_Beam} no es compatible",
                                     "Advertencia",
                                     MessageBoxButtons.OK,
@@ -155,11 +189,6 @@
 
         End If
 
-        Me.Close()
-    End Sub
-
-    Private Sub Btn_OK_Click(sender As Object, e As EventArgs) Handles Button3.Click
-        ' Aquí puedes guardar la selección del usuario si es necesario
         Me.DialogResult = DialogResult.OK
         Me.Close()
     End Sub
@@ -168,11 +197,4 @@
         Me.Close()
     End Sub
 
-    Private Sub Form_Opciones_Combinaciones_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
-
-
-
-
-    End Sub
 End Class

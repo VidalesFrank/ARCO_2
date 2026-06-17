@@ -34,40 +34,7 @@ Public Class Form_07_Pag_Zapatas
                                                         .OrderBy(Function(x) x) _
                                                         .ToList()
 
-                    For Each Combinacion As String In Proyecto.Elementos.Zapatas.Lista_Combinaciones
-                        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Combinacion)
-                    Next
-
-                    Form_Opciones_Combinaciones.OpcionLlamado = "Zapatas"
-
-                    Form_Opciones_Combinaciones.Evaluacion = "Estaticas"
-
-                    Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Análisis Estático"
-
-                    Form_Opciones_Combinaciones.ShowDialog()
-
-                    ' Este código ejecuta después de que el formulario inicial se cierra con OK
-                    If Form_Opciones_Combinaciones.DialogResult = DialogResult.OK Then
-                        ' Limpiar el ListBox de combinaciones
-                        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
-                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
-
-                        ' Agregar las nuevas combinaciones sísmicas
-                        For Each Combinacion As String In Proyecto.Elementos.Zapatas.Lista_Combinaciones
-                            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(Combinacion)
-                        Next
-
-                        ' Cambiar los valores de OpcionLlamado y Evaluacion para combinaciones de diseño
-                        Form_Opciones_Combinaciones.OpcionLlamado = "Zapatas"
-                        Form_Opciones_Combinaciones.Evaluacion = "Dinamico"
-
-                        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Análisis Dinámico"
-                        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
-
-                        ' Mostrar nuevamente el formulario con combinaciones sísmicas
-                        Form_Opciones_Combinaciones.ShowDialog()
-
-                    End If
+                    MostrarSelectorCombinacionesZapatas()
 
                     MsgBox("Importación completada.", MsgBoxStyle.Information)
 
@@ -171,6 +138,12 @@ Public Class Form_07_Pag_Zapatas
         TablaResultados.Rows.Clear()
         Tabla_Reporte.Rows.Clear()
 
+        Dim combsEst = New HashSet(Of String)(Proyecto.Elementos.Zapatas.Lista_Combinaciones_Estaticas.Select(Function(c) NormalizarClaveCombo(c)))
+        Dim combsDin = New HashSet(Of String)(Proyecto.Elementos.Zapatas.Lista_Combinaciones_Dinamicas.Select(Function(c) NormalizarClaveCombo(c)))
+        Dim fontBold As New Font("Segoe UI", 9, FontStyle.Bold)
+        TablaResultados.SuspendLayout()
+        Tabla_Reporte.SuspendLayout()
+
         For i = 0 To Proyecto.Elementos.Zapatas.Tipos.Count - 1
 
             Dim Label_Element As String : Label_Element = Tabla_Elementos.Rows(i).Cells(0).Value
@@ -222,11 +195,11 @@ Public Class Form_07_Pag_Zapatas
             Elemento.Refuerzos.Add(r2)
 
             Dim combosValidos_Estatica = Proyecto.Elementos.Zapatas.Reactions.
-    Where(Function(r) Proyecto.Elementos.Zapatas.Lista_Combinaciones_Estaticas.Contains(r.LoadCase) _
+    Where(Function(r) combsEst.Contains(r.LoadCase) _
                    AndAlso r.JointLabel = Label_Element).ToList()
 
             Dim combosValidos_Dinamica = Proyecto.Elementos.Zapatas.Reactions.
-    Where(Function(r) Proyecto.Elementos.Zapatas.Lista_Combinaciones_Dinamicas.Contains(r.LoadCase) _
+    Where(Function(r) combsDin.Contains(r.LoadCase) _
                    AndAlso r.JointLabel = Label_Element).ToList()
 
 
@@ -309,13 +282,9 @@ Public Class Form_07_Pag_Zapatas
                         fila_res.Cells(col).Style.ForeColor = Color.FromArgb(156, 0, 6)
                     End If
 
-                    ' Opcional: mejorar presentación
                     fila_res.Cells(col).Style.Alignment = DataGridViewContentAlignment.MiddleCenter
-                    fila_res.Cells(col).Style.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                    fila_res.Cells(col).Style.Font = fontBold
                 Next
-
-                Dim valores() As Double = {res.g1, res.g2, res.g3, res.g4}
-                Dim maxValor As Double = valores.Max()
 
                 g_Esf_max = Math.Max(g_Esf_max, res.qMax)
                 If (Elemento.qAdm_Est / g_Esf_max) < F_Esf Then
@@ -323,10 +292,12 @@ Public Class Form_07_Pag_Zapatas
                     F_Esf = Elemento.qAdm_Est / g_Esf_max
                 End If
 
-                If (res.Vc_p / res.Vu_p) < F_Punzonamiento Then
-                    Vu_Punzonamiento_max = Math.Max(Vu_Punzonamiento_max, res.Vu_p)
+                Dim vuAbs As Double = Math.Abs(res.Vu_p)
+                If vuAbs > 0 AndAlso (res.Vc_p / vuAbs) < F_Punzonamiento Then
+                    Vu_Punzonamiento_max = Math.Max(Vu_Punzonamiento_max, vuAbs)
                     Vc_Punzonamiento = Math.Min(Vc_Punzonamiento, res.Vc_p)
                     check_Punzonamiento = res.CumplePunzonamiento
+                    F_Punzonamiento = res.Vc_p / vuAbs
                 End If
 
                 Dim Vu_C_max As Double = Math.Max(res.Vu1_C, res.Vu3_C)
@@ -344,8 +315,6 @@ Public Class Form_07_Pag_Zapatas
                     Check_Cortante = res.CumpleCortante_2 And res.CumpleCortante_4
                     F_Cortante = res.Vc1_C / Vu_C_max
                 End If
-
-                Dim M_max_Dem As Double = Math.Max(res.Mu_1, res.Mu_2)
 
                 Dim F1_M As Double = Elemento.Rho_L1 / res.Rho_1
                 Dim F2_M As Double = Elemento.Rho_L2 / res.Rho_2
@@ -412,14 +381,9 @@ Public Class Form_07_Pag_Zapatas
                         fila_res.Cells(col).Style.ForeColor = Color.FromArgb(156, 0, 6)
                     End If
 
-                    ' Opcional: mejorar presentación
                     fila_res.Cells(col).Style.Alignment = DataGridViewContentAlignment.MiddleCenter
-                    fila_res.Cells(col).Style.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                    fila_res.Cells(col).Style.Font = fontBold
                 Next
-
-
-                Dim valores() As Double = {res.g1, res.g2, res.g3, res.g4}
-                Dim maxValor As Double = valores.Max()
 
                 g_Esf_max_Din = Math.Max(g_Esf_max_Din, res.qMax)
                 If (Elemento.qAdm_Din / g_Esf_max_Din) < F_Esf_Din Then
@@ -427,10 +391,12 @@ Public Class Form_07_Pag_Zapatas
                     F_Esf_Din = Elemento.qAdm_Din / g_Esf_max_Din
                 End If
 
-                If (res.Vc_p / res.Vu_p) < F_Punzonamiento Then
-                    Vu_Punzonamiento_max = Math.Max(Vu_Punzonamiento_max, res.Vu_p)
+                Dim vuAbs_D As Double = Math.Abs(res.Vu_p)
+                If vuAbs_D > 0 AndAlso (res.Vc_p / vuAbs_D) < F_Punzonamiento Then
+                    Vu_Punzonamiento_max = Math.Max(Vu_Punzonamiento_max, vuAbs_D)
                     Vc_Punzonamiento = Math.Min(Vc_Punzonamiento, res.Vc_p)
                     check_Punzonamiento = res.CumplePunzonamiento
+                    F_Punzonamiento = res.Vc_p / vuAbs_D
                 End If
 
                 Dim Vu_C_max As Double = Math.Max(res.Vu1_C, res.Vu3_C)
@@ -448,8 +414,6 @@ Public Class Form_07_Pag_Zapatas
                     Check_Cortante = res.CumpleCortante_2 And res.CumpleCortante_4
                     F_Cortante = res.Vc1_C / Vu_C_max
                 End If
-
-                Dim M_max_Dem As Double = Math.Max(res.Mu_1, res.Mu_2)
 
                 Dim F1_M As Double = Elemento.Rho_L1 / res.Rho_1
                 Dim F2_M As Double = Elemento.Rho_L2 / res.Rho_2
@@ -503,17 +467,131 @@ Public Class Form_07_Pag_Zapatas
                     fila.Cells(col).Style.ForeColor = Color.FromArgb(156, 0, 6)
                 End If
 
-                ' Opcional: mejorar presentación
                 fila.Cells(col).Style.Alignment = DataGridViewContentAlignment.MiddleCenter
-                fila.Cells(col).Style.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                fila.Cells(col).Style.Font = fontBold
             Next
 
         Next
 
+        TablaResultados.ResumeLayout(True)
+        Tabla_Reporte.ResumeLayout(True)
+        fontBold.Dispose()
 
 
+    End Sub
 
+    ' ── Carga Tabla_Elementos desde los datos ya guardados en el proyecto ──────
+    Public Sub PopularTablaElementos()
+        If Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then Return
+        Tabla_Elementos.Rows.Clear()
+        For Each z In Proyecto.Elementos.Zapatas.Tipos
+            Dim r1 = z.Refuerzos.FirstOrDefault(Function(r) r.Direccion = eDireccionRefuerzo.L2)
+            Dim r2 = z.Refuerzos.FirstOrDefault(Function(r) r.Direccion = eDireccionRefuerzo.L1)
+            Tabla_Elementos.Rows.Add(
+                z.Label_joint, z.Nombre,
+                z.b, z.h, z.e, z.L_b, z.L_h,
+                If(r1 IsNot Nothing, r1.Diametro, ""),
+                If(r1 IsNot Nothing, r1.AreaBarra, 0.0),
+                If(r1 IsNot Nothing, r1.Cantidad, 0.0),
+                If(r2 IsNot Nothing, r2.Diametro, ""),
+                If(r2 IsNot Nothing, r2.AreaBarra, 0.0),
+                If(r2 IsNot Nothing, r2.Cantidad, 0.0),
+                z.fc)
+        Next
+    End Sub
 
+    ''' <summary>
+    ''' Llamado por la página principal al abrir un proyecto.
+    ''' Re-sincroniza la referencia y vuelve a mostrar los resultados calculados.
+    ''' </summary>
+    Public Sub RefrescarDesdeProyecto()
+        Proyecto = Form_00_PaginaPrincipal.proyecto
+        If Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then Return
+        PopularTablaElementos()
+        If Proyecto.Elementos.Zapatas.Reactions.Count > 0 Then
+            Button1_Click(Nothing, EventArgs.Empty)
+        End If
+    End Sub
+
+    Private Sub Open_Pilas_Click(sender As Object, e As EventArgs) Handles Open_Pilas.Click
+        Dim dlg As New OpenFileDialog With {.Filter = "Archivo|*.esm", .Title = "Abrir Archivo"}
+        If dlg.ShowDialog() <> DialogResult.OK Then Return
+        Try
+            Proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(dlg.FileName)
+        Catch
+            Try
+                Dim elementos = Funciones_Programa.DeSerializar(Of cElementos)(dlg.FileName)
+                Proyecto = New Proyecto()
+                Proyecto.Elementos = elementos
+            Catch ex As Exception
+                MessageBox.Show("No se pudo abrir el archivo." & vbCrLf & ex.Message,
+                                "Error al abrir", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End Try
+        End Try
+        Proyecto.Ruta = dlg.FileName
+        Form_00_PaginaPrincipal.proyecto = Proyecto
+        Form_00_PaginaPrincipal.SincronizarModulos()
+        RefrescarDesdeProyecto()
+    End Sub
+
+    Private Sub Save_Pilas_Click(sender As Object, e As EventArgs) Handles Save_Pilas.Click
+        If String.IsNullOrEmpty(Proyecto.Ruta) Then
+            SaveAs_Pilas_Click(Nothing, EventArgs.Empty)
+            Return
+        End If
+        Try
+            Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Catch ex As Exception
+            MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub SaveAs_Pilas_Click(sender As Object, e As EventArgs) Handles SaveAs_Pilas.Click
+        Dim dlg As New SaveFileDialog With {
+            .Filter = "Archivo|*.esm",
+            .Title = "Guardar Archivo",
+            .FileName = "RevisiónZapatas_Proyecto-" & Proyecto.Info.Nombre
+        }
+        If dlg.ShowDialog() <> DialogResult.OK Then Return
+        Try
+            Proyecto.Ruta = dlg.FileName
+            Form_00_PaginaPrincipal.proyecto = Proyecto
+            Funciones_Programa.Serializar(dlg.FileName, Proyecto)
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar Como", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Catch ex As Exception
+            MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub New_Pilas_Click(sender As Object, e As EventArgs) Handles New_Pilas.Click
+        Dim result = MessageBox.Show("¿Desea crear un nuevo proyecto? Se perderán los cambios no guardados.",
+                                     "Nuevo Proyecto", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+        If result <> DialogResult.Yes Then Return
+        Proyecto = New Proyecto()
+        Form_00_PaginaPrincipal.proyecto = Proyecto
+        Tabla_Elementos.Rows.Clear()
+        TablaResultados.Rows.Clear()
+        Tabla_Reporte.Rows.Clear()
+    End Sub
+
+    Private Sub ReporteZapatas_MenuItem_Click(sender As Object, e As EventArgs) Handles ReporteZapatas_MenuItem.Click
+        If Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
+            MessageBox.Show("Ejecute primero la revisión de zapatas.", "Sin datos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Form_Reporte_Zapatas.Mostrar(Proyecto)
+    End Sub
+
+    Private Sub Exportar_Excel_Click(sender As Object, e As EventArgs) Handles Exportar_Excel.Click
+        If Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
+            MessageBox.Show("Ejecute primero la revisión de zapatas.", "Sin datos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Form_Reporte_Zapatas.Mostrar(Proyecto)
     End Sub
 
     Private Sub Ref_L1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Ref_L1.SelectedIndexChanged
@@ -539,4 +617,39 @@ Public Class Form_07_Pag_Zapatas
 
         End Try
     End Sub
+
+    Private Sub ActualizarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ActualizarDemandasToolStripMenuItem.Click
+        If Proyecto.Elementos.Zapatas.Lista_Combinaciones.Count = 0 Then
+            MsgBox("No hay combinaciones cargadas. Importe las demandas primero.", MsgBoxStyle.Exclamation)
+            Return
+        End If
+        MostrarSelectorCombinacionesZapatas()
+    End Sub
+
+    Private Sub MostrarSelectorCombinacionesZapatas()
+        Dim combos = Proyecto.Elementos.Zapatas.Lista_Combinaciones
+
+        Dim fEst As New Form_Opciones_Combinaciones()
+        For Each c As String In combos
+            If Not Proyecto.Elementos.Zapatas.Lista_Combinaciones_Estaticas.Contains(c) Then fEst.Lista_Combinaciones.Items.Add(c)
+        Next
+        For Each c As String In Proyecto.Elementos.Zapatas.Lista_Combinaciones_Estaticas
+            fEst.Lista_Cargas_Design.Items.Add(c)
+        Next
+        fEst.OpcionLlamado = "Zapatas" : fEst.Evaluacion = "Estaticas"
+        fEst.GroupBox2.Text = "Combinaciones Análisis Estático"
+        fEst.ShowDialog()
+
+        Dim fDin As New Form_Opciones_Combinaciones()
+        For Each c As String In combos
+            If Not Proyecto.Elementos.Zapatas.Lista_Combinaciones_Dinamicas.Contains(c) Then fDin.Lista_Combinaciones.Items.Add(c)
+        Next
+        For Each c As String In Proyecto.Elementos.Zapatas.Lista_Combinaciones_Dinamicas
+            fDin.Lista_Cargas_Design.Items.Add(c)
+        Next
+        fDin.OpcionLlamado = "Zapatas" : fDin.Evaluacion = "Dinamico"
+        fDin.GroupBox2.Text = "Combinaciones Análisis Dinámico"
+        fDin.ShowDialog()
+    End Sub
+
 End Class

@@ -242,21 +242,47 @@ Public Class Form_00_PaginaPrincipal
     End Sub
 
     Private Sub Form_00_PaginaPrincipal_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
+        ' Agregar ítem "Reporte Completo..." en menú Opciones
+        Dim sep As New ToolStripSeparator()
+        Dim mnuReporte As New ToolStripMenuItem("Reporte Completo del Proyecto…")
+        AddHandler mnuReporte.Click, Sub(s, ev) Form_Reporte_Proyecto_Completo.Mostrar(proyecto)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(sep)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporte)
     End Sub
 
     Private Sub AbrirProyectoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles AbrirProyectoToolStripMenuItem.Click
         Open()
     End Sub
     Public Sub Open()
-        Dim Open As New OpenFileDialog
-        Open.Filter = "Archivo|*.esm"
-        Open.Title = "Abrir Archivo"
-        Open.ShowDialog()
-        If Open.FileName <> String.Empty Then
-            proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(Open.FileName)
-        End If
+        Dim dlg As New OpenFileDialog With {.Filter = "Archivo|*.esm", .Title = "Abrir Archivo"}
+        If dlg.ShowDialog() <> DialogResult.OK Then Return
+        Try
+            proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(dlg.FileName)
+            SincronizarModulos()
+        Catch ex As Exception
+            MessageBox.Show("Error al abrir el proyecto: " & ex.Message,
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
 
+    ''' <summary>
+    ''' Actualiza la referencia Proyecto en todos los módulos y recarga su UI.
+    ''' Se llama tras abrir o guardar un proyecto desde la página principal.
+    ''' </summary>
+    Public Sub SincronizarModulos()
+        ' ── Actualizar referencias ────────────────────────────────────────────
+        Form_02_PagColumnas.Proyecto = proyecto
+        Form_01_PagPilas.Proyecto    = proyecto
+        Form_06_PagMuros.proyecto    = proyecto
+        Form_07_Pag_Zapatas.Proyecto = proyecto
+        Form_09_Vigas.Proyecto       = proyecto
+
+        ' ── Recargar UI de todos los módulos ─────────────────────────────────
+        Form_02_PagColumnas.RefrescarDesdeProyecto()
+        Form_01_PagPilas.RefrescarDesdeProyecto()
+        Form_06_PagMuros.RefrescarDesdeProyecto()
+        Form_07_Pag_Zapatas.RefrescarDesdeProyecto()
+        Form_09_Vigas.RefrescarDesdeProyecto()
     End Sub
 
     Private Sub InformaciónDeProyectoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles InformaciónDeProyectoToolStripMenuItem.Click
@@ -266,37 +292,24 @@ Public Class Form_00_PaginaPrincipal
             PagInfoGeneral.C_YearBuilding.Text = proyecto.Info.Year
         End If
 
-        If IsNothing(proyecto.ParametrosSismicos.NDE) Then
-            PagInfoGeneral.C_DM.Text = "DMO"
-            PagInfoGeneral.C_TS.Text = "D"
-            PagInfoGeneral.C_GU.Text = "I"
+        PagInfoGeneral.C_DM.Text = proyecto.ParametrosSismicos.NDE.ToString()
+        PagInfoGeneral.T_NameProjet.Text = If(proyecto.Info.Nombre, "")
+        PagInfoGeneral.T_Direction.Text = If(proyecto.Info.Direccion, "")
+        PagInfoGeneral.T_Department.Text = If(proyecto.Info.Departamento, "")
+        PagInfoGeneral.T_City.Text = If(proyecto.Info.Ciudad, "")
+        PagInfoGeneral.T_Propietario.Text = If(proyecto.Info.Propietario, "")
+        PagInfoGeneral.T_Disenador.Text = If(proyecto.Info.Designer, "")
+        If proyecto.Info.Area > 0 Then PagInfoGeneral.T_AreaPlanta.Text = proyecto.Info.Area.ToString()
+        PagInfoGeneral.C_SE.Text = proyecto.Info.SistemaEstructural.ToString()
+        PagInfoGeneral.C_GU.Text = proyecto.Info.GrupoUso.ToString()
+        PagInfoGeneral.C_TS.Text = proyecto.Info.TipoSuelo.ToString()
 
+        Dim nombreResp As String = DirectorioResponsables.dResponsables(proyecto.Info.Persona_Responsable).NombreCompleto
+        If PagInfoGeneral.C_Responsable.Items.Contains(nombreResp) Then
+            PagInfoGeneral.C_Responsable.SelectedItem = nombreResp
         Else
-            PagInfoGeneral.C_DM.Text = proyecto.ParametrosSismicos.NDE
-            PagInfoGeneral.T_NameProjet.Text = proyecto.Info.Nombre
-            PagInfoGeneral.T_Direction.Text = proyecto.Info.Direccion
-            PagInfoGeneral.T_Department.Text = proyecto.Info.Departamento
-            PagInfoGeneral.T_City.Text = proyecto.Info.Ciudad
-            PagInfoGeneral.T_Propietario.Text = proyecto.Info.Propietario
-            PagInfoGeneral.T_Disenador.Text = proyecto.Info.Designer
-            PagInfoGeneral.C_SE.Text = proyecto.Info.SistemaEstructural
-
-            PagInfoGeneral.C_SE.Text = DirectorioSistemaEstructural.dSistemaEstructural(proyecto.Info.SistemaEstructural).ToString()
-
-            Dim responsableEnum As eResponsables = proyecto.Info.Persona_Responsable
-
-            Dim nombreSeleccionado As String = DirectorioResponsables.dResponsables(responsableEnum).NombreCompleto
-
-            If PagInfoGeneral.C_Responsable.Items.Contains(nombreSeleccionado) Then
-                PagInfoGeneral.C_Responsable.SelectedItem = nombreSeleccionado
-            Else
-                PagInfoGeneral.C_Responsable.Items.Add(nombreSeleccionado)
-                PagInfoGeneral.C_Responsable.SelectedItem = nombreSeleccionado
-            End If
-
-            PagInfoGeneral.C_GU.Text = proyecto.Info.GrupoUso
-            PagInfoGeneral.C_TS.Text = proyecto.Info.TipoSuelo
-
+            PagInfoGeneral.C_Responsable.Items.Add(nombreResp)
+            PagInfoGeneral.C_Responsable.SelectedItem = nombreResp
         End If
 
         PagInfoGeneral.Show()

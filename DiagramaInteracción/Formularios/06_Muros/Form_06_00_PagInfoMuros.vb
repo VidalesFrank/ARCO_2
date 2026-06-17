@@ -254,8 +254,59 @@ Public Class Form_06_00_PagInfoMuros
             Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
 
+        ' ── Menú: Diagrama de Interacción ────────────────────────────────────
+        Dim menuDI As New ToolStripMenuItem("Diagrama de Interacción P-M")
+        menuDI.ForeColor = Color.White
+        menuDI.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuDI.Click, AddressOf AbrirDiagramaInteraccion
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuDI)
 
+        ' ── Menú: Sección Transversal ─────────────────────────────────────────
+        Dim menuSec As New ToolStripMenuItem("Ver Sección Transversal")
+        menuSec.ForeColor = Color.White
+        menuSec.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuSec.Click, AddressOf AbrirSeccionTransversal
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuSec)
 
+    End Sub
+
+    Private Sub AbrirDiagramaInteraccion(sender As Object, e As EventArgs)
+        Dim muro = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text)
+        If muro Is Nothing OrElse muro.Lista_Secciones.Count = 0 Then
+            MessageBox.Show("Seleccione un muro con secciones calculadas.", "Sin datos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim sec = muro.Lista_Secciones(0)
+        If sec.Lista_Mn_Top Is Nothing OrElse sec.Lista_Mn_Top.Count = 0 Then
+            MessageBox.Show("Primero aplique el refuerzo (Botón 'Guardar') para calcular el diagrama de interacción.",
+                            "Sin diagrama", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim form As New Form_DiagramaInteraccionMuro() With {
+            .Seccion = sec,
+            .NombreMuro = muro.Label,
+            .NombrePiso = sec.Piso,
+            .ListaCombinacionesDesign = proyecto.Elementos.Muros.ListA_Combinaciones_Design,
+            .Combinaciones = sec.Lista_Combinaciones
+        }
+        form.Show(Me)
+    End Sub
+
+    Private Sub AbrirSeccionTransversal(sender As Object, e As EventArgs)
+        Dim muro = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text)
+        If muro Is Nothing OrElse muro.Lista_Secciones.Count = 0 Then
+            MessageBox.Show("Seleccione un muro con secciones.", "Sin datos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim sec = muro.Lista_Secciones(0)
+        Dim form As New Form_SeccionMuroViewer() With {
+            .Seccion = sec,
+            .NombreMuro = muro.Label,
+            .NombrePiso = sec.Piso
+        }
+        form.Show(Me)
     End Sub
 
     Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
@@ -380,7 +431,6 @@ Public Class Form_06_00_PagInfoMuros
 
                 End If
             Next
-
 
             Seccion(i / 2).Cantidad_Barras_Col_Bot = Count_Barras_Bot
             Seccion(i / 2).Cantidad_Barras_Col_Top = Count_Barras_Top
@@ -583,112 +633,111 @@ Public Class Form_06_00_PagInfoMuros
 
             ' -------------- UBICACIÓN DE REFUERZO TOP --------------
 
-            Dim Coor_X_1 As Single = 0
-            Dim Coor_X_2 As Single = 0
-            Dim Coor_Y_1 As Single = 0
-            Dim Coor_Y_2 As Single = 0
-
-            Dim Num_Lineas As Integer = Seccion(i / 2).Cantidad_Barras_Col_Top / (Num_Capas * 2)
-            Dim Count_Lines As Integer = 0
+            Dim Num_Lineas As Integer = If(Num_Capas > 0, Seccion(i / 2).Cantidad_Barras_Col_Top \ Num_Capas, 0)
 
             If Seccion(i / 2).ListaRefuerzoCompleto_Top.Count > 0 Then
                 Seccion(i / 2).ListaRefuerzoCompleto_Top.Clear()
             End If
 
-            For Each Barra As BarraInfo In Seccion(i / 2).Refuerzo_Muro_Top_Pr.Barras
+            If Num_Lineas > 0 AndAlso Seccion(i / 2).Refuerzo_Muro_Top_Pr.Barras.Count > 0 Then
 
-                Dim S As Single = (H / 2 - 0.02 - Barra.Db / (1000 * 2)) * 2 / (Num_Lineas * 2 - 1)
-                Dim As_b As Single = BarraData.BarraAreas(Barra.String_Barra)
-
-                Dim Lineas_Patron As Integer = Barra.Count_Barras / (Num_Capas)
-
-                For l = 0 To Lineas_Patron - 1
-
-                    Coor_Y_1 = -H / 2 + 0.02 + Barra.Db / (1000 * 2) + (Count_Lines + l) * S
-                    Coor_Y_2 = H / 2 - 0.02 - Barra.Db / (1000 * 2) - (Count_Lines + l) * S
-
-                    If Num_Capas = 2 Then
-                        Coor_X_1 = -B / 2 + 0.02 + Barra.Db / (1000 * 2)
-                        Coor_X_2 = B / 2 - 0.02 - Barra.Db / (1000 * 2)
-
-                        Dim Refuerzo_1 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_1)
-                        Dim Refuerzo_2 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_2, Coor_Y_1)
-                        Dim Refuerzo_3 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_2)
-                        Dim Refuerzo_4 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_2, Coor_Y_2)
-
-                        Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(Refuerzo_1)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(Refuerzo_2)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(Refuerzo_3)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(Refuerzo_4)
-
+                ' Orden de asignación exterior→interior: [0, N-1, 1, N-2, 2, ...]
+                Dim Assign_Top As New List(Of Integer)
+                Dim lo_t As Integer = 0, hi_t As Integer = Num_Lineas - 1
+                While lo_t <= hi_t
+                    If lo_t = hi_t Then
+                        Assign_Top.Add(lo_t)
                     Else
-                        Coor_X_1 = 0
-
-                        Dim Refuerzo_1 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_1)
-                        Dim Refuerzo_2 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_2)
-
-                        Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(Refuerzo_1)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(Refuerzo_2)
-
+                        Assign_Top.Add(lo_t)
+                        Assign_Top.Add(hi_t)
                     End If
+                    lo_t += 1 : hi_t -= 1
+                End While
 
+                ' Espaciado basado en la primera barra (la mayor)
+                Dim Db_ref_t As Single = Seccion(i / 2).Refuerzo_Muro_Top_Pr.Barras(0).Db / 1000
+                Dim S_t As Single = If(Num_Lineas > 1, (H - 0.04 - Db_ref_t) / (Num_Lineas - 1), 0)
+
+                Dim fillIdx_t As Integer = 0
+
+                For Each Barra As BarraInfo In Seccion(i / 2).Refuerzo_Muro_Top_Pr.Barras
+                    Dim Db_m As Single = Barra.Db / 1000
+                    Dim As_b As Single = BarraData.BarraAreas(Barra.String_Barra)
+                    Dim Y_Bot_b As Single = -H / 2 + 0.02 + Db_m / 2
+                    Dim Coor_X_1 As Single = -B / 2 + 0.02 + Db_m / 2
+                    Dim Coor_X_2 As Single = B / 2 - 0.02 - Db_m / 2
+
+                    Dim N_pos As Integer = Barra.Count_Barras \ Num_Capas
+
+                    For k = 0 To N_pos - 1
+                        Dim posIdx As Integer = Assign_Top(fillIdx_t + k)
+                        Dim Coor_Y As Single = Y_Bot_b + posIdx * S_t
+
+                        If Num_Capas = 2 Then
+                            Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y))
+                            Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_2, Coor_Y))
+                        Else
+                            Seccion(i / 2).ListaRefuerzoCompleto_Top.Add(New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, 0, Coor_Y))
+                        End If
+                    Next
+
+                    fillIdx_t += N_pos
                 Next
 
-                Count_Lines += Lineas_Patron
-
-            Next
+            End If
 
             ' -------------- UBICACIÓN DE REFUERZO BOT --------------
 
-            Num_Lineas = Seccion(i / 2).Cantidad_Barras_Col_Bot / (Num_Capas * 2)
-            Count_Lines = 0
+            Num_Lineas = If(Num_Capas > 0, Seccion(i / 2).Cantidad_Barras_Col_Bot \ Num_Capas, 0)
 
             If Seccion(i / 2).ListaRefuerzoCompleto_Bot.Count > 0 Then
                 Seccion(i / 2).ListaRefuerzoCompleto_Bot.Clear()
             End If
 
-            For Each Barra As BarraInfo In Seccion(i / 2).Refuerzo_Muro_Bot_Pr.Barras
+            If Num_Lineas > 0 AndAlso Seccion(i / 2).Refuerzo_Muro_Bot_Pr.Barras.Count > 0 Then
 
-                Dim S As Single = (H / 2 - 0.02 - Barra.Db / (1000 * 2)) * 2 / (Num_Lineas * 2 - 1)
-                Dim As_b As Single = BarraData.BarraAreas(Barra.String_Barra)
-
-                Dim Lineas_Patron As Integer = Barra.Count_Barras / (Num_Capas)
-
-                For l = 0 To Lineas_Patron
-
-                    Coor_Y_1 = -H / 2 + 0.02 + Barra.Db / (1000 * 2) + (Count_Lines + l) * S
-                    Coor_Y_2 = H / 2 - 0.02 - Barra.Db / (1000 * 2) - (Count_Lines + l) * S
-
-                    If Num_Capas = 2 Then
-                        Coor_X_1 = -B / 2 + 0.02 + Barra.Db / (1000 * 2)
-                        Coor_X_2 = B / 2 - 0.02 - Barra.Db / (1000 * 2)
-
-                        Dim Refuerzo_1 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_1)
-                        Dim Refuerzo_2 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_2, Coor_Y_1)
-                        Dim Refuerzo_3 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_2)
-                        Dim Refuerzo_4 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_2, Coor_Y_2)
-
-                        Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(Refuerzo_1)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(Refuerzo_2)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(Refuerzo_3)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(Refuerzo_4)
-
+                Dim Assign_Bot As New List(Of Integer)
+                Dim lo_b As Integer = 0, hi_b As Integer = Num_Lineas - 1
+                While lo_b <= hi_b
+                    If lo_b = hi_b Then
+                        Assign_Bot.Add(lo_b)
                     Else
-                        Coor_X_1 = 0
-
-                        Dim Refuerzo_1 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_1)
-                        Dim Refuerzo_2 As New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y_2)
-
-                        Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(Refuerzo_1)
-                        Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(Refuerzo_2)
-
+                        Assign_Bot.Add(lo_b)
+                        Assign_Bot.Add(hi_b)
                     End If
+                    lo_b += 1 : hi_b -= 1
+                End While
 
+                Dim Db_ref_b As Single = Seccion(i / 2).Refuerzo_Muro_Bot_Pr.Barras(0).Db / 1000
+                Dim S_b As Single = If(Num_Lineas > 1, (H - 0.04 - Db_ref_b) / (Num_Lineas - 1), 0)
+
+                Dim fillIdx_b As Integer = 0
+
+                For Each Barra As BarraInfo In Seccion(i / 2).Refuerzo_Muro_Bot_Pr.Barras
+                    Dim Db_m As Single = Barra.Db / 1000
+                    Dim As_b As Single = BarraData.BarraAreas(Barra.String_Barra)
+                    Dim Y_Bot_b As Single = -H / 2 + 0.02 + Db_m / 2
+                    Dim Coor_X_1 As Single = -B / 2 + 0.02 + Db_m / 2
+                    Dim Coor_X_2 As Single = B / 2 - 0.02 - Db_m / 2
+
+                    Dim N_pos As Integer = Barra.Count_Barras \ Num_Capas
+
+                    For k = 0 To N_pos - 1
+                        Dim posIdx As Integer = Assign_Bot(fillIdx_b + k)
+                        Dim Coor_Y As Single = Y_Bot_b + posIdx * S_b
+
+                        If Num_Capas = 2 Then
+                            Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_1, Coor_Y))
+                            Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, Coor_X_2, Coor_Y))
+                        Else
+                            Seccion(i / 2).ListaRefuerzoCompleto_Bot.Add(New RefuerzoSimple(Barra.Id, Barra.String_Barra, Barra.Db, As_b, 0, Coor_Y))
+                        End If
+                    Next
+
+                    fillIdx_b += N_pos
                 Next
 
-                Count_Lines += Lineas_Patron
-
-            Next
+            End If
 
             '====== CALCULO DE DIAGRAMA DE INTERACCIÓN PARA CADA SECCIÓN =======
             Dim List_Ref As List(Of RefuerzoSimple) = Seccion(i / 2).ListaRefuerzoCompleto_Top
@@ -719,7 +768,11 @@ Public Class Form_06_00_PagInfoMuros
 
         Next
 
-        proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Combo_Elementos.Text).Ref_Modificado_Muros = True
+        ' Calcular verificaciones (cortante, C_Limite, EB) para el muro actual
+        Dim muroActual = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Elemento)
+        If muroActual IsNot Nothing Then VerificarMuro(muroActual)
+
+        muroActual.Ref_Modificado_Muros = True
 
         If proyecto.Elementos.Muros.Lista_Muros.FindIndex(Function(p) p.Name = Elemento) < Combo_Elementos.Items.Count - 1 Then
 
@@ -737,14 +790,12 @@ Public Class Form_06_00_PagInfoMuros
 
     End Sub
 
-    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
-        Try
-            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+    ' Verifica cortante, C_Limite y elementos de borde para UN muro.
+    ' Es llamado automáticamente por Button4 (al guardar) y por Button3 (todos los muros).
+    Private Sub VerificarMuro(Elemento As Muro)
 
-                Dim Elemento = proyecto.Elementos.Muros.Lista_Muros(i)
-
-                For j = 0 To proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.Count - 1
-                    Dim seccion = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(j)
+        For j = 0 To Elemento.Lista_Secciones.Count - 1
+            Dim seccion = Elemento.Lista_Secciones(j)
 
                     '----- Verificación Cuantias minimas ---------
                     seccion.fy = 420
@@ -773,7 +824,7 @@ Public Class Form_06_00_PagInfoMuros
                     seccion.EB_D_Bot.Tipo_EB_Col = ""
 
                     Dim D_Techo As Single = proyecto.Elementos.Muros.D_Techo_X
-                    If seccion.Direccion_Muro = "Y" Then
+                    If seccion.Direccion_Muro = eNumeradores.eDireccion.Y Then
                         D_Techo = proyecto.Elementos.Muros.D_Techo_Y
                     End If
                     seccion.C_Limite = EB_C(proyecto.ParametrosSismicos.NDE, D_Techo, Elemento.Hw, seccion.Lw_Planos)
@@ -994,8 +1045,14 @@ Public Class Form_06_00_PagInfoMuros
                         seccion.EB_D_Bot.Tipo_EB_Req = "No especial"
                         seccion.EB_D_Bot.RefH_Req = (Math.Round(seccion.EB_D_Bot.L_EB / 0.35, 0) + 1) * 32
                     End If
-                Next
+        Next
 
+    End Sub
+
+    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
+        Try
+            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+                VerificarMuro(proyecto.Elementos.Muros.Lista_Muros(i))
             Next
 
         Catch ex As Exception

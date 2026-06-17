@@ -102,8 +102,11 @@ Public Class Funciones_02_Columnas
 
     End Function
 
+    ' Índices en el vector: 0=Piso, 1=Label, 2=Combinacion, 3=Salto, 4=P, 5=V2, 6=V3,
+    '                       7=T, 8=M2, 9=M3, 10=StepType
+    ' Formato ETABS E23. E17 tenía columnas desplazadas (sin UniqueName/StepType).
     Public Shared Function Columnas_Fuerzas(ByVal Opcion As String)
-        Dim Vector_Columnas(10)
+        Dim Vector_Columnas(11)
 
         Dim Piso As Integer = 0
         Dim Label As Integer = 1
@@ -115,25 +118,32 @@ Public Class Funciones_02_Columnas
         Dim T As Integer
         Dim M2 As Integer
         Dim M3 As Integer
+        Dim StepType As Integer
 
         If Opcion = "Frame" Then
+            ' Element Forces - Columns (E23):
+            ' Story(0) Column(1) UniqueName(2) OutputCase(3) CaseType(4) StepType(5) Station(6) P(7) V2(8) V3(9) T(10) M2(11) M3(12)
             Combinacion = 3
             Salto = 3
-            P = 5
-            V2 = 6
-            V3 = 7
-            T = 8
-            M2 = 9
-            M3 = 10
+            P = 7
+            V2 = 8
+            V3 = 9
+            T = 10
+            M2 = 11
+            M3 = 12
+            StepType = 5
         Else
+            ' Pier Forces (E23):
+            ' Story(0) Pier(1) OutputCase(2) CaseType(3) StepType(4) Location(5) P(6) V2(7) V3(8) T(9) M2(10) M3(11)
             Combinacion = 2
             Salto = 2
-            P = 4
-            V2 = 5
-            V3 = 6
-            T = 7
-            M2 = 8
-            M3 = 9
+            P = 6
+            V2 = 7
+            V3 = 8
+            T = 9
+            M2 = 10
+            M3 = 11
+            StepType = 4
         End If
 
         Vector_Columnas(0) = Piso
@@ -146,10 +156,24 @@ Public Class Funciones_02_Columnas
         Vector_Columnas(7) = T
         Vector_Columnas(8) = M2
         Vector_Columnas(9) = M3
+        Vector_Columnas(10) = StepType
 
         Columnas_Fuerzas = Vector_Columnas
 
+    End Function
 
+    ''' <summary>Construye la clave de combinación canónica. Normaliza E17 ("Envolvente Min" → "Envolvente (Min)").</summary>
+    Public Shared Function ConstruirClaveCombo(ByVal outputCase As String, ByVal stepType As String) As String
+        If Not String.IsNullOrWhiteSpace(stepType) Then
+            Return outputCase.Trim() & " (" & stepType.Trim() & ")"
+        End If
+        Dim t = outputCase.Trim()
+        If t.EndsWith(" Max", StringComparison.OrdinalIgnoreCase) Then
+            Return t.Substring(0, t.Length - 4).TrimEnd() & " (Max)"
+        ElseIf t.EndsWith(" Min", StringComparison.OrdinalIgnoreCase) Then
+            Return t.Substring(0, t.Length - 4).TrimEnd() & " (Min)"
+        End If
+        Return t
     End Function
 
     Public Shared Function Columnas_Secciones(ByVal Opcion As String)

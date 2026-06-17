@@ -50,6 +50,7 @@ Public Class Tramo_Columna
     Public Numero_Barras_Estribo As String
     Public Separacion_Estribos As Single
     Public Separacion_Estribos_ZNC As Single
+    Public Num_Estribos_ZC As Integer
 
     Public As_Sent_Largo As Single
     Public As_Sent_Corto As Single
@@ -87,6 +88,9 @@ Public Class Tramo_Columna
     Public Barra_Long_Min As String
     Public F_Ash_Corto As Single
     Public F_Ash_Largo As Single
+
+    Public L0_Prov As Single
+    Public F_L0 As Single
 
     ' ==========================================================
     ' FLEXO-COMPRESIÓN – RESULTADOS FINALES

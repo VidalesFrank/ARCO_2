@@ -24,5 +24,6 @@ Public Class cColumnas
     Public Lista_Combinaciones_Grafico_ALR As New List(Of String)
 
     Public ListA_Combinaciones_Design As New List(Of String)
+    Public Lista_Combinaciones_Cortante As New List(Of String)
 
 End Class

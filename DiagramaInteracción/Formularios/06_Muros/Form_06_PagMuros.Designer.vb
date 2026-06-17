@@ -66,6 +66,7 @@ Partial Class Form_06_PagMuros
         Me.UnirArchivosToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReportesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReporteInicialToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ResumenEjecutivoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ImportarDatosEtabsToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.VisualizacionMuros = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem14 = New System.Windows.Forms.ToolStripMenuItem()
@@ -440,11 +441,22 @@ Partial Class Form_06_PagMuros
         'ReportesToolStripMenuItem
         '
         Me.ReportesToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.ReportesToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteInicialToolStripMenuItem})
+        Me.ReportesToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteInicialToolStripMenuItem, Me.ResumenEjecutivoToolStripMenuItem})
         Me.ReportesToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ReportesToolStripMenuItem.Name = "ReportesToolStripMenuItem"
         Me.ReportesToolStripMenuItem.Size = New System.Drawing.Size(220, 22)
         Me.ReportesToolStripMenuItem.Text = "Reportes"
+        '
+        'ReporteInicialToolStripMenuItem
+        '
+        '
+        'ResumenEjecutivoToolStripMenuItem
+        '
+        Me.ResumenEjecutivoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.ResumenEjecutivoToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.ResumenEjecutivoToolStripMenuItem.Name = "ResumenEjecutivoToolStripMenuItem"
+        Me.ResumenEjecutivoToolStripMenuItem.Size = New System.Drawing.Size(220, 22)
+        Me.ResumenEjecutivoToolStripMenuItem.Text = "Resumen Ejecutivo"
         '
         'ReporteInicialToolStripMenuItem
         '
@@ -1135,6 +1147,7 @@ Partial Class Form_06_PagMuros
     Protected WithEvents Check_Secciones As CheckBox
     Friend WithEvents ReportesToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ReporteInicialToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents ResumenEjecutivoToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents Macroparametros As TabPage
     Friend WithEvents Tabla_Parametros As DataGridView
     Friend WithEvents Figura_Muros_Tw As PictureBox

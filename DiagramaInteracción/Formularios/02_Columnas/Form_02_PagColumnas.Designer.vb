@@ -46,10 +46,14 @@ Partial Class Form_02_PagColumnas
         Me.Ver_Columnas = New System.Windows.Forms.ToolStripMenuItem()
         Me.Resultados_Col = New System.Windows.Forms.ToolStripMenuItem()
         Me.Graficos_Col = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Reporte_Col = New System.Windows.Forms.ToolStripMenuItem()
         Me.OpcionesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ActualizarSolicitacionesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.FrameToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.PierToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Comb_Diseno_Columnas = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Comb_Cortante_Columnas = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Comb_ALR_Columnas = New System.Windows.Forms.ToolStripMenuItem()
         Me.ArchivoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.NuevoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.AbrirToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
@@ -283,7 +287,7 @@ Partial Class Form_02_PagColumnas
         '
         'Ver_Columnas
         '
-        Me.Ver_Columnas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Resultados_Col, Me.Graficos_Col})
+        Me.Ver_Columnas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Resultados_Col, Me.Graficos_Col, Me.Reporte_Col})
         Me.Ver_Columnas.ForeColor = System.Drawing.Color.White
         Me.Ver_Columnas.Name = "Ver_Columnas"
         Me.Ver_Columnas.Size = New System.Drawing.Size(39, 26)
@@ -302,12 +306,20 @@ Partial Class Form_02_PagColumnas
         Me.Graficos_Col.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Graficos_Col.ForeColor = System.Drawing.Color.White
         Me.Graficos_Col.Name = "Graficos_Col"
-        Me.Graficos_Col.Size = New System.Drawing.Size(140, 22)
+        Me.Graficos_Col.Size = New System.Drawing.Size(200, 22)
         Me.Graficos_Col.Text = "Gráficos"
+        '
+        'Reporte_Col
+        '
+        Me.Reporte_Col.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.Reporte_Col.ForeColor = System.Drawing.Color.White
+        Me.Reporte_Col.Name = "Reporte_Col"
+        Me.Reporte_Col.Size = New System.Drawing.Size(200, 22)
+        Me.Reporte_Col.Text = "Reporte de Resultados"
         '
         'OpcionesToolStripMenuItem
         '
-        Me.OpcionesToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ActualizarSolicitacionesToolStripMenuItem})
+        Me.OpcionesToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ActualizarSolicitacionesToolStripMenuItem, Me.Comb_Diseno_Columnas, Me.Comb_Cortante_Columnas, Me.Comb_ALR_Columnas})
         Me.OpcionesToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.OpcionesToolStripMenuItem.Name = "OpcionesToolStripMenuItem"
         Me.OpcionesToolStripMenuItem.Size = New System.Drawing.Size(75, 26)
@@ -333,6 +345,30 @@ Partial Class Form_02_PagColumnas
         Me.PierToolStripMenuItem.Name = "PierToolStripMenuItem"
         Me.PierToolStripMenuItem.Size = New System.Drawing.Size(112, 22)
         Me.PierToolStripMenuItem.Text = "Pier"
+        '
+        'Comb_Diseno_Columnas
+        '
+        Me.Comb_Diseno_Columnas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Comb_Diseno_Columnas.ForeColor = System.Drawing.Color.White
+        Me.Comb_Diseno_Columnas.Name = "Comb_Diseno_Columnas"
+        Me.Comb_Diseno_Columnas.Size = New System.Drawing.Size(214, 22)
+        Me.Comb_Diseno_Columnas.Text = "Combinaciones Diseño"
+        '
+        'Comb_Cortante_Columnas
+        '
+        Me.Comb_Cortante_Columnas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Comb_Cortante_Columnas.ForeColor = System.Drawing.Color.White
+        Me.Comb_Cortante_Columnas.Name = "Comb_Cortante_Columnas"
+        Me.Comb_Cortante_Columnas.Size = New System.Drawing.Size(214, 22)
+        Me.Comb_Cortante_Columnas.Text = "Combinaciones Cortante"
+        '
+        'Comb_ALR_Columnas
+        '
+        Me.Comb_ALR_Columnas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Comb_ALR_Columnas.ForeColor = System.Drawing.Color.White
+        Me.Comb_ALR_Columnas.Name = "Comb_ALR_Columnas"
+        Me.Comb_ALR_Columnas.Size = New System.Drawing.Size(214, 22)
+        Me.Comb_ALR_Columnas.Text = "Combinaciones ALR"
         '
         'ArchivoToolStripMenuItem
         '
@@ -937,8 +973,12 @@ Partial Class Form_02_PagColumnas
     Friend WithEvents Ver_Columnas As ToolStripMenuItem
     Friend WithEvents Resultados_Col As ToolStripMenuItem
     Friend WithEvents Graficos_Col As ToolStripMenuItem
+    Friend WithEvents Reporte_Col As ToolStripMenuItem
     Friend WithEvents OpcionesToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ActualizarSolicitacionesToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents FrameToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents PierToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents Comb_Diseno_Columnas As ToolStripMenuItem
+    Friend WithEvents Comb_Cortante_Columnas As ToolStripMenuItem
+    Friend WithEvents Comb_ALR_Columnas As ToolStripMenuItem
 End Class

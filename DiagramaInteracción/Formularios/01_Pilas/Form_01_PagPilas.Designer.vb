@@ -157,6 +157,7 @@ Partial Class Form_01_PagPilas
         Me.DatosAExcelToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.VerToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReporteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.DiagramaDiametroToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Grafica1 = New System.Windows.Forms.DataVisualization.Charting.Chart()
         Me.TabControl2 = New System.Windows.Forms.TabControl()
         Me.Seccion = New System.Windows.Forms.TabPage()
@@ -772,7 +773,7 @@ Partial Class Form_01_PagPilas
         Me.MenuStrip1.Dock = System.Windows.Forms.DockStyle.Fill
         Me.MenuStrip1.Font = New System.Drawing.Font("Segoe UI", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.MenuStrip1.ImageScalingSize = New System.Drawing.Size(20, 20)
-        Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Archivo_Pilas, Me.Importar_Pilas, Me.Exportar_Pilas, Me.OpcionesToolStripMenuItem})
+        Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Archivo_Pilas, Me.Importar_Pilas, Me.Exportar_Pilas, Me.OpcionesToolStripMenuItem, Me.VerToolStripMenuItem})
         Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
         Me.MenuStrip1.Name = "MenuStrip1"
         Me.MenuStrip1.Padding = New System.Windows.Forms.Padding(4, 2, 0, 2)
@@ -999,7 +1000,7 @@ Partial Class Form_01_PagPilas
         '
         'VerToolStripMenuItem
         '
-        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteToolStripMenuItem})
+        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteToolStripMenuItem, Me.DiagramaDiametroToolStripMenuItem})
         Me.VerToolStripMenuItem.Enabled = False
         Me.VerToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.VerToolStripMenuItem.Name = "VerToolStripMenuItem"
@@ -1011,8 +1012,16 @@ Partial Class Form_01_PagPilas
         Me.ReporteToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.ReporteToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ReporteToolStripMenuItem.Name = "ReporteToolStripMenuItem"
-        Me.ReporteToolStripMenuItem.Size = New System.Drawing.Size(115, 22)
+        Me.ReporteToolStripMenuItem.Size = New System.Drawing.Size(218, 22)
         Me.ReporteToolStripMenuItem.Text = "Reporte"
+        '
+        'DiagramaDiametroToolStripMenuItem
+        '
+        Me.DiagramaDiametroToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.DiagramaDiametroToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.DiagramaDiametroToolStripMenuItem.Name = "DiagramaDiametroToolStripMenuItem"
+        Me.DiagramaDiametroToolStripMenuItem.Size = New System.Drawing.Size(218, 22)
+        Me.DiagramaDiametroToolStripMenuItem.Text = "Diagrama de Interacción por Diámetro"
         '
         'Grafica1
         '
@@ -1832,6 +1841,7 @@ Partial Class Form_01_PagPilas
     Friend WithEvents Label10 As Label
     Friend WithEvents VerToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ReporteToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents DiagramaDiametroToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents TabControl2 As TabControl
     Friend WithEvents Seccion As TabPage
     Friend WithEvents DiagramaInteraccion As TabPage

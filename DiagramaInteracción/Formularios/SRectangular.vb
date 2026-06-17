@@ -70,23 +70,27 @@ Partial Public Class SRectangular
 
         Dim Combinacion As SeccionMuro.Fuerzas_Elementos = Seccion.Lista_Combinaciones.Find(Function(p) p.Name = Seccion.Combinacion_Demanda_Flexo_Bot)
 
-        Dim recta_Capacidad = Funciones_Muros.RectaCapacidadDemanda(Combinacion, Lista_Phi_Mn, Lista_Phi_Pn)
-        Dim List_X As List(Of Single) = recta_Capacidad.Item1
-        Dim List_Y As List(Of Single) = recta_Capacidad.Item2
+        If Combinacion IsNot Nothing Then
 
-        Dim nuevaSerie As New DataVisualization.Charting.Series()
-        nuevaSerie.Name = "Recta"
-        nuevaSerie.ChartType = DataVisualization.Charting.SeriesChartType.Spline
-        nuevaSerie.BorderWidth = 2
-        nuevaSerie.Color = Color.Red
-        nuevaSerie.BorderDashStyle = ChartDashStyle.Dash
-        nuevaSerie.IsVisibleInLegend = False
+            Dim recta_Capacidad = Funciones_Muros.RectaCapacidadDemanda(Combinacion, Lista_Phi_Mn, Lista_Phi_Pn)
+            Dim List_X As List(Of Single) = recta_Capacidad.Item1
+            Dim List_Y As List(Of Single) = recta_Capacidad.Item2
 
-        For i As Integer = 0 To List_X.Count - 1
-            nuevaSerie.Points.AddXY(List_X(i), List_Y(i))
-        Next
+            Dim nuevaSerie As New DataVisualization.Charting.Series()
+            nuevaSerie.Name = "Recta"
+            nuevaSerie.ChartType = DataVisualization.Charting.SeriesChartType.Spline
+            nuevaSerie.BorderWidth = 2
+            nuevaSerie.Color = Color.Red
+            nuevaSerie.BorderDashStyle = ChartDashStyle.Dash
+            nuevaSerie.IsVisibleInLegend = False
 
-        Grafico_DI.Series.Add(nuevaSerie)
+            For i As Integer = 0 To List_X.Count - 1
+                nuevaSerie.Points.AddXY(List_X(i), List_Y(i))
+            Next
+
+            Grafico_DI.Series.Add(nuevaSerie)
+
+        End If
 
     End Sub
 

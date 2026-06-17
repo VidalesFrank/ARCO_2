@@ -73,7 +73,7 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>1-75c67b13.ico</ApplicationIcon>
+    <ApplicationIcon>ARCO_2_ICONO_V1.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -324,6 +324,18 @@
     <Compile Include="Formularios\06_Muros\Form_06_PagMuros.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\06_Muros\Form_DiagramaInteraccionMuro.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_SeccionMuroViewer.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_Reporte_Resumen_Muros.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\Form_Reporte_Ejecutivo_Muros.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\06_Muros\Form_InfoDesignMuros.Designer.vb">
       <DependentUpon>Form_InfoDesignMuros.vb</DependentUpon>
     </Compile>
@@ -336,6 +348,9 @@
     <Compile Include="Formularios\06_Muros\R_ReporteInicial.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\09_Vigas\DiagramaService.vb" />
+    <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
+    <Compile Include="Formularios\09_Vigas\VigaService.vb" />
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
       <DependentUpon>Form_Logos.vb</DependentUpon>
     </Compile>
@@ -358,6 +373,24 @@
       <DependentUpon>Form_09_Vigas.vb</DependentUpon>
     </Compile>
     <Compile Include="Formularios\Form_09_Vigas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_AyudaImportacion.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_FiltroSecciones.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_PlantaInteractiva.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Reporte_Resumen.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Reporte_Proyecto_Completo.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Reporte_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_Derivas.Designer.vb">
@@ -437,6 +470,9 @@
     <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_Reporte_Columnas.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Form1.Designer.vb">
       <DependentUpon>Form1.vb</DependentUpon>
     </Compile>
@@ -454,6 +490,12 @@
       <DependentUpon>Form_01_00_PagInfoPilas.vb</DependentUpon>
     </Compile>
     <Compile Include="Formularios\01_Pilas\Form_01_00_PagInfoPilas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_DiagramaInteraccionPilas_Resumen.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_Reporte_Pilas.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_11_PagMateriales.Designer.vb">
@@ -821,6 +863,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="1-75c67b13.ico" />
+    <Content Include="ARCO_2_ICONO.ico" />
+    <Content Include="ARCO_2_ICONO_V1.ico" />
     <Content Include="ARCO_V04.ico" />
     <Content Include="Logo3.ico" />
     <Content Include="LogoColumnaSinFondo_1.ico" />
@@ -830,7 +874,11 @@
     <None Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_LOGOVerde.png" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Clases\Vigas\" />
+    <Folder Include="Formularios\07_Zapatas\" />
+    <Folder Include="Formularios\08_V_Fundacion\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>
     <PostBuildEvent>

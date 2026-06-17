@@ -60,6 +60,7 @@ Partial Class Form_02_00_PagInfoColumnas
         Me.Column20 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column16 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column18 = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.Column21 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Panel1.SuspendLayout()
         CType(Me.Tabla_Info_Seccion, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel2.SuspendLayout()
@@ -212,7 +213,7 @@ Partial Class Form_02_00_PagInfoColumnas
         DataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
         Me.Tabla_Info_Seccion.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         Me.Tabla_Info_Seccion.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        Me.Tabla_Info_Seccion.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.Column1, Me.Column3, Me.Column12, Me.Column13, Me.Column2, Me.Column4, Me.Column5, Me.Column6, Me.Column7, Me.Column8, Me.Column9, Me.Column10, Me.Column11, Me.Column14, Me.Column15, Me.Column17, Me.Column19, Me.Column20, Me.Column16, Me.Column18})
+        Me.Tabla_Info_Seccion.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.Column1, Me.Column3, Me.Column12, Me.Column13, Me.Column2, Me.Column4, Me.Column5, Me.Column6, Me.Column7, Me.Column8, Me.Column9, Me.Column10, Me.Column11, Me.Column14, Me.Column15, Me.Column17, Me.Column19, Me.Column20, Me.Column16, Me.Column18, Me.Column21})
         DataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window
         DataGridViewCellStyle2.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
@@ -399,6 +400,13 @@ Partial Class Form_02_00_PagInfoColumnas
         '
         Me.Column18.HeaderText = "Sep. ZNC (m)"
         Me.Column18.Name = "Column18"
+        Me.Column18.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+        '
+        'Column21
+        '
+        Me.Column21.HeaderText = "N° Est. ZC"
+        Me.Column21.Name = "Column21"
+        Me.Column21.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
         '
         'Form_02_00_PagInfoColumnas
         '
@@ -456,4 +464,5 @@ Partial Class Form_02_00_PagInfoColumnas
     Friend WithEvents Column20 As DataGridViewTextBoxColumn
     Friend WithEvents Column16 As DataGridViewTextBoxColumn
     Friend WithEvents Column18 As DataGridViewTextBoxColumn
+    Friend WithEvents Column21 As DataGridViewTextBoxColumn
 End Class

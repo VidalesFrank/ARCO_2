@@ -30,7 +30,12 @@ Public Class Form_02_00_PagInfoColumnas
                     Tabla_Info_Seccion.Rows(i).Cells(13).Value = 0
                     Tabla_Info_Seccion.Rows(i).Cells(14).Value = 0
                     Tabla_Info_Seccion.Rows(i).Cells(15).Value = "#3"
-                    Tabla_Info_Seccion.Rows(i).Cells(16).Value = 0
+                    Tabla_Info_Seccion.Rows(i).Cells(16).Value = AreaRefuerzo("#3")
+                    Tabla_Info_Seccion.Rows(i).Cells(17).Value = AreaRefuerzo("#3")
+                    Dim sZC_new As Single = Math.Round(Math.Min(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano) / 3, 3)
+                    Tabla_Info_Seccion.Rows(i).Cells(18).Value = sZC_new
+                    Tabla_Info_Seccion.Rows(i).Cells(19).Value = Math.Round(2 * sZC_new, 3)
+                    Tabla_Info_Seccion.Rows(i).Cells(20).Value = 0
                 Else
                     Tabla_Info_Seccion.Rows(i).Cells(5).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_2
                     Tabla_Info_Seccion.Rows(i).Cells(6).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_3
@@ -53,7 +58,18 @@ Public Class Form_02_00_PagInfoColumnas
                     Tabla_Info_Seccion.Rows(i).Cells(13).Value = Seccion(i / 2).Num_Ramas_Largo
                     Tabla_Info_Seccion.Rows(i).Cells(14).Value = Seccion(i / 2).Num_Ramas_Corto
                     Tabla_Info_Seccion.Rows(i).Cells(15).Value = Seccion(i / 2).Numero_Barras_Estribo
-                    Tabla_Info_Seccion.Rows(i).Cells(16).Value = Seccion(i / 2).Separacion_Estribos
+                    Dim asSentL As Single = Seccion(i / 2).As_Sent_Largo
+                    If asSentL = 0 AndAlso Not String.IsNullOrEmpty(Seccion(i / 2).Numero_Barras_Estribo) AndAlso Seccion(i / 2).Numero_Barras_Estribo <> "User" Then
+                        asSentL = AreaRefuerzo(Seccion(i / 2).Numero_Barras_Estribo)
+                    End If
+                    Tabla_Info_Seccion.Rows(i).Cells(16).Value = asSentL
+                    Tabla_Info_Seccion.Rows(i).Cells(17).Value = Seccion(i / 2).As_Sent_Corto
+                    Dim sZC_sug As Single = Math.Round(Math.Min(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano) / 3, 3)
+                    Dim sZC_val As Single = If(Seccion(i / 2).Separacion_Estribos > 0, Seccion(i / 2).Separacion_Estribos, sZC_sug)
+                    Dim sZNC_val As Single = If(Seccion(i / 2).Separacion_Estribos_ZNC > 0, Seccion(i / 2).Separacion_Estribos_ZNC, Math.Round(2 * sZC_sug, 3))
+                    Tabla_Info_Seccion.Rows(i).Cells(18).Value = sZC_val
+                    Tabla_Info_Seccion.Rows(i).Cells(19).Value = sZNC_val
+                    Tabla_Info_Seccion.Rows(i).Cells(20).Value = Seccion(i / 2).Num_Estribos_ZC
                 End If
             Next
 
@@ -191,8 +207,11 @@ Public Class Form_02_00_PagInfoColumnas
             Seccion(i / 2).Separacion_Estribos = Tabla_Info_Seccion.Rows(i).Cells(18).Value
             Seccion(i / 2).Separacion_Estribos_ZNC = Tabla_Info_Seccion.Rows(i).Cells(19).Value
 
+            Seccion(i / 2).As_Sent_Largo = area_var_Largo
+            Seccion(i / 2).As_Sent_Corto = area_var_Corto
             Seccion(i / 2).Ash_Col_Corto = Seccion(i / 2).Num_Ramas_Corto * area_var_Corto
             Seccion(i / 2).Ash_Col_Largo = Seccion(i / 2).Num_Ramas_Largo * area_var_Largo
+            Seccion(i / 2).Num_Estribos_ZC = Convert.ToInt32(If(Tabla_Info_Seccion.Rows(i).Cells(20).Value IsNot Nothing, Tabla_Info_Seccion.Rows(i).Cells(20).Value, 0))
         Next
 
         If Op_SeccionPrincipal.Checked = True Then
@@ -221,6 +240,36 @@ Public Class Form_02_00_PagInfoColumnas
                 End If
             Next
         Next
+
+        Dim fila As Integer = e.RowIndex
+        If fila < 0 Then Return
+        ' Datos de estribo y separaciones sólo aplican en filas pares (Top)
+        If fila Mod 2 <> 0 Then Return
+
+        Select Case e.ColumnIndex
+            Case 15  ' # Barra cambia → auto-fill As Sent. Largo y Corto
+                Dim barraObj As Object = Tabla_Info_Seccion.Rows(fila).Cells(15).Value
+                If barraObj IsNot Nothing Then
+                    Dim barra As String = barraObj.ToString()
+                    If barra <> "User" AndAlso barra <> "" Then
+                        Dim asSent As Single = AreaRefuerzo(barra)
+                        Tabla_Info_Seccion.Rows(fila).Cells(16).Value = Math.Round(asSent, 2)
+                        Tabla_Info_Seccion.Rows(fila).Cells(17).Value = Math.Round(asSent, 2)
+                    End If
+                End If
+
+            Case 2, 3  ' Base o Alto cambia → auto-calc Sep. ZC y ZNC
+                Dim bObj As Object = Tabla_Info_Seccion.Rows(fila).Cells(2).Value
+                Dim hObj As Object = Tabla_Info_Seccion.Rows(fila).Cells(3).Value
+                If bObj IsNot Nothing AndAlso hObj IsNot Nothing Then
+                    Dim b As Single, h As Single
+                    If Single.TryParse(bObj.ToString(), b) AndAlso Single.TryParse(hObj.ToString(), h) AndAlso b > 0 AndAlso h > 0 Then
+                        Dim sZC As Single = Math.Round(Math.Min(b, h) / 3, 3)
+                        Tabla_Info_Seccion.Rows(fila).Cells(18).Value = sZC
+                        Tabla_Info_Seccion.Rows(fila).Cells(19).Value = Math.Round(2 * sZC, 3)
+                    End If
+                End If
+        End Select
     End Sub
 
     Sub Color_Celda(ByVal Tabla As DataGridView, ByVal Fila As Integer, ByVal Columna As Integer)
@@ -242,14 +291,25 @@ Public Class Form_02_00_PagInfoColumnas
 
     Private Sub Form_03_PagInfoColumnas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
-        If Proyecto.Elementos.Columnas.Lista_Columnas.Count > 0 Then
+        For Each col As DataGridViewColumn In Tabla_Info_Seccion.Columns
+            col.SortMode = DataGridViewColumnSortMode.NotSortable
+            If col.HeaderText.Contains("Sep.") Then
+                col.DefaultCellStyle.Format = "F3"
+            End If
+        Next
 
+        RefrescarCombo()
+
+    End Sub
+
+    Public Sub RefrescarCombo()
+        Combo_Elementos.Items.Clear()
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count > 0 Then
             For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
                 Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento)
             Next
             Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Elemento
         End If
-
     End Sub
 
     Private Sub Form_03_PagInfoColumnas_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
@@ -262,117 +322,125 @@ Public Class Form_02_00_PagInfoColumnas
     End Sub
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-        Dim cont As Integer = 0
+        Dim colsConRefuerzo = Proyecto.Elementos.Columnas.Lista_Columnas.Where(Function(c) c.Ref_Modificado).ToList()
+        Dim cantOmitidas As Integer = Proyecto.Elementos.Columnas.Lista_Columnas.Count - colsConRefuerzo.Count
+
+        If colsConRefuerzo.Count = 0 Then
+            MessageBox.Show("Ninguna columna tiene refuerzo definido. Ingrese el refuerzo de al menos una columna antes de calcular.",
+                            "Sin Refuerzo Definido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ' Repoblar combos únicamente con las columnas que se van a calcular
+        Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Clear()
+        Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Clear()
+        Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Clear()
+
         For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
-            For j = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
-                If Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).As_Col_Top = 0 Then
-                    Form_Reportes.Lista_Reporte.Items.Add("- No se ha ingresado refuerzo Top en la sección " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label & " en el piso " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).Piso)
-                    cont += 1
+            Dim col = Proyecto.Elementos.Columnas.Lista_Columnas(i)
+
+            ' Omitir columnas sin refuerzo definido
+            If Not col.Ref_Modificado Then Continue For
+
+            Dim Lista(3, 2) : Lista(1, 1) = 100 : Lista(2, 1) = 100 : Lista(3, 1) = 100
+            col.Lista_F.Clear()
+            col.Lista_F_Piso.Clear()
+
+            Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(col.Name_Label)
+            Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Add(col.Name_Label)
+            Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Add(col.Name_Label)
+
+            For j = 0 To col.Lista_Tramos_Columnas.Count - 1
+                Dim Seccion = col.Lista_Tramos_Columnas(j)
+
+                '--- Verificación a Flexo-Compresión -------
+                Seccion.F_Flexo_Top = Math.Round(Seccion.As_Col_Top / Seccion.As_Req_Top, 2)
+                Seccion.F_Flexo_Bottom = Math.Round(Seccion.As_Col_Bottom / Seccion.As_Req_Bottom, 2)
+
+                '---- Verificación a Cortante -------
+                Dim Rev_Cortante_L = Funcion_Cortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
+                Dim Rev_Cortante_C = Funcion_Cortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
+                Seccion.Vc_2 = Rev_Cortante_L(1)
+                Seccion.Vs_2 = Rev_Cortante_L(2)
+                Seccion.Vn_2 = Rev_Cortante_L(3)
+                Seccion.Vu_2 = Rev_Cortante_L(4)
+                Seccion.F_Cortante_2 = Rev_Cortante_L(5)
+                Seccion.Vc_3 = Rev_Cortante_C(1)
+                Seccion.Vs_3 = Rev_Cortante_C(2)
+                Seccion.Vn_3 = Rev_Cortante_C(3)
+                Seccion.Vu_3 = Rev_Cortante_C(4)
+                Seccion.F_Cortante_3 = Rev_Cortante_C(5)
+
+                '------ Verificaciòn al Confinamiento ------
+                Dim Rev_Confinamiento_L = Funcion_Confinamiento(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                Dim Rev_Confinamiento_C = Funcion_Confinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+
+                Seccion.Ash_L = Rev_Confinamiento_L(1)
+                Seccion.Ramas_Req_L = Rev_Confinamiento_L(2)
+                Seccion.S0_L = Rev_Confinamiento_L(3)
+                Seccion.L0_L = Rev_Confinamiento_L(4)
+
+                Seccion.Ash_C = Rev_Confinamiento_C(1)
+                Seccion.Ramas_Req_C = Rev_Confinamiento_C(2)
+                Seccion.S0_C = Rev_Confinamiento_C(3)
+                Seccion.L0_C = Rev_Confinamiento_C(4)
+
+                Seccion.F_Ash_Largo = Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)
+                Seccion.F_Ash_Corto = Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)
+
+                Seccion.L0_Prov = Math.Round(0.05 + Seccion.Num_Estribos_ZC * Seccion.Separacion_Estribos + 0.05, 3)
+                Dim l0Req As Single = Math.Max(Seccion.L0_L, Seccion.L0_C)
+                If l0Req > 0 Then Seccion.F_L0 = Math.Round(Seccion.L0_Prov / l0Req, 2)
+
+                If Lista(1, 1) > Seccion.F_Flexo_Top Then
+                    Lista(1, 1) = Seccion.F_Flexo_Top
+                    Lista(1, 2) = Seccion.Piso
                 End If
-                If Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).As_Col_Bottom = 0 Then
-                    Form_Reportes.Lista_Reporte.Items.Add("- No se ha ingresado refuerzo Bottom en la sección " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label & " en el piso " & Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j).Piso)
-                    cont += 1
+                If Lista(1, 1) > Seccion.F_Flexo_Bottom Then
+                    Lista(1, 1) = Seccion.F_Flexo_Bottom
+                    Lista(1, 2) = Seccion.Piso
                 End If
+
+                If Lista(2, 1) > Seccion.F_Cortante_2 Then
+                    Lista(2, 1) = Seccion.F_Cortante_2
+                    Lista(2, 2) = Seccion.Piso
+                End If
+
+                If Lista(3, 1) > Seccion.F_Cortante_3 Then
+                    Lista(3, 1) = Seccion.F_Cortante_3
+                    Lista(3, 2) = Seccion.Piso
+                End If
+            Next
+
+            For k = 1 To 3
+                col.Lista_F.Add(Lista(k, 1))
+                col.Lista_F_Piso.Add(Lista(k, 2))
             Next
         Next
 
-        If cont = 0 Then
-            For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
-                Dim Lista(3, 2) : Lista(1, 1) = 100 : Lista(2, 1) = 100 : Lista(3, 1) = 100
-                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F.Clear()
-                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F_Piso.Clear()
-
-                If Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Count < Proyecto.Elementos.Columnas.Lista_Columnas.Count Then
-                    Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
-                    Form_02_01_02_ResultadosModelo.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
-                    Form_02_01_00_RevisionCortante.Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Label)
-                End If
-
-                For j = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
-                    Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(j)
-
-                    '--- Verificación a Flexo-Compresión -------
-                    Seccion.F_Flexo_Top = Math.Round(Seccion.As_Col_Top / Seccion.As_Req_Top, 2)
-                    Seccion.F_Flexo_Bottom = Math.Round(Seccion.As_Col_Bottom / Seccion.As_Req_Bottom, 2)
-
-                    '---- Verificación a Cortante -------
-                    Dim Rev_Cortante_L = Funcion_Cortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
-                    Dim Rev_Cortante_C = Funcion_Cortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
-                    Seccion.Vc_2 = Rev_Cortante_L(1)
-                    Seccion.Vs_2 = Rev_Cortante_L(2)
-                    Seccion.Vn_2 = Rev_Cortante_L(3)
-                    Seccion.Vu_2 = Rev_Cortante_L(4)
-                    Seccion.F_Cortante_2 = Rev_Cortante_L(5)
-                    Seccion.Vc_3 = Rev_Cortante_C(1)
-                    Seccion.Vs_3 = Rev_Cortante_C(2)
-                    Seccion.Vn_3 = Rev_Cortante_C(3)
-                    Seccion.Vu_3 = Rev_Cortante_C(4)
-                    Seccion.F_Cortante_3 = Rev_Cortante_C(5)
-
-                    '------ Verificaciòn al Confinamiento ------
-                    Dim Rev_Confinamiento_L = Funcion_Confinamiento(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
-                    Dim Rev_Confinamiento_C = Funcion_Confinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
-
-                    Seccion.Ash_L = Rev_Confinamiento_L(1)
-                    Seccion.Ramas_Req_L = Rev_Confinamiento_L(2)
-                    Seccion.S0_L = Rev_Confinamiento_L(3)
-                    Seccion.L0_L = Rev_Confinamiento_L(4)
-
-                    Seccion.Ash_C = Rev_Confinamiento_C(1)
-                    Seccion.Ramas_Req_C = Rev_Confinamiento_C(2)
-                    Seccion.S0_C = Rev_Confinamiento_C(3)
-                    Seccion.L0_C = Rev_Confinamiento_C(4)
-
-                    Seccion.F_Ash_Largo = Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)
-                    Seccion.F_Ash_Corto = Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)
-
-
-                    If Lista(1, 1) > Seccion.F_Flexo_Top Then
-                        Lista(1, 1) = Seccion.F_Flexo_Top
-                        Lista(1, 2) = Seccion.Piso
-                    End If
-                    If Lista(1, 1) > Seccion.F_Flexo_Bottom Then
-                        Lista(1, 1) = Seccion.F_Flexo_Bottom
-                        Lista(1, 2) = Seccion.Piso
-                    End If
-
-                    If Lista(2, 1) > Seccion.F_Cortante_2 Then
-                        Lista(2, 1) = Seccion.F_Cortante_2
-                        Lista(2, 2) = Seccion.Piso
-                    End If
-
-                    If Lista(3, 1) > Seccion.F_Cortante_3 Then
-                        Lista(3, 1) = Seccion.F_Cortante_3
-                        Lista(3, 2) = Seccion.Piso
-                    End If
-                Next
-
-                For k = 1 To 3
-                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F.Add(Lista(k, 1))
-                    Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_F_Piso.Add(Lista(k, 2))
-                Next
+        ' ALR — solo columnas calculadas
+        For Each col In colsConRefuerzo
+            col.Lista_ALR.Clear()
+            For j = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
+                Dim Ce As Integer = j
+                Dim ultimoTramo = col.Lista_Tramos_Columnas(col.Lista_Tramos_Columnas.Count - 1)
+                Dim combMatch = ultimoTramo.Lista_Combinaciones.Find(Function(p) p.Name = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(Ce))
+                If combMatch Is Nothing Then Continue For
+                Dim Valor_ALR As New Columna.ALR
+                Valor_ALR.Combinacion = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(j)
+                Valor_ALR.ALR = Math.Round(Math.Abs(combMatch.P) / (ultimoTramo.fc * ultimoTramo.B_Plano * ultimoTramo.H_Plano * 1000), 2)
+                col.Lista_ALR.Add(Valor_ALR)
             Next
+        Next
 
-            '--------------- Debo verificar este proceso ya que arroja error --------------
-            Dim Columnas = Proyecto.Elementos.Columnas.Lista_Columnas
-            For i = 0 To Columnas.Count() - 1
-                For j = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
-                    Dim Ce As Integer = j
+        Form_02_01_ResultadosColumnas.Combo_Elementos.Text = colsConRefuerzo(0).Name_Label
+        Form_02_01_ResultadosColumnas.Show()
 
-                    Dim Valor_ALR As New Columna.ALR
-                    Valor_ALR.Combinacion = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(j)
-                    Valor_ALR.ALR = Math.Round(Math.Abs(Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).Lista_Combinaciones.Find(Function(p) p.Name = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(Ce)).P) / (Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).fc * Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).B_Plano * Columnas(i).Lista_Tramos_Columnas(Columnas(i).Lista_Tramos_Columnas.Count - 1).H_Plano * 1000), 2)
-
-                    Columnas(i).Lista_ALR.Add(Valor_ALR)
-                Next
-            Next
-
-            Form_02_01_ResultadosColumnas.Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Label
-            Form_02_01_ResultadosColumnas.Show()
-            MessageBox.Show("Análisis Finalizado con Éxito.", "Ejecución de Análisis", MessageBoxButtons.OK, MessageBoxIcon.Information)
-        Else
-            Form_Reportes.Show()
+        Dim msg As String = $"Análisis finalizado: {colsConRefuerzo.Count} columna(s) calculada(s)."
+        If cantOmitidas > 0 Then
+            msg &= $"{Environment.NewLine}{cantOmitidas} columna(s) omitida(s) por no tener refuerzo definido."
         End If
+        MessageBox.Show(msg, "Ejecución de Análisis", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
     End Sub
 
@@ -434,43 +502,66 @@ Public Class Form_02_00_PagInfoColumnas
     Private Sub C_Lista_Secciones_Principales_SelectedIndexChanged(sender As Object, e As EventArgs) Handles C_Lista_Secciones_Principales.SelectedIndexChanged
         Tabla_Info_Seccion.Rows.Clear()
 
-        Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Name_Elemento
-        Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Lista_Tramos_Columnas
+        ' Refuerzo: copiado de la sección principal seleccionada
+        Dim SeccionPrincipal = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Lista_Tramos_Columnas
+        ' Geometría: mantenida de la sección actual (no se copia del principal)
+        Dim SeccionActual = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
 
-        For i = 0 To (Seccion.Count - 1) * 2
+        For i = 0 To (SeccionPrincipal.Count - 1) * 2
             Tabla_Info_Seccion.Rows.Add()
         Next
 
-        For i = 0 To (Seccion.Count - 1) * 2 Step 2
-            Tabla_Info_Seccion.Rows(i).Cells(0).Value = Seccion(i / 2).Piso
-            Tabla_Info_Seccion.Rows(i).Cells(1).Value = Seccion(i / 2).fc
-            Tabla_Info_Seccion.Rows(i).Cells(2).Value = Seccion(i / 2).B_Plano
-            Tabla_Info_Seccion.Rows(i).Cells(3).Value = Seccion(i / 2).H_Plano
+        For i = 0 To (SeccionPrincipal.Count - 1) * 2 Step 2
+            Dim tramoPrincipal = SeccionPrincipal(i \ 2)
+
+            ' Geometría: de la sección ACTUAL (no del principal)
+            If i \ 2 < SeccionActual.Count Then
+                Dim tramoActual = SeccionActual(i \ 2)
+                Tabla_Info_Seccion.Rows(i).Cells(0).Value = tramoActual.Piso
+                Tabla_Info_Seccion.Rows(i).Cells(1).Value = tramoActual.fc
+                Tabla_Info_Seccion.Rows(i).Cells(2).Value = tramoActual.B_Plano
+                Tabla_Info_Seccion.Rows(i).Cells(3).Value = tramoActual.H_Plano
+            End If
             Tabla_Info_Seccion.Rows(i).Cells(4).Value = "Top"
             Tabla_Info_Seccion.Rows(i + 1).Cells(4).Value = "Bottom"
 
-            Tabla_Info_Seccion.Rows(i).Cells(5).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_2
-            Tabla_Info_Seccion.Rows(i).Cells(6).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_3
-            Tabla_Info_Seccion.Rows(i).Cells(7).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_4
-            Tabla_Info_Seccion.Rows(i).Cells(8).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_5
-            Tabla_Info_Seccion.Rows(i).Cells(9).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_6
-            Tabla_Info_Seccion.Rows(i).Cells(10).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_7
-            Tabla_Info_Seccion.Rows(i).Cells(11).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_8
-            Tabla_Info_Seccion.Rows(i).Cells(12).Value = Seccion(i / 2).Refuerzo_Col_Top.Barras_10
+            ' Refuerzo longitudinal: del principal
+            Tabla_Info_Seccion.Rows(i).Cells(5).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_2
+            Tabla_Info_Seccion.Rows(i).Cells(6).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_3
+            Tabla_Info_Seccion.Rows(i).Cells(7).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_4
+            Tabla_Info_Seccion.Rows(i).Cells(8).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_5
+            Tabla_Info_Seccion.Rows(i).Cells(9).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_6
+            Tabla_Info_Seccion.Rows(i).Cells(10).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_7
+            Tabla_Info_Seccion.Rows(i).Cells(11).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_8
+            Tabla_Info_Seccion.Rows(i).Cells(12).Value = tramoPrincipal.Refuerzo_Col_Top.Barras_10
 
-            Tabla_Info_Seccion.Rows(i + 1).Cells(5).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_2
-            Tabla_Info_Seccion.Rows(i + 1).Cells(6).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_3
-            Tabla_Info_Seccion.Rows(i + 1).Cells(7).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_4
-            Tabla_Info_Seccion.Rows(i + 1).Cells(8).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_5
-            Tabla_Info_Seccion.Rows(i + 1).Cells(9).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_6
-            Tabla_Info_Seccion.Rows(i + 1).Cells(10).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_7
-            Tabla_Info_Seccion.Rows(i + 1).Cells(11).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8
-            Tabla_Info_Seccion.Rows(i + 1).Cells(12).Value = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10
+            Tabla_Info_Seccion.Rows(i + 1).Cells(5).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_2
+            Tabla_Info_Seccion.Rows(i + 1).Cells(6).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_3
+            Tabla_Info_Seccion.Rows(i + 1).Cells(7).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_4
+            Tabla_Info_Seccion.Rows(i + 1).Cells(8).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_5
+            Tabla_Info_Seccion.Rows(i + 1).Cells(9).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_6
+            Tabla_Info_Seccion.Rows(i + 1).Cells(10).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_7
+            Tabla_Info_Seccion.Rows(i + 1).Cells(11).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_8
+            Tabla_Info_Seccion.Rows(i + 1).Cells(12).Value = tramoPrincipal.Refuerzo_Col_Bottom.Barras_10
 
-            Tabla_Info_Seccion.Rows(i).Cells(13).Value = Seccion(i / 2).Num_Ramas_Largo
-            Tabla_Info_Seccion.Rows(i).Cells(14).Value = Seccion(i / 2).Num_Ramas_Corto
-            Tabla_Info_Seccion.Rows(i).Cells(15).Value = Seccion(i / 2).Numero_Barras_Estribo
-            Tabla_Info_Seccion.Rows(i).Cells(16).Value = Seccion(i / 2).Separacion_Estribos
+            ' Refuerzo transversal: del principal
+            Tabla_Info_Seccion.Rows(i).Cells(13).Value = tramoPrincipal.Num_Ramas_Largo
+            Tabla_Info_Seccion.Rows(i).Cells(14).Value = tramoPrincipal.Num_Ramas_Corto
+            Tabla_Info_Seccion.Rows(i).Cells(15).Value = tramoPrincipal.Numero_Barras_Estribo
+            Dim asSentLS As Single = tramoPrincipal.As_Sent_Largo
+            If asSentLS = 0 AndAlso Not String.IsNullOrEmpty(tramoPrincipal.Numero_Barras_Estribo) AndAlso tramoPrincipal.Numero_Barras_Estribo <> "User" Then
+                asSentLS = AreaRefuerzo(tramoPrincipal.Numero_Barras_Estribo)
+            End If
+            Tabla_Info_Seccion.Rows(i).Cells(16).Value = asSentLS
+            Tabla_Info_Seccion.Rows(i).Cells(17).Value = tramoPrincipal.As_Sent_Corto
+
+            ' Para la sugerencia de ZC, usar dimensiones de la sección ACTUAL si disponible
+            Dim bRef As Single = If(i \ 2 < SeccionActual.Count, SeccionActual(i \ 2).B_Plano, tramoPrincipal.B_Plano)
+            Dim hRef As Single = If(i \ 2 < SeccionActual.Count, SeccionActual(i \ 2).H_Plano, tramoPrincipal.H_Plano)
+            Dim sZC_sugS As Single = Math.Round(Math.Min(bRef, hRef) / 3, 3)
+            Tabla_Info_Seccion.Rows(i).Cells(18).Value = If(tramoPrincipal.Separacion_Estribos > 0, tramoPrincipal.Separacion_Estribos, sZC_sugS)
+            Tabla_Info_Seccion.Rows(i).Cells(19).Value = If(tramoPrincipal.Separacion_Estribos_ZNC > 0, tramoPrincipal.Separacion_Estribos_ZNC, Math.Round(2 * sZC_sugS, 3))
+            Tabla_Info_Seccion.Rows(i).Cells(20).Value = tramoPrincipal.Num_Estribos_ZC
         Next
 
     End Sub

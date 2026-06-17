@@ -242,7 +242,7 @@ Public Module Funciones_Zapatas
 
         Dim Vc As Double = {vc_1, vc_2, vc_3}.Min()
 
-        Dim cumple = (0.9 * Vu <= Vc)
+        Dim cumple = (Math.Abs(Vu) <= Vc)
 
         Return (cumple, Vu, vc_1, vc_2, vc_3, Vc, g5, g6, g7, g8)
 

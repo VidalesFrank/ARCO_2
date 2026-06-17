@@ -3,35 +3,51 @@
 Public Class PagInfoGeneral
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         Try
-            Form_00_PaginaPrincipal.proyecto.Info.Nombre = T_NameProjet.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Direccion = T_Direction.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Ciudad = T_City.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Departamento = T_Department.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Year = Convert.ToInt16(C_YearBuilding.Text)
-            Form_00_PaginaPrincipal.proyecto.ParametrosSismicos.NDE = C_DM.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Propietario = T_Propietario.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Designer = T_Disenador.Text
-            Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = C_SE.Text
+            Dim p = Form_00_PaginaPrincipal.proyecto
 
-            If C_SE.Text = "MCR" Then
-                Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.MCR
-            ElseIf C_SE.Text = "Porticos" Then
-                Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Porticos
-            Else
-                Form_00_PaginaPrincipal.proyecto.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Combinado
+            p.Info.Nombre = T_NameProjet.Text
+            p.Info.Direccion = T_Direction.Text
+            p.Info.Ciudad = T_City.Text
+            p.Info.Departamento = T_Department.Text
+            p.Info.Propietario = T_Propietario.Text
+            p.Info.Designer = T_Disenador.Text
+
+            If Not String.IsNullOrEmpty(C_YearBuilding.Text) Then
+                p.Info.Year = Convert.ToInt16(C_YearBuilding.Text)
             End If
 
-            Form_00_PaginaPrincipal.proyecto.Info.GrupoUso = C_GU.Text
-            Form_00_PaginaPrincipal.proyecto.Info.TipoSuelo = C_TS.Text
-            Form_00_PaginaPrincipal.proyecto.Info.Area = Convert.ToSingle(T_AreaPlanta.Text)
+            Dim areaVal As Single
+            If Single.TryParse(T_AreaPlanta.Text, areaVal) Then
+                p.Info.Area = areaVal
+            End If
 
-            Dim nombreSeleccionado As String = C_Responsable.SelectedItem.ToString()
+            If C_SE.Text = "MCR" Then
+                p.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.MCR
+            ElseIf C_SE.Text = "Porticos" Then
+                p.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Porticos
+            Else
+                p.Info.SistemaEstructural = eNumeradores.eSistemaEstructural.Combinado
+            End If
 
-            Dim responsableEnum As eResponsables = DirectorioResponsables.dResponsables.FirstOrDefault(Function(kvp) kvp.Value.NombreCompleto = nombreSeleccionado).Key
+            If Not String.IsNullOrEmpty(C_DM.Text) Then
+                p.ParametrosSismicos.NDE = DirectCast([Enum].Parse(GetType(eDisipasion), C_DM.Text), eDisipasion)
+            End If
 
-            Form_00_PaginaPrincipal.proyecto.Info.Persona_Responsable = responsableEnum
+            If Not String.IsNullOrEmpty(C_GU.Text) Then
+                p.Info.GrupoUso = DirectCast([Enum].Parse(GetType(eGrupoUso), C_GU.Text), eGrupoUso)
+            End If
+
+            If Not String.IsNullOrEmpty(C_TS.Text) Then
+                p.Info.TipoSuelo = DirectCast([Enum].Parse(GetType(eGrupoSuelo), C_TS.Text), eGrupoSuelo)
+            End If
+
+            If C_Responsable.SelectedItem IsNot Nothing Then
+                Dim nombreSel As String = C_Responsable.SelectedItem.ToString()
+                p.Info.Persona_Responsable = DirectorioResponsables.dResponsables.FirstOrDefault(Function(kvp) kvp.Value.NombreCompleto = nombreSel).Key
+            End If
 
         Catch ex As Exception
+            MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
             Me.Close()
         End Try
@@ -40,7 +56,7 @@ Public Class PagInfoGeneral
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         If IsNothing(Form_00_PaginaPrincipal.proyecto.Info.Imagen) Then
             Dim Dialog As New OpenFileDialog
-            Dialog.Filter = "Imagenes |*.jpg"
+            Dialog.Filter = "Imagenes|*.jpg;*.jpeg;*.png"
             Dialog.Title = "Insertar Imagen del Proyecto"
             Dialog.ShowDialog()
             Form_00_PaginaPrincipal.proyecto.Info.Ruta_Imagen = Dialog.FileName
@@ -57,26 +73,15 @@ Public Class PagInfoGeneral
     End Sub
 
     Private Sub PagInfoGeneral_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        If C_Responsable.Items.Count > 0 Then
-            C_Responsable.Items.Clear()
-        End If
-
-        Dim diccionario As Dictionary(Of eResponsables, Persona) = DirectorioResponsables.dResponsables
-
-        For Each responsable As KeyValuePair(Of eResponsables, Persona) In diccionario
-            C_Responsable.Items.Add(responsable.Value.NombreCompleto)
+        C_Responsable.Items.Clear()
+        For Each kv As KeyValuePair(Of eResponsables, Persona) In DirectorioResponsables.dResponsables
+            C_Responsable.Items.Add(kv.Value.NombreCompleto)
         Next
 
-        If C_SE.Items.Count > 0 Then
-            C_SE.Items.Clear()
-        End If
-
-        Dim diccionario_SE As Dictionary(Of eSistemaEstructural, Sistema) = DirectorioSistemaEstructural.dSistemaEstructural
-
-        For Each SE As KeyValuePair(Of eSistemaEstructural, Sistema) In diccionario_SE
-            C_SE.Items.Add(SE.Value.NameSistema)
+        C_SE.Items.Clear()
+        For Each kv As KeyValuePair(Of eSistemaEstructural, Sistema) In DirectorioSistemaEstructural.dSistemaEstructural
+            C_SE.Items.Add(kv.Value.NameSistema)
         Next
-
     End Sub
 
 End Class

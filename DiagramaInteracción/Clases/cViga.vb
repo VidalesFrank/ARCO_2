@@ -4,6 +4,8 @@ Public Class cViga
 
     Public Property Nombre As String
     Public Property Name_Beam As String
+    ' Nombre asignado por el usuario según planos (si está vacío se usa Nombre)
+    Public Property NombrePlano As String = ""
     Public Property Frames As New List(Of cFrame)
     Public Property Piso As String
     Public Property LongitudTotal As Double

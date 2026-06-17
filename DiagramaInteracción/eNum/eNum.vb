@@ -142,5 +142,10 @@ Public Class eNumeradores
         Derecha = 2
     End Enum
 
+    Public Enum TipoResultadoFlexionViga
+        Base
+        Actual
+    End Enum
+
 
 End Class

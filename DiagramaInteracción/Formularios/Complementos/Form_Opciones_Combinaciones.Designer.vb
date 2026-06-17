@@ -48,9 +48,9 @@ Partial Class Form_Opciones_Combinaciones
         Me.GroupBox1.Controls.Add(Me.Button3)
         Me.GroupBox1.Controls.Add(Me.GroupBox2)
         Me.GroupBox1.Location = New System.Drawing.Point(16, 15)
-        Me.GroupBox1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox1.Margin = New System.Windows.Forms.Padding(4)
         Me.GroupBox1.Name = "GroupBox1"
-        Me.GroupBox1.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox1.Padding = New System.Windows.Forms.Padding(4)
         Me.GroupBox1.Size = New System.Drawing.Size(780, 457)
         Me.GroupBox1.TabIndex = 0
         Me.GroupBox1.TabStop = False
@@ -64,7 +64,7 @@ Partial Class Form_Opciones_Combinaciones
         Me.Button2.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button2.ForeColor = System.Drawing.Color.White
         Me.Button2.Location = New System.Drawing.Point(417, 393)
-        Me.Button2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Button2.Margin = New System.Windows.Forms.Padding(4)
         Me.Button2.Name = "Button2"
         Me.Button2.Size = New System.Drawing.Size(113, 33)
         Me.Button2.TabIndex = 18
@@ -80,7 +80,7 @@ Partial Class Form_Opciones_Combinaciones
         Me.Button3.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button3.ForeColor = System.Drawing.Color.White
         Me.Button3.Location = New System.Drawing.Point(237, 393)
-        Me.Button3.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Button3.Margin = New System.Windows.Forms.Padding(4)
         Me.Button3.Name = "Button3"
         Me.Button3.Size = New System.Drawing.Size(113, 33)
         Me.Button3.TabIndex = 17
@@ -96,9 +96,9 @@ Partial Class Form_Opciones_Combinaciones
         Me.GroupBox2.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox2.ForeColor = System.Drawing.Color.Black
         Me.GroupBox2.Location = New System.Drawing.Point(27, 25)
-        Me.GroupBox2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox2.Margin = New System.Windows.Forms.Padding(4)
         Me.GroupBox2.Name = "GroupBox2"
-        Me.GroupBox2.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox2.Padding = New System.Windows.Forms.Padding(4)
         Me.GroupBox2.Size = New System.Drawing.Size(727, 341)
         Me.GroupBox2.TabIndex = 0
         Me.GroupBox2.TabStop = False
@@ -117,9 +117,9 @@ Partial Class Form_Opciones_Combinaciones
         Me.GroupBox3.Controls.Add(Me.Lista_Combinaciones)
         Me.GroupBox3.ForeColor = System.Drawing.Color.Black
         Me.GroupBox3.Location = New System.Drawing.Point(27, 31)
-        Me.GroupBox3.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox3.Margin = New System.Windows.Forms.Padding(4)
         Me.GroupBox3.Name = "GroupBox3"
-        Me.GroupBox3.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox3.Padding = New System.Windows.Forms.Padding(4)
         Me.GroupBox3.Size = New System.Drawing.Size(673, 284)
         Me.GroupBox3.TabIndex = 0
         Me.GroupBox3.TabStop = False
@@ -156,7 +156,7 @@ Partial Class Form_Opciones_Combinaciones
         Me.Button1.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button1.ForeColor = System.Drawing.Color.White
         Me.Button1.Location = New System.Drawing.Point(275, 164)
-        Me.Button1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Button1.Margin = New System.Windows.Forms.Padding(4)
         Me.Button1.Name = "Button1"
         Me.Button1.Size = New System.Drawing.Size(113, 33)
         Me.Button1.TabIndex = 16
@@ -172,7 +172,7 @@ Partial Class Form_Opciones_Combinaciones
         Me.Boton_ALR.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Boton_ALR.ForeColor = System.Drawing.Color.White
         Me.Boton_ALR.Location = New System.Drawing.Point(275, 116)
-        Me.Boton_ALR.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Boton_ALR.Margin = New System.Windows.Forms.Padding(4)
         Me.Boton_ALR.Name = "Boton_ALR"
         Me.Boton_ALR.Size = New System.Drawing.Size(113, 33)
         Me.Boton_ALR.TabIndex = 15
@@ -187,7 +187,7 @@ Partial Class Form_Opciones_Combinaciones
         Me.Lista_Cargas_Design.FormattingEnabled = True
         Me.Lista_Cargas_Design.ItemHeight = 19
         Me.Lista_Cargas_Design.Location = New System.Drawing.Point(431, 69)
-        Me.Lista_Cargas_Design.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Lista_Cargas_Design.Margin = New System.Windows.Forms.Padding(4)
         Me.Lista_Cargas_Design.Name = "Lista_Cargas_Design"
         Me.Lista_Cargas_Design.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended
         Me.Lista_Cargas_Design.Size = New System.Drawing.Size(205, 194)
@@ -201,7 +201,7 @@ Partial Class Form_Opciones_Combinaciones
         Me.Lista_Combinaciones.FormattingEnabled = True
         Me.Lista_Combinaciones.ItemHeight = 19
         Me.Lista_Combinaciones.Location = New System.Drawing.Point(27, 69)
-        Me.Lista_Combinaciones.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Lista_Combinaciones.Margin = New System.Windows.Forms.Padding(4)
         Me.Lista_Combinaciones.Name = "Lista_Combinaciones"
         Me.Lista_Combinaciones.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended
         Me.Lista_Combinaciones.Size = New System.Drawing.Size(205, 194)
@@ -215,10 +215,10 @@ Partial Class Form_Opciones_Combinaciones
         Me.ClientSize = New System.Drawing.Size(812, 487)
         Me.Controls.Add(Me.GroupBox1)
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
-        Me.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Margin = New System.Windows.Forms.Padding(4)
         Me.Name = "Form_Opciones_Combinaciones"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
-        Me.Text = "Combinaciones de Diseño"
+        Me.Text = "Combinaciones de Análisis"
         Me.GroupBox1.ResumeLayout(False)
         Me.GroupBox2.ResumeLayout(False)
         Me.GroupBox3.ResumeLayout(False)
