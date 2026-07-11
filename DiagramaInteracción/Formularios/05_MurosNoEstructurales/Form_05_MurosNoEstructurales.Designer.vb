@@ -129,6 +129,13 @@ Partial Class Form_05_MurosNoEstructurales
         Me.Button2 = New System.Windows.Forms.Button()
         Me.Panel1 = New System.Windows.Forms.Panel()
         Me.MenuStrip1 = New System.Windows.Forms.MenuStrip()
+        Me.ToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.New_MNE = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Open_MNE = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Save_MNE = New System.Windows.Forms.ToolStripMenuItem()
+        Me.SaveAs_MNE = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Reporte_PDF_MNE = New System.Windows.Forms.ToolStripMenuItem()
         Me.ArchivoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.NuevoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.AbrirToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
@@ -136,13 +143,6 @@ Partial Class Form_05_MurosNoEstructurales
         Me.GuardarComoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ExportarToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReportePDFToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.ToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
-        Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
-        Me.New_MNE = New System.Windows.Forms.ToolStripMenuItem()
-        Me.Open_MNE = New System.Windows.Forms.ToolStripMenuItem()
-        Me.Save_MNE = New System.Windows.Forms.ToolStripMenuItem()
-        Me.SaveAs_MNE = New System.Windows.Forms.ToolStripMenuItem()
-        Me.Reporte_PDF_MNE = New System.Windows.Forms.ToolStripMenuItem()
         Me.TabControl1.SuspendLayout()
         Me.TabPage1.SuspendLayout()
         Me.GroupBox12.SuspendLayout()
@@ -1348,6 +1348,62 @@ Partial Class Form_05_MurosNoEstructurales
         Me.MenuStrip1.TabIndex = 1
         Me.MenuStrip1.Text = "MenuStrip1"
         '
+        'ToolStripMenuItem1
+        '
+        Me.ToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.New_MNE, Me.Open_MNE, Me.Save_MNE, Me.SaveAs_MNE})
+        Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
+        Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
+        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(81, 33)
+        Me.ToolStripMenuItem1.Text = "Archivo"
+        '
+        'New_MNE
+        '
+        Me.New_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.New_MNE.ForeColor = System.Drawing.Color.White
+        Me.New_MNE.Name = "New_MNE"
+        Me.New_MNE.Size = New System.Drawing.Size(207, 28)
+        Me.New_MNE.Text = "Nuevo"
+        '
+        'Open_MNE
+        '
+        Me.Open_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.Open_MNE.ForeColor = System.Drawing.Color.White
+        Me.Open_MNE.Name = "Open_MNE"
+        Me.Open_MNE.Size = New System.Drawing.Size(207, 28)
+        Me.Open_MNE.Text = "Abrir"
+        '
+        'Save_MNE
+        '
+        Me.Save_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.Save_MNE.ForeColor = System.Drawing.Color.White
+        Me.Save_MNE.Name = "Save_MNE"
+        Me.Save_MNE.Size = New System.Drawing.Size(207, 28)
+        Me.Save_MNE.Text = "Guardar"
+        '
+        'SaveAs_MNE
+        '
+        Me.SaveAs_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.SaveAs_MNE.ForeColor = System.Drawing.Color.White
+        Me.SaveAs_MNE.Name = "SaveAs_MNE"
+        Me.SaveAs_MNE.Size = New System.Drawing.Size(207, 28)
+        Me.SaveAs_MNE.Text = "Guardar Como"
+        '
+        'ToolStripMenuItem2
+        '
+        Me.ToolStripMenuItem2.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Reporte_PDF_MNE})
+        Me.ToolStripMenuItem2.ForeColor = System.Drawing.Color.White
+        Me.ToolStripMenuItem2.Name = "ToolStripMenuItem2"
+        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(84, 33)
+        Me.ToolStripMenuItem2.Text = "Reporte"
+        '
+        'Reporte_PDF_MNE
+        '
+        Me.Reporte_PDF_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.Reporte_PDF_MNE.ForeColor = System.Drawing.Color.White
+        Me.Reporte_PDF_MNE.Name = "Reporte_PDF_MNE"
+        Me.Reporte_PDF_MNE.Size = New System.Drawing.Size(140, 28)
+        Me.Reporte_PDF_MNE.Text = "A PDF"
+        '
         'ArchivoToolStripMenuItem
         '
         Me.ArchivoToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.NuevoToolStripMenuItem, Me.AbrirToolStripMenuItem, Me.GuardarToolStripMenuItem, Me.GuardarComoToolStripMenuItem})
@@ -1403,62 +1459,6 @@ Partial Class Form_05_MurosNoEstructurales
         Me.ReportePDFToolStripMenuItem.Name = "ReportePDFToolStripMenuItem"
         Me.ReportePDFToolStripMenuItem.Size = New System.Drawing.Size(175, 26)
         Me.ReportePDFToolStripMenuItem.Text = "Reporte PDF"
-        '
-        'ToolStripMenuItem1
-        '
-        Me.ToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.New_MNE, Me.Open_MNE, Me.Save_MNE, Me.SaveAs_MNE})
-        Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
-        Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
-        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(81, 33)
-        Me.ToolStripMenuItem1.Text = "Archivo"
-        '
-        'ToolStripMenuItem2
-        '
-        Me.ToolStripMenuItem2.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Reporte_PDF_MNE})
-        Me.ToolStripMenuItem2.ForeColor = System.Drawing.Color.White
-        Me.ToolStripMenuItem2.Name = "ToolStripMenuItem2"
-        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(84, 33)
-        Me.ToolStripMenuItem2.Text = "Reporte"
-        '
-        'New_MNE
-        '
-        Me.New_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.New_MNE.ForeColor = System.Drawing.Color.White
-        Me.New_MNE.Name = "New_MNE"
-        Me.New_MNE.Size = New System.Drawing.Size(207, 28)
-        Me.New_MNE.Text = "Nuevo"
-        '
-        'Open_MNE
-        '
-        Me.Open_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.Open_MNE.ForeColor = System.Drawing.Color.White
-        Me.Open_MNE.Name = "Open_MNE"
-        Me.Open_MNE.Size = New System.Drawing.Size(207, 28)
-        Me.Open_MNE.Text = "Abrir"
-        '
-        'Save_MNE
-        '
-        Me.Save_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.Save_MNE.ForeColor = System.Drawing.Color.White
-        Me.Save_MNE.Name = "Save_MNE"
-        Me.Save_MNE.Size = New System.Drawing.Size(207, 28)
-        Me.Save_MNE.Text = "Guardar"
-        '
-        'SaveAs_MNE
-        '
-        Me.SaveAs_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.SaveAs_MNE.ForeColor = System.Drawing.Color.White
-        Me.SaveAs_MNE.Name = "SaveAs_MNE"
-        Me.SaveAs_MNE.Size = New System.Drawing.Size(207, 28)
-        Me.SaveAs_MNE.Text = "Guardar Como"
-        '
-        'Reporte_PDF_MNE
-        '
-        Me.Reporte_PDF_MNE.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
-        Me.Reporte_PDF_MNE.ForeColor = System.Drawing.Color.White
-        Me.Reporte_PDF_MNE.Name = "Reporte_PDF_MNE"
-        Me.Reporte_PDF_MNE.Size = New System.Drawing.Size(140, 28)
-        Me.Reporte_PDF_MNE.Text = "A PDF"
         '
         'Form_05_MurosNoEstructurales
         '

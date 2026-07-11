@@ -109,74 +109,61 @@ Public Class Form_02_00_PagInfoColumnas
             Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8 = Tabla_Info_Seccion.Rows(i + 1).Cells(11).Value
             Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10 = Tabla_Info_Seccion.Rows(i + 1).Cells(12).Value
 
-            Seccion(i / 2).As_Col_Top = 32 * Seccion(i / 2).Refuerzo_Col_Top.Barras_2 + 71 * Seccion(i / 2).Refuerzo_Col_Top.Barras_3 + 129 * Seccion(i / 2).Refuerzo_Col_Top.Barras_4 + 199 * Seccion(i / 2).Refuerzo_Col_Top.Barras_5 + 284 * Seccion(i / 2).Refuerzo_Col_Top.Barras_6 + 387 * Seccion(i / 2).Refuerzo_Col_Top.Barras_7 + 510 * Seccion(i / 2).Refuerzo_Col_Top.Barras_8 + 819 * Seccion(i / 2).Refuerzo_Col_Top.Barras_10
+            Seccion(i / 2).As_Col_Top =
+                AreaRefuerzo("#2") * Seccion(i / 2).Refuerzo_Col_Top.Barras_2 +
+                AreaRefuerzo("#3") * Seccion(i / 2).Refuerzo_Col_Top.Barras_3 +
+                AreaRefuerzo("#4") * Seccion(i / 2).Refuerzo_Col_Top.Barras_4 +
+                AreaRefuerzo("#5") * Seccion(i / 2).Refuerzo_Col_Top.Barras_5 +
+                AreaRefuerzo("#6") * Seccion(i / 2).Refuerzo_Col_Top.Barras_6 +
+                AreaRefuerzo("#7") * Seccion(i / 2).Refuerzo_Col_Top.Barras_7 +
+                AreaRefuerzo("#8") * Seccion(i / 2).Refuerzo_Col_Top.Barras_8 +
+                AreaRefuerzo("#10") * Seccion(i / 2).Refuerzo_Col_Top.Barras_10
             Seccion(i / 2).Cuantia_Col_Top = Seccion(i / 2).As_Col_Top / (Seccion(i / 2).B_Plano * Seccion(i / 2).H_Plano * 1000000)
             Seccion(i / 2).Cantidad_Barras_Top = Seccion(i / 2).Refuerzo_Col_Top.Barras_2 + Seccion(i / 2).Refuerzo_Col_Top.Barras_3 + Seccion(i / 2).Refuerzo_Col_Top.Barras_4 + Seccion(i / 2).Refuerzo_Col_Top.Barras_5 + Seccion(i / 2).Refuerzo_Col_Top.Barras_6 + Seccion(i / 2).Refuerzo_Col_Top.Barras_7 + Seccion(i / 2).Refuerzo_Col_Top.Barras_8 + Seccion(i / 2).Refuerzo_Col_Top.Barras_10
 
-            Seccion(i / 2).As_Col_Bottom = 32 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_2 + 71 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_3 + 129 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_4 + 199 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_5 + 284 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_6 + 387 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_7 + 510 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8 + 819 * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10
+            Seccion(i / 2).As_Col_Bottom =
+                AreaRefuerzo("#2") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_2 +
+                AreaRefuerzo("#3") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_3 +
+                AreaRefuerzo("#4") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_4 +
+                AreaRefuerzo("#5") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_5 +
+                AreaRefuerzo("#6") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_6 +
+                AreaRefuerzo("#7") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_7 +
+                AreaRefuerzo("#8") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8 +
+                AreaRefuerzo("#10") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10
             Seccion(i / 2).Cuantia_Col_Bottom = Seccion(i / 2).As_Col_Bottom / (Seccion(i / 2).B_Plano * Seccion(i / 2).H_Plano * 1000000)
             Seccion(i / 2).Cantidad_Barras_Bottom = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_2 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_3 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_4 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_5 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_6 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_7 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10
 
             Dim As_Equivalente_Top As Single = Seccion(i / 2).As_Col_Top / Seccion(i / 2).Cantidad_Barras_Top
             Dim As_Equivalente_Bottom As Single = Seccion(i / 2).As_Col_Bottom / Seccion(i / 2).Cantidad_Barras_Bottom
 
-            If Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Count > 2 Then
-                Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Clear()
-            End If
-            If Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Count > 2 Then
-                Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Clear()
-            End If
+            Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Clear()
+            Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Clear()
 
-            Dim Bc As Single = Seccion(i / 2).B_Plano - 0.1
-            Dim Hc As Single = Seccion(i / 2).H_Plano - 0.1
-            Dim Cant_Lado_Corto As Single
-            Dim Cant_Lado_Largo As Single
-            If 0.1 < Bc And Bc < 0.35 Then
-                Cant_Lado_Corto = 1
-            Else
-                Cant_Lado_Corto = Math.Round(Bc / 0.15, 0)
-            End If
-            Seccion(i / 2).Cantidad_Lado_Corto_Top = Cant_Lado_Corto
-            Seccion(i / 2).Cantidad_Lado_Corto_Bottom = Cant_Lado_Corto
-
-            For j = 0 To Seccion(i / 2).Cantidad_Barras_Top - 1
-                Dim Cantidad As Integer = Seccion(i / 2).Cantidad_Barras_Top
-                If Cantidad <= 4 Then
-                    Cant_Lado_Corto = 0
-                    Cant_Lado_Largo = 0
-                Else
-                    Cant_Lado_Largo = (Cantidad - 4 - 2 * Cant_Lado_Corto) / 2
-                End If
-
-                Seccion(i / 2).Cantidad_Lado_Largo_Top = Cant_Lado_Largo
-                Dim Barra_ As New Tramo_Columna.Detalles_Refuerzo_Longitudinal
-                Barra_.Name_Barra = j + 1
-                Barra_.Asb = As_Equivalente_Top
-                Barra_.Db = Math.Sqrt(4 * Barra_.Asb / Math.PI)
-                'Dim Lista_Coordenadas_Barras = Coordenadas_Barras(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, Seccion(i / 2).Cantidad_Barras_Top, Cant_Lado_Corto, Cant_Lado_Largo)
-                'Barra_.Coordenada_X = Lista_Coordenadas_Barras(j, 1)
-                'Barra_.Coordenada_Y = Lista_Coordenadas_Barras(j, 2)
-                Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Add(Barra_)
+            ' ----- Barras Top -----
+            Dim N_Top As Integer = Seccion(i / 2).Cantidad_Barras_Top
+            Dim Coords_Top = DistribuirBarrasConEsquinas(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, N_Top)
+            For j = 0 To N_Top - 1
+                Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Add(
+                    New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
+                        .Name_Barra = j + 1, .Asb = As_Equivalente_Top,
+                        .Db = Math.Sqrt(4 * As_Equivalente_Top / Math.PI),
+                        .Coordenada_X = Coords_Top(j, 1), .Coordenada_Y = Coords_Top(j, 2)})
             Next
-            For j = 0 To Seccion(i / 2).Cantidad_Barras_Bottom - 1
-                Dim Cantidad As Integer = Seccion(i / 2).Cantidad_Barras_Bottom
-                If Cantidad <= 4 Then
-                    Cant_Lado_Corto = 0
-                    Cant_Lado_Largo = 0
-                Else
-                    Cant_Lado_Largo = (Cantidad - 4 - 2 * Cant_Lado_Corto) / 2
-                End If
 
-                Seccion(i / 2).Cantidad_Lado_Largo_Bottom = Cant_Lado_Largo
-                Dim Barra_ As New Tramo_Columna.Detalles_Refuerzo_Longitudinal
-                Barra_.Name_Barra = j + 1
-                Barra_.Asb = As_Equivalente_Bottom
-                Barra_.Db = Math.Sqrt(4 * Barra_.Asb / Math.PI)
-                'Dim Lista_Coordenadas_Barras = Coordenadas_Barras(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, Seccion(i / 2).Cantidad_Barras_Bottom, Cant_Lado_Corto, Cant_Lado_Largo)
-                'Barra_.Coordenada_X = Lista_Coordenadas_Barras(j, 1)
-                'Barra_.Coordenada_Y = Lista_Coordenadas_Barras(j, 2)
-                Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Add(Barra_)
+            ' ----- Barras Bottom -----
+            Dim N_Bot As Integer = Seccion(i / 2).Cantidad_Barras_Bottom
+            Dim Coords_Bot = DistribuirBarrasConEsquinas(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, N_Bot)
+            For j = 0 To N_Bot - 1
+                Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Add(
+                    New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
+                        .Name_Barra = j + 1, .Asb = As_Equivalente_Bottom,
+                        .Db = Math.Sqrt(4 * As_Equivalente_Bottom / Math.PI),
+                        .Coordenada_X = Coords_Bot(j, 1), .Coordenada_Y = Coords_Bot(j, 2)})
             Next
+
+            ' Limpiar distribución personalizada si el usuario vuelve a guardar (se regenerará)
+            Seccion(i / 2).Distribucion_Personalizada = False
+            Seccion(i / 2).Lista_Barras_Seccion.Clear()
 
             For j = 5 To 12
                 If Tabla_Info_Seccion.Rows(i).Cells(j).Value > 0 And j <= 11 Then
@@ -195,9 +182,9 @@ Public Class Form_02_00_PagInfoColumnas
             Dim area_var_Largo As Single = 0
             Dim area_var_Corto As Single = 0
             If Seccion(i / 2).Numero_Barras_Estribo = "User" Then
-                area_ref_var = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(16).Value)
-                area_var_Largo = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(16).Value)
-                area_var_Corto = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(17).Value)
+                area_ref_var = Convert.ToSingle(If(Tabla_Info_Seccion.Rows(i).Cells(16).Value, 0))
+                area_var_Largo = Convert.ToSingle(If(Tabla_Info_Seccion.Rows(i).Cells(16).Value, 0))
+                area_var_Corto = Convert.ToSingle(If(Tabla_Info_Seccion.Rows(i).Cells(17).Value, 0))
             Else
                 area_ref_var = AreaRefuerzo(Seccion(i / 2).Numero_Barras_Estribo)
                 area_var_Largo = area_ref_var
@@ -300,6 +287,31 @@ Public Class Form_02_00_PagInfoColumnas
 
         RefrescarCombo()
 
+        ' Botón independiente para el diagrama biaxial (no afecta flujo existente)
+        Dim btnDI As New Button()
+        btnDI.Name = "Btn_DiagramaBiaxial"
+        btnDI.Text = "Diagrama Biaxial"
+        btnDI.Size = New Size(130, Button2.Height)
+        btnDI.BackColor = Color.FromArgb(30, 80, 160)
+        btnDI.ForeColor = Color.White
+        btnDI.FlatStyle = FlatStyle.Flat
+        btnDI.FlatAppearance.BorderSize = 0
+        btnDI.Top = Button2.Top
+        btnDI.Left = Button2.Right + 10
+        btnDI.Anchor = AnchorStyles.Bottom
+        AddHandler btnDI.Click, AddressOf Btn_DiagramaBiaxial_Click
+        Panel1.Controls.Add(btnDI)
+
+    End Sub
+
+    Private Sub Btn_DiagramaBiaxial_Click(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show("No hay columnas importadas.", "Diagrama Biaxial",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim frm As New Form_02_02_DiagramaColumna()
+        frm.Show()
     End Sub
 
     Public Sub RefrescarCombo()
@@ -318,6 +330,9 @@ Public Class Form_02_00_PagInfoColumnas
         Button2.Left = (Panel1.Width - Button2.Width) / 2 + 0.6 * Button2.Width
 
         Label1.Left = (Panel1.Width - Label1.Width) / 2
+
+        Dim ctls = Panel1.Controls.Find("Btn_DiagramaBiaxial", False)
+        If ctls.Length > 0 Then ctls(0).Left = Button2.Right + 10
 
     End Sub
 
@@ -358,8 +373,8 @@ Public Class Form_02_00_PagInfoColumnas
                 Seccion.F_Flexo_Bottom = Math.Round(Seccion.As_Col_Bottom / Seccion.As_Req_Bottom, 2)
 
                 '---- Verificación a Cortante -------
-                Dim Rev_Cortante_L = Funcion_Cortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
-                Dim Rev_Cortante_C = Funcion_Cortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
+                Dim Rev_Cortante_L = FuncionCortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
+                Dim Rev_Cortante_C = FuncionCortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
                 Seccion.Vc_2 = Rev_Cortante_L(1)
                 Seccion.Vs_2 = Rev_Cortante_L(2)
                 Seccion.Vn_2 = Rev_Cortante_L(3)
@@ -372,8 +387,8 @@ Public Class Form_02_00_PagInfoColumnas
                 Seccion.F_Cortante_3 = Rev_Cortante_C(5)
 
                 '------ Verificaciòn al Confinamiento ------
-                Dim Rev_Confinamiento_L = Funcion_Confinamiento(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
-                Dim Rev_Confinamiento_C = Funcion_Confinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                Dim Rev_Confinamiento_L = FuncionConfinamiento(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                Dim Rev_Confinamiento_C = FuncionConfinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
 
                 Seccion.Ash_L = Rev_Confinamiento_L(1)
                 Seccion.Ramas_Req_L = Rev_Confinamiento_L(2)
@@ -387,6 +402,17 @@ Public Class Form_02_00_PagInfoColumnas
 
                 Seccion.F_Ash_Largo = Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)
                 Seccion.F_Ash_Corto = Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)
+
+                ' D/C biaxial (diagrama de interacción)
+                Dim combosD = Proyecto.Elementos.Columnas.ListA_Combinaciones_Design
+                If Seccion.Distribucion_Personalizada Then
+                    FuncionDiagramaColumna(Seccion, 420.0F, 200000.0F, "Top", combosD)
+                Else
+                    Dim okTop = FuncionDiagramaColumna(Seccion, 420.0F, 200000.0F, "Top", combosD)
+                    Dim dcTop As Single = If(okTop, Seccion.F_Interaccion, 0)
+                    FuncionDiagramaColumna(Seccion, 420.0F, 200000.0F, "Bottom", combosD)
+                    If dcTop > Seccion.F_Interaccion Then Seccion.F_Interaccion = dcTop
+                End If
 
                 Seccion.L0_Prov = Math.Round(0.05 + Seccion.Num_Estribos_ZC * Seccion.Separacion_Estribos + 0.05, 3)
                 Dim l0Req As Single = Math.Max(Seccion.L0_L, Seccion.L0_C)

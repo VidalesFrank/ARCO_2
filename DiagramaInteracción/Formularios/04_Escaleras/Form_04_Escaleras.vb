@@ -32,6 +32,7 @@ Public Class Form_04_Escaleras
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
 
+        Try
         Dim fc As Single = Convert.ToSingle(T_fc.Text)
         Dim fy As Single = Convert.ToSingle(T_fy.Text)
         Dim C_Impuesta As Single = Convert.ToSingle(T_C_Impuesta.Text)
@@ -93,8 +94,8 @@ Public Class Form_04_Escaleras
 
         For i = 0 To Proyecto.L_Total Step Proyecto.L_Total / N_Puntos
             Proyecto.Abscisas.Add(i)
-            Proyecto.Momentos.Add(Momento_Escalera(i, Proyecto.L_Peldanos, Proyecto.L_Descanso, Proyecto.Wu_Inclinada, Proyecto.Wu_Descanso))
-            Proyecto.Cortantes.Add(Cortante_Escalera(i, Proyecto.L_Peldanos, Proyecto.L_Descanso, Proyecto.Wu_Inclinada, Proyecto.Wu_Descanso))
+            Proyecto.Momentos.Add(MomentoEscalera(i, Proyecto.L_Peldanos, Proyecto.L_Descanso, Proyecto.Wu_Inclinada, Proyecto.Wu_Descanso))
+            Proyecto.Cortantes.Add(CortanteEscalera(i, Proyecto.L_Peldanos, Proyecto.L_Descanso, Proyecto.Wu_Inclinada, Proyecto.Wu_Descanso))
         Next
 
         T_Vmax.Text = Math.Round(Proyecto.Cortantes.Max, 2)
@@ -116,6 +117,13 @@ Public Class Form_04_Escaleras
         Proyecto.Vc = 0.75 * 0.17 * Math.Sqrt(fc) * 1000 * (h - Recubrimiento) * A_Estudio
 
         Rellenar()
+        Catch ex As FormatException
+            Logger.Warning("Form_04_Escaleras.Button2_Click", "Dato de entrada inválido: " & ex.Message)
+            MessageBox.Show("Verifique que todos los campos numéricos tengan valores válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_04_Escaleras.Button2_Click", "Error durante el cálculo de escaleras")
+            MessageBox.Show("Error durante el cálculo. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
 
     End Sub
     Private Sub C_BarraTemperatura_SelectedIndexChanged(sender As Object, e As EventArgs) Handles C_BarraTemperatura.SelectedIndexChanged
@@ -127,7 +135,8 @@ Public Class Form_04_Escaleras
                 T_SRequeridaTemperatura.Text = Proyecto.S_Temperatura
             End If
         Catch ex As Exception
-
+            Logger.Warning("Form_04_Escaleras.C_BarraTemperatura_SelectedIndexChanged",
+                           "Error al calcular separación de temperatura con barra: " & C_BarraTemperatura.Text)
         End Try
     End Sub
     Private Sub C_BarraFlexion_SelectedIndexChanged(sender As Object, e As EventArgs) Handles C_BarraFlexion.SelectedIndexChanged
@@ -139,7 +148,8 @@ Public Class Form_04_Escaleras
                 T_SRequeridaFlexion.Text = Proyecto.S_Flexion
             End If
         Catch ex As Exception
-
+            Logger.Warning("Form_04_Escaleras.C_BarraFlexion_SelectedIndexChanged",
+                           "Error al calcular separación a flexión con barra: " & C_BarraFlexion.Text)
         End Try
     End Sub
 
@@ -154,10 +164,10 @@ Public Class Form_04_Escaleras
                 Proyecto.S_Temperatura_Colocada = S_Colocada
 
                 If Proyecto.Cuantia_Temperaruta_Colocada >= 0.9 * Proyecto.Cuantia_Temperatura Then
-                    Casilla_Cumple(T_VerificacionTemperatura)
+                    CasillaCumple(T_VerificacionTemperatura)
                     T_VerificacionTemperatura.Text = "Cumple"
                 Else
-                    Casilla_Nocumple(T_VerificacionTemperatura)
+                    CasillaNocumple(T_VerificacionTemperatura)
                     T_VerificacionTemperatura.Text = "No cumple"
                 End If
 
@@ -180,10 +190,10 @@ Public Class Form_04_Escaleras
 
 
                 If Proyecto.Acero_Flexion_Colocado >= 0.9 * Proyecto.Acero_Flexion Then
-                    Casilla_Cumple(T_VerificacionFlexion)
+                    CasillaCumple(T_VerificacionFlexion)
                     T_VerificacionFlexion.Text = "Cumple"
                 Else
-                    Casilla_Nocumple(T_VerificacionFlexion)
+                    CasillaNocumple(T_VerificacionFlexion)
                     T_VerificacionFlexion.Text = "No cumple"
                 End If
 
@@ -298,7 +308,8 @@ Public Class Form_04_Escaleras
                 Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
             End If
         Catch ex As Exception
-
+            Logger.Critical(ex, "Form_04_Escaleras.ToolStripMenuItem4_Click",
+                            "No se pudo guardar el proyecto de escaleras. Verifique permisos de escritura.")
         End Try
     End Sub
 
@@ -364,10 +375,10 @@ Public Class Form_04_Escaleras
         T_SRequeridaTemperatura.Text = Format(Proyecto.S_Temperatura, "##,##0.00")
         T_SColocadaTemperatura.Text = Format(Proyecto.S_Temperatura_Colocada, "##,##0.00")
         If Proyecto.Cuantia_Temperaruta_Colocada >= 0.9 * Proyecto.Cuantia_Temperatura Then
-            Casilla_Cumple(T_VerificacionTemperatura)
+            CasillaCumple(T_VerificacionTemperatura)
             T_VerificacionTemperatura.Text = "Cumple"
         Else
-            Casilla_Nocumple(T_VerificacionTemperatura)
+            CasillaNocumple(T_VerificacionTemperatura)
             T_VerificacionTemperatura.Text = "No cumple"
         End If
 
@@ -379,10 +390,10 @@ Public Class Form_04_Escaleras
         T_SColocadaFlexion.Text = Format(Proyecto.S_Flexion_Colocada, "##,##0.00")
 
         If Proyecto.Acero_Flexion_Colocado >= 0.9 * Proyecto.Acero_Flexion Then
-            Casilla_Cumple(T_VerificacionFlexion)
+            CasillaCumple(T_VerificacionFlexion)
             T_VerificacionFlexion.Text = "Cumple"
         Else
-            Casilla_Nocumple(T_VerificacionFlexion)
+            CasillaNocumple(T_VerificacionFlexion)
             T_VerificacionFlexion.Text = "No cumple"
         End If
 
@@ -392,11 +403,11 @@ Public Class Form_04_Escaleras
 
         If Proyecto.Vc >= Proyecto.Vu Then
             Proyecto.Verificacion_Cortante = True
-            Casilla_Cumple(T_VerificacionCortante)
+            CasillaCumple(T_VerificacionCortante)
             T_VerificacionCortante.Text = "Cumple"
         Else
             Proyecto.Verificacion_Cortante = False
-            Casilla_Nocumple(T_VerificacionCortante)
+            CasillaNocumple(T_VerificacionCortante)
             T_VerificacionCortante.Text = "No cumple"
         End If
 

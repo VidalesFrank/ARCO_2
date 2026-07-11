@@ -635,7 +635,7 @@ Public Class Funciones_00_Varias
         DiametroRefuerzo = Db
     End Function
 
-    Public Shared Sub Funcion_Color_Cumple(ByVal Tabla As DataGridView, ByVal Fila As Integer, ByVal Columna As Integer, ByVal Opcion As String)
+    Public Shared Sub FuncionColorCumple(ByVal Tabla As DataGridView, ByVal Fila As Integer, ByVal Columna As Integer, ByVal Opcion As String)
 
         If Opcion = "Cumple" Then
             Tabla.Rows(Fila).Cells(Columna).Style.BackColor = Color.FromArgb(198, 239, 206)
@@ -691,22 +691,23 @@ Public Class Funciones_00_Varias
     End Function
 
     Public Shared Sub GuardarProyecto(ByVal Objeto As Object, ByVal Nombre_Archivo As String)
+        Dim dlg As New SaveFileDialog
+        dlg.Filter = "Archivo|*.esm"
+        dlg.Title = "Guardar Archivo"
+        dlg.FileName = Nombre_Archivo
+        If dlg.ShowDialog() <> DialogResult.OK Then Return
         Try
-            Dim SaveAs As New SaveFileDialog
-            SaveAs.Filter = "Archivo|*.esm"
-            SaveAs.Title = "Guardar Archivo"
-            SaveAs.FileName = Nombre_Archivo
-            SaveAs.ShowDialog()
-            If SaveAs.FileName <> String.Empty Then
-                Objeto.Ruta = Path.GetFullPath(SaveAs.FileName)
-                Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
-            End If
+            Objeto.Ruta = Path.GetFullPath(dlg.FileName)
+            Funciones_Programa.Serializar(dlg.FileName, Objeto)
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
-
+            MessageBox.Show("Error al guardar el archivo: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
 
-    Public Shared Sub Abrir_Importar_Excel()
+    Public Shared Sub AbrirImportarExcel()
         Dim OpenFileDialog As New OpenFileDialog
         Dim openFD As New OpenFileDialog()
         With openFD
@@ -720,16 +721,16 @@ Public Class Funciones_00_Varias
             End If
         End With
     End Sub
-    Public Shared Sub Casilla_Cumple(ByVal Casilla As TextBox)
+    Public Shared Sub CasillaCumple(ByVal Casilla As TextBox)
         Casilla.BackColor = Color.FromArgb(198, 239, 206)
         Casilla.ForeColor = Color.FromArgb(0, 97, 0)
     End Sub
-    Public Shared Sub Casilla_Nocumple(ByVal Casilla As TextBox)
+    Public Shared Sub CasillaNoCumple(ByVal Casilla As TextBox)
         Casilla.BackColor = Color.FromArgb(255, 199, 206)
         Casilla.ForeColor = Color.FromArgb(156, 0, 6)
     End Sub
 
-    Public Shared Sub Estilo_Tabla(ByVal Tabla As DataGridView)
+    Public Shared Sub EstiloTabla(ByVal Tabla As DataGridView)
 
         With Tabla.DefaultCellStyle
             .Font = New Font("Arial", 10)

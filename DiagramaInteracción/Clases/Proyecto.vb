@@ -26,6 +26,18 @@ Public Class Proyecto
 
     Public Property Grids As New cGrids()
 
+    ' Garantiza que todos los objetos estén inicializados al deserializar archivos antiguos.
+    <System.Runtime.Serialization.OnDeserialized>
+    Private Sub OnDeserialized(ctx As System.Runtime.Serialization.StreamingContext)
+        If Info Is Nothing Then Info = New cInfoProyecto()
+        If ParametrosSismicos Is Nothing Then ParametrosSismicos = New cParametrosSismicos()
+        If ResultadosGlobales Is Nothing Then ResultadosGlobales = New cResultadosGlobales()
+        If Elementos Is Nothing Then Elementos = New cElementos()
+        If TablasEtabs Is Nothing Then TablasEtabs = New cTablasETABS()
+        If Pisos Is Nothing Then Pisos = New List(Of cPiso)()
+        If Grids Is Nothing Then Grids = New cGrids()
+    End Sub
+
 
     'Public Ruta As String
 

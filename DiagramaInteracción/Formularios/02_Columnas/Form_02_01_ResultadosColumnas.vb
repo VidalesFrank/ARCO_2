@@ -1,4 +1,5 @@
 ﻿Imports System.Data.OleDb
+Imports System.Runtime.InteropServices
 Imports ARCO.Funciones_00_Varias
 Imports Excel = Microsoft.Office.Interop.Excel
 
@@ -45,26 +46,43 @@ Public Class Form_02_01_ResultadosColumnas
             Tabla_Resultados.Rows(i + 1).Cells(13).Value = Seccion(i / 2).F_Ash_Corto
         Next
 
+        ' Columna D/C Biaxial (una sola fila por tramo, filas pares)
+        Dim colDIBiaxial = Tabla_Resultados.Columns("ColDIBiaxial")
+        If colDIBiaxial IsNot Nothing Then
+            For i = 0 To (Seccion.Count - 1) * 2 Step 2
+                Dim dc = Seccion(i \ 2).F_Interaccion
+                If dc > 0 Then Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value = dc
+            Next
+        End If
+
         For i = 0 To Seccion.Count * 2 - 1
             If Tabla_Resultados.Rows(i).Cells(5).Value < 0.9 Then
-                Funcion_Color_Cumple(Tabla_Resultados, i, 5, "No cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 5, "No cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Resultados, i, 5, "Cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 5, "Cumple")
             End If
             If Tabla_Resultados.Rows(i).Cells(6).Value < 0.9 And Tabla_Resultados.Rows(i).Cells(6).Value > 0 Then
-                Funcion_Color_Cumple(Tabla_Resultados, i, 6, "No cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 6, "No cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Resultados, i, 6, "Cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 6, "Cumple")
             End If
             If Tabla_Resultados.Rows(i).Cells(10).Value < 0.9 Then
-                Funcion_Color_Cumple(Tabla_Resultados, i, 10, "No cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 10, "No cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Resultados, i, 10, "Cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 10, "Cumple")
             End If
             If Tabla_Resultados.Rows(i).Cells(13).Value < 0.9 Then
-                Funcion_Color_Cumple(Tabla_Resultados, i, 13, "No cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 13, "No cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Resultados, i, 13, "Cumple")
+                FuncionColorCumple(Tabla_Resultados, i, 13, "Cumple")
+            End If
+            ' Color D/C Biaxial (solo filas pares)
+            If colDIBiaxial IsNot Nothing AndAlso i Mod 2 = 0 Then
+                Dim dcVal As Object = Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value
+                If dcVal IsNot Nothing Then
+                    Dim dc As Single = CSng(dcVal)
+                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, If(dc <= 1.0F, "Cumple", "No cumple"))
+                End If
             End If
         Next
 
@@ -103,7 +121,7 @@ Public Class Form_02_01_ResultadosColumnas
         For i = 0 To Seccion.Count - 1
             For j = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR.Count - 1
                 If Form_ALR.Tabla_ALR.Rows(i).Cells(j + 1).Value > 0.4 Then
-                    Funcion_Color_Cumple(Form_ALR.Tabla_ALR, i, j + 1, "No cumple")
+                    FuncionColorCumple(Form_ALR.Tabla_ALR, i, j + 1, "No cumple")
                 End If
             Next
         Next
@@ -116,6 +134,13 @@ Public Class Form_02_01_ResultadosColumnas
     Private Sub Form_03_01_ResultadosColumnas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         If Proyecto.Elementos.Columnas.Verificacion_ALR = True Then
             Button1.Visible = True
+        End If
+        If Tabla_Resultados.Columns("ColDIBiaxial") Is Nothing Then
+            Dim colDI As New DataGridViewTextBoxColumn()
+            colDI.Name = "ColDIBiaxial"
+            colDI.HeaderText = "D/C Biaxial"
+            colDI.MinimumWidth = 6
+            Tabla_Resultados.Columns.Add(colDI)
         End If
     End Sub
 
@@ -130,9 +155,11 @@ Public Class Form_02_01_ResultadosColumnas
 
         'Try
         Dim Color_Interior As Color = Color.FromArgb(200, 200, 200)
-        Dim appXL As New Excel.Application
-        Dim wbXL As Excel.Workbook
-        Dim Hoja_Resultados As Excel.Worksheet
+        Dim appXL As Excel.Application = Nothing
+        Dim wbXL As Excel.Workbook = Nothing
+        Dim Hoja_Resultados As Excel.Worksheet = Nothing
+        Try
+        appXL = New Excel.Application
         wbXL = appXL.Workbooks.Add()
 
         Hoja_Resultados = wbXL.Sheets("Hoja1")
@@ -305,12 +332,22 @@ Public Class Form_02_01_ResultadosColumnas
         appXL.Quit()
         System.Diagnostics.Process.Start(saveFileDialog1.FileName)
 
-        'Catch ex As Exception
-        'MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'Finally
-        conexion.Close()
-        Cursor = Cursors.Arrow
-        'End Try
+        Catch ex As Exception
+            Logger.Error(ex, "Form_02_01_ResultadosColumnas.ExportarExcel",
+                         "Error al exportar resultados de columnas a Excel.")
+            MessageBox.Show("Error al exportar a Excel: " & ex.Message,
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            ' Liberar objetos COM en orden inverso para evitar procesos EXCEL.EXE huérfanos.
+            ' Sin esto, cada exportación deja un proceso Excel activo en memoria.
+            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
+            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
+            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            conexion.Close()
+            Cursor = Cursors.Arrow
+        End Try
 
     End Sub
 

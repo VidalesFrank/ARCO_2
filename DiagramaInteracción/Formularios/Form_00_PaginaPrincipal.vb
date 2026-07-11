@@ -8,6 +8,7 @@ Public Class Form_00_PaginaPrincipal
     '----------------------------------------------
     Public Shared proyecto As New Proyecto
     '----------------------------------------------
+    Private _hayCambiosPP As Boolean = False
 
     Private Sub Opcion1_CheckedChanged(sender As Object, e As EventArgs) Handles Opcion1.CheckedChanged
         SeccionR.Show()
@@ -260,11 +261,24 @@ Public Class Form_00_PaginaPrincipal
         If dlg.ShowDialog() <> DialogResult.OK Then Return
         Try
             proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(dlg.FileName)
+            proyecto.Ruta = dlg.FileName
             SincronizarModulos()
+            _hayCambiosPP = False
+            MessageBox.Show("Proyecto abierto correctamente.", "Abrir",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
-            MessageBox.Show("Error al abrir el proyecto: " & ex.Message,
-                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Logger.Critical(ex, "Form_00_PaginaPrincipal.Open",
+                            "No se pudo abrir el proyecto. El archivo puede estar dañado o ser de una versión incompatible.")
+            MessageBox.Show("No se pudo abrir el archivo. Puede estar dañado o ser de una versión incompatible.",
+                            "Error al abrir", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+    End Sub
+
+    ''' <summary>
+    ''' Marca que hay cambios sin guardar. Llamar desde cualquier módulo al modificar datos.
+    ''' </summary>
+    Public Sub MarcarCambios()
+        _hayCambiosPP = True
     End Sub
 
     ''' <summary>
@@ -576,32 +590,49 @@ Public Class Form_00_PaginaPrincipal
     End Sub
 
     Private Sub SaveAs(ByVal Objeto As Object)
+        Dim dlg As New SaveFileDialog
+        dlg.Filter = "Archivo|*.esm"
+        dlg.Title = "Guardar Archivo"
+        dlg.FileName = "RevisiónMuros_Proyecto - " & If(proyecto.Info?.Nombre, "ARCO")
+        If dlg.ShowDialog() <> DialogResult.OK Then Return
         Try
-            Dim SaveAs As New SaveFileDialog
-            SaveAs.Filter = "Archivo|*.esm"
-            SaveAs.Title = "Guardar Archivo"
-            SaveAs.FileName = Convert.ToString("RevisiónMuros_Proyecto - " & proyecto.Info.Nombre)
-            SaveAs.ShowDialog()
-            If SaveAs.FileName <> String.Empty Then
-                proyecto.Ruta = Path.GetFullPath(SaveAs.FileName)
-                Funciones_Programa.Serializar(SaveAs.FileName, Objeto)
-            End If
+            proyecto.Ruta = Path.GetFullPath(dlg.FileName)
+            Funciones_Programa.Serializar(dlg.FileName, Objeto)
+            _hayCambiosPP = False
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar Como",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
-
+            Logger.Critical(ex, "Form_00_PaginaPrincipal.SaveAs",
+                            "No se pudo guardar el proyecto. Verifique que tenga permisos de escritura en la carpeta seleccionada.")
+            MessageBox.Show("Error al guardar el archivo: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
-
     End Sub
 
     Private Sub GuardarToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles GuardarToolStripMenuItem1.Click
+        If String.IsNullOrEmpty(proyecto.Ruta) Then
+            SaveAs(proyecto)
+            Return
+        End If
         Try
-            If proyecto.Ruta = String.Empty Then
-                SaveAs(proyecto)
-            Else
-                Funciones_Programa.Serializar(proyecto.Ruta, proyecto)
-            End If
+            Funciones_Programa.Serializar(proyecto.Ruta, proyecto)
+            _hayCambiosPP = False
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
-
+            Logger.Critical(ex, "Form_00_PaginaPrincipal.GuardarToolStripMenuItem1_Click",
+                            "No se pudo guardar el proyecto. El archivo puede estar en uso o no hay permisos de escritura.")
+            MessageBox.Show("Error al guardar el archivo: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+    End Sub
+
+    Private Sub Form_00_PaginaPrincipal_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        If Not _hayCambiosPP Then Return
+        Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
+                                "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
+        If r = DialogResult.Yes Then GuardarToolStripMenuItem1_Click(sender, e)
+        If r = DialogResult.Cancel Then e.Cancel = True
     End Sub
 
     Public ResultadosGlobales As New Dictionary(Of String, DataTable)

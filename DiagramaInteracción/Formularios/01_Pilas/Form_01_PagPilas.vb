@@ -33,6 +33,7 @@ Public Class Form_01_PagPilas
 
         ResumenDI.Visible = True
 
+        Try
         Proyecto.Elementos.Pilas.Esf_Adm_Est = Convert.ToSingle(EadmEst.Text)
         Proyecto.Elementos.Pilas.Esf_Adm_Din = Convert.ToSingle(EadmDin.Text)
         Proyecto.Elementos.Pilas.Esf_Frccion = Convert.ToSingle(Esf_Friccion.Text)
@@ -41,7 +42,6 @@ Public Class Form_01_PagPilas
         Proyecto.Elementos.Pilas.Fy = Convert.ToSingle(PagMateriales.Fy.Text)
         Proyecto.Elementos.Pilas.ModuloE_Acero = Convert.ToSingle(PagMateriales.Es.Text)
 
-        'Try
         Proyecto.Elementos.Pilas.ListaElementos.Clear()
         For Each Elemento_ In Lista_Elementos
 
@@ -238,14 +238,16 @@ Public Class Form_01_PagPilas
         End If
 
         ComboElementos.Visible = True
-
-        'Catch ex As Exception
-        'Finally
-
         Form_01_00_PagInfoPilas.Show()
-
-        'End Try
+        Catch ex As FormatException
+            Logger.Warning("Form_01_PagPilas.Button1_Click", "Dato de entrada inválido: " & ex.Message)
+            MessageBox.Show("Verifique que todos los campos numéricos tengan valores válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_01_PagPilas.Button1_Click", "Error durante el cálculo de pilas")
+            MessageBox.Show("Error durante el cálculo. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
         Me.Cursor = Cursors.Arrow
+        End Try
 
 
     End Sub
@@ -572,15 +574,15 @@ Public Class Form_01_PagPilas
     '---------------------- LLAMAR Y LLENAR CADA DATAGRIDVIEW CON LAS TABLAS DE EXCEL ------------------------------- 
     Private Sub TipoFrameToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Frame.Click
         Proyecto.Elementos.Pilas.Opcion_Elemento = "Frame"
-        Abrir_Importar_Excel()
+        AbrirImportarExcel()
     End Sub
     Private Sub TipoPuntoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Puntos.Click
         Proyecto.Elementos.Pilas.Opcion_Elemento = "Punto"
-        Abrir_Importar_Excel()
+        AbrirImportarExcel()
     End Sub
     Private Sub TipoPierToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Pier.Click
         Proyecto.Elementos.Pilas.Opcion_Elemento = "Pier"
-        Abrir_Importar_Excel()
+        AbrirImportarExcel()
     End Sub
 
     Private Sub SeccionC_Resize(sender As Object, e As EventArgs) Handles Me.Resize
@@ -747,6 +749,8 @@ Public Class Form_01_PagPilas
             Funciones_Programa.Serializar(dlg.FileName, Objeto)
             _hayCambiosPilas = False
             _ultimoGuardadoPilas = DateTime.Now
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar Como",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -774,6 +778,7 @@ Public Class Form_01_PagPilas
 
         Proyecto.Ruta = dlg.FileName
         Form_00_PaginaPrincipal.proyecto = Proyecto
+        Form_00_PaginaPrincipal.SincronizarModulos()
         _hayCambiosPilas = False
 
         BorrarDatos()
@@ -794,6 +799,8 @@ Public Class Form_01_PagPilas
                 Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
                 _hayCambiosPilas = False
                 _ultimoGuardadoPilas = DateTime.Now
+                MessageBox.Show("El archivo se guardó correctamente.", "Guardar",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
             Catch ex As Exception
                 MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             End Try

@@ -31,8 +31,20 @@ Public Class Proyecto_MNE
 
     Public Opcion_Barra_Flexion As Integer
 
+    ' <OptionalField> permite abrir archivos guardados antes de que este campo existiera.
+    <System.Runtime.Serialization.OptionalField>
+    Public Lista_Alturas_Pisos As List(Of Single)
+
     Public Lista_Divisorios As New List(Of Divisorio)
     Public Lista_Antepechos As New List(Of Antepecho)
+
+    <System.Runtime.Serialization.OnDeserialized>
+    Private Sub OnDeserialized(ctx As System.Runtime.Serialization.StreamingContext)
+        If Lista_Alturas_Pisos Is Nothing Then Lista_Alturas_Pisos = New List(Of Single)
+        If Lista_Divisorios Is Nothing Then Lista_Divisorios = New List(Of Divisorio)
+        If Lista_Antepechos Is Nothing Then Lista_Antepechos = New List(Of Antepecho)
+    End Sub
+
     <Serializable>
     Public Class Divisorio
 

@@ -219,8 +219,12 @@ Public Class Form_03_Losas
             TabControl1.SelectedIndex = 1
             MessageBox.Show("Análisis Finalizado con Éxito.", "Ejecución de Análisis", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
+        Catch ex As FormatException
+            Logger.Warning("Form_03_Losas.Button2_Click", "Dato de entrada inválido: " & ex.Message)
+            MessageBox.Show("Verifique que todos los campos numéricos tengan valores válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
         Catch ex As Exception
-            MessageBox.Show("Se tienen celdas vacías.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Logger.Error(ex, "Form_03_Losas.Button2_Click", "Error durante el cálculo de losas")
+            MessageBox.Show("Error durante el cálculo. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
         Me.Cursor = Cursors.Arrow
     End Sub

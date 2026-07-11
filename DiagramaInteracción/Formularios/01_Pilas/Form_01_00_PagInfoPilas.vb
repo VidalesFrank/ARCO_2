@@ -9,6 +9,7 @@ Public Class Form_01_00_PagInfoPilas
         Form_01_PagPilas.ComboElementos.Items.Clear()
 
         Dim FT As Double = 1
+        Try
 
         If Proyecto.Elementos.Pilas.Opcion_Elemento = "Punto" Then
             FT = 1
@@ -20,15 +21,15 @@ Public Class Form_01_00_PagInfoPilas
             Dim Elemento = Proyecto.Elementos.Pilas.ListaElementos.Find(Function(p) p.Name_Label = Label_Element)
 
             Elemento.Name_Elemento = Tabla_Elementos.Rows(i).Cells(1).Value
-            Elemento.Df = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(2).Value)
-            Elemento.Dc = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(3).Value)
-            Elemento.L_Pila = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(4).Value)
+            Elemento.Df = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(2).Value, 0))
+            Elemento.Dc = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(3).Value, 0))
+            Elemento.L_Pila = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(4).Value, 0))
             Elemento.Opcion_Hueca = Tabla_Elementos.Rows(i).Cells(5).Value
-            Elemento.Esp_Anillo = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(6).Value)
+            Elemento.Esp_Anillo = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(6).Value, 0))
             Elemento.N_Barra_Long = Tabla_Elementos.Rows(i).Cells(7).Value
-            Elemento.Acero_Long = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(8).Value)
-            Elemento.Cant_Barras_Long = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(9).Value)
-            Elemento.fc = Convert.ToSingle(Tabla_Elementos.Rows(i).Cells(10).Value)
+            Elemento.Acero_Long = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(8).Value, 0))
+            Elemento.Cant_Barras_Long = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(9).Value, 0))
+            Elemento.fc = Convert.ToSingle(If(Tabla_Elementos.Rows(i).Cells(10).Value, 0))
 
             Elemento.N_Barra_Trans = Form_01_PagPilas.RefuerzoTransv.Text
             Elemento.Separacion_Trans = Convert.ToSingle(Form_01_PagPilas.Separacion.Text)
@@ -245,6 +246,13 @@ SiguienteElemento:
         Form_01_PagPilas.ExportarToolStripMenuItem.Enabled = True
         Form_01_PagPilas.VerToolStripMenuItem.Enabled = True
         MessageBox.Show("Análisis Finalizado con Éxito.", "Ejecución de Análisis", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Catch ex As FormatException
+            Logger.Warning("Form_01_00_PagInfoPilas.Button1_Click", "Dato de entrada inválido: " & ex.Message)
+            MessageBox.Show("Verifique que todos los campos numéricos de la tabla tengan valores válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_01_00_PagInfoPilas.Button1_Click", "Error durante el análisis de pilas")
+            MessageBox.Show("Error durante el análisis. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
     Private Sub Op_Seccion_SelectedIndexChanged(sender As Object, e As DataGridViewCellEventArgs) Handles Tabla_Elementos.CellValueChanged

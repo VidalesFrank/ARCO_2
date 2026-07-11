@@ -1,4 +1,6 @@
-﻿<Serializable>
+﻿Imports System.Runtime.Serialization
+
+<Serializable>
 Public Class SeccionMuro
 
     Public Name As String
@@ -39,7 +41,7 @@ Public Class SeccionMuro
     '----------- INFORMACION DE LEIDA (COLOCADA) ------------
     Public Refuerzo_Muro_Top As New Refuerzo_Longitudinal
 
-    Public Refuerzo_Muro_Top_Pr As New Refuerzo_Longitudinal_Prueba
+    <OptionalField> Public Refuerzo_Muro_Top_Pr As New Refuerzo_Longitudinal_Prueba
 
     Public Cuantia_Top_Col As Single
     Public AsT_Top_Col As Single
@@ -47,7 +49,7 @@ Public Class SeccionMuro
 
     Public Refuerzo_Muro_Bottom As New Refuerzo_Longitudinal
 
-    Public Refuerzo_Muro_Bot_Pr As New Refuerzo_Longitudinal_Prueba
+    <OptionalField> Public Refuerzo_Muro_Bot_Pr As New Refuerzo_Longitudinal_Prueba
 
     Public Cuantia_Bot_Col As Single
     Public AsT_Bot_Col As Single
@@ -131,20 +133,40 @@ Public Class SeccionMuro
 
 
     '-------- DIAGRAMA DE INTERACCIÓN ------
-    Public Lista_Mn_Top As List(Of Single)
-    Public Lista_Pn_Top As List(Of Single)
-    Public Lista_M_Top As List(Of Single)
-    Public Lista_P_Top As List(Of Single)
+    <OptionalField> Public Lista_Mn_Top As List(Of Single)
+    <OptionalField> Public Lista_Pn_Top As List(Of Single)
+    <OptionalField> Public Lista_M_Top As List(Of Single)
+    <OptionalField> Public Lista_P_Top As List(Of Single)
 
-    Public Lista_Mn_Bot As List(Of Single)
-    Public Lista_Pn_Bot As List(Of Single)
-    Public Lista_M_Bot As List(Of Single)
-    Public Lista_P_Bot As List(Of Single)
+    <OptionalField> Public Lista_Mn_Bot As List(Of Single)
+    <OptionalField> Public Lista_Pn_Bot As List(Of Single)
+    <OptionalField> Public Lista_M_Bot As List(Of Single)
+    <OptionalField> Public Lista_P_Bot As List(Of Single)
 
     Public Factor_Demanda_Flexo_Top As Single
-    Public Combinacion_Demanda_Flexo_Top As String
+    <OptionalField> Public Combinacion_Demanda_Flexo_Top As String
     Public Factor_Demanda_Flexo_Bot As Single
-    Public Combinacion_Demanda_Flexo_Bot As String
+    <OptionalField> Public Combinacion_Demanda_Flexo_Bot As String
+
+    <OnDeserializing>
+    Private Sub InicializarDefaults(ctx As StreamingContext)
+        Lista_ALR = New List(Of ALR)
+        Lista_Combinaciones = New List(Of Fuerzas_Elementos)
+        ListaRefuerzos_Bot = New List(Of Refuerzo)
+        ListaRefuerzoCompleto_Bot = New List(Of RefuerzoSimple)
+        ListaRefuerzos_Top = New List(Of Refuerzo)
+        ListaRefuerzoCompleto_Top = New List(Of RefuerzoSimple)
+        Refuerzo_Muro_Top_Pr = New Refuerzo_Longitudinal_Prueba()
+        Refuerzo_Muro_Bot_Pr = New Refuerzo_Longitudinal_Prueba()
+        Lista_Mn_Top = New List(Of Single)
+        Lista_Pn_Top = New List(Of Single)
+        Lista_M_Top = New List(Of Single)
+        Lista_P_Top = New List(Of Single)
+        Lista_Mn_Bot = New List(Of Single)
+        Lista_Pn_Bot = New List(Of Single)
+        Lista_M_Bot = New List(Of Single)
+        Lista_P_Bot = New List(Of Single)
+    End Sub
 
     <Serializable>
     Public Class ElementoBorde
@@ -232,6 +254,11 @@ Public Class SeccionMuro
     <Serializable>
     Public Class Refuerzo_Longitudinal_Prueba
         Public Property Barras As New List(Of BarraInfo)
+
+        <OnDeserializing>
+        Private Sub InicializarDefaults(ctx As StreamingContext)
+            Barras = New List(Of BarraInfo)
+        End Sub
 
         Public Sub OrdenarBarrasPorId()
             Barras = Barras.OrderByDescending(Function(b) b.Id_Barra).ToList()

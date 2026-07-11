@@ -1,6 +1,7 @@
 ﻿Imports System.Data.OleDb
 Imports ARCO.Funciones_00_Varias
 Imports Excel = Microsoft.Office.Interop.Excel
+Imports System.Runtime.InteropServices
 
 Public Class Form_06_01_ResultadosMuros
     Public Shared proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
@@ -52,17 +53,17 @@ Public Class Form_06_01_ResultadosMuros
 
             If (Seccion(i / 2).Cuantia_Top_Col / Seccion(i / 2).Cuantia_Top_Req) >= 0.9 Then
                 Tabla_Result_Flexo.Rows(i).Cells(11).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_Flexo, i, 11, "Cumple")
+                FuncionColorCumple(Tabla_Result_Flexo, i, 11, "Cumple")
             Else
                 Tabla_Result_Flexo.Rows(i).Cells(11).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_Flexo, i, 11, "No cumple")
+                FuncionColorCumple(Tabla_Result_Flexo, i, 11, "No cumple")
             End If
             If (Seccion(i / 2).Cuantia_Bot_Col / Seccion(i / 2).Cuantia_Bot_Req) >= 0.9 Then
                 Tabla_Result_Flexo.Rows(i + 1).Cells(11).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_Flexo, i + 1, 11, "Cumple")
+                FuncionColorCumple(Tabla_Result_Flexo, i + 1, 11, "Cumple")
             Else
                 Tabla_Result_Flexo.Rows(i + 1).Cells(11).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_Flexo, i + 1, 11, "No cumple")
+                FuncionColorCumple(Tabla_Result_Flexo, i + 1, 11, "No cumple")
             End If
 
             ' ------------------ LLENAR TABLA DE RESULTADOS A CORTANTE -----------
@@ -79,10 +80,10 @@ Public Class Form_06_01_ResultadosMuros
             Tabla_Result_Cortante.Rows(i / 2).Cells(10).Value = Format(Seccion(i / 2).F_Cortante, "##,##0.00")
             If Seccion(i / 2).F_Cortante >= 0.9 Then
                 Tabla_Result_Cortante.Rows(i / 2).Cells(10).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_Cortante, i / 2, 10, "Cumple")
+                FuncionColorCumple(Tabla_Result_Cortante, i / 2, 10, "Cumple")
             Else
                 Tabla_Result_Cortante.Rows(i / 2).Cells(10).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_Cortante, i / 2, 10, "No cumple")
+                FuncionColorCumple(Tabla_Result_Cortante, i / 2, 10, "No cumple")
             End If
 
             Tabla_Result_Cortante.Rows(i / 2).Cells(11).Value = Format(Seccion(i / 2).AsH_Col, "##,##0.00")
@@ -91,10 +92,10 @@ Public Class Form_06_01_ResultadosMuros
 
             If (Seccion(i / 2).AsH_Col / Seccion(i / 2).AsH_Req_Top) >= 0.9 Then
                 Tabla_Result_Cortante.Rows(i / 2).Cells(14).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_Cortante, i / 2, 14, "Cumple")
+                FuncionColorCumple(Tabla_Result_Cortante, i / 2, 14, "Cumple")
             Else
                 Tabla_Result_Cortante.Rows(i / 2).Cells(14).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_Cortante, i / 2, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_Cortante, i / 2, 14, "No cumple")
             End If
 
             ' ------------------ LLENAR TABLA DE RESULTADOS A EB(1) -----------
@@ -111,14 +112,14 @@ Public Class Form_06_01_ResultadosMuros
             Tabla_Result_EB1.Rows(i + 1).Cells(6).Value = Seccion(i / 2).Chequeo_EB_I_Bot_Esf
 
             If Seccion(i / 2).Chequeo_EB_I_Top_Esf = "No requiere" Then
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 6, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 6, "Cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 6, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 6, "No cumple")
             End If
             If Seccion(i / 2).Chequeo_EB_I_Bot_Esf = "No requiere" Then
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 6, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 6, "Cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 6, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 6, "No cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(7).Value = Format(Seccion(i / 2).Esf_D_Top, "##,##0.00")
@@ -127,14 +128,14 @@ Public Class Form_06_01_ResultadosMuros
             Tabla_Result_EB1.Rows(i + 1).Cells(8).Value = Seccion(i / 2).Chequeo_EB_D_Bot_Esf
 
             If Seccion(i / 2).Chequeo_EB_D_Top_Esf = "No requiere" Then
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 8, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 8, "Cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 8, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 8, "No cumple")
             End If
             If Seccion(i / 2).Chequeo_EB_D_Bot_Esf = "No requiere" Then
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 8, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 8, "Cumple")
             Else
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 8, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 8, "No cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(9).Value = Format(Seccion(i / 2).C_Limite, "##,##0.00")
@@ -144,17 +145,17 @@ Public Class Form_06_01_ResultadosMuros
 
             If Seccion(i / 2).C_I_Top <= Seccion(i / 2).C_Limite / 0.9 Then
                 Tabla_Result_EB1.Rows(i).Cells(11).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 11, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 11, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i).Cells(11).Value = "Requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 11, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 11, "No cumple")
             End If
             If Seccion(i / 2).C_I_Bot <= Seccion(i / 2).C_Limite / 0.9 Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(11).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 11, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 11, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(11).Value = "Requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 11, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 11, "No cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(12).Value = Format(Seccion(i / 2).C_D_Top, "##,##0.00")
@@ -162,73 +163,73 @@ Public Class Form_06_01_ResultadosMuros
 
             If Seccion(i / 2).C_D_Top <= Seccion(i / 2).C_Limite / 0.9 Then
                 Tabla_Result_EB1.Rows(i).Cells(13).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 13, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 13, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i).Cells(13).Value = "Requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 13, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 13, "No cumple")
             End If
             If Seccion(i / 2).C_D_Bot <= Seccion(i / 2).C_Limite / 0.9 Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(13).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 13, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 13, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(13).Value = "Requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 13, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 13, "No cumple")
             End If
 
             If Seccion(i / 2).Chequeo_EB_I_Top_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_I_Top_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i).Cells(14).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 14, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 14, "Cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_I_Top_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_I_Top_Def = "Requiere" Then
                 Tabla_Result_EB1.Rows(i).Cells(14).Value = "Requiere por deformaciones"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 14, "No cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_I_Top_Esf = "Requiere" And Seccion(i / 2).Chequeo_EB_I_Top_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i).Cells(14).Value = "Requiere por esfuerzos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 14, "No cumple")
             Else
                 Tabla_Result_EB1.Rows(i).Cells(14).Value = "Requiere por ambos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 14, "No cumple")
             End If
 
             If Seccion(i / 2).Chequeo_EB_I_Bot_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_I_Bot_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(14).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 14, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 14, "Cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_I_Bot_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_I_Bot_Def = "Requiere" Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(14).Value = "Requiere por deformaciones"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 14, "No cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_I_Bot_Esf = "Requiere" And Seccion(i / 2).Chequeo_EB_I_Bot_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(14).Value = "Requiere por esfuerzos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 14, "No cumple")
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(14).Value = "Requiere por ambos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 14, "No cumple")
             End If
 
             If Seccion(i / 2).Chequeo_EB_D_Top_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_D_Top_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i).Cells(15).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 15, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 15, "Cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_D_Top_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_D_Top_Def = "Requiere" Then
                 Tabla_Result_EB1.Rows(i).Cells(15).Value = "Requiere por deformaciones"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 15, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 15, "No cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_D_Top_Esf = "Requiere" And Seccion(i / 2).Chequeo_EB_D_Top_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i).Cells(15).Value = "Requiere por esfuerzos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 15, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 15, "No cumple")
             Else
                 Tabla_Result_EB1.Rows(i).Cells(15).Value = "Requiere por ambos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 15, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 15, "No cumple")
             End If
 
             If Seccion(i / 2).Chequeo_EB_D_Bot_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_D_Bot_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(15).Value = "No requiere"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 15, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 15, "Cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_D_Bot_Esf = "No requiere" And Seccion(i / 2).Chequeo_EB_D_Bot_Def = "Requiere" Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(15).Value = "Requiere por deformaciones"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 15, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 15, "No cumple")
             ElseIf Seccion(i / 2).Chequeo_EB_D_Bot_Esf = "Requiere" And Seccion(i / 2).Chequeo_EB_D_Bot_Def = "No requiere" Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(15).Value = "Requiere por esfuerzos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 15, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 15, "No cumple")
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(15).Value = "Requiere por ambos"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 15, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 15, "No cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(16).Value = Format(Seccion(i / 2).EB_I_Top.L_EB_Req, "##,##0.00")
@@ -239,17 +240,17 @@ Public Class Form_06_01_ResultadosMuros
 
             If Seccion(i / 2).EB_I_Top.L_EB_Req <= (Seccion(i / 2).EB_I_Top.L_EB / 0.9) Then
                 Tabla_Result_EB1.Rows(i).Cells(18).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 18, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 18, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i).Cells(18).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 18, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 18, "No cumple")
             End If
             If Seccion(i / 2).EB_I_Bot.L_EB_Req <= (Seccion(i / 2).EB_I_Bot.L_EB) / 0.9 Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(18).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 18, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 18, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(18).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 18, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 18, "No cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(19).Value = Format(Seccion(i / 2).EB_D_Top.L_EB_Req, "##,##0.00")
@@ -260,17 +261,17 @@ Public Class Form_06_01_ResultadosMuros
 
             If Seccion(i / 2).EB_D_Top.L_EB_Req <= (Seccion(i / 2).EB_D_Top.L_EB) / 0.9 Then
                 Tabla_Result_EB1.Rows(i).Cells(21).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 21, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 21, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i).Cells(21).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 21, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 21, "No cumple")
             End If
             If Seccion(i / 2).EB_D_Bot.L_EB_Req <= (Seccion(i / 2).EB_D_Bot.L_EB) / 0.9 Then
                 Tabla_Result_EB1.Rows(i + 1).Cells(21).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 21, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 21, "Cumple")
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(21).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 21, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 21, "No cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(22).Value = Format(Seccion(i / 2).EB_I_Top.Cuantia_L, "##,##0.00")
@@ -279,27 +280,27 @@ Public Class Form_06_01_ResultadosMuros
             If Seccion(i / 2).Req_EB_I_Top_Esp = False Then
                 If Seccion(i / 2).Req_EB_I_Top_NoEsp = False Then
                     Tabla_Result_EB1.Rows(i).Cells(23).Value = "No requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i, 23, "Cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i, 23, "Cumple")
                 Else
                     Tabla_Result_EB1.Rows(i).Cells(23).Value = "Requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i, 23, "No cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i, 23, "No cumple")
                 End If
             Else
                 Tabla_Result_EB1.Rows(i).Cells(23).Value = "Rev. EB Especial"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 23, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 23, "Cumple")
             End If
 
             If Seccion(i / 2).Req_EB_I_Bot_Esp = False Then
                 If Seccion(i / 2).Req_EB_I_Bot_NoEsp = False Then
                     Tabla_Result_EB1.Rows(i + 1).Cells(23).Value = "No requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 23, "Cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i + 1, 23, "Cumple")
                 Else
                     Tabla_Result_EB1.Rows(i + 1).Cells(23).Value = "Requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 23, "No cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i + 1, 23, "No cumple")
                 End If
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(23).Value = "Rev. EB Especial"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 23, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 23, "Cumple")
             End If
 
             Tabla_Result_EB1.Rows(i).Cells(24).Value = Format(Seccion(i / 2).EB_D_Top.Cuantia_L, "##,##0.00")
@@ -307,26 +308,26 @@ Public Class Form_06_01_ResultadosMuros
             If Seccion(i / 2).Req_EB_D_Top_Esp = False Then
                 If Seccion(i / 2).Req_EB_D_Top_NoEsp = False Then
                     Tabla_Result_EB1.Rows(i).Cells(25).Value = "No requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i, 25, "Cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i, 25, "Cumple")
                 Else
                     Tabla_Result_EB1.Rows(i).Cells(25).Value = "Requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i, 25, "No cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i, 25, "No cumple")
                 End If
             Else
                 Tabla_Result_EB1.Rows(i).Cells(25).Value = "Rev. EB Especial"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i, 25, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i, 25, "Cumple")
             End If
             If Seccion(i / 2).Req_EB_D_Bot_Esp = False Then
                 If Seccion(i / 2).Req_EB_D_Bot_NoEsp = False Then
                     Tabla_Result_EB1.Rows(i + 1).Cells(25).Value = "No requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 25, "Cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i + 1, 25, "Cumple")
                 Else
                     Tabla_Result_EB1.Rows(i + 1).Cells(25).Value = "Requiere"
-                    Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 25, "No cumple")
+                    FuncionColorCumple(Tabla_Result_EB1, i + 1, 25, "No cumple")
                 End If
             Else
                 Tabla_Result_EB1.Rows(i + 1).Cells(25).Value = "Rev. EB Especial"
-                Funcion_Color_Cumple(Tabla_Result_EB1, i + 1, 25, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB1, i + 1, 25, "Cumple")
             End If
 
             ' ------------------ LLENAR TABLA DE RESULTADOS A EB(2) -----------
@@ -349,17 +350,17 @@ Public Class Form_06_01_ResultadosMuros
 
             If Seccion(i / 2).EB_I_Top.RefH_Req * 0.9 <= Seccion(i / 2).EB_I_Top.RefH.Acero_T Then
                 Tabla_Result_EB2.Rows(i).Cells(8).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i, 8, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i, 8, "Cumple")
             Else
                 Tabla_Result_EB2.Rows(i).Cells(8).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i, 8, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i, 8, "No cumple")
             End If
             If Seccion(i / 2).EB_I_Bot.RefH_Req * 0.9 <= Seccion(i / 2).EB_I_Bot.RefH.Acero_T Then
                 Tabla_Result_EB2.Rows(i + 1).Cells(8).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i + 1, 8, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i + 1, 8, "Cumple")
             Else
                 Tabla_Result_EB2.Rows(i + 1).Cells(8).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i + 1, 8, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i + 1, 8, "No cumple")
             End If
 
             Tabla_Result_EB2.Rows(i).Cells(10).Value = Seccion(i / 2).EB_D_Top.Tipo_EB_Req
@@ -375,17 +376,17 @@ Public Class Form_06_01_ResultadosMuros
 
             If Seccion(i / 2).EB_D_Top.RefH_Req * 0.9 <= Seccion(i / 2).EB_D_Top.RefH.Acero_T Then
                 Tabla_Result_EB2.Rows(i).Cells(14).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i, 14, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i, 14, "Cumple")
             Else
                 Tabla_Result_EB2.Rows(i).Cells(14).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i, 14, "No cumple")
             End If
             If Seccion(i / 2).EB_D_Bot.RefH_Req * 0.9 <= Seccion(i / 2).EB_D_Bot.RefH.Acero_T Then
                 Tabla_Result_EB2.Rows(i + 1).Cells(14).Value = "Cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i + 1, 14, "Cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i + 1, 14, "Cumple")
             Else
                 Tabla_Result_EB2.Rows(i + 1).Cells(14).Value = "No cumple"
-                Funcion_Color_Cumple(Tabla_Result_EB2, i + 1, 14, "No cumple")
+                FuncionColorCumple(Tabla_Result_EB2, i + 1, 14, "No cumple")
             End If
 
         Next
@@ -397,10 +398,10 @@ Public Class Form_06_01_ResultadosMuros
 
         If Math.Max(Elemento.LV_EB_I_Req_Def, Elemento.LV_EB_I_Req_Esf) <= Elemento.LV_EB_I_Col_Esp Then
             Tabla_Result_EB2.Rows(0).Cells(18).Value = "Cumple"
-            Funcion_Color_Cumple(Tabla_Result_EB2, 0, 18, "Cumple")
+            FuncionColorCumple(Tabla_Result_EB2, 0, 18, "Cumple")
         Else
             Tabla_Result_EB2.Rows(0).Cells(18).Value = "Revisar"
-            Funcion_Color_Cumple(Tabla_Result_EB2, 0, 18, "No cumple")
+            FuncionColorCumple(Tabla_Result_EB2, 0, 18, "No cumple")
         End If
 
         Tabla_Result_EB2.Rows(0).Cells(19).Value = Elemento.LV_EB_D_Req_Def
@@ -410,10 +411,10 @@ Public Class Form_06_01_ResultadosMuros
 
         If Math.Max(Elemento.LV_EB_D_Req_Def, Elemento.LV_EB_D_Req_Esf) <= Elemento.LV_EB_D_Col_Esp Then
             Tabla_Result_EB2.Rows(0).Cells(22).Value = "Cumple"
-            Funcion_Color_Cumple(Tabla_Result_EB2, 0, 22, "Cumple")
+            FuncionColorCumple(Tabla_Result_EB2, 0, 22, "Cumple")
         Else
             Tabla_Result_EB2.Rows(0).Cells(22).Value = "Revisar"
-            Funcion_Color_Cumple(Tabla_Result_EB2, 0, 22, "No cumple")
+            FuncionColorCumple(Tabla_Result_EB2, 0, 22, "No cumple")
         End If
 
     End Sub
@@ -422,16 +423,16 @@ Public Class Form_06_01_ResultadosMuros
 
         Me.Cursor = Cursors.WaitCursor
 
-        'try
-
         Dim Archivo As String = "RevisiónMuros"
         Dim connection As String = "Provider=sqloledb;Data Source==miServidor;Initial Catalog=bdd_Web;User Id=web;Password="
         Dim conexion As New OleDbConnection(connection)
 
         Dim Color_Interior As Color = Color.FromArgb(200, 200, 200)
-        Dim appXL As New Excel.Application
-        Dim wbXL As Excel.Workbook
-        Dim Hoja_Resultados As Excel.Worksheet
+        Dim appXL As Excel.Application = Nothing
+        Dim wbXL As Excel.Workbook = Nothing
+        Dim Hoja_Resultados As Excel.Worksheet = Nothing
+        Try
+        appXL = New Excel.Application
         wbXL = appXL.Workbooks.Add()
 
         Hoja_Resultados = wbXL.Sheets("Hoja1")
@@ -496,13 +497,18 @@ Public Class Form_06_01_ResultadosMuros
         appXL.Workbooks.Close()
         appXL.Quit()
         System.Diagnostics.Process.Start(saveFileDialog1.FileName)
-
-        'Catch ex As Exception
-        'MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'Finally
-        conexion.Close()
-        Cursor = Cursors.Arrow
-        'End Try
+        Catch ex As Exception
+            Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
+            MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
+            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
+            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            conexion.Close()
+            Cursor = Cursors.Arrow
+        End Try
 
 
     End Sub
@@ -517,11 +523,12 @@ Public Class Form_06_01_ResultadosMuros
         Dim connection As String = "Provider=sqloledb;Data Source==miServidor;Initial Catalog=bdd_Web;User Id=web;Password="
         Dim conexion As New OleDbConnection(connection)
 
-        'Try
         Dim Color_Interior As Color = Color.FromArgb(200, 200, 200)
-        Dim appXL As New Excel.Application
-        Dim wbXL As Excel.Workbook
-        Dim Hoja_Resultados As Excel.Worksheet
+        Dim appXL As Excel.Application = Nothing
+        Dim wbXL As Excel.Workbook = Nothing
+        Dim Hoja_Resultados As Excel.Worksheet = Nothing
+        Try
+        appXL = New Excel.Application
         wbXL = appXL.Workbooks.Add()
 
         Hoja_Resultados = wbXL.Sheets("Hoja1")
@@ -747,13 +754,18 @@ Public Class Form_06_01_ResultadosMuros
         appXL.Workbooks.Close()
         appXL.Quit()
         System.Diagnostics.Process.Start(saveFileDialog1.FileName)
-
-        'Catch ex As Exception
-        'MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'Finally
-        conexion.Close()
-        Cursor = Cursors.Arrow
-        'End Try
+        Catch ex As Exception
+            Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
+            MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
+            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
+            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            conexion.Close()
+            Cursor = Cursors.Arrow
+        End Try
 
 
     End Sub
@@ -768,11 +780,12 @@ Public Class Form_06_01_ResultadosMuros
         Dim connection As String = "Provider=sqloledb;Data Source==miServidor;Initial Catalog=bdd_Web;User Id=web;Password="
         Dim conexion As New OleDbConnection(connection)
 
-        'Try
         Dim Color_Interior As Color = Color.FromArgb(200, 200, 200)
-        Dim appXL As New Excel.Application
-        Dim wbXL As Excel.Workbook
-        Dim Hoja_Resultados As Excel.Worksheet
+        Dim appXL As Excel.Application = Nothing
+        Dim wbXL As Excel.Workbook = Nothing
+        Dim Hoja_Resultados As Excel.Worksheet = Nothing
+        Try
+        appXL = New Excel.Application
         wbXL = appXL.Workbooks.Add()
 
         Hoja_Resultados = wbXL.Sheets("Hoja1")
@@ -976,13 +989,18 @@ Public Class Form_06_01_ResultadosMuros
         appXL.Workbooks.Close()
         appXL.Quit()
         System.Diagnostics.Process.Start(saveFileDialog1.FileName)
-
-        'Catch ex As Exception
-        'MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'Finally
-        conexion.Close()
-        Cursor = Cursors.Arrow
-        'End Try
+        Catch ex As Exception
+            Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
+            MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
+            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
+            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            conexion.Close()
+            Cursor = Cursors.Arrow
+        End Try
 
 
     End Sub
@@ -1043,11 +1061,12 @@ Public Class Form_06_01_ResultadosMuros
         Dim connection As String = "Provider=sqloledb;Data Source==miServidor;Initial Catalog=bdd_Web;User Id=web;Password="
         Dim conexion As New OleDbConnection(connection)
 
-        'Try
         Dim Color_Interior As Color = Color.FromArgb(200, 200, 200)
-        Dim appXL As New Excel.Application
-        Dim wbXL As Excel.Workbook
-        Dim Hoja_Resultados As Excel.Worksheet
+        Dim appXL As Excel.Application = Nothing
+        Dim wbXL As Excel.Workbook = Nothing
+        Dim Hoja_Resultados As Excel.Worksheet = Nothing
+        Try
+        appXL = New Excel.Application
         wbXL = appXL.Workbooks.Add()
 
         Hoja_Resultados = wbXL.Sheets("Hoja1")
@@ -1259,11 +1278,18 @@ Public Class Form_06_01_ResultadosMuros
         appXL.Quit()
         System.Diagnostics.Process.Start(saveFileDialog1.FileName)
 
-        'Catch ex As Exception
-        'MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'Finally
-        conexion.Close()
-        Cursor = Cursors.Arrow
+        Catch ex As Exception
+            Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
+            MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
+            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
+            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            conexion.Close()
+            Cursor = Cursors.Arrow
+        End Try
 
     End Sub
 End Class

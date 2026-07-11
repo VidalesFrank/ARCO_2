@@ -2100,21 +2100,39 @@ Public Class Form_09_Vigas
             Dim fOrigen = origen.Frames(i)
             Dim fDestino = destino.Frames(i)
 
-            ' Limpiar
+            ' Limpiar longitudinal y transversal
             fDestino.RefuerzoSuperior.Clear()
             fDestino.RefuerzoInferior.Clear()
+            fDestino.RefuerzoTransversal.Clear()
 
-            ' 🔹 Copiar superior
+            ' Copiar superior
             For Each tramo In fOrigen.RefuerzoSuperior
                 fDestino.RefuerzoSuperior.Add(ClonarTramo(tramo))
             Next
 
-            ' 🔹 Copiar inferior
+            ' Copiar inferior
             For Each tramo In fOrigen.RefuerzoInferior
                 fDestino.RefuerzoInferior.Add(ClonarTramo(tramo))
             Next
 
+            ' Copiar estribos (refuerzo transversal por zona)
+            For Each zona In fOrigen.RefuerzoTransversal
+                fDestino.RefuerzoTransversal.Add(New cRefuerzoTransversalZona With {
+                    .Posicion = zona.Posicion,
+                    .NumEstribos = zona.NumEstribos,
+                    .NumeroBarra = zona.NumeroBarra,
+                    .CantEstribos = zona.CantEstribos,
+                    .Separacion = zona.Separacion
+                })
+            Next
+
         Next
+
+        ' Recalcular flexión y cortante para la viga destino con el refuerzo copiado
+        _vigaService.CalcularFlexionViga(destino)
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+            _vigaService.CalcularCapacidadCortante(New List(Of cViga) From {destino})
+        End If
 
     End Sub
 
@@ -2289,6 +2307,7 @@ Public Class Form_09_Vigas
 
         Proyecto.Ruta = OpenFile.FileName
         Form_00_PaginaPrincipal.proyecto = Proyecto
+        Form_00_PaginaPrincipal.SincronizarModulos()
         CargarCombos(Proyecto)
         HayCambios = False
         MessageBox.Show("El archivo se abrió correctamente.", "Abrir", MessageBoxButtons.OK, MessageBoxIcon.Information)

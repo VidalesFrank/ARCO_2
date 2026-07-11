@@ -204,7 +204,9 @@
     <Reference Include="SixLabors.Fonts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d998eea7b14cab13, processorArchitecture=MSIL">
       <HintPath>..\packages\SixLabors.Fonts.1.0.0\lib\netstandard2.0\SixLabors.Fonts.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
+    <Reference Include="System">
+      <HintPath>..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.dll</HintPath>
+    </Reference>
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
@@ -306,6 +308,9 @@
     <Compile Include="Formularios\05_MurosNoEstructurales\Form_05_MurosNoEstructurales.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\05_MurosNoEstructurales\Form_AlturasPisos.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\06_Muros\Form_06_00_PagInfoMuros.Designer.vb">
       <DependentUpon>Form_06_00_PagInfoMuros.vb</DependentUpon>
     </Compile>
@@ -349,7 +354,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\09_Vigas\DiagramaService.vb" />
-    <Compile Include="Formularios\09_Vigas\Form_AgrupacionManualVigas.vb" />
+    <Compile Include="Formularios\09_Vigas\Form_AgrupacionManualVigas.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
@@ -471,6 +478,12 @@
     <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_02_DiagramaColumna.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_03_DI_3D.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\02_Columnas\Form_02_Reporte_Columnas.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -553,6 +566,7 @@
     <Compile Include="Funciones\Funciones_05_MurosNoEstructurales.vb" />
     <Compile Include="Funciones\Funciones_01_Pilas.vb" />
     <Compile Include="Funciones\Funciones_00_Varias.vb" />
+    <Compile Include="Funciones\Logger.vb" />
     <Compile Include="Funciones\Funciones_02_Columnas.vb" />
     <Compile Include="Funciones\Funciones_Muros.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />

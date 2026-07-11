@@ -1,4 +1,6 @@
-﻿<Serializable>
+﻿Imports System.Runtime.Serialization
+
+<Serializable>
 Public Class Tramo_Columna
 
     ' ==========================================================
@@ -120,6 +122,55 @@ Public Class Tramo_Columna
     ' LISTA DE REFUERZOS POR TRAMO
     ' ==========================================================
     Public ListaRefuerzos As New List(Of Refuerzo)
+
+    ' ==========================================================
+    ' DISTRIBUCIÓN PERSONALIZADA DE BARRAS (DIAGRAMA BIAXIAL)
+    ' ==========================================================
+    Public Distribucion_Personalizada As Boolean = False
+    <OptionalField> Public Lista_Barras_Seccion As New List(Of Barra_Seccion)
+
+    ' ==========================================================
+    ' RESULTADOS DIAGRAMA DE INTERACCIÓN BIAXIAL
+    ' ==========================================================
+    <OptionalField> Public Lista_DI_M3_Phi As New List(Of Single)
+    <OptionalField> Public Lista_DI_M3_P_Phi As New List(Of Single)
+    <OptionalField> Public Lista_DI_M2_Phi As New List(Of Single)
+    <OptionalField> Public Lista_DI_M2_P_Phi As New List(Of Single)
+    <OptionalField> Public Lista_DI_Mn_M3 As New List(Of Single)
+    <OptionalField> Public Lista_DI_Pn_M3 As New List(Of Single)
+    <OptionalField> Public Lista_DI_Mn_M2 As New List(Of Single)
+    <OptionalField> Public Lista_DI_Pn_M2 As New List(Of Single)
+    Public F_Interaccion As Single
+    <OptionalField> Public Combo_Gobernante_DI As String
+    Public Pu_Gob_DI As Single
+    Public M2u_Gob_DI As Single
+    Public M3u_Gob_DI As Single
+
+    <OnDeserializing>
+    Private Sub InicializarDefaults(ctx As StreamingContext)
+        Lista_Detalles_Refuerzo_Top = New List(Of Detalles_Refuerzo_Longitudinal)
+        Lista_Detalles_Refuerzo_Bottom = New List(Of Detalles_Refuerzo_Longitudinal)
+        Lista_Combinaciones = New List(Of Fuerzas_Elementos)
+        ListaRefuerzos = New List(Of Refuerzo)
+        Lista_Barras_Seccion = New List(Of Barra_Seccion)
+        Lista_DI_M3_Phi = New List(Of Single)
+        Lista_DI_M3_P_Phi = New List(Of Single)
+        Lista_DI_M2_Phi = New List(Of Single)
+        Lista_DI_M2_P_Phi = New List(Of Single)
+        Lista_DI_Mn_M3 = New List(Of Single)
+        Lista_DI_Pn_M3 = New List(Of Single)
+        Lista_DI_Mn_M2 = New List(Of Single)
+        Lista_DI_Pn_M2 = New List(Of Single)
+    End Sub
+
+    <Serializable>
+    Public Class Barra_Seccion
+        Public Name_Barra As String
+        Public Asb As Single
+        Public Db As Single
+        Public X As Single
+        Public Y As Single
+    End Class
 
     <Serializable>
     Public Class Refuerzo_Longitudinal

@@ -5,6 +5,94 @@ Imports iTextSharp.text
 Imports iTextSharp.text.pdf
 Public Class Form_05_MurosNoEstructurales
     Public Shared Proyecto As New Proyecto_MNE
+    Private WithEvents Btn_AlturasPisos As New Button
+    Private _hayCambiosMNE As Boolean = False
+
+    ' ── Carga inicial ──────────────────────────────────────────────────────────
+    Private Sub Form_MNE_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+
+        Me.WindowState = FormWindowState.Maximized
+
+        ' T_Hn pasa a ser de solo lectura (se calcula como Σ alturas)
+        T_Hn.ReadOnly = True
+        T_Hn.BackColor = System.Drawing.Color.WhiteSmoke
+
+        ' ── Expansión de contenedores para alojar el botón debajo de T_Heq ──
+        ' Grilla de 40px: T_NPisos y=34, T_Hx y=74, T_Hn y=113, T_Heq y=153 (h=29, bottom=182).
+        ' Botón sigue la grilla: y=193, h=29 → bottom=222. GroupBox4 → 222+8=230px.
+        ' GroupBox4 (313,193) en GroupBox6 → fondo 193+230=423 → GroupBox6 → 423+8=431px.
+        ' GroupBox6 (24,22) en GroupBox10 → fondo 22+431=453  → GroupBox10 → 453+11=464px (original).
+        GroupBox4.Height = 230
+        GroupBox6.Height = 431
+        GroupBox10.Height = 464
+
+        ' ── Botón "Alturas por piso" dentro de GroupBox4, debajo de Heq ──
+        Btn_AlturasPisos.Text = "Alturas por piso..."
+        Btn_AlturasPisos.Location = New System.Drawing.Point(8, 193)
+        Btn_AlturasPisos.Size = New System.Drawing.Size(330, 29)
+        Btn_AlturasPisos.FlatStyle = FlatStyle.Flat
+        Btn_AlturasPisos.FlatAppearance.BorderSize = 0
+        Btn_AlturasPisos.BackColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Btn_AlturasPisos.ForeColor = System.Drawing.Color.White
+        Btn_AlturasPisos.Font = New System.Drawing.Font("SansSerif", 11.0F, System.Drawing.FontStyle.Bold)
+        GroupBox4.Controls.Add(Btn_AlturasPisos)
+
+        ' ── Todas las imágenes en Zoom para conservar proporciones al redimensionar ──
+        P_Imagen_MuroAnalisis.SizeMode = PictureBoxSizeMode.Zoom
+        P_ImagenMuros.SizeMode = PictureBoxSizeMode.Zoom
+        P_ImagenAntepecho.SizeMode = PictureBoxSizeMode.Zoom
+    End Sub
+
+    Private Sub Btn_AlturasPisos_Click(sender As Object, e As EventArgs) Handles Btn_AlturasPisos.Click
+        Dim nPisos As Integer
+        Dim hxTipico As Single
+        If Not Integer.TryParse(T_NPisos.Text, nPisos) OrElse nPisos <= 0 Then
+            MessageBox.Show("Ingrese un número de pisos válido primero.", "Dato requerido",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        If Not Single.TryParse(T_Hx.Text, Globalization.NumberStyles.Float,
+                               Globalization.CultureInfo.InvariantCulture, hxTipico) AndAlso
+           Not Single.TryParse(T_Hx.Text, hxTipico) Then
+            hxTipico = 2.95F
+        End If
+
+        Using dlg As New Form_AlturasPisos(nPisos, hxTipico, Proyecto.Lista_Alturas_Pisos)
+            If dlg.ShowDialog(Me) = DialogResult.OK Then
+                Proyecto.Lista_Alturas_Pisos = dlg.AlturasSalida
+                Dim hn As Single = Proyecto.Lista_Alturas_Pisos.Sum()
+                T_Hn.Text = Math.Round(hn, 3).ToString()
+                ActualizarLabelBotonAlturas()
+            End If
+        End Using
+    End Sub
+
+    Private Sub ActualizarLabelBotonAlturas()
+        Dim nPisos As Integer
+        Dim hxActual As Single
+        Single.TryParse(T_Hx.Text,
+                        Globalization.NumberStyles.Float,
+                        Globalization.CultureInfo.InvariantCulture, hxActual)
+        If Integer.TryParse(T_NPisos.Text, nPisos) AndAlso nPisos > 0 AndAlso
+           Proyecto.Lista_Alturas_Pisos.Count = nPisos AndAlso
+           Proyecto.Lista_Alturas_Pisos.Any(Function(h) Math.Abs(h - hxActual) > 0.001F) Then
+            Btn_AlturasPisos.Text = "Alturas por piso  [personalizado]"
+        Else
+            Btn_AlturasPisos.Text = "Alturas por piso..."
+        End If
+    End Sub
+
+    Private Function GetAlturasActuales(nPisos As Integer, hxTipico As Single) As List(Of Single)
+        If Proyecto.Lista_Alturas_Pisos.Count = nPisos Then
+            Return Proyecto.Lista_Alturas_Pisos
+        End If
+        Dim lst As New List(Of Single)
+        For i = 1 To nPisos
+            lst.Add(hxTipico)
+        Next
+        Return lst
+    End Function
+
     Private Sub T_Hn_TextChanged(sender As Object, e As EventArgs) Handles T_Hn.TextChanged
         Try
             Dim Hn As Single = Convert.ToSingle(T_Hn.Text)
@@ -19,6 +107,7 @@ Public Class Form_05_MurosNoEstructurales
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
 
+        Try
         Dim Aa As Single = Convert.ToSingle(T_Aa.Text)
         Dim Av As Single = Convert.ToSingle(T_Av.Text)
         Dim Fa As Single = Convert.ToSingle(T_Fa.Text)
@@ -73,18 +162,34 @@ Public Class Form_05_MurosNoEstructurales
         Proyecto.Muro_Divisorio = True
         Proyecto.Muro_Antepecho = False
 
+        ' Alturas individuales por piso (backward-compatible: si no hay personalización usa Hx uniforme)
+        Dim alturas As List(Of Single) = GetAlturasActuales(N_Pisos, Hx)
+        Proyecto.Lista_Alturas_Pisos = alturas
+
+        ' Alturas acumuladas desde la base (hxAcum(i) = altura hasta el piso i+1)
+        Dim hxAcum As New List(Of Single)
+        Dim cumul As Single = 0
+        For k = 0 To N_Pisos - 1
+            cumul += alturas(k)
+            hxAcum.Add(cumul)
+        Next
+        ' Hn calculado desde las alturas reales
+        Hn = hxAcum(N_Pisos - 1)
+        T_Hn.Text = Math.Round(Hn, 3).ToString()
+
+        T_Vu.Text = "0.00"
         For i = N_Pisos To 1 Step -1
-            Dim Mp As Single = B * Peso_Especifico * Hx
-            Dim Wm As Single = Mp
+            Dim hw_i As Single = alturas(i - 1)
+            Dim hx_i As Single = hxAcum(i - 1)
+            Dim Wm As Single = B * Peso_Especifico * hw_i
             Dim ax As Single
-            Dim Hw = Hx
-            If i * Hx <= Heq Then
-                ax = As_ + (Sa - As_) * i * Hx / Heq
+            If hx_i <= Heq Then
+                ax = As_ + (Sa - As_) * hx_i / Heq
             Else
-                ax = Sa * i * Hx / Heq
+                ax = Sa * hx_i / Heq
             End If
             Dim Fp As Single = Math.Max(ax * ap * Wm / Rp, Aa * Imp * Wm / 2)
-            Dim Mu As Single = Fp * Hw / 8
+            Dim Mu As Single = Fp * hw_i / 8
             Dim Vu As Single = Fp / 2
 
             Dim Acero = DiseñoFlexion(420, fm, 1000, B * 1000, 0.5 * B * 1000, Mu, 1.4 / 420, 0.25 * Math.Sqrt(fm) / 420)
@@ -97,13 +202,13 @@ Public Class Form_05_MurosNoEstructurales
 
             Dim Nivel As New Proyecto_MNE.Divisorio
             Nivel.Piso = i
-            Nivel.Hw = Hx
-            Nivel.Hx = i * Hx
+            Nivel.Hw = hw_i
+            Nivel.Hx = hx_i
             Nivel.b = Proyecto.B
             Nivel.Wm = Wm
             Nivel.ax = ax
             Nivel.Fp = Fp
-            Nivel.Presion = Fp / Hx
+            Nivel.Presion = Fp / hw_i
             Nivel.Mu = Mu
             Nivel.Vu = Vu
             Nivel.Acero = Acero
@@ -143,9 +248,28 @@ Public Class Form_05_MurosNoEstructurales
         C_Refuerzo.SelectedIndex = 1
 
         TabControl1.SelectedIndex = 1
+        _hayCambiosMNE = True
 
         Rellenar()
+        Catch ex As FormatException
+            Logger.Warning("Form_05_MurosNoEstructurales.Button2_Click", "Dato de entrada inválido: " & ex.Message)
+            MessageBox.Show("Verifique que todos los campos numéricos tengan valores válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_05_MurosNoEstructurales.Button2_Click", "Error durante el cálculo de muros no estructurales")
+            MessageBox.Show("Error durante el cálculo. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
 
+    End Sub
+
+    Private Sub T_NPisos_TextChanged(sender As Object, e As EventArgs) Handles T_NPisos.TextChanged
+        Dim nPisos As Integer
+        If Integer.TryParse(T_NPisos.Text, nPisos) AndAlso nPisos > 0 Then
+            ' Si el número de pisos cambia, la lista almacenada queda desactualizada
+            If Proyecto.Lista_Alturas_Pisos.Count <> nPisos Then
+                Proyecto.Lista_Alturas_Pisos.Clear()
+            End If
+            ActualizarLabelBotonAlturas()
+        End If
     End Sub
 
     Private Sub Op_Divisiorio_CheckedChanged(sender As Object, e As EventArgs) Handles Op_Inyectadas.CheckedChanged
@@ -165,22 +289,33 @@ Public Class Form_05_MurosNoEstructurales
         Try
             Proyecto.Lista_Divisorios.Clear()
 
-            For i = Proyecto.N_Pisos To 1 Step -1
-                Dim Mp As Single = Proyecto.B * Proyecto.Peso_Especifico * Proyecto.Hx
-                Dim Wm As Single = Mp
+            Dim nPisos As Integer = Proyecto.N_Pisos
+            Dim alturas As List(Of Single) = GetAlturasActuales(nPisos, Proyecto.Hx)
+
+            Dim hxAcumR As New List(Of Single)
+            Dim cumulR As Single = 0
+            For k = 0 To nPisos - 1
+                cumulR += alturas(k)
+                hxAcumR.Add(cumulR)
+            Next
+
+            T_Vu.Text = "0.00"
+            For i = nPisos To 1 Step -1
+                Dim hw_i As Single = alturas(i - 1)
+                Dim hx_i As Single = hxAcumR(i - 1)
+                Dim Wm As Single = Proyecto.B * Proyecto.Peso_Especifico * hw_i
                 Dim ax As Single
-                Dim Hw = Proyecto.Hx
-                If i * Proyecto.Hx <= Proyecto.Heq Then
-                    ax = Proyecto.As_ + (Proyecto.Sa - Proyecto.As_) * i * Proyecto.Hx / Proyecto.Heq
+                If hx_i <= Proyecto.Heq Then
+                    ax = Proyecto.As_ + (Proyecto.Sa - Proyecto.As_) * hx_i / Proyecto.Heq
                 Else
-                    ax = Proyecto.Sa * i * Proyecto.Hx / Proyecto.Heq
+                    ax = Proyecto.Sa * hx_i / Proyecto.Heq
                 End If
                 Dim Fp As Single = Math.Max(ax * Proyecto.ap * Wm / Proyecto.Rp, Proyecto.Aa * Proyecto.Imp * Wm / 2)
-                Dim Mu As Single = Fp * Hw / 8
+                Dim Mu As Single = Fp * hw_i / 8
                 Dim Vu As Single = Fp / 2
 
                 If Op_SinInyectar.Checked = True Then
-                    Mu = Fp * Hw / 2
+                    Mu = Fp * hw_i / 2
                     Vu = Fp
                 End If
 
@@ -188,18 +323,19 @@ Public Class Form_05_MurosNoEstructurales
                 Dim Area_Barra As Single = AreaRefuerzo(C_Refuerzo.Text)
 
                 If Vu > Convert.ToSingle(T_Vu.Text) Then
+                    T_Vu.Text = Format(Vu, "##,##0.00")
                     Proyecto.Vu_Divisorio = Vu
                 End If
 
                 Dim Nivel As New Proyecto_MNE.Divisorio
                 Nivel.Piso = i
-                Nivel.Hw = Proyecto.Hx
-                Nivel.Hx = i * Proyecto.Hx
+                Nivel.Hw = hw_i
+                Nivel.Hx = hx_i
                 Nivel.b = Proyecto.B
                 Nivel.Wm = Wm
                 Nivel.ax = ax
                 Nivel.Fp = Fp
-                Nivel.Presion = Fp / Proyecto.Hx
+                Nivel.Presion = Fp / hw_i
                 Nivel.Mu = Mu
                 Nivel.Vu = Vu
                 Nivel.Acero = Acero
@@ -238,19 +374,24 @@ Public Class Form_05_MurosNoEstructurales
     End Sub
 
     Private Sub GuardarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Save_MNE.Click
+        If String.IsNullOrEmpty(Proyecto.Ruta) Then
+            GuardarProyecto(Proyecto, "RevisiónMurosNoEstructurales")
+            Return
+        End If
         Try
-            If Proyecto.Ruta = String.Empty Then
-                GuardarProyecto(Proyecto, "RevisiónMurosNoEstructurales")
-            Else
-                Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
-            End If
+            Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+            _hayCambiosMNE = False
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
-
+            MessageBox.Show("Error al guardar el archivo: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
 
     Private Sub GuardarComoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SaveAs_MNE.Click
         GuardarProyecto(Proyecto, "RevisiónMurosNoEstructurales")
+        _hayCambiosMNE = False
     End Sub
 
     Private Sub AbrirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Open_MNE.Click
@@ -258,15 +399,26 @@ Public Class Form_05_MurosNoEstructurales
     End Sub
 
     Public Sub Open()
-        Dim Open As New OpenFileDialog
-        Open.Filter = "Archivo|*.esm"
-        Open.Title = "Abrir Archivo"
-        Open.ShowDialog()
-        If Open.FileName <> String.Empty Then
-            Proyecto = Funciones_Programa.DeSerializar(Of Proyecto_MNE)(Open.FileName)
+        Dim dlg As New OpenFileDialog With {.Filter = "Archivo|*.esm", .Title = "Abrir Archivo"}
+        If dlg.ShowDialog() <> DialogResult.OK Then Return
+        Try
+            Proyecto = Funciones_Programa.DeSerializar(Of Proyecto_MNE)(dlg.FileName)
+            Proyecto.Ruta = dlg.FileName
+            _hayCambiosMNE = False
             Llenar_Celdas()
             Rellenar()
-        End If
+        Catch ex As Exception
+            MessageBox.Show("No se pudo abrir el archivo. Puede estar dañado o ser incompatible." & vbCrLf & ex.Message,
+                            "Error al abrir", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub Form_05_MurosNoEstructurales_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        If Not _hayCambiosMNE Then Return
+        Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
+                                "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
+        If r = DialogResult.Yes Then GuardarToolStripMenuItem_Click(sender, e)
+        If r = DialogResult.Cancel Then e.Cancel = True
     End Sub
 
     Public Sub Llenar_Celdas()
@@ -287,6 +439,7 @@ Public Class Form_05_MurosNoEstructurales
         T_Heq.Text = Proyecto.Heq
 
         C_Refuerzo.SelectedIndex = Proyecto.Opcion_Barra_Flexion
+        ActualizarLabelBotonAlturas()
     End Sub
     Public Sub Rellenar()
         Tabla_Resultados.Rows.Clear()
@@ -358,10 +511,10 @@ Public Class Form_05_MurosNoEstructurales
 
             If Vu < Proyecto.Vn Then
                 T_Chequeo.Text = "Cumple"
-                Casilla_Cumple(T_Chequeo)
+                CasillaCumple(T_Chequeo)
             Else
                 T_Chequeo.Text = "No cumple"
-                Casilla_Nocumple(T_Chequeo)
+                CasillaNocumple(T_Chequeo)
             End If
 
         Catch ex As Exception
@@ -371,19 +524,52 @@ Public Class Form_05_MurosNoEstructurales
     End Sub
 
     Private Sub Form_05_MurosNoEstructurales_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
-        GroupBox10.Left = TabPage1.Width / 2 - GroupBox10.Width / 2
-        Dim Alto As Integer = TabPage1.Height - 2 * GroupBox10.Top - GroupBox10.Height
-        Dim Dimension_min As Integer = Math.Min(Alto, TabPage1.Width / 2 - 50)
-        GroupBox11.Width = Dimension_min
-        GroupBox11.Height = Dimension_min / 1.25
-        GroupBox12.Width = Dimension_min
-        GroupBox12.Height = Dimension_min / 1.25
+        Const MARGEN As Integer = 8
+        ' Ratio original de los esquemas de muro divisorio y antepecho (493 × 327)
+        Const IMG_W As Double = 493
+        Const IMG_H As Double = 327
 
-        GroupBox11.Left = TabPage1.Width / 2 - GroupBox11.Width - 8
-        GroupBox12.Left = TabPage1.Width / 2 + 8
+        ' ── GroupBox10: ocupa todo el ancho disponible ──
+        GroupBox10.Left = MARGEN
+        GroupBox10.Width = TabPage1.Width - 2 * MARGEN
 
-        GroupBox11.Top = GroupBox10.Top + GroupBox10.Height + 15
-        GroupBox12.Top = GroupBox10.Top + GroupBox10.Height + 15
+        ' ── GroupBox7 (Tipos de Muros, dentro de GroupBox10):
+        '    arranca a la derecha de GroupBox6 y ocupa el resto del ancho.
+        '    P_Imagen_MuroAnalisis usa SizeMode.Zoom → respeta ratio automáticamente. ──
+        Dim gb7Left As Integer = GroupBox6.Left + GroupBox6.Width + MARGEN
+        GroupBox7.Left = gb7Left
+        GroupBox7.Width = Math.Max(120, GroupBox10.Width - gb7Left - MARGEN)
+        GroupBox7.Height = GroupBox10.Height - GroupBox7.Top - MARGEN
+
+        ' ── GroupBox11 y GroupBox12 (esquemas divisorio / antepecho) ──
+        ' Se ubican debajo de GroupBox10, lado a lado, manteniendo el ratio original.
+        Dim topImg As Integer = GroupBox10.Top + GroupBox10.Height + MARGEN
+        Dim altoDisp As Integer = Math.Max(80, TabPage1.Height - topImg - MARGEN)
+        Dim anchoDisp As Integer = Math.Max(120, (TabPage1.Width - 3 * MARGEN) \ 2)
+
+        ' Derivar alto a partir del ancho respetando el ratio; si excede el espacio
+        ' disponible, invertir: limitar por alto y derivar el ancho.
+        Dim anchoImg As Integer = anchoDisp
+        Dim altoImg As Integer = CInt(anchoImg * IMG_H / IMG_W)
+        If altoImg > altoDisp Then
+            altoImg = altoDisp
+            anchoImg = CInt(altoImg * IMG_W / IMG_H)
+        End If
+
+        ' Las imágenes internas usan SizeMode.Zoom → no necesitan ajuste adicional.
+        ' Se centran horizontalmente dentro de TabPage1.
+        Dim totalW As Integer = 2 * anchoImg + MARGEN
+        Dim offsetX As Integer = Math.Max(MARGEN, (TabPage1.Width - totalW) \ 2)
+
+        GroupBox11.Left = offsetX
+        GroupBox11.Top = topImg
+        GroupBox11.Width = anchoImg
+        GroupBox11.Height = altoImg
+
+        GroupBox12.Left = offsetX + anchoImg + MARGEN
+        GroupBox12.Top = topImg
+        GroupBox12.Width = anchoImg
+        GroupBox12.Height = altoImg
     End Sub
 
     '-------------- Reporte PDF -------------

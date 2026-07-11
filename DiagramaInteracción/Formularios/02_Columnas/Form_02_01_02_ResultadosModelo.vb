@@ -22,8 +22,8 @@
         Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text).Lista_Tramos_Columnas
 
         For i = 0 To (Seccion.Count - 1) * 2 Step 2
-            Seccion(i / 2).F_Flexo_Modelo_Top = Convert.ToSingle(Tabla_Resultados.Rows(i).Cells(3).Value)
-            Seccion(i / 2).F_Flexo_Modelo_Bottom = Convert.ToSingle(Tabla_Resultados.Rows(i + 1).Cells(3).Value)
+            Seccion(i / 2).F_Flexo_Modelo_Top = Convert.ToSingle(If(Tabla_Resultados.Rows(i).Cells(3).Value, 0))
+            Seccion(i / 2).F_Flexo_Modelo_Bottom = Convert.ToSingle(If(Tabla_Resultados.Rows(i + 1).Cells(3).Value, 0))
         Next
 
     End Sub

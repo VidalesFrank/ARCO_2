@@ -7,8 +7,7 @@ Public Class Form_02_PagColumnas
     Public Shared Columna As New Columna
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         Me.Cursor = Cursors.WaitCursor
-
-        'Try
+        Columna = New Columna()
 
         If Op_Flexo.Checked = True Then
             Proyecto.Elementos.Columnas.Verificacion_Flexo_Compresion = True
@@ -26,9 +25,9 @@ Public Class Form_02_PagColumnas
         If Proyecto.Elementos.Columnas.Elementos_Frame = True Then
             Dim Tabla As DataGridView
 
-            Dim Col_Diseno = Columnas_Diseno("Frame")
-            Dim Col_Secciones = Columnas_Secciones("Frame")
-            Dim Col_Fuerzas = Columnas_Fuerzas("Frame")
+            Dim Col_Diseno = ColumnasDiseno("Frame")
+            Dim Col_Secciones = ColumnasSecciones("Frame")
+            Dim Col_Fuerzas = ColumnasFuerzas("Frame")
 
             If Proyecto.Elementos.Columnas.Info_Diseño = True Then
                 Tabla = Tabla_Diseño_Flexo
@@ -45,8 +44,9 @@ Public Class Form_02_PagColumnas
 
                 For i = 2 To Tabla.Rows.Count() - 1
                     For j = 1 To 7
+                        If I0 + j >= Tabla.Rows.Count Then Exit For
                         If Tabla.Rows(I0 + j).Cells(1).Value <> Section Then
-                            Salto = j - 0
+                            Salto = j
                             Exit For
                         End If
                     Next
@@ -115,23 +115,24 @@ Public Class Form_02_PagColumnas
             If Proyecto.Elementos.Columnas.Info_Fuerzas = True Then
                 Tabla = Tabla_Fuerzas
 
-                Dim Col_Piso As Integer = Col_Fuerzas(0)
-                Dim Col_Label As Integer = Col_Fuerzas(1)
-                Dim Col_Combinacion As Integer = Col_Fuerzas(2)
-                Dim Col_P As Integer = Col_Fuerzas(4)
-                Dim Col_V2 As Integer = Col_Fuerzas(5)
-                Dim Col_V3 As Integer = Col_Fuerzas(6)
-                Dim Col_T As Integer = Col_Fuerzas(7)
-                Dim Col_M2 As Integer = Col_Fuerzas(8)
-                Dim Col_M3 As Integer = Col_Fuerzas(9)
-                Dim Col_StepType As Integer = Col_Fuerzas(10)
+                Dim cols_F = IndicesColumnasFuerzas(Tabla)
+                Dim Col_Piso        As Integer = If(cols_F.ContainsKey("Story"),      cols_F("Story"),       0)
+                Dim Col_Label       As Integer = If(cols_F.ContainsKey("Label"),      cols_F("Label"),       1)
+                Dim Col_Combinacion As Integer = If(cols_F.ContainsKey("OutputCase"), cols_F("OutputCase"),  3)
+                Dim Col_P           As Integer = If(cols_F.ContainsKey("P"),          cols_F("P"),           8)
+                Dim Col_V2          As Integer = If(cols_F.ContainsKey("V2"),         cols_F("V2"),          9)
+                Dim Col_V3          As Integer = If(cols_F.ContainsKey("V3"),         cols_F("V3"),         10)
+                Dim Col_T           As Integer = If(cols_F.ContainsKey("T"),          cols_F("T"),          11)
+                Dim Col_M2          As Integer = If(cols_F.ContainsKey("M2"),         cols_F("M2"),         12)
+                Dim Col_M3          As Integer = If(cols_F.ContainsKey("M3"),         cols_F("M3"),         13)
+                Dim Col_StepType    As Integer = cols_F("StepType")
 
                 ' 1. Registrar combinaciones únicas (con clave compuesta si Step Type no está vacío)
                 For j = 2 To Tabla.Rows.Count - 1
                     If Tabla.Rows(j).Cells(Col_Piso).Value IsNot Nothing AndAlso
                        Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> String.Empty Then
                         Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
-                        Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                        Dim stepVal As String = If(Col_StepType >= 0 AndAlso Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
                         Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
                         If clave <> "" AndAlso Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = clave) Then
                             Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(clave)
@@ -153,7 +154,7 @@ Public Class Form_02_PagColumnas
                             If If(Tabla.Rows(j).Cells(Col_Label).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Label).Value.ToString(), "") <> Elemento Then Continue For
 
                             Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
-                            Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                            Dim stepVal As String = If(Col_StepType >= 0 AndAlso Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
                             Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
 
                             Dim nuevoP As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
@@ -194,9 +195,9 @@ Public Class Form_02_PagColumnas
         If Proyecto.Elementos.Columnas.Elementos_Pier = True Then
             Dim Tabla As DataGridView
 
-            Dim Col_Diseno = Columnas_Diseno("Pier")
-            Dim Col_Secciones = Columnas_Secciones("Pier")
-            Dim Col_Fuerzas = Columnas_Fuerzas("Pier")
+            Dim Col_Diseno = ColumnasDiseno("Pier")
+            Dim Col_Secciones = ColumnasSecciones("Pier")
+            Dim Col_Fuerzas = ColumnasFuerzas("Pier")
 
             If Proyecto.Elementos.Columnas.Info_Diseño = True Then
                 Tabla = Tabla_Diseño_Pier
@@ -278,23 +279,24 @@ Public Class Form_02_PagColumnas
             If Proyecto.Elementos.Columnas.Info_Fuerzas = True Then
                 Tabla = Tabla_Fuerzas_Pier
 
-                Dim Col_Piso As Integer = Col_Fuerzas(0)
-                Dim Col_Label As Integer = Col_Fuerzas(1)
-                Dim Col_Combinacion As Integer = Col_Fuerzas(2)
-                Dim Col_P As Integer = Col_Fuerzas(4)
-                Dim Col_V2 As Integer = Col_Fuerzas(5)
-                Dim Col_V3 As Integer = Col_Fuerzas(6)
-                Dim Col_T As Integer = Col_Fuerzas(7)
-                Dim Col_M2 As Integer = Col_Fuerzas(8)
-                Dim Col_M3 As Integer = Col_Fuerzas(9)
-                Dim Col_StepType As Integer = Col_Fuerzas(10)
+                Dim cols_P = IndicesColumnasFuerzas(Tabla)
+                Dim Col_Piso        As Integer = If(cols_P.ContainsKey("Story"),      cols_P("Story"),       0)
+                Dim Col_Label       As Integer = If(cols_P.ContainsKey("Label"),      cols_P("Label"),       1)
+                Dim Col_Combinacion As Integer = If(cols_P.ContainsKey("OutputCase"), cols_P("OutputCase"),  2)
+                Dim Col_P           As Integer = If(cols_P.ContainsKey("P"),          cols_P("P"),           7)
+                Dim Col_V2          As Integer = If(cols_P.ContainsKey("V2"),         cols_P("V2"),          8)
+                Dim Col_V3          As Integer = If(cols_P.ContainsKey("V3"),         cols_P("V3"),          9)
+                Dim Col_T           As Integer = If(cols_P.ContainsKey("T"),          cols_P("T"),          10)
+                Dim Col_M2          As Integer = If(cols_P.ContainsKey("M2"),         cols_P("M2"),         11)
+                Dim Col_M3          As Integer = If(cols_P.ContainsKey("M3"),         cols_P("M3"),         12)
+                Dim Col_StepType    As Integer = cols_P("StepType")
 
                 ' 1. Registrar combinaciones únicas con clave compuesta si Step Type no está vacío
                 For j = 2 To Tabla.Rows.Count - 1
                     If Tabla.Rows(j).Cells(Col_Piso).Value IsNot Nothing AndAlso
                        Tabla.Rows(j).Cells(Col_Piso).Value.ToString <> String.Empty Then
                         Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
-                        Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                        Dim stepVal As String = If(Col_StepType >= 0 AndAlso Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
                         Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
                         If clave <> "" AndAlso Not Proyecto.Elementos.Columnas.Lista_Combinaciones.Exists(Function(p) p = clave) Then
                             Proyecto.Elementos.Columnas.Lista_Combinaciones.Add(clave)
@@ -316,7 +318,7 @@ Public Class Form_02_PagColumnas
                             If If(Tabla.Rows(j).Cells(Col_Label).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Label).Value.ToString(), "") <> Elemento Then Continue For
 
                             Dim combo As String = If(Tabla.Rows(j).Cells(Col_Combinacion).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_Combinacion).Value.ToString(), "")
-                            Dim stepVal As String = If(Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
+                            Dim stepVal As String = If(Col_StepType >= 0 AndAlso Tabla.Rows(j).Cells(Col_StepType).Value IsNot Nothing, Tabla.Rows(j).Cells(Col_StepType).Value.ToString(), "")
                             Dim clave As String = Funciones_02_Columnas.ConstruirClaveCombo(combo, stepVal)
 
                             Dim nuevoP As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_P).Value)
@@ -508,7 +510,9 @@ Public Class Form_02_PagColumnas
             End If
 
         Catch ex As Exception
-
+            Logger.Error(ex, "Form_02_PagColumnas.Button2_Click",
+                         "Error durante el cálculo principal de columnas (Frame/Pier). " &
+                         "Algunos elementos pueden no haberse procesado.")
         End Try
     End Sub
     Private Sub DataGridView1_CellPainting(sender As System.Object, e As System.Windows.Forms.DataGridViewCellPaintingEventArgs) Handles Tabla_Resumen.CellPainting
@@ -528,7 +532,8 @@ Public Class Form_02_PagColumnas
                 End If
             End If
         Catch ex As Exception
-
+            Logger.Warning("Form_02_PagColumnas.DataGridView1_CellPainting",
+                           "Error al pintar celda de la tabla resumen (no afecta el cálculo): " & ex.Message)
         End Try
 
     End Sub
@@ -756,6 +761,7 @@ Public Class Form_02_PagColumnas
 
         Proyecto.Ruta = dlg.FileName
         Form_00_PaginaPrincipal.proyecto = Proyecto
+        Form_00_PaginaPrincipal.SincronizarModulos()
         Form_02_00_PagInfoColumnas.Proyecto = Proyecto
         Form_02_01_ResultadosColumnas.Proyecto = Proyecto
         Form_02_01_00_RevisionCortante.Proyecto = Proyecto
@@ -797,6 +803,8 @@ Public Class Form_02_PagColumnas
             Funciones_Programa.Serializar(dlg.FileName, Objeto)
             _hayCambiosColumnas = False
             _ultimoGuardadoColumnas = DateTime.Now
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar Como",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -810,6 +818,8 @@ Public Class Form_02_PagColumnas
                 Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
                 _hayCambiosColumnas = False
                 _ultimoGuardadoColumnas = DateTime.Now
+                MessageBox.Show("El archivo se guardó correctamente.", "Guardar",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
             Catch ex As Exception
                 MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             End Try
@@ -878,7 +888,7 @@ Public Class Form_02_PagColumnas
 
     ''' <summary>Lógica de envolvente compartida para Frame y Pier. Registra combinaciones y asigna fuerzas.</summary>
     Private Sub ProcesarFuerzasEnvolvente(ByVal Tabla As DataGridView, ByVal tipoElemento As String)
-        Dim cf = Columnas_Fuerzas(tipoElemento)
+        Dim cf = ColumnasFuerzas(tipoElemento)
         Dim Col_Piso As Integer = cf(0)
         Dim Col_Label As Integer = cf(1)
         Dim Col_Combinacion As Integer = cf(2)
@@ -1199,7 +1209,9 @@ Public Class Form_02_PagColumnas
             Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
             _ultimoGuardadoColumnas = DateTime.Now
             _hayCambiosColumnas = False
-        Catch
+        Catch ex As Exception
+            Logger.Warning("Form_02_PagColumnas.AutoGuardar",
+                           "El autoguardado periódico falló. Los cambios no se han guardado en disco.")
         End Try
     End Sub
 

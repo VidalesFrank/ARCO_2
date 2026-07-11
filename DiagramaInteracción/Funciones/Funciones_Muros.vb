@@ -8,7 +8,7 @@ Public Class Funciones_Muros
     Public Shared proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Public Shared Muro As New Muro
 
-    Public Shared Function Funcion_CorteLimite(ByVal tw As Single, ByVal Lw As Single, ByVal fc As Single, ByVal Vu As Single)
+    Public Shared Function FuncionCorteLimite(ByVal tw As Single, ByVal Lw As Single, ByVal fc As Single, ByVal Vu As Single)
 
         Dim Resultados_Rho(3)
 
@@ -25,10 +25,10 @@ Public Class Funciones_Muros
         Resultados_Rho(1) = Rho_t * 100
         Resultados_Rho(2) = V_Lim
 
-        Funcion_CorteLimite = Resultados_Rho
+        FuncionCorteLimite = Resultados_Rho
     End Function
 
-    Public Shared Function Funcion_Cortante(ByVal tw As Single, ByVal Lw As Single, ByVal fc As Single, ByVal Fy As Single, ByVal CuantiaH As Single, ByVal Vu As Single)
+    Public Shared Function FuncionCortante(ByVal tw As Single, ByVal Lw As Single, ByVal fc As Single, ByVal Fy As Single, ByVal CuantiaH As Single, ByVal Vu As Single)
 
         Dim Revision(5)
 
@@ -42,13 +42,13 @@ Public Class Funciones_Muros
         Revision(3) = Math.Round(Vn, 2)
         Revision(4) = Math.Round(F_, 2)
 
-        Funcion_Cortante = Revision
+        FuncionCortante = Revision
     End Function
 
-    Public Shared Function Calculo_Cuantia(ByVal tw As Single, ByVal Ref_Malla As String, ByVal Capas_1 As Integer, ByVal Sep_1 As Single, ByVal Ref_2 As String, ByVal Capas_2 As Integer, ByVal Sep_2 As Single)
+    Public Shared Function CalculoCuantia(ByVal tw As Single, ByVal Ref_Malla As String, ByVal Capas_1 As Integer, ByVal Sep_1 As Single, ByVal Ref_2 As String, ByVal Capas_2 As Integer, ByVal Sep_2 As Single)
         Dim mallaTipo As MallaTipo = StringToMallaTipo(Ref_Malla)
 
-        Dim As_1 As Single = Acero_Mallas(mallaTipo)
+        Dim As_1 As Single = AceroMallas(mallaTipo)
         Dim As_2 As Single = AreaRefuerzo(Ref_2)
 
         Dim Rho_1 As Single = 0
@@ -61,7 +61,7 @@ Public Class Funciones_Muros
             Rho_2 = Capas_2 * (1 / Sep_2) * As_2 / (1000 * tw * 1000)
         End If
 
-        Calculo_Cuantia = Rho_1 + Rho_2
+        CalculoCuantia = Rho_1 + Rho_2
 
     End Function
 
@@ -107,7 +107,7 @@ Public Class Funciones_Muros
     End Function
 
 
-    Public Shared Function Acero_Mallas(ByVal malla As MallaTipo) As Single
+    Public Shared Function AceroMallas(ByVal malla As MallaTipo) As Single
         If MallaData.MallaAreas.ContainsKey(malla) Then
             Return MallaData.MallaAreas(malla)
         Else
@@ -228,7 +228,7 @@ Public Class Funciones_Muros
 
     End Sub
 
-    Public Shared Sub Grafico_PorcentajeMuros(chart1 As Chart, Size_Title_Axis As Integer, Size_Value_Axis As Integer, Size_Legend As Integer)
+    Public Shared Sub GraficoPorcentajeMuros(chart1 As Chart, Size_Title_Axis As Integer, Size_Value_Axis As Integer, Size_Legend As Integer)
 
         chart1.Series.Clear()
 
@@ -476,7 +476,7 @@ Public Class Funciones_Muros
         End With
 
     End Sub
-    Public Shared Sub Grafico_ArMuros(chart1 As Chart, Size_Title_Axis As Integer, Size_Value_Axis As Integer, Size_Legend As Integer)
+    Public Shared Sub GraficoArMuros(chart1 As Chart, Size_Title_Axis As Integer, Size_Value_Axis As Integer, Size_Legend As Integer)
 
         chart1.Series.Clear()
 

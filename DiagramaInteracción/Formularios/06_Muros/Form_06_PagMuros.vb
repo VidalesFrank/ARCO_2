@@ -30,9 +30,9 @@ Public Class Form_06_PagMuros
 
         'Try
         Dim Tabla As DataGridView
-        Dim Col_Diseno = Funciones_02_Columnas.Columnas_Diseno("Pier")
-        Dim Col_Secciones = Funciones_02_Columnas.Columnas_Secciones("Pier")
-        Dim Col_Fuerzas = Funciones_02_Columnas.Columnas_Fuerzas("Pier")
+        Dim Col_Diseno = Funciones_02_Columnas.ColumnasDiseno("Pier")
+        Dim Col_Secciones = Funciones_02_Columnas.ColumnasSecciones("Pier")
+        Dim Col_Fuerzas = Funciones_02_Columnas.ColumnasFuerzas("Pier")
 
         If proyecto.Elementos.Muros.Info_Diseño = True Then
             Tabla = Tabla_Diseño_Flexo
@@ -232,35 +232,19 @@ Public Class Form_06_PagMuros
         If proyecto.Elementos.Muros.Info_Fuerzas = True Then
             Tabla = Tabla_Fuerzas
 
-            Dim Col_Piso As Integer = Col_Fuerzas(0)      ' 0
-            Dim Col_Label As Integer = Col_Fuerzas(1)     ' 1
-            Dim Col_Combinacion As Integer = Col_Fuerzas(2) ' 2  (igual en E17 y E23)
             Dim Salto As Integer = Col_Fuerzas(3)
 
-            ' ── Detectar formato E23 por la presencia de "Case Type" en la fila de encabezados (DGV row 0) ──
-            ' E17: Story | Pier | Load Case/Combo | Location | P | V2 | V3 | T | M2 | M3
-            ' E23: Story | Pier | Output Case | Case Type | Step Type | Step Number | Location | P | V2 | ...
-            Dim esFormatoE23_Fuerzas As Boolean = False
-            If Tabla.Rows.Count > 0 Then
-                For ci = 0 To Math.Min(Tabla.Columns.Count - 1, 8)
-                    Dim header = If(Tabla.Rows(0).Cells(ci).Value?.ToString(), "")
-                    If header.Contains("Case Type") OrElse header.Contains("Step Type") Then
-                        esFormatoE23_Fuerzas = True
-                        Exit For
-                    End If
-                Next
-            End If
-
-            ' Columnas de fuerzas según formato detectado
-            Dim Col_P       As Integer = If(esFormatoE23_Fuerzas, 7, 4)
-            Dim Col_V2      As Integer = If(esFormatoE23_Fuerzas, 8, 5)
-            Dim Col_V3      As Integer = If(esFormatoE23_Fuerzas, 9, 6)
-            Dim Col_T       As Integer = If(esFormatoE23_Fuerzas, 10, 7)
-            Dim Col_M2      As Integer = If(esFormatoE23_Fuerzas, 11, 8)
-            Dim Col_M3      As Integer = If(esFormatoE23_Fuerzas, 12, 9)
-            ' E23: Step Type en col 4 distingue Max/Min para combinaciones sísmicas
-            ' E17: no existe Step Type → las combinaciones ya tienen sufijo "Max"/"Min" en el nombre
-            Dim Col_StepType As Integer = If(esFormatoE23_Fuerzas, 4, -1)
+            Dim cols_M = Funciones_02_Columnas.IndicesColumnasFuerzas(Tabla)
+            Dim Col_Piso        As Integer = If(cols_M.ContainsKey("Story"),      cols_M("Story"),       0)
+            Dim Col_Label       As Integer = If(cols_M.ContainsKey("Label"),      cols_M("Label"),       1)
+            Dim Col_Combinacion As Integer = If(cols_M.ContainsKey("OutputCase"), cols_M("OutputCase"),  2)
+            Dim Col_P           As Integer = If(cols_M.ContainsKey("P"),          cols_M("P"),           7)
+            Dim Col_V2          As Integer = If(cols_M.ContainsKey("V2"),         cols_M("V2"),          8)
+            Dim Col_V3          As Integer = If(cols_M.ContainsKey("V3"),         cols_M("V3"),          9)
+            Dim Col_T           As Integer = If(cols_M.ContainsKey("T"),          cols_M("T"),          10)
+            Dim Col_M2          As Integer = If(cols_M.ContainsKey("M2"),         cols_M("M2"),         11)
+            Dim Col_M3          As Integer = If(cols_M.ContainsKey("M3"),         cols_M("M3"),         12)
+            Dim Col_StepType    As Integer = cols_M("StepType")
 
             ' Helper: clave única de combinación.
             ' E17: usa el nombre tal cual ("SismoX Max", "SismoX Min")
@@ -268,7 +252,7 @@ Public Class Form_06_PagMuros
             '      si está vacío (cargas gravitacionales LinStatic) usa solo el nombre.
             Dim CombKey = Function(r As DataGridViewRow) As String
                               Dim nombre = If(r.Cells(Col_Combinacion).Value?.ToString(), "")
-                              If esFormatoE23_Fuerzas AndAlso Col_StepType >= 0 Then
+                              If Col_StepType >= 0 Then
                                   Dim stepVal = If(r.Cells(Col_StepType).Value?.ToString(), "").Trim()
                                   If Not String.IsNullOrEmpty(stepVal) Then Return $"{nombre} ({stepVal})"
                               End If
@@ -327,9 +311,6 @@ Public Class Form_06_PagMuros
                                 ?.Lista_Secciones.FirstOrDefault(Function(s) s.Piso = Piso)
                             If Seccion IsNot Nothing Then
                                 Seccion.Lista_Combinaciones.Add(Fuerza)
-                                If Seccion.Lista_Combinaciones.Any() Then
-                                    Seccion.Vu = Seccion.Lista_Combinaciones.Max(Function(c) Math.Abs(c.V2))
-                                End If
                             End If
                         End If
                     Next
@@ -374,14 +355,17 @@ Public Class Form_06_PagMuros
             Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
 
+        'MessageBox.Show("Información Cargada con Éxito.")
+        'Catch ex As FormatException
+        '    Logger.Warning("Form_06_PagMuros.Button2_Click", "Dato de entrada inválido: " & ex.Message)
+        '    MessageBox.Show("Verifique que los datos numéricos en las tablas sean válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
         'Catch ex As Exception
-        '    MessageBox.Show("Error al leer la información.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        '    Logger.Error(ex, "Form_06_PagMuros.Button2_Click", "Error al cargar datos de muros desde ETABS")
+        '    MessageBox.Show("Error al leer la información. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         'Finally
-
         Obtencion_Macroparametros()
         _hayCambiosMuros = True
         Cursor = Cursors.Arrow
-        MessageBox.Show("Información Cargada con Éxito.")
         'End Try
 
     End Sub
@@ -519,6 +503,8 @@ Public Class Form_06_PagMuros
             Funciones_Programa.Serializar(dlg.FileName, Objeto)
             _hayCambiosMuros = False
             _ultimoGuardadoMuros = DateTime.Now
+            MessageBox.Show("El archivo se guardó correctamente.", "Guardar Como",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -546,6 +532,7 @@ Public Class Form_06_PagMuros
 
         proyecto.Ruta = dlg.FileName
         Form_00_PaginaPrincipal.proyecto = proyecto
+        Form_00_PaginaPrincipal.SincronizarModulos()
         _hayCambiosMuros = False
         Rellenar_Columnas()
     End Sub
@@ -583,6 +570,8 @@ Public Class Form_06_PagMuros
                 Funciones_Programa.Serializar(proyecto.Ruta, proyecto)
                 _hayCambiosMuros = False
                 _ultimoGuardadoMuros = DateTime.Now
+                MessageBox.Show("El archivo se guardó correctamente.", "Guardar",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
             Catch ex As Exception
                 MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             End Try
@@ -639,7 +628,7 @@ Public Class Form_06_PagMuros
 
         Dim Tabla As DataGridView
 
-        Dim Col_Diseno = Funciones_02_Columnas.Columnas_Diseno("Pier")
+        Dim Col_Diseno = Funciones_02_Columnas.ColumnasDiseno("Pier")
 
         If proyecto.Elementos.Muros.Info_Diseño = True Then
             Tabla = Tabla_Diseño_Flexo
@@ -840,7 +829,7 @@ Public Class Form_06_PagMuros
 
         Dim Tabla As DataGridView
 
-        Dim Col_Secciones = Funciones_02_Columnas.Columnas_Secciones("Pier")
+        Dim Col_Secciones = Funciones_02_Columnas.ColumnasSecciones("Pier")
 
         If proyecto.Elementos.Muros.Info_Secciones = True Then
 
@@ -896,12 +885,12 @@ Public Class Form_06_PagMuros
         Dim List_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
 
         Llenar_Tablas_Macroparametros(Tabla_Parametros, List_X, List_Y)
-        Funciones_00_Varias.Estilo_Tabla(Tabla_Parametros)
+        Funciones_00_Varias.EstiloTabla(Tabla_Parametros)
 
         Dim List_Prot_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
         Dim List_Prot_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
         Llenar_Tablas_Macroparametros(Tabla_Muros_Protagonicos, List_Prot_X, List_Prot_Y)
-        Funciones_00_Varias.Estilo_Tabla(Tabla_Muros_Protagonicos)
+        Funciones_00_Varias.EstiloTabla(Tabla_Muros_Protagonicos)
 
         Func_Muros.CalcularGeometriaMuros()
         Func_Muros.GraficosMurosPlanta(Figura_Muros_Tw, Figura_Muros_Protagonicos)
@@ -934,6 +923,13 @@ Public Class Form_06_PagMuros
             proyecto.Elementos.Muros.Lista_Muros(i).Pmax_G = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_G).Max(Function(p) Math.Abs(p.P))
 
             proyecto.Elementos.Muros.Lista_Muros(i).Pmax_D = seccionMenorZ.Lista_Combinaciones.Where(Function(p) proyecto.Elementos.Muros.ListA_Combinaciones_Design.Contains(p.Name)).Max(Function(p) Math.Abs(p.P))
+
+            For Each sec In proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones
+                Dim combsD = sec.Lista_Combinaciones.Where(Function(c) proyecto.Elementos.Muros.ListA_Combinaciones_Design.Contains(c.Name)).ToList()
+                If combsD.Any() Then
+                    sec.Vu = combsD.Max(Function(c) Math.Abs(c.V2))
+                End If
+            Next
 
             'Proyecto.Elementos.Muros.Lista_Muros(i).Pmax_D = seccionMenorZ.Lista_Combinaciones.Where(Function(p) p.Name = Comb_D).Max(Function(p) Math.Abs(p.P))
             proyecto.Elementos.Muros.Lista_Muros(i).ALR_G = proyecto.Elementos.Muros.Lista_Muros(i).Pmax_G / (seccionMenorZ.fc * 1000 * seccionMenorZ.Lw_Model * seccionMenorZ.tw_Model)
@@ -968,7 +964,7 @@ Public Class Form_06_PagMuros
         Dim List_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
 
         Llenar_Tablas_Macroparametros(Tabla_Parametros, List_X, List_Y)
-        Funciones_00_Varias.Estilo_Tabla(Tabla_Parametros)
+        Funciones_00_Varias.EstiloTabla(Tabla_Parametros)
 
         proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(0).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
         proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(1).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
@@ -1001,12 +997,12 @@ Public Class Form_06_PagMuros
         Dim List_Prot_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
 
         Llenar_Tablas_Macroparametros(Tabla_Muros_Protagonicos, List_Prot_X, List_Prot_Y)
-        Funciones_00_Varias.Estilo_Tabla(Tabla_Muros_Protagonicos)
+        Funciones_00_Varias.EstiloTabla(Tabla_Muros_Protagonicos)
 
         Func_Muros.CalcularGeometriaMuros()
         Func_Muros.GraficosMurosPlanta(Figura_Muros_Tw, Figura_Muros_Protagonicos)
-        Func_Muros.Grafico_PorcentajeMuros(Grafico_MurosProtagonicos, 14, 12, 12)
-        Func_Muros.Grafico_ArMuros(Grafico_Ar, 14, 12, 12)
+        Func_Muros.GraficoPorcentajeMuros(Grafico_MurosProtagonicos, 14, 12, 12)
+        Func_Muros.GraficoArMuros(Grafico_Ar, 14, 12, 12)
 
         'DibujarRectangulos()
 
@@ -1075,7 +1071,7 @@ Public Class Form_06_PagMuros
 
     Private Sub Crear_Subgrafico()
 
-        Func_Muros.Grafico_PorcentajeMuros(Grafico_MurosProtagonicos, 14, 12, 12)
+        Func_Muros.GraficoPorcentajeMuros(Grafico_MurosProtagonicos, 14, 12, 12)
 
     End Sub
 

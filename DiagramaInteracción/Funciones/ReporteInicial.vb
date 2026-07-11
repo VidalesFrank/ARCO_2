@@ -54,7 +54,7 @@ Public Class ReporteInicial
         Dim ChartArea2 As New ChartArea("ChartArea2")
         Chart1.ChartAreas.Add(ChartArea2)
 
-        Funciones_Muros.Grafico_PorcentajeMuros(Chart1, 18, 16, 14)
+        Funciones_Muros.GraficoPorcentajeMuros(Chart1, 18, 16, 14)
 
         ' Ajustar tamaño del gráfico
         Chart1.Width = anchoPx

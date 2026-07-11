@@ -4,6 +4,7 @@ Imports DocumentFormat.OpenXml.Office.PowerPoint.Y2022.M03.Main
 
 Public Class Form_07_Pag_Zapatas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
+    Private _hayCambiosZapatas As Boolean = False
 
     Private Sub ImportarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarDemandasToolStripMenuItem.Click
 
@@ -544,6 +545,7 @@ Public Class Form_07_Pag_Zapatas
         End If
         Try
             Funciones_Programa.Serializar(Proyecto.Ruta, Proyecto)
+            _hayCambiosZapatas = False
             MessageBox.Show("El archivo se guardó correctamente.", "Guardar", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -561,6 +563,7 @@ Public Class Form_07_Pag_Zapatas
             Proyecto.Ruta = dlg.FileName
             Form_00_PaginaPrincipal.proyecto = Proyecto
             Funciones_Programa.Serializar(dlg.FileName, Proyecto)
+            _hayCambiosZapatas = False
             MessageBox.Show("El archivo se guardó correctamente.", "Guardar Como", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show("Error al guardar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -652,6 +655,14 @@ Public Class Form_07_Pag_Zapatas
         fDin.OpcionLlamado = "Zapatas" : fDin.Evaluacion = "Dinamico"
         fDin.GroupBox2.Text = "Combinaciones Análisis Dinámico"
         fDin.ShowDialog()
+    End Sub
+
+    Private Sub Form_07_Pag_Zapatas_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        If Not _hayCambiosZapatas Then Return
+        Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
+                                "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
+        If r = DialogResult.Yes Then Save_Pilas_Click(sender, e)
+        If r = DialogResult.Cancel Then e.Cancel = True
     End Sub
 
 End Class
