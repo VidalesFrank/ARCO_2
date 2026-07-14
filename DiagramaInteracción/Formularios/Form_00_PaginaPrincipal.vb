@@ -251,6 +251,18 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuReporte.Click, Sub(s, ev) Form_Reporte_Proyecto_Completo.Mostrar(proyecto)
         OpcionesToolStripMenuItem1.DropDownItems.Add(sep)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporte)
+
+        ' Análisis de Sección independiente (Módulo 10)
+        Dim sepAS As New ToolStripSeparator()
+        Dim mnuAS As New ToolStripMenuItem("Análisis de Sección…")
+        mnuAS.BackColor = Color.FromArgb(87, 87, 86)
+        mnuAS.ForeColor = Color.White
+        AddHandler mnuAS.Click, Sub(s, ev)
+                                    Dim f As New Form_10_AnalisisSeccion()
+                                    f.Show()
+                                End Sub
+        OpcionesToolStripMenuItem1.DropDownItems.Add(sepAS)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuAS)
     End Sub
 
     Private Sub AbrirProyectoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles AbrirProyectoToolStripMenuItem.Click

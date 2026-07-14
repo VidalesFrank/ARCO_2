@@ -484,6 +484,9 @@
     <Compile Include="Formularios\02_Columnas\Form_02_03_DI_3D.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\10_AnalisisSeccion\Form_10_AnalisisSeccion.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\02_Columnas\Form_02_Reporte_Columnas.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -574,6 +577,7 @@
     <Compile Include="Funciones\ReporteInicial.vb" />
     <Compile Include="Microsofts\Office.vb" />
     <Compile Include="Funciones\Diagrama_Interaccion_Rectangular.vb" />
+    <Compile Include="Funciones\Funciones_10_AnalisisSeccion.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>

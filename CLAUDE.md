@@ -212,9 +212,13 @@ Acceso desde el menú "? Tablas ETABS" en cada módulo. Muestra qué hojas ETABS
 
 ---
 
-## Auditoría de calidad — pendiente
+## Auditoría de calidad — completada
 
-- **TryParse**: Form_03_Losas (~25), Form_04_Escaleras (~15), Form_05_MurosNoEstructurales (~12), Form_06_PagMuros (~8). Estrategia: Try/Catch FormatException a nivel del sub de cálculo, no por campo.
+- **TryParse/FormatException**: ✅ Todos los subs de cálculo protegidos con Try/Catch FormatException + Catch Exception.
+  - Form_03_Losas: Button2_Click ✅
+  - Form_04_Escaleras: Button2_Click ✅
+  - Form_05_MurosNoEstructurales: Button2_Click ✅
+  - Form_06_PagMuros: Button2_Click — Try estaba comentado, corregido (jul 2026) ✅
 - **Nomenclatura inconsistente**: baja prioridad.
 
 ---

@@ -28,7 +28,7 @@ Public Class Form_06_PagMuros
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         Me.Cursor = Cursors.WaitCursor
 
-        'Try
+        Try
         Dim Tabla As DataGridView
         Dim Col_Diseno = Funciones_02_Columnas.ColumnasDiseno("Pier")
         Dim Col_Secciones = Funciones_02_Columnas.ColumnasSecciones("Pier")
@@ -355,18 +355,17 @@ Public Class Form_06_PagMuros
             Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
 
-        'MessageBox.Show("Información Cargada con Éxito.")
-        'Catch ex As FormatException
-        '    Logger.Warning("Form_06_PagMuros.Button2_Click", "Dato de entrada inválido: " & ex.Message)
-        '    MessageBox.Show("Verifique que los datos numéricos en las tablas sean válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-        'Catch ex As Exception
-        '    Logger.Error(ex, "Form_06_PagMuros.Button2_Click", "Error al cargar datos de muros desde ETABS")
-        '    MessageBox.Show("Error al leer la información. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        'Finally
         Obtencion_Macroparametros()
         _hayCambiosMuros = True
-        Cursor = Cursors.Arrow
-        'End Try
+        Catch ex As FormatException
+            Logger.Warning("Form_06_PagMuros.Button2_Click", "Dato de entrada inválido: " & ex.Message)
+            MessageBox.Show("Verifique que los datos numéricos en las tablas sean válidos.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_06_PagMuros.Button2_Click", "Error al cargar datos de muros desde ETABS")
+            MessageBox.Show("Error al leer la información. Revise el log para más detalles.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            Cursor = Cursors.Arrow
+        End Try
 
     End Sub
 
