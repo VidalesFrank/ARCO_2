@@ -46,13 +46,18 @@ Public Class Form_10_AnalisisSeccion
     Private tbSEst As New TextBox With {.Text = "0.10"}
     Private nudRamasB As New NumericUpDown
     Private nudRamasH As New NumericUpDown
+    Private tbEpsSu As New TextBox With {.Text = "0.09"}
 
     ' ── Controles: P axial M-κ ─────────────────────────────────────────────
     Private tbP As New TextBox With {.Text = "0"}
 
+    ' ── Controles: ángulo de análisis (estilo Section Designer) ────────────
+    Private nudAngulo As New NumericUpDown
+
     ' ── Controles: botón y etiqueta Mander ────────────────────────────────
     Private btnCalc As New Button
     Private lblMander As New Label
+    Private lblAdvertenciaMK As New Label
 
     ' ── Visualización ──────────────────────────────────────────────────────
     Private picSec As New PictureBox
@@ -60,6 +65,16 @@ Public Class Form_10_AnalisisSeccion
     Private picMK As New PictureBox
     Private dgvRes As New DataGridView
     Private tabs As New TabControl
+
+    ' ── Transformación de píxeles del dibujo de sección (para clic derecho) ──
+    Private _cxSec As Single, _cySec As Single, _escSec As Single
+
+    ' ── Editor de barra por clic derecho ───────────────────────────────────
+    Private _menuBarra10 As New ContextMenuStrip()
+    Private _barraContextIdx As Integer = -1
+
+    ' ── Firma de layout: evita que CALCULAR borre ediciones manuales ──────
+    Private _lastLayoutSig As String = Nothing
 
     ' ── Constantes de barra disponibles ───────────────────────────────────
     Private Shared ReadOnly _barTags As String() = {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10"}
@@ -135,7 +150,7 @@ Public Class Form_10_AnalisisSeccion
         panRefCirc.Controls.Add(cbBarraCirc)
 
         ' ── CONFINAMIENTO MANDER ───────────────────────────────────────
-        Dim pConf = MkSection(panLeft, "CONFINAMIENTO — MANDER 1988", y, 120) : y += 126
+        Dim pConf = MkSection(panLeft, "CONFINAMIENTO — MANDER 1988", y, 148) : y += 154
         MkLbl(pConf, "Estribo:", 10, 28)
         cbBarraEst.Left = 68 : cbBarraEst.Top = 25 : cbBarraEst.Width = 60
         cbBarraEst.DropDownStyle = ComboBoxStyle.DropDownList
@@ -144,13 +159,20 @@ Public Class Form_10_AnalisisSeccion
         MkLbl(pConf, "s (m):", 140, 28) : MkTb(tbSEst, pConf, 178, 26, 58)
         MkLbl(pConf, "Ramas en B:", 10, 58) : MkNud(nudRamasB, pConf, 88, 56, 2, 10, 2)
         MkLbl(pConf, "Ramas en H:", 150, 58) : MkNud(nudRamasH, pConf, 228, 56, 2, 10, 2)
-        MkLbl(pConf, "(solo aplica a columnas con estribos cerrados)", 10, 84).ForeColor = Color.Gray
+        MkLbl(pConf, "ε_su (rotura acero):", 10, 88) : MkTb(tbEpsSu, pConf, 140, 86, 56)
+        MkLbl(pConf, "(solo aplica a columnas con estribos cerrados)", 10, 112).ForeColor = Color.Gray
 
         ' ── P AXIAL PARA M-κ ──────────────────────────────────────────
         Dim pPax = MkSection(panLeft, "CARGA AXIAL — DIAGRAMA M-κ", y, 58) : y += 64
         MkLbl(pPax, "P axial (kN):", 10, 26)
         MkTb(tbP, pPax, 104, 24, 80)
         MkLbl(pPax, "(compresión +)", 192, 28).ForeColor = Color.Gray
+
+        ' ── ÁNGULO DE ANÁLISIS (estilo Section Designer) ────────────────
+        Dim pAng = MkSection(panLeft, "ÁNGULO DE ANÁLISIS", y, 58) : y += 64
+        MkLbl(pAng, "θ (grados):", 10, 26)
+        MkNud(nudAngulo, pAng, 104, 24, 0, 360, 0)
+        MkLbl(pAng, "(0°=eje fuerte H, 90°=eje débil B)", 170, 28).ForeColor = Color.Gray
 
         ' ── BOTÓN CALCULAR ─────────────────────────────────────────────
         btnCalc.Left = 8 : btnCalc.Top = y : btnCalc.Width = 296 : btnCalc.Height = 38
@@ -168,6 +190,18 @@ Public Class Form_10_AnalisisSeccion
         lblMander.BorderStyle = BorderStyle.FixedSingle
         lblMander.Padding = New Padding(4)
         panLeft.Controls.Add(lblMander)
+        y += 50
+
+        ' ── ADVERTENCIA: M-κ no convergió por aplastamiento real ───────
+        lblAdvertenciaMK.Left = 8 : lblAdvertenciaMK.Top = y : lblAdvertenciaMK.Width = 296 : lblAdvertenciaMK.Height = 40
+        lblAdvertenciaMK.AutoSize = False : lblAdvertenciaMK.Font = New Font("Segoe UI", 7.5F, FontStyle.Bold)
+        lblAdvertenciaMK.ForeColor = Color.FromArgb(140, 30, 0)
+        lblAdvertenciaMK.BackColor = Color.FromArgb(255, 240, 230)
+        lblAdvertenciaMK.BorderStyle = BorderStyle.FixedSingle
+        lblAdvertenciaMK.Padding = New Padding(4)
+        lblAdvertenciaMK.Text = "⚠ El M-κ no alcanzó el aplastamiento real dentro del barrido (κu/μφ son un límite de barrido)."
+        lblAdvertenciaMK.Visible = False
+        panLeft.Controls.Add(lblAdvertenciaMK)
 
         ' ┌─────────────────────────────────────────────────────────────┐
         ' │  PANEL CENTRAL — SECCIÓN TRANSVERSAL (280px)                │
@@ -246,7 +280,82 @@ Public Class Form_10_AnalisisSeccion
         For Each tb As TextBox In {tbB, tbH, tbD, tbRec}
             AddHandler tb.TextChanged, Sub(s, ev) picSec.Refresh()
         Next
+
+        ' El eje neutro se ve en vivo al mover el ángulo, sin esperar a CALCULAR
+        AddHandler nudAngulo.ValueChanged, Sub(s, ev) picSec.Refresh()
+
+        ConfigurarMenuBarra10()
     End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════
+    '  EDITOR DE BARRA POR CLIC DERECHO
+    ' ══════════════════════════════════════════════════════════════════════
+    Private Sub ConfigurarMenuBarra10()
+        _menuBarra10.Font = New Font("Segoe UI", 9)
+        For Each tag As String In _barTags
+            Dim item As New ToolStripMenuItem(tag)
+            AddHandler item.Click, AddressOf MenuBarra10_Click
+            _menuBarra10.Items.Add(item)
+        Next
+        AddHandler picSec.MouseDown, AddressOf PicSec_MouseDown
+    End Sub
+
+    Private Function HitTestBarra10(pt As Point) As Integer
+        If _barras Is Nothing OrElse _escSec <= 0 Then Return -1
+        Const HIT_R As Single = 9.0F
+        For i = 0 To _barras.Count - 1
+            Dim bar = _barras(i)
+            Dim sx = _cxSec + bar.Coordenada_X * _escSec
+            Dim sy = _cySec - bar.Coordenada_Y * _escSec
+            Dim dx = pt.X - sx, dy = pt.Y - sy
+            If dx * dx + dy * dy <= HIT_R * HIT_R Then Return i
+        Next
+        Return -1
+    End Function
+
+    Private Sub PicSec_MouseDown(sender As Object, e As MouseEventArgs)
+        If e.Button <> MouseButtons.Right Then Return
+        Dim idx = HitTestBarra10(e.Location)
+        If idx < 0 Then Return
+        _barraContextIdx = idx
+        _menuBarra10.Show(picSec, picSec.PointToClient(Cursor.Position))
+    End Sub
+
+    Private Sub MenuBarra10_Click(sender As Object, e As EventArgs)
+        Try
+            If _barraContextIdx < 0 OrElse _barras Is Nothing OrElse _barraContextIdx >= _barras.Count Then Return
+            Dim tag = CStr(DirectCast(sender, ToolStripMenuItem).Text)
+            Dim bar = _barras(_barraContextIdx)
+            bar.Name_Barra = tag
+            bar.Db = DiametroRefuerzo(tag)
+            bar.Asb = AreaRefuerzo(tag)
+            _barraContextIdx = -1
+            Calcular()
+        Catch ex As Exception
+            Logger.Error(ex, "Form_10_AnalisisSeccion.MenuBarra10_Click", "Error al reasignar barra")
+        End Try
+    End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════
+    '  FIRMA DE LAYOUT: para que CALCULAR no borre ediciones manuales
+    ' ══════════════════════════════════════════════════════════════════════
+    Private Function ComputeLayoutSig10() As String
+        Dim sb As New System.Text.StringBuilder
+        sb.Append(_tipoSec.ToString()).Append("|")
+        If _tipoSec = TipoSeccion10.Rectangular Then
+            sb.Append(tbB.Text).Append("|").Append(tbH.Text).Append("|")
+            Dim esp = GetEspec()
+            sb.Append(esp.BarraEsquinas).Append("|")
+            sb.Append(esp.BarraSuperior).Append("|").Append(esp.NSuperior).Append("|")
+            sb.Append(esp.BarraInferior).Append("|").Append(esp.NInferior).Append("|")
+            sb.Append(esp.BarraLateral).Append("|").Append(esp.NLateralPorCara)
+        Else
+            sb.Append(tbD.Text).Append("|").Append(nudNCirc.Value).Append("|")
+            sb.Append(If(cbBarraCirc.SelectedItem, "").ToString())
+        End If
+        sb.Append("|").Append(tbRec.Text)
+        Return sb.ToString()
+    End Function
 
     ' ══════════════════════════════════════════════════════════════════════
     '  DataGridView de refuerzo por caras
@@ -417,6 +526,12 @@ Public Class Form_10_AnalisisSeccion
             Dim s_est As Single
             If Single.TryParse(tbSEst.Text, s_est) AndAlso s_est > 0 Then s_mm = s_est * 1000.0F
             Dim db_hoop = DiametroRefuerzo(CStr(cbBarraEst.SelectedItem))
+            Dim thetaRad As Single = CSng(nudAngulo.Value) * CSng(Math.PI) / 180.0F
+            Dim eps_su As Single = 0.09F
+            If Not Single.TryParse(tbEpsSu.Text, eps_su) OrElse eps_su <= 0 Then eps_su = 0.09F
+
+            Dim sigActual = ComputeLayoutSig10()
+            Dim regenerar = (_barras Is Nothing) OrElse (sigActual <> _lastLayoutSig)
 
             If _tipoSec = TipoSeccion10.Rectangular Then
                 Dim secB As Single, secH As Single
@@ -427,10 +542,12 @@ Public Class Form_10_AnalisisSeccion
                     MessageBox.Show("H inválido.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
                 End If
 
-                Dim esp = GetEspec()
-                _barras = DistribuirBarrasPorLados(secB, secH, esp, rec)
+                If regenerar Then
+                    Dim esp = GetEspec()
+                    _barras = DistribuirBarrasPorLados(secB, secH, esp, rec)
+                End If
 
-                If _barras.Count = 0 Then
+                If _barras Is Nothing OrElse _barras.Count = 0 Then
                     MessageBox.Show("No hay barras definidas. Verifique el refuerzo.", "Sin refuerzo",
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
                 End If
@@ -441,27 +558,37 @@ Public Class Form_10_AnalisisSeccion
                                   CInt(nudRamasB.Value), CInt(nudRamasH.Value),
                                   _fcc, _eps_cc, _eps_cu)
 
-                _datosDI = DI_Rectangular10(secB, secH, _barras, fc, fy, Es)
+                _datosDI = DI_Rectangular10(secB, secH, _barras, fc, fy, Es, rec, thetaRad)
                 _datosMK = MomentoCurvatura10(secB, secH, TipoSeccion10.Rectangular, rec,
-                                               _barras, fc, fy, Es, _fcc, _eps_cc, _eps_cu, P_ax)
+                                               _barras, fc, fy, Es, _fcc, _eps_cc, _eps_cu, P_ax, thetaRad, eps_su)
             Else
                 Dim secD As Single
                 If Not Single.TryParse(tbD.Text, secD) OrElse secD <= 0 Then
                     MessageBox.Show("D inválido.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
                 End If
 
-                _barras = DistribuirBarrasCirculo10(secD, CInt(nudNCirc.Value),
-                                                    CStr(cbBarraCirc.SelectedItem), rec)
+                If regenerar Then
+                    _barras = DistribuirBarrasCirculo10(secD, CInt(nudNCirc.Value),
+                                                        CStr(cbBarraCirc.SelectedItem), rec)
+                End If
+
+                If _barras Is Nothing OrElse _barras.Count = 0 Then
+                    MessageBox.Show("No hay barras definidas. Verifique el refuerzo.", "Sin refuerzo",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
+                End If
+
                 Dim R_core = Math.Max(0.02F, secD / 2 - rec)
                 ' Para circular: ramas equivalentes = (n_ramas_b + n_ramas_h) en cada dirección
                 Dim nRamas = CInt(nudRamasB.Value) + CInt(nudRamasH.Value)
                 CalcularMander10(fc, fy, db_hoop, s_mm, 2 * R_core, 2 * R_core,
                                   nRamas, nRamas, _fcc, _eps_cc, _eps_cu)
 
-                _datosDI = DI_Circular10(secD, _barras, fc, fy, Es)
+                _datosDI = DI_Circular10(secD, _barras, fc, fy, Es, thetaRad)
                 _datosMK = MomentoCurvatura10(secD, secD, TipoSeccion10.Circular, rec,
-                                               _barras, fc, fy, Es, _fcc, _eps_cc, _eps_cu, P_ax)
+                                               _barras, fc, fy, Es, _fcc, _eps_cc, _eps_cu, P_ax, thetaRad, eps_su)
             End If
+
+            _lastLayoutSig = sigActual
 
             ' Etiqueta Mander
             lblMander.Text = String.Format(
@@ -469,6 +596,8 @@ Public Class Form_10_AnalisisSeccion
                 "ε_cc = {2:F5}     ε_cu* = {3:F5}",
                 _fcc, If(_fcc > 0 AndAlso fc > 0, _fcc / fc, 1),
                 _eps_cc, _eps_cu)
+
+            lblAdvertenciaMK.Visible = Not _datosMK.ConvergioPorAplastamiento
 
             picSec.Refresh() : picDI.Refresh() : picMK.Refresh()
             RellenarResultados()
@@ -503,51 +632,56 @@ Public Class Form_10_AnalisisSeccion
             Single.TryParse(tbB.Text, secB) : Single.TryParse(tbH.Text, secH)
             If secB <= 0 OrElse secH <= 0 Then Return
 
-            Dim esc = Math.Min((wPx - 2 * mg) / secB, (hPx - 2 * mg - 40) / secH)
-            Dim cx = wPx / 2.0F, cy = (hPx - 30) / 2.0F
-            Dim secBpx = secB * esc, secHpx = secH * esc
-            rPx = rec * esc
+            _escSec = Math.Min((wPx - 2 * mg) / secB, (hPx - 2 * mg - 40) / secH)
+            _cxSec = wPx / 2.0F : _cySec = (hPx - 30) / 2.0F
+            Dim secBpx = secB * _escSec, secHpx = secH * _escSec
+            rPx = rec * _escSec
 
             ' Sección bruta (concreto de recubrimiento)
             g.FillRectangle(New SolidBrush(Color.FromArgb(195, 195, 195)),
-                            cx - secBpx / 2, cy - secHpx / 2, secBpx, secHpx)
+                            _cxSec - secBpx / 2, _cySec - secHpx / 2, secBpx, secHpx)
             ' Núcleo confinado
             g.FillRectangle(New SolidBrush(Color.FromArgb(220, 228, 240)),
-                            cx - secBpx / 2 + rPx, cy - secHpx / 2 + rPx,
+                            _cxSec - secBpx / 2 + rPx, _cySec - secHpx / 2 + rPx,
                             secBpx - 2 * rPx, secHpx - 2 * rPx)
             g.DrawRectangle(New Pen(Color.FromArgb(70, 70, 70), 2),
-                            cx - secBpx / 2, cy - secHpx / 2, secBpx, secHpx)
+                            _cxSec - secBpx / 2, _cySec - secHpx / 2, secBpx, secHpx)
             g.DrawRectangle(New Pen(Color.FromArgb(100, 130, 180), 1) With {.DashStyle = DashStyle.Dash},
-                            cx - secBpx / 2 + rPx, cy - secHpx / 2 + rPx,
+                            _cxSec - secBpx / 2 + rPx, _cySec - secHpx / 2 + rPx,
                             secBpx - 2 * rPx, secHpx - 2 * rPx)
 
-            DibujarBarrasGDI(g, cx, cy, esc)
-            DibujarCotas(g, cx, cy, secB, secH, esc, wPx, hPx)
+            DibujarBarrasGDI(g, _cxSec, _cySec, _escSec)
+            DibujarCotas(g, _cxSec, _cySec, secB, secH, _escSec, wPx, hPx)
+            DibujarEjeNeutro10(g, _cxSec, _cySec, _escSec,
+                                CSng(nudAngulo.Value) * CSng(Math.PI) / 180.0F,
+                                CSng(Math.Sqrt((secB / 2.0F) ^ 2 + (secH / 2.0F) ^ 2)))
 
         Else  ' Circular
             Dim secD As Single = 0.5F
             Single.TryParse(tbD.Text, secD)
             If secD <= 0 Then Return
             Dim R = secD / 2.0F
-            Dim esc = Math.Min((wPx - 2 * mg) / secD, (hPx - 2 * mg - 40) / secD)
-            Dim cx = wPx / 2.0F, cy = (hPx - 30) / 2.0F
-            Dim Rcirc = R * esc
-            rPx = rec * esc
+            _escSec = Math.Min((wPx - 2 * mg) / secD, (hPx - 2 * mg - 40) / secD)
+            _cxSec = wPx / 2.0F : _cySec = (hPx - 30) / 2.0F
+            Dim Rcirc = R * _escSec
+            rPx = rec * _escSec
 
             ' Sección bruta
             g.FillEllipse(New SolidBrush(Color.FromArgb(195, 195, 195)),
-                          cx - Rcirc, cy - Rcirc, 2 * Rcirc, 2 * Rcirc)
+                          _cxSec - Rcirc, _cySec - Rcirc, 2 * Rcirc, 2 * Rcirc)
             ' Núcleo confinado
             g.FillEllipse(New SolidBrush(Color.FromArgb(220, 228, 240)),
-                          cx - Rcirc + rPx, cy - Rcirc + rPx,
+                          _cxSec - Rcirc + rPx, _cySec - Rcirc + rPx,
                           2 * (Rcirc - rPx), 2 * (Rcirc - rPx))
             g.DrawEllipse(New Pen(Color.FromArgb(70, 70, 70), 2),
-                          cx - Rcirc, cy - Rcirc, 2 * Rcirc, 2 * Rcirc)
+                          _cxSec - Rcirc, _cySec - Rcirc, 2 * Rcirc, 2 * Rcirc)
             g.DrawEllipse(New Pen(Color.FromArgb(100, 130, 180), 1) With {.DashStyle = DashStyle.Dash},
-                          cx - Rcirc + rPx, cy - Rcirc + rPx,
+                          _cxSec - Rcirc + rPx, _cySec - Rcirc + rPx,
                           2 * (Rcirc - rPx), 2 * (Rcirc - rPx))
 
-            DibujarBarrasGDI(g, cx, cy, esc)
+            DibujarBarrasGDI(g, _cxSec, _cySec, _escSec)
+            DibujarEjeNeutro10(g, _cxSec, _cySec, _escSec,
+                                CSng(nudAngulo.Value) * CSng(Math.PI) / 180.0F, R)
 
             ' Etiqueta D
             Dim fntD = New Font("Segoe UI", 7.5F)
@@ -566,10 +700,40 @@ Public Class Form_10_AnalisisSeccion
         End If
     End Sub
 
+    ' Dibuja el eje neutro asumido (línea punteada por el centroide, dirección
+    ' (cosθ,-senθ)) y una flecha hacia el lado de compresión asumido
+    ' (dirección (senθ,cosθ)), igual a como Section Designer indica el ángulo
+    ' de análisis. thetaRad=0 → línea horizontal, flecha hacia arriba (+Y).
+    Private Sub DibujarEjeNeutro10(g As Graphics, cx As Single, cy As Single, esc As Single,
+                                     thetaRad As Single, radioM As Single)
+        If radioM <= 0 OrElse esc <= 0 Then Return
+        Dim sinT = CSng(Math.Sin(thetaRad)) : Dim cosT = CSng(Math.Cos(thetaRad))
+        Dim largo = radioM * esc * 1.15F
+
+        ' Eje neutro: dirección (cosθ, -senθ) en píxeles (Y de pantalla invertida)
+        Dim x1 = cx - cosT * largo, y1 = cy - sinT * largo
+        Dim x2 = cx + cosT * largo, y2 = cy + sinT * largo
+        Dim penEje As New Pen(Color.FromArgb(200, 30, 30), 1.5F) With {.DashStyle = DashStyle.DashDot}
+        g.DrawLine(penEje, x1, y1, x2, y2)
+
+        ' Flecha hacia el lado de compresión asumido: dirección (senθ, cosθ)
+        Dim flechaLen = radioM * esc * 0.35F
+        Dim fx = cx + sinT * flechaLen, fy2 = cy - cosT * flechaLen
+        Dim penFlecha As New Pen(Color.FromArgb(200, 30, 30), 2.0F)
+        penFlecha.CustomEndCap = New AdjustableArrowCap(4, 5)
+        g.DrawLine(penFlecha, cx, cy, fx, fy2)
+
+        Dim fnt = New Font("Segoe UI", 7.5F, FontStyle.Bold)
+        Dim thetaDeg = CSng(thetaRad * 180.0 / Math.PI)
+        g.DrawString(String.Format("θ = {0:F0}°", thetaDeg), fnt,
+                     New SolidBrush(Color.FromArgb(200, 30, 30)), fx + 4, fy2 - 12)
+    End Sub
+
     Private Sub DibujarBarrasGDI(g As Graphics, cx As Single, cy As Single, esc As Single)
         If _barras Is Nothing Then Return
         For Each bar As RefuerzoSimple In _barras
-            Dim db_px = Math.Max(5.0F, bar.Db / 1000.0F * esc)
+            ' bar.Db ya está en metros (DiametroRefuerzo), no en mm
+            Dim db_px = Math.Max(5.0F, bar.Db * esc)
             Dim bx = cx + bar.Coordenada_X * esc - db_px / 2
             Dim by = cy - bar.Coordenada_Y * esc - db_px / 2
             g.FillEllipse(New SolidBrush(Color.FromArgb(50, 50, 50)), bx, by, db_px, db_px)
@@ -812,6 +976,13 @@ Public Class Form_10_AnalisisSeccion
             g.DrawRectangle(New Pen(Color.FromArgb(0, 82, 164), 1),
                             rx - 4, mT + 6, sz.Width + 8, sz.Height + 4)
             g.DrawString(txt, fntDuct, New SolidBrush(Color.FromArgb(0, 82, 164)), rx, mT + 8)
+
+            If Not String.IsNullOrEmpty(_datosMK.CausaFalla) Then
+                Dim fntCausa = New Font("Segoe UI", 7.5F, FontStyle.Italic)
+                Dim szC = g.MeasureString(_datosMK.CausaFalla, fntCausa)
+                g.DrawString(_datosMK.CausaFalla, fntCausa, Brushes.DimGray,
+                             mL + pw - szC.Width - 8, mT + 6 + sz.Height + 8)
+            End If
         End If
 
         ' Ejes
@@ -877,6 +1048,7 @@ Public Class Form_10_AnalisisSeccion
         Dim fc_val As Single : Single.TryParse(tbFc.Text, fc_val)
 
         addSep("  SECCIÓN")
+        add("Ángulo de análisis θ", String.Format("{0:F0}", _datosDI.ThetaGrados), "°")
         add("Ag", String.Format("{0:F2}", _datosDI.Ag_cm2), "cm²")
         add("Ast  (total)", String.Format("{0:F3}", _datosDI.Ast_cm2), "cm²")
         add("ρ  (cuantía)", String.Format("{0:F3}", _datosDI.rho_pct), "%")
@@ -905,6 +1077,7 @@ Public Class Form_10_AnalisisSeccion
             add("κ_u  (último)", String.Format("{0:F5}", _datosMK.Ku), "1/m")
             add("Mu", String.Format("{0:F2}", _datosMK.Mu), "kN·m")
             add("μφ  (ductilidad)", String.Format("{0:F3}", _datosMK.Ductilidad), "κu / κy")
+            add("Causa de falla", _datosMK.CausaFalla, "")
         End If
     End Sub
 
