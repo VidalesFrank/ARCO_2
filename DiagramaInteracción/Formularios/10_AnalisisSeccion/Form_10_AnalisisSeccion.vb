@@ -76,6 +76,33 @@ Public Class Form_10_AnalisisSeccion
     ' ── Firma de layout: evita que CALCULAR borre ediciones manuales ──────
     Private _lastLayoutSig As String = Nothing
 
+    ' ── Verificación puntual P, M ─────────────────────────────────────────
+    Private tbDemandaP As New TextBox With {.Text = ""}
+    Private tbDemandaM As New TextBox With {.Text = ""}
+    Private lblCD10 As New Label
+    Private _demandaP As Single = Single.NaN
+    Private _demandaM As Single = Single.NaN
+
+    ' ── Superficie DI 3D (array [pIdx * nAng + aIdx]) ─────────────────────
+    Private picDI3D As New PictureBox
+    Private _surf3D As Pt3D10()
+    Private ReadOnly _nP3D As Integer = 40
+    Private ReadOnly _nAng3D As Integer = 36
+    Private _azim3D As Double = 0.6
+    Private _elev3D As Double = 0.5
+    Private _zoom3D As Double = 1.0
+    Private _drag3D As Boolean = False
+    Private _drag3DStart As Point
+    Private _azim3DStart As Double, _elev3DStart As Double
+    Private _maxM3D As Double = 1.0, _maxP3D As Double = 1.0, _minP3D As Double = 0.0
+
+    Private Structure Pt3D10
+        Public X As Single, Y As Single, Z As Single
+        Public Sub New(xx As Single, yy As Single, zz As Single)
+            X = xx : Y = yy : Z = zz
+        End Sub
+    End Structure
+
     ' ── Constantes de barra disponibles ───────────────────────────────────
     Private Shared ReadOnly _barTags As String() = {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10"}
 
@@ -96,6 +123,10 @@ Public Class Form_10_AnalisisSeccion
         Me.StartPosition = FormStartPosition.CenterScreen
         Me.Font = New Font("Segoe UI", 8.5F)
         Me.BackColor = Color.FromArgb(240, 242, 245)
+        Try
+            Me.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)
+        Catch
+        End Try
         AddHandler Me.Load, AddressOf OnLoad
 
         ' ┌─────────────────────────────────────────────────────────────┐
@@ -174,6 +205,27 @@ Public Class Form_10_AnalisisSeccion
         MkNud(nudAngulo, pAng, 104, 24, 0, 360, 0)
         MkLbl(pAng, "(0°=eje fuerte H, 90°=eje débil B)", 170, 28).ForeColor = Color.Gray
 
+        ' ── VERIFICACIÓN PUNTUAL P, M ────────────────────────────────
+        Dim pVer = MkSection(panLeft, "VERIFICACIÓN  P, M  EN  DIAGRAMA", y, 100) : y += 106
+        MkLbl(pVer, "P demanda (kN):", 10, 28)
+        MkTb(tbDemandaP, pVer, 120, 26, 90)
+        MkLbl(pVer, "comp. +", 218, 30).ForeColor = Color.Gray
+        MkLbl(pVer, "M demanda (kN·m):", 10, 56)
+        MkTb(tbDemandaM, pVer, 140, 54, 70)
+        Dim btnVer As New Button With {
+            .Left = 8, .Top = 78, .Width = 130, .Height = 24,
+            .Text = "▶ Marcar en DI",
+            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .BackColor = Color.FromArgb(0, 82, 164), .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat, .Cursor = Cursors.Hand}
+        btnVer.FlatAppearance.BorderSize = 0
+        pVer.Controls.Add(btnVer)
+        AddHandler btnVer.Click, AddressOf OnVerificarClick
+        lblCD10.Left = 148 : lblCD10.Top = 78 : lblCD10.Width = 148 : lblCD10.Height = 24
+        lblCD10.AutoSize = False : lblCD10.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
+        lblCD10.TextAlign = ContentAlignment.MiddleLeft
+        pVer.Controls.Add(lblCD10)
+
         ' ── BOTÓN CALCULAR ─────────────────────────────────────────────
         btnCalc.Left = 8 : btnCalc.Top = y : btnCalc.Width = 296 : btnCalc.Height = 38
         btnCalc.Text = "▶  CALCULAR" : btnCalc.Font = New Font("Segoe UI", 10, FontStyle.Bold)
@@ -246,7 +298,20 @@ Public Class Form_10_AnalisisSeccion
         AddHandler picMK.Resize, Sub(s, ev) picMK.Refresh()
         tMK.Controls.Add(picMK) : tabs.TabPages.Add(tMK)
 
-        ' Tab 3: Resultados numéricos
+        ' Tab 3: Superficie DI 3D
+        Dim t3D As New TabPage("  DI Superficie 3D  ")
+        t3D.BackColor = Color.FromArgb(16, 20, 34)
+        picDI3D.Dock = DockStyle.Fill : picDI3D.BackColor = Color.FromArgb(16, 20, 34)
+        picDI3D.Cursor = Cursors.SizeAll
+        AddHandler picDI3D.Paint, AddressOf OnPaintDI3D
+        AddHandler picDI3D.Resize, Sub(s, ev) picDI3D.Refresh()
+        AddHandler picDI3D.MouseDown, AddressOf OnDI3D_MouseDown
+        AddHandler picDI3D.MouseMove, AddressOf OnDI3D_MouseMove
+        AddHandler picDI3D.MouseUp, AddressOf OnDI3D_MouseUp
+        AddHandler picDI3D.MouseWheel, AddressOf OnDI3D_MouseWheel
+        t3D.Controls.Add(picDI3D) : tabs.TabPages.Add(t3D)
+
+        ' Tab 4: Resultados numéricos
         Dim tRes As New TabPage("  Resultados  ")
         dgvRes.Dock = DockStyle.Fill : dgvRes.ReadOnly = True : dgvRes.AllowUserToAddRows = False
         dgvRes.RowHeadersVisible = False : dgvRes.SelectionMode = DataGridViewSelectionMode.FullRowSelect
@@ -590,6 +655,21 @@ Public Class Form_10_AnalisisSeccion
 
             _lastLayoutSig = sigActual
 
+            ' Superficie DI 3D (en background para no bloquear UI)
+            Try
+                If _tipoSec = TipoSeccion10.Rectangular Then
+                    Dim secB2 As Single, secH2 As Single
+                    Single.TryParse(tbB.Text, secB2) : Single.TryParse(tbH.Text, secH2)
+                    GenerarSuperficie3D(fc, fy, Es, rec, secB2, secH2, 0)
+                Else
+                    Dim secD2 As Single
+                    Single.TryParse(tbD.Text, secD2)
+                    GenerarSuperficie3D(fc, fy, Es, rec, secD2, secD2, secD2)
+                End If
+            Catch ex As Exception
+                Logger.Warning("Form_10_AnalisisSeccion", "Superficie 3D no generada: " & ex.Message)
+            End Try
+
             ' Etiqueta Mander
             lblMander.Text = String.Format(
                 "Mander 1988:  f'cc = {0:F2} MPa  (f'cc/f'c = {1:F2})" & vbCrLf &
@@ -599,7 +679,7 @@ Public Class Form_10_AnalisisSeccion
 
             lblAdvertenciaMK.Visible = Not _datosMK.ConvergioPorAplastamiento
 
-            picSec.Refresh() : picDI.Refresh() : picMK.Refresh()
+            picSec.Refresh() : picDI.Refresh() : picMK.Refresh() : picDI3D.Refresh()
             RellenarResultados()
 
         Catch ex As Exception
@@ -777,7 +857,7 @@ Public Class Form_10_AnalisisSeccion
             Return
         End If
 
-        Dim mL = 90, mR = 20, mT = 30, mB = 52
+        Dim mL = 105, mR = 24, mT = 36, mB = 62
         Dim pw = wPx - mL - mR, ph = hPx - mT - mB
         If pw < 50 OrElse ph < 50 Then Return
 
@@ -791,7 +871,7 @@ Public Class Form_10_AnalisisSeccion
         Dim toY = Function(p As Single) CSng(mT + (1 - (p - minP) / pRng) * ph)
 
         ' Grid
-        Dim gPen = New Pen(Color.FromArgb(235, 238, 245))
+        Dim gPen = New Pen(Color.FromArgb(220, 225, 238))
         For ix = 0 To 4
             Dim xx = CSng(mL + ix / 4.0 * pw)
             g.DrawLine(gPen, xx, mT, xx, mT + ph)
@@ -807,7 +887,6 @@ Public Class Form_10_AnalisisSeccion
             For i = 0 To _datosDI.PhiMn.Count - 1
                 polyPts.Add(New PointF(toX(_datosDI.PhiMn(i)), toY(_datosDI.PhiPn(i))))
             Next
-            ' Cerrar polígono por eje M=0
             polyPts.Add(New PointF(mL, toY(_datosDI.PhiPn.Last())))
             polyPts.Add(New PointF(mL, toY(_datosDI.PhiPn(0))))
             g.FillPolygon(New SolidBrush(Color.FromArgb(20, 0, 100, 200)), polyPts.ToArray())
@@ -832,7 +911,32 @@ Public Class Form_10_AnalisisSeccion
             Dim bx = toX(_datosDI.M_bal), by = toY(_datosDI.P_bal)
             g.FillEllipse(Brushes.OrangeRed, bx - 6, by - 6, 12, 12)
             g.DrawEllipse(Pens.DarkRed, bx - 6, by - 6, 12, 12)
-            g.DrawString("Bal", New Font("Segoe UI", 7), Brushes.OrangeRed, bx + 8, by - 10)
+            g.DrawString("Bal.", New Font("Segoe UI", 8.5F), Brushes.OrangeRed, bx + 8, by - 10)
+        End If
+
+        ' ── Punto de demanda P, M ────────────────────────────────────
+        If Not Single.IsNaN(_demandaP) AndAlso Not Single.IsNaN(_demandaM) Then
+            Dim phiMnAtP = InterpolatePhiMnAtP(_demandaP)
+            Dim cd As Single = 0
+            If _demandaM > 0.01F AndAlso phiMnAtP > 0.01F Then
+                cd = phiMnAtP / _demandaM
+            ElseIf _demandaM <= 0.01F AndAlso _demandaP > 0.01F AndAlso _datosDI.PhiP0 > 0.01F Then
+                cd = _datosDI.PhiP0 / _demandaP
+            End If
+            Dim cumpleDemanda = cd >= 1.0F
+            Dim dotClr = If(cumpleDemanda, Color.FromArgb(0, 160, 80), Color.FromArgb(210, 40, 40))
+            Dim dxP = toX(_demandaM), dyP = toY(_demandaP)
+            g.FillEllipse(New SolidBrush(dotClr), dxP - 8, dyP - 8, 16, 16)
+            g.DrawEllipse(New Pen(Color.Black, 1.5F), dxP - 8, dyP - 8, 16, 16)
+            g.DrawLine(New Pen(dotClr, 1.5F) With {.DashStyle = DashStyle.Dot},
+                       dxP, dyP, dxP, mT + ph)
+            g.DrawLine(New Pen(dotClr, 1.5F) With {.DashStyle = DashStyle.Dot},
+                       mL, dyP, dxP, dyP)
+            Dim fntCD = New Font("Segoe UI", 10F, FontStyle.Bold)
+            g.DrawString(String.Format("C/D = {0:F3}", cd),
+                         fntCD, New SolidBrush(dotClr), dxP + 12, dyP - 14)
+            g.DrawString("Demanda", New Font("Segoe UI", 8.5F),
+                         Brushes.Black, dxP + 12, dyP + 4)
         End If
 
         ' Ejes
@@ -840,34 +944,35 @@ Public Class Form_10_AnalisisSeccion
         g.DrawLine(axPen, mL, mT, mL, mT + ph)
         g.DrawLine(axPen, mL, mT + ph, mL + pw, mT + ph)
 
-        Dim fnt = New Font("Segoe UI", 7.5F)
-        Dim fntB = New Font("Segoe UI", 7.5F, FontStyle.Bold)
+        Dim fnt = New Font("Segoe UI", 9.5F)
+        Dim fntB = New Font("Segoe UI", 9.5F, FontStyle.Bold)
+        Dim fntTitle = New Font("Segoe UI", 10F, FontStyle.Bold)
         Dim sfR As New StringFormat With {.Alignment = StringAlignment.Far}
 
         ' Ticks X
         For ix = 0 To 4
             Dim m = maxM * ix / 4
             Dim xx = CSng(mL + m / maxM * pw)
-            g.DrawLine(Pens.Black, xx, mT + ph, xx, mT + ph + 4)
-            g.DrawString(String.Format("{0:F0}", m), fnt, Brushes.Black, xx - 16, mT + ph + 6)
+            g.DrawLine(Pens.Black, xx, mT + ph, xx, mT + ph + 5)
+            g.DrawString(String.Format("{0:F0}", m), fnt, Brushes.Black, xx - 18, mT + ph + 8)
         Next
-        g.DrawString("Momento  M  (kN·m)", fnt, Brushes.Black,
-                     CSng(mL + pw / 2 - 55), hPx - 18)
+        g.DrawString("Momento  M  (kN·m)", fntTitle, Brushes.Black,
+                     CSng(mL + pw / 2 - 70), hPx - 24)
 
         ' Ticks Y
         For iy = 0 To 5
             Dim p = minP + pRng * iy / 5
             Dim yy = toY(p)
-            g.DrawLine(Pens.Black, mL, yy, mL - 4, yy)
+            g.DrawLine(Pens.Black, mL, yy, mL - 5, yy)
             g.DrawString(String.Format("{0:F0}", p), fnt, Brushes.Black,
-                         New RectangleF(2, yy - 9, mL - 8, 18), sfR)
+                         New RectangleF(2, yy - 10, mL - 9, 20), sfR)
         Next
 
         ' Etiqueta Y rotada
         Dim st = g.Save()
-        g.TranslateTransform(12, mT + ph / 2)
+        g.TranslateTransform(14, mT + ph / 2)
         g.RotateTransform(-90)
-        g.DrawString("Fuerza axial  P  (kN)", fnt, Brushes.Black, 0, 0,
+        g.DrawString("Fuerza axial  P  (kN)", fntTitle, Brushes.Black, 0, 0,
                      New StringFormat With {.Alignment = StringAlignment.Center})
         g.Restore(st)
 
@@ -876,11 +981,11 @@ Public Class Form_10_AnalisisSeccion
                      _datosDI.P0, _datosDI.PhiP0), fntB, Brushes.DarkBlue, mL + 4, mT + 4)
 
         ' Leyenda
-        Dim lx = mL + pw - 130, ly = mT + 8
+        Dim lx = mL + pw - 145, ly = mT + 10
         g.DrawLine(New Pen(Color.Silver, 1.5F) With {.DashStyle = DashStyle.Dash}, lx, ly, lx + 22, ly)
-        g.DrawString("Nominal", fnt, Brushes.Gray, lx + 26, ly - 6)
-        g.DrawLine(New Pen(Color.FromArgb(0, 82, 164), 2.5F), lx, ly + 16, lx + 22, ly + 16)
-        g.DrawString("Reducido  φ", fnt, New SolidBrush(Color.FromArgb(0, 82, 164)), lx + 26, ly + 10)
+        g.DrawString("Nominal", fnt, Brushes.Gray, lx + 26, ly - 7)
+        g.DrawLine(New Pen(Color.FromArgb(0, 82, 164), 2.5F), lx, ly + 18, lx + 22, ly + 18)
+        g.DrawString("Reducido  φ", fnt, New SolidBrush(Color.FromArgb(0, 82, 164)), lx + 26, ly + 11)
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════
@@ -898,7 +1003,7 @@ Public Class Form_10_AnalisisSeccion
             Return
         End If
 
-        Dim mL = 90, mR = 20, mT = 30, mB = 52
+        Dim mL = 105, mR = 24, mT = 36, mB = 62
         Dim pw = wPx - mL - mR, ph = hPx - mT - mB
         If pw < 50 OrElse ph < 50 Then Return
 
@@ -909,7 +1014,7 @@ Public Class Form_10_AnalisisSeccion
         Dim toY = Function(m As Single) CSng(mT + (1 - m / maxM) * ph)
 
         ' Grid
-        Dim gPen = New Pen(Color.FromArgb(235, 238, 245))
+        Dim gPen = New Pen(Color.FromArgb(220, 225, 238))
         For ix = 0 To 4
             g.DrawLine(gPen, CSng(mL + ix / 4.0 * pw), mT, CSng(mL + ix / 4.0 * pw), mT + ph)
         Next
@@ -932,56 +1037,71 @@ Public Class Form_10_AnalisisSeccion
         Next
         g.DrawLines(New Pen(Color.FromArgb(0, 82, 164), 2.5F), pts)
 
-        Dim fnt = New Font("Segoe UI", 7.5F)
-        Dim fntB = New Font("Segoe UI", 7.5F, FontStyle.Bold)
+        Dim fnt = New Font("Segoe UI", 9.5F)
+        Dim fntB = New Font("Segoe UI", 9.5F, FontStyle.Bold)
+        Dim fntTitle = New Font("Segoe UI", 10F, FontStyle.Bold)
 
         ' Punto κy (verde)
         If _datosMK.Ky > 0 AndAlso _datosMK.My > 0 Then
             Dim kyCl = Math.Min(_datosMK.Ky, maxK / 1.12F)
-            Dim px = toX(kyCl), py = toY(_datosMK.My)
-            g.FillEllipse(Brushes.SeaGreen, px - 6, py - 6, 12, 12)
-            g.DrawEllipse(New Pen(Color.DarkGreen, 1), px - 6, py - 6, 12, 12)
-            g.DrawLine(New Pen(Color.SeaGreen, 1) With {.DashStyle = DashStyle.Dot},
-                       px, py, px, mT + ph)
-            g.DrawLine(New Pen(Color.SeaGreen, 1) With {.DashStyle = DashStyle.Dot},
-                       mL, py, px, py)
+            Dim kypx = toX(kyCl), kypy = toY(_datosMK.My)
+            g.FillEllipse(Brushes.SeaGreen, kypx - 7, kypy - 7, 14, 14)
+            g.DrawEllipse(New Pen(Color.DarkGreen, 1.2F), kypx - 7, kypy - 7, 14, 14)
+            g.DrawLine(New Pen(Color.SeaGreen, 1.2F) With {.DashStyle = DashStyle.Dot},
+                       kypx, kypy, kypx, mT + ph)
+            g.DrawLine(New Pen(Color.SeaGreen, 1.2F) With {.DashStyle = DashStyle.Dot},
+                       mL, kypy, kypx, kypy)
             g.DrawString(String.Format("κy = {0:F4} /m", _datosMK.Ky),
-                         fntB, Brushes.SeaGreen, px + 8, py - 16)
+                         fntB, Brushes.SeaGreen, kypx + 10, kypy - 18)
             g.DrawString(String.Format("My = {0:F1} kN·m", _datosMK.My),
-                         fnt, Brushes.SeaGreen, mL + 4, py - 14)
+                         fnt, Brushes.SeaGreen, mL + 4, kypy - 16)
         End If
 
         ' Punto κu (naranja)
         If _datosMK.Ku > 0 AndAlso _datosMK.Mu > 0 Then
             Dim kuCl = Math.Min(_datosMK.Ku, maxK / 1.12F)
-            Dim px = toX(kuCl), py = toY(_datosMK.Mu)
-            g.FillEllipse(Brushes.OrangeRed, px - 6, py - 6, 12, 12)
-            g.DrawEllipse(New Pen(Color.DarkOrange, 1), px - 6, py - 6, 12, 12)
-            g.DrawLine(New Pen(Color.OrangeRed, 1) With {.DashStyle = DashStyle.Dot},
-                       px, py, px, mT + ph)
+            Dim kupx = toX(kuCl), kupy = toY(_datosMK.Mu)
+            g.FillEllipse(Brushes.OrangeRed, kupx - 7, kupy - 7, 14, 14)
+            g.DrawEllipse(New Pen(Color.DarkOrange, 1.2F), kupx - 7, kupy - 7, 14, 14)
+            g.DrawLine(New Pen(Color.OrangeRed, 1.2F) With {.DashStyle = DashStyle.Dot},
+                       kupx, kupy, kupx, mT + ph)
             g.DrawString(String.Format("κu = {0:F4} /m", _datosMK.Ku),
-                         fntB, Brushes.OrangeRed, px - 90, mT + ph - 28)
+                         fntB, Brushes.OrangeRed, kupx - 100, mT + ph - 30)
             g.DrawString(String.Format("Mu = {0:F1} kN·m", _datosMK.Mu),
-                         fnt, Brushes.OrangeRed, px - 90, mT + ph - 14)
+                         fnt, Brushes.OrangeRed, kupx - 100, mT + ph - 14)
         End If
 
-        ' Ductilidad μφ — destacada
+        ' ── Ductilidad μφ = κu/κy ── caja destacada ──────────────────
         If _datosMK.Ductilidad > 0 Then
             Dim fntDuct = New Font("Segoe UI", 14, FontStyle.Bold)
-            Dim txt = String.Format("μφ = {0:F2}", _datosMK.Ductilidad)
-            Dim sz = g.MeasureString(txt, fntDuct)
-            Dim rx = mL + pw - sz.Width - 8
+            Dim fntFrac = New Font("Segoe UI", 8.5F, FontStyle.Italic)
+            Dim txtDuct = String.Format("μφ = {0:F2}", _datosMK.Ductilidad)
+            Dim txtFrac As String
+            If _datosMK.Ky > 0 Then
+                txtFrac = String.Format("κu / κy  =  {0:F4} / {1:F4}  (1/m)",
+                                        _datosMK.Ku, _datosMK.Ky)
+            Else
+                txtFrac = "κy no determinado"
+            End If
+            Dim szD = g.MeasureString(txtDuct, fntDuct)
+            Dim szF = g.MeasureString(txtFrac, fntFrac)
+            Dim boxW = Math.Max(szD.Width, szF.Width) + 16
+            Dim boxH = szD.Height + szF.Height + 10
+            Dim rx = mL + pw - boxW - 6
             g.FillRectangle(New SolidBrush(Color.FromArgb(240, 248, 255)),
-                            rx - 4, mT + 6, sz.Width + 8, sz.Height + 4)
-            g.DrawRectangle(New Pen(Color.FromArgb(0, 82, 164), 1),
-                            rx - 4, mT + 6, sz.Width + 8, sz.Height + 4)
-            g.DrawString(txt, fntDuct, New SolidBrush(Color.FromArgb(0, 82, 164)), rx, mT + 8)
+                            rx - 4, mT + 6, boxW, boxH)
+            g.DrawRectangle(New Pen(Color.FromArgb(0, 82, 164), 1.2F),
+                            rx - 4, mT + 6, boxW, boxH)
+            g.DrawString(txtDuct, fntDuct,
+                         New SolidBrush(Color.FromArgb(0, 82, 164)), rx, mT + 8)
+            g.DrawString(txtFrac, fntFrac, Brushes.DimGray,
+                         rx, CSng(mT + 8 + szD.Height + 2))
 
             If Not String.IsNullOrEmpty(_datosMK.CausaFalla) Then
-                Dim fntCausa = New Font("Segoe UI", 7.5F, FontStyle.Italic)
+                Dim fntCausa = New Font("Segoe UI", 8.5F, FontStyle.Italic)
                 Dim szC = g.MeasureString(_datosMK.CausaFalla, fntCausa)
                 g.DrawString(_datosMK.CausaFalla, fntCausa, Brushes.DimGray,
-                             mL + pw - szC.Width - 8, mT + 6 + sz.Height + 8)
+                             mL + pw - szC.Width - 8, CSng(mT + 8 + boxH + 4))
             End If
         End If
 
@@ -995,33 +1115,33 @@ Public Class Form_10_AnalisisSeccion
         For ix = 0 To 4
             Dim k = maxK * ix / 4
             Dim xx = CSng(mL + k / maxK * pw)
-            g.DrawLine(Pens.Black, xx, mT + ph, xx, mT + ph + 4)
-            g.DrawString(String.Format("{0:F4}", k), fnt, Brushes.Black, xx - 16, mT + ph + 6)
+            g.DrawLine(Pens.Black, xx, mT + ph, xx, mT + ph + 5)
+            g.DrawString(String.Format("{0:F4}", k), fnt, Brushes.Black, xx - 20, mT + ph + 8)
         Next
-        g.DrawString("Curvatura  κ  (1/m)", fnt, Brushes.Black,
-                     CSng(mL + pw / 2 - 50), hPx - 18)
+        g.DrawString("Curvatura  κ  (1/m)", fntTitle, Brushes.Black,
+                     CSng(mL + pw / 2 - 68), hPx - 24)
 
         ' Ticks Y
         For iy = 0 To 5
             Dim m = maxM * iy / 5
             Dim yy = toY(m)
-            g.DrawLine(Pens.Black, mL, yy, mL - 4, yy)
+            g.DrawLine(Pens.Black, mL, yy, mL - 5, yy)
             g.DrawString(String.Format("{0:F0}", m), fnt, Brushes.Black,
-                         New RectangleF(2, yy - 9, mL - 8, 18), sfR)
+                         New RectangleF(2, yy - 10, mL - 9, 20), sfR)
         Next
 
         ' Etiqueta Y
         Dim st = g.Save()
-        g.TranslateTransform(12, mT + ph / 2)
+        g.TranslateTransform(14, mT + ph / 2)
         g.RotateTransform(-90)
-        g.DrawString("Momento  M  (kN·m)", fnt, Brushes.Black, 0, 0,
+        g.DrawString("Momento  M  (kN·m)", fntTitle, Brushes.Black, 0, 0,
                      New StringFormat With {.Alignment = StringAlignment.Center})
         g.Restore(st)
 
         ' Leyenda zona plástica
         If _datosMK.Ductilidad > 0 Then
-            g.FillRectangle(New SolidBrush(Color.FromArgb(60, 255, 140, 0)), mL + 4, mT + 4, 14, 10)
-            g.DrawString("Zona plástica", fnt, Brushes.DarkOrange, mL + 20, mT + 2)
+            g.FillRectangle(New SolidBrush(Color.FromArgb(60, 255, 140, 0)), mL + 4, mT + 6, 16, 12)
+            g.DrawString("Zona plástica  (κy → κu)", fnt, Brushes.DarkOrange, mL + 24, mT + 4)
         End If
     End Sub
 
@@ -1089,6 +1209,247 @@ Public Class Form_10_AnalisisSeccion
         Dim sz = g.MeasureString(msg, fnt)
         g.DrawString(msg, fnt, Brushes.Gray,
                      (w - sz.Width) / 2, (h - sz.Height) / 2)
+    End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════
+    '  VERIFICACIÓN PUNTUAL P, M
+    ' ══════════════════════════════════════════════════════════════════════
+    Private Sub OnVerificarClick(sender As Object, e As EventArgs)
+        Dim p As Single, m As Single
+        If Not Single.TryParse(tbDemandaP.Text, p) Then
+            MessageBox.Show("P demanda inválido.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
+        End If
+        If Not Single.TryParse(tbDemandaM.Text, m) OrElse m < 0 Then
+            MessageBox.Show("M demanda inválido (debe ser ≥ 0).", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
+        End If
+        If _datosDI Is Nothing OrElse _datosDI.PhiPn.Count < 2 Then
+            MessageBox.Show("Calcule el diagrama primero.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning) : Return
+        End If
+        _demandaP = p : _demandaM = m
+        Dim phiMnAtP = InterpolatePhiMnAtP(p)
+        Dim cd As Single = 0
+        If m > 0.01F AndAlso phiMnAtP > 0.01F Then
+            cd = phiMnAtP / m
+        ElseIf m <= 0.01F AndAlso p > 0.01F AndAlso _datosDI.PhiP0 > 0.01F Then
+            cd = _datosDI.PhiP0 / p
+        End If
+        Dim cumple = cd >= 1.0F
+        lblCD10.Text = String.Format("C/D = {0:F3}  {1}", cd, If(cumple, "✓", "✗"))
+        lblCD10.ForeColor = If(cumple, Color.FromArgb(0, 130, 60), Color.FromArgb(190, 30, 30))
+        tabs.SelectedIndex = 0
+        picDI.Refresh()
+    End Sub
+
+    Private Function InterpolatePhiMnAtP(Pu As Single) As Single
+        If _datosDI Is Nothing OrElse _datosDI.PhiPn.Count < 2 Then Return 0
+        Dim bestM As Single = 0
+        For i = 0 To _datosDI.PhiPn.Count - 2
+            Dim p1 = _datosDI.PhiPn(i), p2 = _datosDI.PhiPn(i + 1)
+            Dim m1 = _datosDI.PhiMn(i), m2 = _datosDI.PhiMn(i + 1)
+            Dim pLo = Math.Min(p1, p2), pHi = Math.Max(p1, p2)
+            If Pu >= pLo AndAlso Pu <= pHi AndAlso Math.Abs(p2 - p1) > 0.001F Then
+                Dim t = (Pu - p1) / (p2 - p1)
+                Dim mInterp = m1 + t * (m2 - m1)
+                If mInterp > bestM Then bestM = mInterp
+            End If
+        Next
+        Return bestM
+    End Function
+
+    ' ══════════════════════════════════════════════════════════════════════
+    '  SUPERFICIE DI 3D
+    ' ══════════════════════════════════════════════════════════════════════
+    Private Sub GenerarSuperficie3D(fc As Single, fy As Single, Es As Single, rec As Single,
+                                     B As Single, H As Single, D As Single)
+        _surf3D = Nothing
+        _maxM3D = 0 : _maxP3D = 0 : _minP3D = 0
+
+        Dim nAng = _nAng3D : Dim nP = _nP3D
+        Dim disPorAngulo(nAng - 1) As DatosDI10
+
+        For a = 0 To nAng - 1
+            Dim theta = CSng(a * 2.0 * Math.PI / nAng)
+            Try
+                If _tipoSec = TipoSeccion10.Rectangular Then
+                    disPorAngulo(a) = DI_Rectangular10(B, H, _barras, fc, fy, Es, rec, theta)
+                Else
+                    disPorAngulo(a) = DI_Circular10(D, _barras, fc, fy, Es, theta)
+                End If
+            Catch
+                disPorAngulo(a) = New DatosDI10()
+            End Try
+        Next
+
+        ' Determinar rango global de P para la grilla uniforme
+        Dim globalPmax = Single.MinValue, globalPmin = Single.MaxValue
+        For a = 0 To nAng - 1
+            Dim di = disPorAngulo(a)
+            If di Is Nothing OrElse di.PhiPn.Count < 2 Then Continue For
+            If di.PhiPn.Max() > globalPmax Then globalPmax = di.PhiPn.Max()
+            If di.PhiPn.Min() < globalPmin Then globalPmin = di.PhiPn.Min()
+        Next
+        If globalPmax <= globalPmin Then Return
+        _maxP3D = globalPmax : _minP3D = globalPmin
+
+        ReDim _surf3D(nP * nAng - 1)
+        Dim maxMsofar As Double = 0
+
+        For pIdx = 0 To nP - 1
+            Dim pVal = CSng(globalPmin + (globalPmax - globalPmin) * pIdx / (nP - 1))
+            For a = 0 To nAng - 1
+                Dim di = disPorAngulo(a)
+                Dim phiMn As Single = 0
+                If di IsNot Nothing AndAlso di.PhiPn.Count > 1 Then
+                    phiMn = InterpolarPhiMnDI3D(di, pVal)
+                End If
+                Dim theta = CSng(a * 2.0 * Math.PI / nAng)
+                ' X = Mx (eje fuerte, cosθ), Y = My (eje débil, sinθ)
+                Dim mx = phiMn * CSng(Math.Cos(theta))
+                Dim my = phiMn * CSng(Math.Sin(theta))
+                _surf3D(pIdx * nAng + a) = New Pt3D10(mx, my, pVal)
+                If Math.Abs(mx) > maxMsofar Then maxMsofar = Math.Abs(mx)
+                If Math.Abs(my) > maxMsofar Then maxMsofar = Math.Abs(my)
+            Next
+        Next
+        _maxM3D = If(maxMsofar < 0.1, 1.0, maxMsofar)
+    End Sub
+
+    Private Function InterpolarPhiMnDI3D(di As DatosDI10, pVal As Single) As Single
+        Dim bestM As Single = 0
+        For i = 0 To di.PhiPn.Count - 2
+            Dim p1 = di.PhiPn(i), p2 = di.PhiPn(i + 1)
+            Dim pLo = Math.Min(p1, p2), pHi = Math.Max(p1, p2)
+            If pVal >= pLo AndAlso pVal <= pHi AndAlso Math.Abs(p2 - p1) > 0.001F Then
+                Dim t = (pVal - p1) / (p2 - p1)
+                Dim m = di.PhiMn(i) + t * (di.PhiMn(i + 1) - di.PhiMn(i))
+                If m > bestM Then bestM = m
+            End If
+        Next
+        Return bestM
+    End Function
+
+    ' ── Paint 3D ────────────────────────────────────────────────────────
+    Private Sub OnPaintDI3D(sender As Object, e As PaintEventArgs)
+        Dim gfx = e.Graphics
+        gfx.Clear(Color.FromArgb(16, 20, 34))
+        gfx.SmoothingMode = SmoothingMode.AntiAlias
+        If _surf3D Is Nothing OrElse _maxM3D < 0.01 Then
+            Dim fntMsg = New Font("Segoe UI", 9, FontStyle.Italic)
+            gfx.DrawString("Presione CALCULAR para generar la superficie 3D",
+                           fntMsg, New SolidBrush(Color.FromArgb(140, 160, 200)),
+                           30, picDI3D.Height / 2 - 10)
+            Return
+        End If
+        Dim W = picDI3D.Width, H = picDI3D.Height
+        Dim cx = W / 2.0F, cy = H / 2.0F
+        Dim baseScale As Double = Math.Min(W, H) * 0.36 * _zoom3D
+        Dim cosAz = Math.Cos(_azim3D), sinAz = Math.Sin(_azim3D)
+        Dim cosEl = Math.Cos(_elev3D), sinEl = Math.Sin(_elev3D)
+        Dim pRange = _maxP3D - _minP3D : If pRange < 1 Then Return
+
+        Dim nP = _nP3D, nAng = _nAng3D
+        Dim screenPts(nP * nAng - 1) As PointF
+        Dim depths(nP * nAng - 1) As Double
+        For idx = 0 To _surf3D.Length - 1
+            Dim nx = _surf3D(idx).X / _maxM3D
+            Dim ny = _surf3D(idx).Y / _maxM3D
+            Dim nz = (_surf3D(idx).Z - (_maxP3D + _minP3D) / 2.0) / pRange
+            screenPts(idx) = Project3D10(nx, ny, nz, cosAz, sinAz, cosEl, sinEl, cx, cy, baseScale, depths(idx))
+        Next
+
+        ' Anillos horizontales (P = cte)
+        Dim ringOrder = Enumerable.Range(0, nP).
+            OrderByDescending(Function(pi) (Enumerable.Range(0, nAng).
+                Sum(Function(ai) depths(pi * nAng + ai)) / nAng)).ToList()
+        For Each pIdx In ringOrder
+            Dim ring(nAng) As Point
+            For aIdx = 0 To nAng - 1
+                Dim sp = screenPts(pIdx * nAng + aIdx)
+                ring(aIdx) = New Point(CInt(sp.X), CInt(sp.Y))
+            Next
+            ring(nAng) = ring(0)
+            Dim avgDepth = Enumerable.Range(0, nAng).Average(Function(ai) depths(pIdx * nAng + ai))
+            Dim alpha = CInt(Math.Max(35, Math.Min(155, 35 + avgDepth * 95)))
+            gfx.DrawLines(New Pen(Color.FromArgb(alpha, 80, 140, 220), 0.7F), ring)
+        Next
+        ' Meridianos (ángulo = cte)
+        For aIdx = 0 To nAng - 1
+            If aIdx Mod 3 <> 0 Then Continue For
+            Dim merid(nP - 1) As Point
+            For pIdx = 0 To nP - 1
+                Dim sp = screenPts(pIdx * nAng + aIdx)
+                merid(pIdx) = New Point(CInt(sp.X), CInt(sp.Y))
+            Next
+            gfx.DrawLines(New Pen(Color.FromArgb(50, 100, 160, 220), 0.5F), merid)
+        Next
+
+        DrawAxes3D10(gfx, cx, cy, baseScale, cosAz, sinAz, cosEl, sinEl)
+
+        ' Leyenda
+        Dim fntL = New Font("Segoe UI", 8.5F)
+        Dim fntLB = New Font("Segoe UI", 9F, FontStyle.Bold)
+        gfx.DrawString("Superficie  φ·Pn – φ·Mn (biaxial)", fntLB,
+                        New SolidBrush(Color.FromArgb(180, 210, 255)), 10, 10)
+        gfx.DrawString("Arrastre: rotar   Rueda: zoom", fntL,
+                        New SolidBrush(Color.FromArgb(130, 150, 200)), 10, 28)
+    End Sub
+
+    Private Function Project3D10(nx As Double, ny As Double, nz As Double,
+                                   cosAz As Double, sinAz As Double,
+                                   cosEl As Double, sinEl As Double,
+                                   cx As Single, cy As Single, scale As Double,
+                                   ByRef depth As Double) As PointF
+        Dim rx = nx * cosAz - ny * sinAz
+        Dim ry = nx * sinAz + ny * cosAz
+        Dim rz = nz
+        Dim px = rx
+        Dim py2 = ry * sinEl + rz * cosEl
+        Dim pz = -ry * cosEl + rz * sinEl
+        depth = pz
+        Return New PointF(CSng(cx + px * scale), CSng(cy - py2 * scale))
+    End Function
+
+    Private Sub DrawAxes3D10(gfx As Graphics, cx As Single, cy As Single, scale As Double,
+                               cosAz As Double, sinAz As Double, cosEl As Double, sinEl As Double)
+        Const axLen As Double = 1.3
+        Dim fnt = New Font("Segoe UI", 9F, FontStyle.Bold)
+        Dim dOrg As Double = 0
+        Dim origin = Project3D10(0, 0, 0, cosAz, sinAz, cosEl, sinEl, cx, cy, scale, dOrg)
+        Dim tips(2) As PointF : Dim dDummy As Double = 0
+        tips(0) = Project3D10(axLen, 0, 0, cosAz, sinAz, cosEl, sinEl, cx, cy, scale, dDummy)
+        tips(1) = Project3D10(0, axLen, 0, cosAz, sinAz, cosEl, sinEl, cx, cy, scale, dDummy)
+        tips(2) = Project3D10(0, 0, axLen, cosAz, sinAz, cosEl, sinEl, cx, cy, scale, dDummy)
+        Dim lbls = {"φ·Mn (eje H)", "φ·Mn (eje B)", "P (+comp)"}
+        Dim clrs = {Color.FromArgb(255, 80, 80), Color.FromArgb(80, 200, 80), Color.FromArgb(100, 160, 255)}
+        For i = 0 To 2
+            gfx.DrawLine(New Pen(clrs(i), 1.5F), origin.X, origin.Y, tips(i).X, tips(i).Y)
+            gfx.DrawString(lbls(i), fnt, New SolidBrush(clrs(i)), tips(i).X + 4, tips(i).Y - 6)
+        Next
+    End Sub
+
+    ' ── Eventos mouse 3D ────────────────────────────────────────────────
+    Private Sub OnDI3D_MouseDown(sender As Object, e As MouseEventArgs)
+        If e.Button = MouseButtons.Left Then
+            _drag3D = True : _drag3DStart = e.Location
+            _azim3DStart = _azim3D : _elev3DStart = _elev3D
+        End If
+    End Sub
+
+    Private Sub OnDI3D_MouseMove(sender As Object, e As MouseEventArgs)
+        If _drag3D Then
+            _azim3D = _azim3DStart + (e.X - _drag3DStart.X) / 200.0
+            _elev3D = Math.Max(-1.4, Math.Min(1.4, _elev3DStart - (e.Y - _drag3DStart.Y) / 200.0))
+            picDI3D.Refresh()
+        End If
+    End Sub
+
+    Private Sub OnDI3D_MouseUp(sender As Object, e As MouseEventArgs)
+        _drag3D = False
+    End Sub
+
+    Private Sub OnDI3D_MouseWheel(sender As Object, e As MouseEventArgs)
+        _zoom3D = Math.Max(0.3, Math.Min(4.0, _zoom3D * If(e.Delta > 0, 1.12, 0.89)))
+        picDI3D.Refresh()
     End Sub
 
 End Class
