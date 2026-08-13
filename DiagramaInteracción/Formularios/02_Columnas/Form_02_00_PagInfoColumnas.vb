@@ -27,12 +27,13 @@ Public Class Form_02_00_PagInfoColumnas
                         Tabla_Info_Seccion.Rows(i).Cells(j).Value = 0
                         Tabla_Info_Seccion.Rows(i + 1).Cells(j).Value = 0
                     Next
-                    Tabla_Info_Seccion.Rows(i).Cells(13).Value = 0
+                    Tabla_Info_Seccion.Rows(i).Cells(13).Value = If(Seccion(i / 2).EsCircular, 1, 0)
                     Tabla_Info_Seccion.Rows(i).Cells(14).Value = 0
                     Tabla_Info_Seccion.Rows(i).Cells(15).Value = "#3"
                     Tabla_Info_Seccion.Rows(i).Cells(16).Value = AreaRefuerzo("#3")
                     Tabla_Info_Seccion.Rows(i).Cells(17).Value = AreaRefuerzo("#3")
-                    Dim sZC_new As Single = Math.Round(Math.Min(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano) / 3, 3)
+                    Dim dimRef As Single = If(Seccion(i / 2).EsCircular, Seccion(i / 2).Diametro, Math.Min(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano))
+                    Dim sZC_new As Single = Math.Round(dimRef / 4, 3)
                     Tabla_Info_Seccion.Rows(i).Cells(18).Value = sZC_new
                     Tabla_Info_Seccion.Rows(i).Cells(19).Value = Math.Round(2 * sZC_new, 3)
                     Tabla_Info_Seccion.Rows(i).Cells(20).Value = 0
@@ -118,8 +119,6 @@ Public Class Form_02_00_PagInfoColumnas
                 AreaRefuerzo("#7") * Seccion(i / 2).Refuerzo_Col_Top.Barras_7 +
                 AreaRefuerzo("#8") * Seccion(i / 2).Refuerzo_Col_Top.Barras_8 +
                 AreaRefuerzo("#10") * Seccion(i / 2).Refuerzo_Col_Top.Barras_10
-            Seccion(i / 2).Cuantia_Col_Top = Seccion(i / 2).As_Col_Top / (Seccion(i / 2).B_Plano * Seccion(i / 2).H_Plano * 1000000)
-            Seccion(i / 2).Cantidad_Barras_Top = Seccion(i / 2).Refuerzo_Col_Top.Barras_2 + Seccion(i / 2).Refuerzo_Col_Top.Barras_3 + Seccion(i / 2).Refuerzo_Col_Top.Barras_4 + Seccion(i / 2).Refuerzo_Col_Top.Barras_5 + Seccion(i / 2).Refuerzo_Col_Top.Barras_6 + Seccion(i / 2).Refuerzo_Col_Top.Barras_7 + Seccion(i / 2).Refuerzo_Col_Top.Barras_8 + Seccion(i / 2).Refuerzo_Col_Top.Barras_10
 
             Seccion(i / 2).As_Col_Bottom =
                 AreaRefuerzo("#2") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_2 +
@@ -130,36 +129,66 @@ Public Class Form_02_00_PagInfoColumnas
                 AreaRefuerzo("#7") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_7 +
                 AreaRefuerzo("#8") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8 +
                 AreaRefuerzo("#10") * Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10
-            Seccion(i / 2).Cuantia_Col_Bottom = Seccion(i / 2).As_Col_Bottom / (Seccion(i / 2).B_Plano * Seccion(i / 2).H_Plano * 1000000)
+
+            Seccion(i / 2).Cantidad_Barras_Top = Seccion(i / 2).Refuerzo_Col_Top.Barras_2 + Seccion(i / 2).Refuerzo_Col_Top.Barras_3 + Seccion(i / 2).Refuerzo_Col_Top.Barras_4 + Seccion(i / 2).Refuerzo_Col_Top.Barras_5 + Seccion(i / 2).Refuerzo_Col_Top.Barras_6 + Seccion(i / 2).Refuerzo_Col_Top.Barras_7 + Seccion(i / 2).Refuerzo_Col_Top.Barras_8 + Seccion(i / 2).Refuerzo_Col_Top.Barras_10
             Seccion(i / 2).Cantidad_Barras_Bottom = Seccion(i / 2).Refuerzo_Col_Bottom.Barras_2 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_3 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_4 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_5 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_6 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_7 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_8 + Seccion(i / 2).Refuerzo_Col_Bottom.Barras_10
 
-            Dim As_Equivalente_Top As Single = Seccion(i / 2).As_Col_Top / Seccion(i / 2).Cantidad_Barras_Top
-            Dim As_Equivalente_Bottom As Single = Seccion(i / 2).As_Col_Bottom / Seccion(i / 2).Cantidad_Barras_Bottom
+            ' Cuantía — área bruta diferente para circular
+            Dim Ag_sec As Single = If(Seccion(i / 2).EsCircular,
+                                      CSng(Math.PI * Seccion(i / 2).Diametro ^ 2 / 4),
+                                      Seccion(i / 2).B_Plano * Seccion(i / 2).H_Plano)
+            Seccion(i / 2).Cuantia_Col_Top    = If(Ag_sec > 0, Seccion(i / 2).As_Col_Top    / (Ag_sec * 1000000), 0)
+            Seccion(i / 2).Cuantia_Col_Bottom = If(Ag_sec > 0, Seccion(i / 2).As_Col_Bottom / (Ag_sec * 1000000), 0)
+
+            Dim As_Equivalente_Top As Single = If(Seccion(i / 2).Cantidad_Barras_Top > 0, Seccion(i / 2).As_Col_Top / Seccion(i / 2).Cantidad_Barras_Top, 0)
+            Dim As_Equivalente_Bottom As Single = If(Seccion(i / 2).Cantidad_Barras_Bottom > 0, Seccion(i / 2).As_Col_Bottom / Seccion(i / 2).Cantidad_Barras_Bottom, 0)
 
             Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Clear()
             Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Clear()
 
-            ' ----- Barras Top -----
-            Dim N_Top As Integer = Seccion(i / 2).Cantidad_Barras_Top
-            Dim Coords_Top = DistribuirBarrasConEsquinas(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, N_Top)
-            For j = 0 To N_Top - 1
-                Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Add(
-                    New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
-                        .Name_Barra = j + 1, .Asb = As_Equivalente_Top,
-                        .Db = Math.Sqrt(4 * As_Equivalente_Top / Math.PI),
-                        .Coordenada_X = Coords_Top(j, 1), .Coordenada_Y = Coords_Top(j, 2)})
-            Next
-
-            ' ----- Barras Bottom -----
-            Dim N_Bot As Integer = Seccion(i / 2).Cantidad_Barras_Bottom
-            Dim Coords_Bot = DistribuirBarrasConEsquinas(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, N_Bot)
-            For j = 0 To N_Bot - 1
-                Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Add(
-                    New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
-                        .Name_Barra = j + 1, .Asb = As_Equivalente_Bottom,
-                        .Db = Math.Sqrt(4 * As_Equivalente_Bottom / Math.PI),
-                        .Coordenada_X = Coords_Bot(j, 1), .Coordenada_Y = Coords_Bot(j, 2)})
-            Next
+            If Seccion(i / 2).EsCircular Then
+                ' Sección circular: distribuir barras en corona
+                Seccion(i / 2).TipoTransversal = "Espiral"
+                Dim N_Top As Integer = Seccion(i / 2).Cantidad_Barras_Top
+                Dim Coords_Top = DistribuirBarrasEnCirculo(Seccion(i / 2).Diametro, 0.05F, N_Top)
+                For j = 0 To N_Top - 1
+                    Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Add(
+                        New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
+                            .Name_Barra = j + 1, .Asb = As_Equivalente_Top,
+                            .Db = Math.Sqrt(4 * As_Equivalente_Top / Math.PI),
+                            .Coordenada_X = Coords_Top(j, 1), .Coordenada_Y = Coords_Top(j, 2)})
+                Next
+                Dim N_Bot As Integer = Seccion(i / 2).Cantidad_Barras_Bottom
+                Dim Coords_Bot = DistribuirBarrasEnCirculo(Seccion(i / 2).Diametro, 0.05F, N_Bot)
+                For j = 0 To N_Bot - 1
+                    Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Add(
+                        New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
+                            .Name_Barra = j + 1, .Asb = As_Equivalente_Bottom,
+                            .Db = Math.Sqrt(4 * As_Equivalente_Bottom / Math.PI),
+                            .Coordenada_X = Coords_Bot(j, 1), .Coordenada_Y = Coords_Bot(j, 2)})
+                Next
+            Else
+                ' ----- Barras Top (rectangular) -----
+                Dim N_Top As Integer = Seccion(i / 2).Cantidad_Barras_Top
+                Dim Coords_Top = DistribuirBarrasConEsquinas(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, N_Top)
+                For j = 0 To N_Top - 1
+                    Seccion(i / 2).Lista_Detalles_Refuerzo_Top.Add(
+                        New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
+                            .Name_Barra = j + 1, .Asb = As_Equivalente_Top,
+                            .Db = Math.Sqrt(4 * As_Equivalente_Top / Math.PI),
+                            .Coordenada_X = Coords_Top(j, 1), .Coordenada_Y = Coords_Top(j, 2)})
+                Next
+                ' ----- Barras Bottom (rectangular) -----
+                Dim N_Bot As Integer = Seccion(i / 2).Cantidad_Barras_Bottom
+                Dim Coords_Bot = DistribuirBarrasConEsquinas(Seccion(i / 2).B_Plano, Seccion(i / 2).H_Plano, N_Bot)
+                For j = 0 To N_Bot - 1
+                    Seccion(i / 2).Lista_Detalles_Refuerzo_Bottom.Add(
+                        New Tramo_Columna.Detalles_Refuerzo_Longitudinal() With {
+                            .Name_Barra = j + 1, .Asb = As_Equivalente_Bottom,
+                            .Db = Math.Sqrt(4 * As_Equivalente_Bottom / Math.PI),
+                            .Coordenada_X = Coords_Bot(j, 1), .Coordenada_Y = Coords_Bot(j, 2)})
+                Next
+            End If
 
             ' Limpiar distribución personalizada si el usuario vuelve a guardar (se regenerará)
             Seccion(i / 2).Distribucion_Personalizada = False
@@ -245,13 +274,16 @@ Public Class Form_02_00_PagInfoColumnas
                     End If
                 End If
 
-            Case 2, 3  ' Base o Alto cambia → auto-calc Sep. ZC y ZNC
+            Case 2, 3  ' Base/Ø o Alto cambia → auto-calc Sep. ZC y ZNC
                 Dim bObj As Object = Tabla_Info_Seccion.Rows(fila).Cells(2).Value
                 Dim hObj As Object = Tabla_Info_Seccion.Rows(fila).Cells(3).Value
                 If bObj IsNot Nothing AndAlso hObj IsNot Nothing Then
                     Dim b As Single, h As Single
-                    If Single.TryParse(bObj.ToString(), b) AndAlso Single.TryParse(hObj.ToString(), h) AndAlso b > 0 AndAlso h > 0 Then
-                        Dim sZC As Single = Math.Round(Math.Min(b, h) / 3, 3)
+                    If Single.TryParse(bObj.ToString(), b) AndAlso Single.TryParse(hObj.ToString(), h) AndAlso b > 0 Then
+                        ' Para sección circular: b = Ø, usar D/4; rectangular: min(b,h)/3
+                        Dim esCircFila As Boolean = (h = 0 OrElse Math.Abs(b - h) < 0.001)
+                        Dim dimMin As Single = If(esCircFila, b, Math.Min(b, h))
+                        Dim sZC As Single = Math.Round(dimMin / If(esCircFila, 4, 3), 3)
                         Tabla_Info_Seccion.Rows(fila).Cells(18).Value = sZC
                         Tabla_Info_Seccion.Rows(fila).Cells(19).Value = Math.Round(2 * sZC, 3)
                     End If
@@ -373,39 +405,46 @@ Public Class Form_02_00_PagInfoColumnas
                 Seccion.F_Flexo_Bottom = Math.Round(Seccion.As_Col_Bottom / Seccion.As_Req_Bottom, 2)
 
                 '---- Verificación a Cortante -------
-                Dim Rev_Cortante_L = FuncionCortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
-                Dim Rev_Cortante_C = FuncionCortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
-                Seccion.Vc_2 = Rev_Cortante_L(1)
-                Seccion.Vs_2 = Rev_Cortante_L(2)
-                Seccion.Vn_2 = Rev_Cortante_L(3)
-                Seccion.Vu_2 = Rev_Cortante_L(4)
-                Seccion.F_Cortante_2 = Rev_Cortante_L(5)
-                Seccion.Vc_3 = Rev_Cortante_C(1)
-                Seccion.Vs_3 = Rev_Cortante_C(2)
-                Seccion.Vn_3 = Rev_Cortante_C(3)
-                Seccion.Vu_3 = Rev_Cortante_C(4)
-                Seccion.F_Cortante_3 = Rev_Cortante_C(5)
+                If Seccion.EsCircular Then
+                    Dim Rev_Cortante = FuncionCortanteCircular(Seccion.Diametro, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Math.Abs(Seccion.V2), Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V2))
+                    Seccion.Vc_2 = Rev_Cortante(1) : Seccion.Vs_2 = Rev_Cortante(2)
+                    Seccion.Vn_2 = Rev_Cortante(3) : Seccion.Vu_2 = Rev_Cortante(4) : Seccion.F_Cortante_2 = Rev_Cortante(5)
+                    Seccion.Vc_3 = Rev_Cortante(1) : Seccion.Vs_3 = Rev_Cortante(2)
+                    Seccion.Vn_3 = Rev_Cortante(3) : Seccion.Vu_3 = Rev_Cortante(4) : Seccion.F_Cortante_3 = Rev_Cortante(5)
+                Else
+                    Dim Rev_Cortante_L = FuncionCortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
+                    Dim Rev_Cortante_C = FuncionCortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
+                    Seccion.Vc_2 = Rev_Cortante_L(1) : Seccion.Vs_2 = Rev_Cortante_L(2)
+                    Seccion.Vn_2 = Rev_Cortante_L(3) : Seccion.Vu_2 = Rev_Cortante_L(4) : Seccion.F_Cortante_2 = Rev_Cortante_L(5)
+                    Seccion.Vc_3 = Rev_Cortante_C(1) : Seccion.Vs_3 = Rev_Cortante_C(2)
+                    Seccion.Vn_3 = Rev_Cortante_C(3) : Seccion.Vu_3 = Rev_Cortante_C(4) : Seccion.F_Cortante_3 = Rev_Cortante_C(5)
+                End If
 
-                '------ Verificaciòn al Confinamiento ------
-                Dim Rev_Confinamiento_L = FuncionConfinamiento(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
-                Dim Rev_Confinamiento_C = FuncionConfinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
-
-                Seccion.Ash_L = Rev_Confinamiento_L(1)
-                Seccion.Ramas_Req_L = Rev_Confinamiento_L(2)
-                Seccion.S0_L = Rev_Confinamiento_L(3)
-                Seccion.L0_L = Rev_Confinamiento_L(4)
-
-                Seccion.Ash_C = Rev_Confinamiento_C(1)
-                Seccion.Ramas_Req_C = Rev_Confinamiento_C(2)
-                Seccion.S0_C = Rev_Confinamiento_C(3)
-                Seccion.L0_C = Rev_Confinamiento_C(4)
-
-                Seccion.F_Ash_Largo = Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)
-                Seccion.F_Ash_Corto = Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)
+                '------ Verificación al Confinamiento ------
+                If Seccion.EsCircular Then
+                    Dim Rev_Conf = FuncionConfinamientoCircular(Seccion.Diametro, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                    Seccion.Ash_L = Rev_Conf(1) : Seccion.Ramas_Req_L = Rev_Conf(2) : Seccion.S0_L = Rev_Conf(3) : Seccion.L0_L = Rev_Conf(4)
+                    Seccion.Ash_C = Rev_Conf(1) : Seccion.Ramas_Req_C = Rev_Conf(2) : Seccion.S0_C = Rev_Conf(3) : Seccion.L0_C = Rev_Conf(4)
+                    Dim aspReal As Single = Seccion.Ash_Col_Largo   ' = 1 * As_espiral
+                    Seccion.F_Ash_Largo = Math.Round(If(Seccion.Ash_L > 0, aspReal / Seccion.Ash_L, 100), 2)
+                    Seccion.F_Ash_Corto = Seccion.F_Ash_Largo
+                Else
+                    Dim Rev_Confinamiento_L = FuncionConfinamiento(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                    Dim Rev_Confinamiento_C = FuncionConfinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                    Seccion.Ash_L = Rev_Confinamiento_L(1) : Seccion.Ramas_Req_L = Rev_Confinamiento_L(2) : Seccion.S0_L = Rev_Confinamiento_L(3) : Seccion.L0_L = Rev_Confinamiento_L(4)
+                    Seccion.Ash_C = Rev_Confinamiento_C(1) : Seccion.Ramas_Req_C = Rev_Confinamiento_C(2) : Seccion.S0_C = Rev_Confinamiento_C(3) : Seccion.L0_C = Rev_Confinamiento_C(4)
+                    Seccion.F_Ash_Largo = Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)
+                    Seccion.F_Ash_Corto = Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)
+                End If
 
                 ' D/C biaxial (diagrama de interacción)
                 Dim combosD = Proyecto.Elementos.Columnas.ListA_Combinaciones_Design
-                If Seccion.Distribucion_Personalizada Then
+                If Seccion.EsCircular Then
+                    Dim okTop = FuncionDiagramaColumnaCircular(Seccion, 420.0F, 200000.0F, "Top", combosD)
+                    Dim dcTop As Single = If(okTop, Seccion.F_Interaccion, 0)
+                    FuncionDiagramaColumnaCircular(Seccion, 420.0F, 200000.0F, "Bottom", combosD)
+                    If dcTop > Seccion.F_Interaccion Then Seccion.F_Interaccion = dcTop
+                ElseIf Seccion.Distribucion_Personalizada Then
                     FuncionDiagramaColumna(Seccion, 420.0F, 200000.0F, "Top", combosD)
                 Else
                     Dim okTop = FuncionDiagramaColumna(Seccion, 420.0F, 200000.0F, "Top", combosD)
@@ -454,7 +493,10 @@ Public Class Form_02_00_PagInfoColumnas
                 If combMatch Is Nothing Then Continue For
                 Dim Valor_ALR As New Columna.ALR
                 Valor_ALR.Combinacion = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR(j)
-                Valor_ALR.ALR = Math.Round(Math.Abs(combMatch.P) / (ultimoTramo.fc * ultimoTramo.B_Plano * ultimoTramo.H_Plano * 1000), 2)
+                Dim Ag_alr As Single = If(ultimoTramo.EsCircular,
+                                          CSng(Math.PI * ultimoTramo.Diametro ^ 2 / 4),
+                                          ultimoTramo.B_Plano * ultimoTramo.H_Plano)
+                Valor_ALR.ALR = Math.Round(Math.Abs(combMatch.P) / (ultimoTramo.fc * Ag_alr * 1000), 2)
                 col.Lista_ALR.Add(Valor_ALR)
             Next
         Next

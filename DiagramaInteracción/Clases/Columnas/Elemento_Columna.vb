@@ -146,6 +146,11 @@ Public Class Tramo_Columna
     Public M2u_Gob_DI As Single
     Public M3u_Gob_DI As Single
 
+    ' === SECCIÓN CIRCULAR ===
+    <OptionalField> Public EsCircular As Boolean
+    <OptionalField> Public Diametro As Single
+    <OptionalField> Public TipoTransversal As String   ' "Espiral" | "Estribos"
+
     <OnDeserializing>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         Lista_Detalles_Refuerzo_Top = New List(Of Detalles_Refuerzo_Longitudinal)
@@ -161,6 +166,9 @@ Public Class Tramo_Columna
         Lista_DI_Pn_M3 = New List(Of Single)
         Lista_DI_Mn_M2 = New List(Of Single)
         Lista_DI_Pn_M2 = New List(Of Single)
+        EsCircular = False
+        Diametro = 0
+        TipoTransversal = "Estribos"
     End Sub
 
     <Serializable>

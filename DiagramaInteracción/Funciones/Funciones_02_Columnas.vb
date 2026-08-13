@@ -195,6 +195,32 @@ Public Class Funciones_02_Columnas
         Return dict
     End Function
 
+    ''' <summary>
+    ''' Escanea la fila 0 (encabezados) de una tabla ETABS de secciones y retorna un diccionario
+    ''' nombre_canónico→índice_columna. Soporta E17 y E23 (con o sin columnas "File Name" / "Section in File").
+    ''' Claves garantizadas: Name, Material, Depth, Width. Clave "Diameter" presente solo si existe columna circular.
+    ''' </summary>
+    Public Shared Function IndicesColumnasSecciones(Tabla As DataGridView) As Dictionary(Of String, Integer)
+        Dim dict As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+        ' Valores por defecto para formato E17: Name=0, Material=1, Depth=3, Width=4
+        dict("Name") = 0
+        dict("Material") = 1
+        dict("Depth") = 3
+        dict("Width") = 4
+        If Tabla Is Nothing OrElse Tabla.Rows.Count = 0 Then Return dict
+        For ci = 0 To Tabla.Columns.Count - 1
+            Dim h As String = If(Tabla.Rows(0).Cells(ci).Value?.ToString().Trim(), "")
+            Select Case h.ToUpperInvariant()
+                Case "NAME"               : dict("Name") = ci
+                Case "MATERIAL"           : dict("Material") = ci
+                Case "DEPTH"              : dict("Depth") = ci
+                Case "WIDTH"              : dict("Width") = ci
+                Case "DIAMETER"           : dict("Diameter") = ci
+            End Select
+        Next
+        Return dict
+    End Function
+
     ''' <summary>Construye la clave de combinación canónica. Normaliza E17 ("Envolvente Min" → "Envolvente (Min)").</summary>
     Public Shared Function ConstruirClaveCombo(ByVal outputCase As String, ByVal stepType As String) As String
         If Not String.IsNullOrWhiteSpace(stepType) Then
@@ -458,6 +484,176 @@ Public Class Funciones_02_Columnas
         Loop
 
         Return coords
+    End Function
+
+    ' =========================================================
+    '  SECCIONES CIRCULARES — geometría, cortante, confinamiento, DI
+    ' =========================================================
+
+    ' Distribuye N barras en corona circular. Radio = D/2 - recub.
+    ' Retorna coords(0..N-1, 1..2) donde (i,1)=X, (i,2)=Y en metros, centradas en (0,0).
+    Public Shared Function DistribuirBarrasEnCirculo(D As Single, recub As Single, N As Integer) As Single(,)
+        Dim coords(Math.Max(N - 1, 0), 2) As Single
+        If N <= 0 OrElse D <= 0.05F Then Return coords
+        Dim Rb As Single = D / 2.0F - recub
+        For i = 0 To N - 1
+            Dim ang As Double = 2 * Math.PI * i / N + Math.PI / 2   ' arranca en la corona superior
+            coords(i, 1) = CSng(Rb * Math.Cos(ang))
+            coords(i, 2) = CSng(Rb * Math.Sin(ang))
+        Next
+        Return coords
+    End Function
+
+    ' Retorna la designación de la barra predominante en el refuerzo longitudinal.
+    Private Shared Function BarraDominante(ref As Tramo_Columna.Refuerzo_Longitudinal) As String
+        If ref.Barras_10 > 0 Then Return "#10"
+        If ref.Barras_8 > 0 Then Return "#8"
+        If ref.Barras_7 > 0 Then Return "#7"
+        If ref.Barras_6 > 0 Then Return "#6"
+        If ref.Barras_5 > 0 Then Return "#5"
+        If ref.Barras_4 > 0 Then Return "#4"
+        If ref.Barras_3 > 0 Then Return "#3"
+        Return "#2"
+    End Function
+
+    ' Cortante para sección circular. bw = D, d = 0.8·D.
+    ' La espiral (o estribo circular) aporta 2 ramas al plano de corte.
+    ' Devuelve Revision(5): (1)=φVc, (2)=φVs, (3)=φVn, (4)=Vu_max, (5)=φVn/Vu.
+    Public Shared Function FuncionCortanteCircular(ByVal D As Single, ByVal fc As Single, ByVal Fy As Single,
+                                                   ByVal s As Single, ByVal Ref_Trans As String,
+                                                   ByVal Vu2 As Single, ByVal Vu3 As Single, ByVal Pu As Single)
+        Dim Revision(5)
+        Dim Asp As Single = AreaRefuerzo(Ref_Trans)
+        Dim d_ef As Single = 0.8F * D
+        Dim Ag As Single = CSng(Math.PI * D ^ 2 / 4)
+        Dim Ae As Single = D * d_ef
+
+        Dim Vc0 As Single = 0.17F * 0.75F * CSng(Math.Sqrt(fc)) * Ag * 1000
+        Dim Vc1 As Single = 0.17F * 0.75F * (1 + Pu / (14000 * Ag)) * CSng(Math.Sqrt(fc)) * Ae * 1000
+        Dim Vc As Single = Math.Min(Vc1, Vc0)
+        Dim Vs As Single = 0.75F * 2 * Asp * Fy * d_ef / (s * 1000)
+        Dim Vn As Single = Vc + Vs
+        Dim Vu As Single = Math.Max(Vu2, Vu3)
+        Dim Fmax As Single = If(Vu > 0.001F, Vn / Vu, 100.0F)
+
+        Revision(1) = Math.Round(Vc, 2)
+        Revision(2) = Math.Round(Vs, 2)
+        Revision(3) = Math.Round(Vn, 2)
+        Revision(4) = Math.Round(Vu, 2)
+        Revision(5) = Math.Round(Fmax, 2)
+        FuncionCortanteCircular = Revision
+    End Function
+
+    ' Confinamiento para columna circular con espiral (NSR-10 C.21.6.4.1).
+    ' Devuelve Revision(4): (1)=Asp_req (mm²), (2)=1, (3)=s0_max (m), (4)=L0 (m).
+    Public Shared Function FuncionConfinamientoCircular(ByVal D As Single, ByVal fc As Single, ByVal fy As Single,
+                                                        ByVal s As Single, ByVal Numero_Barra_Min_Long As String,
+                                                        ByVal Numero_Barra_Estribo As String, ByVal Disipacion As String)
+        Dim recub As Single = 0.04F
+        Dim Dc As Single = D - 2 * recub
+        Dim Ag As Single = CSng(Math.PI * D ^ 2 / 4)
+        Dim Ach As Single = CSng(Math.PI * Dc ^ 2 / 4)
+
+        Dim Db_Long As Single = DiametroRefuerzo(Numero_Barra_Min_Long)
+
+        Dim rhoS_a As Single = 0.45F * (Ag / Ach - 1) * fc / fy
+        Dim rhoS_b As Single = 0.12F * fc / fy
+        Dim rhoS_req As Single = Math.Max(rhoS_a, rhoS_b)
+
+        ' Asp_req = ρs_req · Dc · s / 4   [m²] → mm²
+        Dim Asp_req As Single = rhoS_req * Dc * s / 4 * 1000000
+
+        Dim S0 As Single = CSng(Math.Min(Math.Min(D / 4, 6 * Db_Long), 0.15))
+        Dim L0 As Single = CSng(Math.Max(Math.Max(2.3 / 6, D), 0.5))
+
+        If Disipacion = "DES" Then
+            S0 = CSng(Math.Min(Math.Min(D / 4, 6 * Db_Long), 0.1))
+            L0 = CSng(Math.Max(2.3 / 6, 0.45))
+        End If
+
+        Dim Resultado(4)
+        Resultado(1) = CSng(Math.Round(Asp_req, 1))
+        Resultado(2) = 1.0F
+        Resultado(3) = S0
+        Resultado(4) = L0
+        FuncionConfinamientoCircular = Resultado
+    End Function
+
+    Public Shared Function FuncionALRCircular(ByVal D As Single, ByVal fc As Single, ByVal Pu As Single) As Single
+        Dim Ag As Single = CSng(Math.PI * D ^ 2 / 4)
+        Return Pu / (Ag * fc * 1000)
+    End Function
+
+    ' Genera el diagrama de interacción para sección circular (reutiliza Funciones_01_Pilas)
+    ' y evalúa todas las combinaciones de diseño (Bresler lineal). Isótropo: M3 = M2.
+    ' Retorna True si el diagrama se calculó, False si no hay refuerzo.
+    Public Shared Function FuncionDiagramaColumnaCircular(
+        ByVal tramo As Tramo_Columna,
+        ByVal fy As Single,
+        ByVal Es As Single,
+        ByVal estacion As String,
+        Optional ByVal combosDiseno As IEnumerable(Of String) = Nothing) As Boolean
+
+        Dim refuerzo = If(estacion = "Top", tramo.Refuerzo_Col_Top, tramo.Refuerzo_Col_Bottom)
+        Dim nBarras As Integer = If(estacion = "Top", tramo.Cantidad_Barras_Top, tramo.Cantidad_Barras_Bottom)
+        If nBarras = 0 Then Return False
+
+        Dim barra As String = BarraDominante(refuerzo)
+        Dim D As Single = tramo.Diametro
+        Dim recub As Single = 0.05F   ' recubrimiento al centroide de barra longitudinal (m)
+
+        Dim res = Funciones_01_Pilas.DiagramaInteraccionCircular(D, recub, barra, 0, nBarras, tramo.fc, Es, 0.003F, fy)
+
+        Dim nPts As Integer = CInt(res(1, 5))
+        If nPts < 2 Then Return False
+
+        Dim phiP As New List(Of Single)
+        Dim phiMn As New List(Of Single)
+        Dim Pn As New List(Of Single)
+        Dim Mn As New List(Of Single)
+
+        For k = 1 To nPts
+            phiP.Add(CSng(res(k, 3)))
+            phiMn.Add(CSng(res(k, 4)))
+            Pn.Add(CSng(res(k, 1)))
+            Mn.Add(CSng(res(k, 2)))
+        Next
+
+        ' Circular isótropo: M3 = M2
+        tramo.Lista_DI_M3_P_Phi = phiP
+        tramo.Lista_DI_M3_Phi = phiMn
+        tramo.Lista_DI_Pn_M3 = Pn
+        tramo.Lista_DI_Mn_M3 = Mn
+        tramo.Lista_DI_M2_P_Phi = phiP.ToList()
+        tramo.Lista_DI_M2_Phi = phiMn.ToList()
+        tramo.Lista_DI_Pn_M2 = Pn.ToList()
+        tramo.Lista_DI_Mn_M2 = Mn.ToList()
+
+        ' Verificar combinaciones de diseño (Bresler lineal)
+        Dim maxDC As Single = 0
+        Dim comboGob As String = ""
+        Dim combosAEvaluar = If(combosDiseno IsNot Nothing AndAlso combosDiseno.Any(),
+                                tramo.Lista_Combinaciones.Where(Function(c) combosDiseno.Contains(c.Name)).ToList(),
+                                tramo.Lista_Combinaciones)
+        For Each combo In combosAEvaluar
+            Dim Pu_dia As Single = -combo.P
+            Dim M3u As Single = Math.Abs(combo.M3)
+            Dim M2u As Single = Math.Abs(combo.M2)
+            Dim phiMn_at_Pu As Single = InterpolarMnEnPu(phiP, phiMn, Pu_dia)
+            Dim DC As Single = 0
+            If phiMn_at_Pu > 0.001F Then DC = (M3u + M2u) / phiMn_at_Pu
+            If DC > maxDC Then
+                maxDC = DC
+                comboGob = combo.Name
+                tramo.Pu_Gob_DI = combo.P
+                tramo.M3u_Gob_DI = combo.M3
+                tramo.M2u_Gob_DI = combo.M2
+            End If
+        Next
+
+        tramo.F_Interaccion = Math.Round(maxDC, 3)
+        tramo.Combo_Gobernante_DI = comboGob
+        Return True
     End Function
 
     Public Shared Function CoordenadasBarras(ByVal B As Single, ByVal H As Single, ByVal Cantidad As Integer, ByVal Cantidad_Corto As Integer, ByVal Cantidad_Largo As Integer)

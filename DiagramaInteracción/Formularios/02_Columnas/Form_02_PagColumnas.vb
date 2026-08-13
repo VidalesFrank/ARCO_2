@@ -5,6 +5,8 @@ Imports ARCO.Funciones_02_Columnas
 Public Class Form_02_PagColumnas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Public Shared Columna As New Columna
+    ' Secciones circulares detectadas en "Frame Sec Def - Conc Circle": nombre → (diámetro m, material)
+    Private Shared _SeccionesCirculares As New Dictionary(Of String, Tuple(Of Single, String))(StringComparer.OrdinalIgnoreCase)
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         Me.Cursor = Cursors.WaitCursor
         Columna = New Columna()
@@ -26,7 +28,6 @@ Public Class Form_02_PagColumnas
             Dim Tabla As DataGridView
 
             Dim Col_Diseno = ColumnasDiseno("Frame")
-            Dim Col_Secciones = ColumnasSecciones("Frame")
             Dim Col_Fuerzas = ColumnasFuerzas("Frame")
 
             If Proyecto.Elementos.Columnas.Info_Diseño = True Then
@@ -85,11 +86,11 @@ Public Class Form_02_PagColumnas
             If Proyecto.Elementos.Columnas.Info_Secciones = True Then
                 Tabla = Tabla_secciones
 
-                Dim Col_Piso As Integer = Col_Secciones(0)
-                Dim Col_Name As Integer = Col_Secciones(1)
-                Dim Col_Material As Integer = Col_Secciones(2)
-                Dim Col_B As Integer = Col_Secciones(3)
-                Dim Col_H As Integer = Col_Secciones(4)
+                Dim cols_S = IndicesColumnasSecciones(Tabla_secciones)
+                Dim Col_Name     As Integer = cols_S("Name")
+                Dim Col_Material As Integer = cols_S("Material")
+                Dim Col_B        As Integer = cols_S("Depth")
+                Dim Col_H        As Integer = cols_S("Width")
 
                 For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
                     Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento
@@ -97,17 +98,47 @@ Public Class Form_02_PagColumnas
                     For Np = 0 To Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas.Count - 1
 
                         For j = 2 To Tabla.Rows.Count - 1
-                            If Tabla.Rows(j).Cells(Col_Name).Value <> String.Empty And Tabla.Rows(j).Cells(Col_Name).Value = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Seccion Then
+                            Dim celdaNombre = Tabla.Rows(j).Cells(Col_Name).Value
+                            If celdaNombre IsNot Nothing AndAlso celdaNombre IsNot DBNull.Value AndAlso
+                               celdaNombre.ToString() <> String.Empty AndAlso
+                               celdaNombre.ToString() = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Seccion Then
+
+                                Dim rawB = Tabla.Rows(j).Cells(Col_B).Value
+                                Dim rawH = Tabla.Rows(j).Cells(Col_H).Value
+                                If rawB Is Nothing OrElse rawB Is DBNull.Value OrElse
+                                   rawH Is Nothing OrElse rawH Is DBNull.Value Then Continue For
+
                                 ' E23: dimensiones en m (Depth=H, Width=B)
-                                Dim valB As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_B).Value)
-                                Dim valH As Single = Convert.ToSingle(Tabla.Rows(j).Cells(Col_H).Value)
+                                Dim valB As Single = Convert.ToSingle(rawB)
+                                Dim valH As Single = Convert.ToSingle(rawH)
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo = Math.Min(valB, valH)
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo = Math.Max(valB, valH)
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Plano = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Plano = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo
-                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value, 1, 2))
+                                Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value.ToString(), 1, 2))
                             End If
                         Next
+
+                        ' Fallback: sección circular (no encontrada en Conc Rect)
+                        Dim tr = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np)
+                        If tr.B_Modelo = 0 Then
+                            Dim secNombre As String = tr.Seccion
+                            If _SeccionesCirculares.ContainsKey(secNombre) Then
+                                Dim info = _SeccionesCirculares(secNombre)
+                                Dim D As Single = info.Item1
+                                tr.EsCircular = True
+                                tr.Diametro = D
+                                tr.B_Modelo = D : tr.H_Modelo = D
+                                tr.B_Plano = D : tr.H_Plano = D
+                                tr.TipoTransversal = "Espiral"
+                                Dim matStr As String = info.Item2
+                                If matStr.Length >= 2 Then
+                                    Dim fcStr As String = matStr.Trim().Substring(0, 2).Trim()
+                                    Dim fcVal As Single
+                                    If Single.TryParse(fcStr, fcVal) Then tr.fc = fcVal
+                                End If
+                            End If
+                        End If
                     Next
                 Next
             End If
@@ -709,6 +740,43 @@ Public Class Form_02_PagColumnas
             Da.SelectCommand = Cmd
             Da.Fill(Ds)
             Dt = Ds.Tables(0)
+
+            ' Si cargamos secciones de Frame, también buscar Conc Circle para columnas circulares
+            If Op = "Secciones" AndAlso Elemento = "Frame" Then
+                Dim hCirc As String = sheetNames.FirstOrDefault(Function(s) s.ToUpperInvariant().Contains("CONC CIRCLE"))
+                If hCirc IsNot Nothing Then
+                    Try
+                        Dim DsCirc As New DataSet
+                        Dim DaCirc As New OleDbDataAdapter(New OleDbCommand($"Select * From [{hCirc}]", cnConex))
+                        DaCirc.Fill(DsCirc)
+                        Dim DtCirc As DataTable = DsCirc.Tables(0)
+                        _SeccionesCirculares.Clear()
+                        If DtCirc.Rows.Count >= 3 Then
+                            Dim colName As Integer = -1, colDiam As Integer = -1, colMat As Integer = -1
+                            For ci = 0 To DtCirc.Columns.Count - 1
+                                Dim h As String = If(DtCirc.Rows(0)(ci) IsNot DBNull.Value, DtCirc.Rows(0)(ci).ToString().Trim().ToUpperInvariant(), "")
+                                If h = "NAME" Then colName = ci
+                                If h = "DIAMETER" Then colDiam = ci
+                                If h = "MATERIAL" Then colMat = ci
+                            Next
+                            If colName >= 0 AndAlso colDiam >= 0 Then
+                                For r = 2 To DtCirc.Rows.Count - 1
+                                    Dim nm As String = If(DtCirc.Rows(r)(colName) IsNot DBNull.Value, DtCirc.Rows(r)(colName).ToString().Trim(), "")
+                                    Dim dmStr As String = If(DtCirc.Rows(r)(colDiam) IsNot DBNull.Value, DtCirc.Rows(r)(colDiam).ToString(), "")
+                                    Dim matStr As String = If(colMat >= 0 AndAlso DtCirc.Rows(r)(colMat) IsNot DBNull.Value, DtCirc.Rows(r)(colMat).ToString().Trim(), "")
+                                    Dim diam As Single
+                                    If nm <> "" AndAlso Single.TryParse(dmStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, diam) AndAlso diam > 0 Then
+                                        _SeccionesCirculares(nm) = Tuple.Create(diam, matStr)
+                                    End If
+                                Next
+                            End If
+                        End If
+                    Catch ex As Exception
+                        Logger.Warning("Importar_Datos_de_Excel", "No se pudo leer Conc Circle: " & ex.Message)
+                    End Try
+                End If
+            End If
+
             Datagrid.Columns.Clear()
             Datagrid.DataSource = Dt
             cnConex.Close()
