@@ -52,6 +52,7 @@ Partial Class Form_Graficos
         Me.Panel1.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Panel1.Controls.Add(Me.PictureBox1)
         Me.Panel1.Controls.Add(Me.Label2)
+        Me.Panel1.Controls.Add(Me.Boton_Exportar)
         Me.Panel1.Controls.Add(Me.Boton_Cortante)
         Me.Panel1.Controls.Add(Me.Boton_Flexo)
         Me.Panel1.Controls.Add(Me.Boton_ALR)
@@ -100,6 +101,22 @@ Partial Class Form_Graficos
         Me.Boton_Cortante.TabIndex = 16
         Me.Boton_Cortante.Text = "Cortante"
         Me.Boton_Cortante.UseVisualStyleBackColor = False
+        '
+        'Boton_Exportar
+        '
+        Me.Boton_Exportar.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Boton_Exportar.BackColor = System.Drawing.Color.FromArgb(CType(CType(31, Byte), Integer), CType(CType(73, Byte), Integer), CType(CType(125, Byte), Integer))
+        Me.Boton_Exportar.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(CType(CType(60, Byte), Integer), CType(CType(110, Byte), Integer), CType(CType(180, Byte), Integer))
+        Me.Boton_Exportar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.Boton_Exportar.Font = New System.Drawing.Font("Segoe UI", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Exportar.ForeColor = System.Drawing.Color.White
+        Me.Boton_Exportar.Location = New System.Drawing.Point(3, 240)
+        Me.Boton_Exportar.Name = "Boton_Exportar"
+        Me.Boton_Exportar.Size = New System.Drawing.Size(160, 40)
+        Me.Boton_Exportar.TabIndex = 19
+        Me.Boton_Exportar.Text = "Exportar imagen..."
+        Me.Boton_Exportar.UseVisualStyleBackColor = False
         '
         'Boton_Flexo
         '
@@ -260,6 +277,7 @@ Partial Class Form_Graficos
     Friend WithEvents EditarToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents CombinacionesDeAnálisisToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents Boton_Cortante As Button
+    Friend WithEvents Boton_Exportar As Button
     Friend WithEvents Label2 As Label
     Friend WithEvents PictureBox1 As PictureBox
     Friend WithEvents MenuStrip1 As MenuStrip

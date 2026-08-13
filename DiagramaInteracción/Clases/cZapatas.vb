@@ -1,4 +1,5 @@
-﻿Imports ARCO.cZapata
+Imports ARCO.cZapata
+Imports System.Runtime.Serialization
 
 <Serializable>
 Public Class cZapatas
@@ -18,6 +19,15 @@ Public Class cZapatas
     Public Lista_Combinaciones_Estaticas As New List(Of String)
     Public Lista_Combinaciones_Dinamicas As New List(Of String)
 
+    <OnDeserialized>
+    Private Sub InicializarDefaults(ctx As StreamingContext)
+        If Tipos Is Nothing Then Tipos = New List(Of cZapata)
+        If Apoyos Is Nothing Then Apoyos = New List(Of cApoyo)
+        If Reactions Is Nothing Then Reactions = New List(Of cCombinacionPila)
+        If Lista_Combinaciones Is Nothing Then Lista_Combinaciones = New List(Of String)
+        If Lista_Combinaciones_Estaticas Is Nothing Then Lista_Combinaciones_Estaticas = New List(Of String)
+        If Lista_Combinaciones_Dinamicas Is Nothing Then Lista_Combinaciones_Dinamicas = New List(Of String)
+    End Sub
 
     ' Ejecutar toda la revisión del proyecto
     Public Sub EvaluarTodas()
@@ -40,7 +50,5 @@ Public Class cZapatas
         Next
 
     End Sub
-
-
 
 End Class

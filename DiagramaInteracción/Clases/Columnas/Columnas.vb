@@ -1,4 +1,5 @@
-﻿Imports ARCO.eNumeradores
+Imports ARCO.eNumeradores
+Imports System.Runtime.Serialization
 
 <Serializable>
 Public Class Columna
@@ -22,14 +23,22 @@ Public Class Columna
     Public Ref_Modificado As Boolean
 
     ' ===== Tramos =====
-    Public Lista_Tramos_Columnas As New List(Of Tramo_Columna)
+    <OptionalField> Public Lista_Tramos_Columnas As New List(Of Tramo_Columna)
 
     ' ===== Resultados ALR =====
-    Public Lista_ALR As New List(Of ALR)
+    <OptionalField> Public Lista_ALR As New List(Of ALR)
 
     ' ===== Fuerzas verticales =====
-    Public Lista_F As New List(Of Single)
-    Public Lista_F_Piso As New List(Of String)
+    <OptionalField> Public Lista_F As New List(Of Single)
+    <OptionalField> Public Lista_F_Piso As New List(Of String)
+
+    <OnDeserialized>
+    Private Sub InicializarDefaults(ctx As StreamingContext)
+        If Lista_Tramos_Columnas Is Nothing Then Lista_Tramos_Columnas = New List(Of Tramo_Columna)
+        If Lista_ALR Is Nothing Then Lista_ALR = New List(Of ALR)
+        If Lista_F Is Nothing Then Lista_F = New List(Of Single)
+        If Lista_F_Piso Is Nothing Then Lista_F_Piso = New List(Of String)
+    End Sub
 
     <Serializable>
     Public Class ALR
@@ -46,7 +55,6 @@ Public Class Columna
         Public Property EspesorAlma As Single
 
         Public Function Area() As Single
-            ' Puedes programar la fórmula dependiendo del tipo de sección
             Return 0
         End Function
 

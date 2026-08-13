@@ -274,10 +274,29 @@ Public Class Form_00_PaginaPrincipal
         Try
             proyecto = Funciones_Programa.DeSerializar(Of Proyecto)(dlg.FileName)
             proyecto.Ruta = dlg.FileName
+
+            Dim eraAntiguo As Boolean = (proyecto.VersionFormato < Proyecto.VersionActual)
+            If eraAntiguo Then
+                proyecto.VersionFormato = Proyecto.VersionActual
+                _hayCambiosPP = True
+            Else
+                _hayCambiosPP = False
+            End If
+
             SincronizarModulos()
-            _hayCambiosPP = False
-            MessageBox.Show("Proyecto abierto correctamente.", "Abrir",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+            If eraAntiguo Then
+                MessageBox.Show(
+                    "Proyecto abierto correctamente." & vbCrLf & vbCrLf &
+                    "Este archivo fue guardado con una versión anterior de ARCO." & vbCrLf &
+                    "Guarde el proyecto ahora (Archivo > Guardar) para actualizar su" & vbCrLf &
+                    "formato y garantizar compatibilidad total con todas las funciones.",
+                    "Formato desactualizado — se recomienda guardar",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Else
+                MessageBox.Show("Proyecto abierto correctamente.", "Abrir",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
         Catch ex As Exception
             Logger.Critical(ex, "Form_00_PaginaPrincipal.Open",
                             "No se pudo abrir el proyecto. El archivo puede estar dañado o ser de una versión incompatible.")
@@ -304,6 +323,7 @@ Public Class Form_00_PaginaPrincipal
         Form_06_PagMuros.proyecto    = proyecto
         Form_07_Pag_Zapatas.Proyecto = proyecto
         Form_09_Vigas.Proyecto       = proyecto
+        Form_11_Nervios.Proyecto     = proyecto
 
         ' ── Recargar UI de todos los módulos ─────────────────────────────────
         Form_02_PagColumnas.RefrescarDesdeProyecto()
@@ -311,6 +331,7 @@ Public Class Form_00_PaginaPrincipal
         Form_06_PagMuros.RefrescarDesdeProyecto()
         Form_07_Pag_Zapatas.RefrescarDesdeProyecto()
         Form_09_Vigas.RefrescarDesdeProyecto()
+        Form_11_Nervios.RefrescarDesdeProyecto()
     End Sub
 
     Private Sub InformaciónDeProyectoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles InformaciónDeProyectoToolStripMenuItem.Click
@@ -703,5 +724,11 @@ Public Class Form_00_PaginaPrincipal
     Private Sub Button3_Click_1(sender As Object, e As EventArgs) Handles Button3.Click
         Form_09_Vigas.Show()
         Form_09_Vigas.WindowState = FormWindowState.Maximized
+    End Sub
+
+    Private Sub BtnNervios_Click(sender As Object, e As EventArgs) Handles BtnNervios.Click
+        Form_11_Nervios.Proyecto = proyecto
+        Form_11_Nervios.Show()
+        Form_11_Nervios.WindowState = FormWindowState.Maximized
     End Sub
 End Class
