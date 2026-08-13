@@ -55,7 +55,7 @@ Public Class Form_09_Vigas
             ' Filtrar frames tipo beam y aplicar filtro de secciones del usuario
             Dim seccFiltro = Proyecto.Elementos.Vigas.SeccionesSeleccionadas
             Dim beams As List(Of cFrame) = Frames _
-                .Where(Function(f) f.ObjectLabel.StartsWith("B")) _
+                .Where(Function(f) f.ObjectLabel.StartsWith("B", StringComparison.OrdinalIgnoreCase)) _
                 .Where(Function(f) seccFiltro.Count = 0 OrElse
                                    (f.Section IsNot Nothing AndAlso seccFiltro.Contains(f.Section.Nombre))) _
                 .ToList()
@@ -69,6 +69,12 @@ Public Class Form_09_Vigas
                 _vigaService.OrdenarFramesViga(v, jointsDict)
             Next
 
+            ' Asignar eje estructural más cercano a cada apoyo (requiere grids de ETABS)
+            Dim gridsEjes = Proyecto?.Elementos?.Grids?.GridLines
+            If gridsEjes IsNot Nothing AndAlso gridsEjes.Count > 0 Then
+                _geo.AsignarEjesAVigas(vigas, gridsEjes, jointsDict)
+            End If
+
             ' Reaplicar agrupaciones manuales previas del usuario
             If Proyecto.Elementos.Vigas.GruposManual.Count > 0 Then
                 _vigaService.AplicarGruposManual(vigas, Proyecto.Elementos.Vigas.GruposManual, jointsDict)
@@ -81,7 +87,16 @@ Public Class Form_09_Vigas
 
             _vigaService.CalcularEnvolventesVigas(vigas,
                                                   Proyecto.Elementos.Vigas.BeamForces,
-                                                  New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c))))
+                                                  New HashSet(Of String)(
+                                                      Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)),
+                                                      StringComparer.OrdinalIgnoreCase))
+
+            Dim diagMomentos As String = _vigaService.DiagnosticarFuerzasAsignadas(vigas)
+            If diagMomentos IsNot Nothing Then
+                Logger.Warning("Form_09_Vigas.Button1_Click", diagMomentos)
+                MessageBox.Show(diagMomentos, "Advertencia — Fuerzas sin asignar",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End If
 
             _vigaService.designVigas(vigas, Proyecto.Elementos.Joints)
 
@@ -90,7 +105,9 @@ Public Class Form_09_Vigas
             If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
                 _vigaService.CalcularEnvolventeCortante(vigas,
                                                         Proyecto.Elementos.Vigas.BeamForces,
-                                                        New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c))))
+                                                        New HashSet(Of String)(
+                                                            Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                                                            StringComparer.OrdinalIgnoreCase))
                 _vigaService.CalcularCapacidadCortante(vigas)
             End If
 
@@ -221,12 +238,24 @@ Public Class Form_09_Vigas
                     End If
 
                     Dim hBeamForces = ResolverNombreHoja(hojas, "Element Forces - Beams", "Beam Forces")
-                    Proyecto.Elementos.Vigas.Tabla_BeamForces = LeerHojaExcel(path, hBeamForces)
+                    Dim posibleTruncamiento As Boolean = False
+                    Proyecto.Elementos.Vigas.BeamForces = CargarBeamForcesDesdeExcel(path, hBeamForces, posibleTruncamiento)
+                    Proyecto.Elementos.Vigas.Tabla_BeamForces = Nothing  ' liberar memoria
+
+                    If posibleTruncamiento Then
+                        MessageBox.Show(
+                            "Advertencia: la hoja de fuerzas de vigas está cerca del límite de 1.048.576 filas de Excel." &
+                            vbCrLf & vbCrLf &
+                            "Es probable que los resultados de las combinaciones de diseño (MAX/MIN) hayan quedado cortados." &
+                            vbCrLf & vbCrLf &
+                            "Para obtener datos completos, re-exporte desde ETABS seleccionando únicamente las combinaciones de " &
+                            "envolvente de diseño en la configuración de salida (Output Options).",
+                            "Datos de vigas posiblemente incompletos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    End If
 
                     Dim hGrids = ResolverNombreHoja(hojas, "Grid Definitions - Grid Lines", "Grid Lines")
                     Dim Table_Grids As DataTable = LeerHojaExcel(path, hGrids)
-
-                    Proyecto.Elementos.Vigas.BeamForces = DataTableToBeamForces(Proyecto.Elementos.Vigas.Tabla_BeamForces)
 
                     Proyecto.Elementos.Grids.GridLines = DataTableToGridLines(Table_Grids)
 
@@ -308,7 +337,9 @@ Public Class Form_09_Vigas
 
         If viga Is Nothing Then Exit Sub
 
-        Dim combinaciones = New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)))
+        Dim combinaciones = New HashSet(Of String)(
+            Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)),
+            StringComparer.OrdinalIgnoreCase)
 
         Dim beamForces = Proyecto.Elementos.Vigas.BeamForces _
             .Where(Function(bf) combinaciones.Contains(bf.LoadCaseKey)) _
@@ -318,7 +349,9 @@ Public Class Form_09_Vigas
         _DiagramaService.DibujarDiagramaMomentoFrames(viga, Diagrama_Momento, beamForces, combinaciones)
 
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
-            Dim combsCortante_cv = New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)))
+            Dim combsCortante_cv = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
             Dim bfCortante = Proyecto.Elementos.Vigas.BeamForces _
                 .Where(Function(bf) combsCortante_cv.Contains(bf.LoadCaseKey)) _
                 .ToList()
@@ -797,7 +830,9 @@ Public Class Form_09_Vigas
         _vigaService.CalcularCortantePlastico(
             vigas,
             Proyecto.Elementos.Vigas.BeamForces,
-            New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Select(Function(c) NormalizarClaveCombo(c))),
+            New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase),
             fy_factor)
 
         ActualizarTablaCortantePlastico()
@@ -984,9 +1019,11 @@ Public Class Form_09_Vigas
 
         If labelsAgregar.Count = 0 AndAlso labelsQuitar.Count = 0 Then Return
 
-        ' Mover frames desde otras vigas hacia la viga actual
+        ' Mover frames desde otras vigas hacia la viga actual (mismo piso solamente)
         For Each label In labelsAgregar
-            Dim srcViga = _vigas.FirstOrDefault(Function(v) v.Frames.Any(Function(f) f.ObjectLabel = label))
+            Dim srcViga = _vigas.FirstOrDefault(
+                Function(v) v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase) AndAlso
+                            v.Frames.Any(Function(f) f.ObjectLabel = label))
             If srcViga Is Nothing Then Continue For
             Dim frame = srcViga.Frames.First(Function(f) f.ObjectLabel = label)
             srcViga.Frames.Remove(frame)
@@ -1057,7 +1094,8 @@ Public Class Form_09_Vigas
     Private Sub RecalcularListaVigas(vigas As List(Of cViga))
 
         Dim combsDesign = New HashSet(Of String)(
-            Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)))
+            Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)),
+            StringComparer.OrdinalIgnoreCase)
 
         _vigaService.CalcularEnvolventesVigas(vigas, Proyecto.Elementos.Vigas.BeamForces, combsDesign)
         _vigaService.designVigas(vigas, Proyecto.Elementos.Joints)
@@ -1065,7 +1103,8 @@ Public Class Form_09_Vigas
 
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
             Dim combsCortante = New HashSet(Of String)(
-                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)))
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
             _vigaService.CalcularEnvolventeCortante(vigas, Proyecto.Elementos.Vigas.BeamForces, combsCortante)
             _vigaService.CalcularCapacidadCortante(vigas)
         End If
@@ -1864,7 +1903,9 @@ Public Class Form_09_Vigas
 
         ' Recalcular cortante con el nuevo refuerzo transversal (zonas N×s)
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
-            Dim combsCortante_ap = New HashSet(Of String)(Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)))
+            Dim combsCortante_ap = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
             Dim listaViga As New List(Of cViga) From {viga}
             _vigaService.CalcularEnvolventeCortante(listaViga,
                                                     Proyecto.Elementos.Vigas.BeamForces,

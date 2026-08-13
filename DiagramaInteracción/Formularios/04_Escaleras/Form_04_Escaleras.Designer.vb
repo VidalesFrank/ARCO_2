@@ -51,6 +51,7 @@ Partial Class Form_04_Escaleras
         Me.ToolStripMenuItem5 = New System.Windows.Forms.ToolStripMenuItem()
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
+        Me.TabPage2 = New System.Windows.Forms.TabPage()
         Me.GroupBox16 = New System.Windows.Forms.GroupBox()
         Me.P_Momento = New System.Windows.Forms.PictureBox()
         Me.T_Mmax = New System.Windows.Forms.TextBox()
@@ -134,6 +135,7 @@ Partial Class Form_04_Escaleras
         Me.MenuStrip2.SuspendLayout()
         Me.TabControl1.SuspendLayout()
         Me.TabPage1.SuspendLayout()
+        Me.TabPage2.SuspendLayout()
         Me.GroupBox16.SuspendLayout()
         CType(Me.P_Momento, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox14.SuspendLayout()
@@ -447,6 +449,7 @@ Partial Class Form_04_Escaleras
         'TabControl1
         '
         Me.TabControl1.Controls.Add(Me.TabPage1)
+        Me.TabControl1.Controls.Add(Me.TabPage2)
         Me.TabControl1.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControl1.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.TabControl1.Location = New System.Drawing.Point(313, 37)
@@ -478,7 +481,18 @@ Partial Class Form_04_Escaleras
         Me.TabPage1.Padding = New System.Windows.Forms.Padding(4)
         Me.TabPage1.Size = New System.Drawing.Size(1306, 757)
         Me.TabPage1.TabIndex = 0
-        Me.TabPage1.Text = "Datos Iniciales"
+        Me.TabPage1.Text = "Diseño"
+        '
+        'TabPage2
+        '
+        Me.TabPage2.BackColor = System.Drawing.Color.FromArgb(CType(CType(200, Byte), Integer), CType(CType(200, Byte), Integer), CType(CType(200, Byte), Integer))
+        Me.TabPage2.Location = New System.Drawing.Point(4, 29)
+        Me.TabPage2.Margin = New System.Windows.Forms.Padding(4)
+        Me.TabPage2.Name = "TabPage2"
+        Me.TabPage2.Padding = New System.Windows.Forms.Padding(4)
+        Me.TabPage2.Size = New System.Drawing.Size(1306, 757)
+        Me.TabPage2.TabIndex = 1
+        Me.TabPage2.Text = "Deflexiones y Refuerzo Superior"
         '
         'GroupBox16
         '
@@ -1369,6 +1383,8 @@ Partial Class Form_04_Escaleras
         Me.TabControl1.ResumeLayout(False)
         Me.TabPage1.ResumeLayout(False)
         Me.TabPage1.PerformLayout()
+        Me.TabPage2.ResumeLayout(False)
+        Me.TabPage2.PerformLayout()
         Me.GroupBox16.ResumeLayout(False)
         CType(Me.P_Momento, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox14.ResumeLayout(False)
@@ -1486,5 +1502,6 @@ Partial Class Form_04_Escaleras
     Friend WithEvents New_Escaleras As ToolStripMenuItem
     Friend WithEvents Open_Escaleras As ToolStripMenuItem
     Friend WithEvents Save_Escaleras As ToolStripMenuItem
+    Friend WithEvents TabPage2 As TabPage
     Friend WithEvents SaveAs_Escaleras As ToolStripMenuItem
 End Class

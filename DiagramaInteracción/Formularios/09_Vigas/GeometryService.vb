@@ -141,5 +141,70 @@ Public Class GeometryService
 
     End Function
 
+    ''' Asigna EjeApoyo_I / EjeApoyo_J a cada frame de la viga buscando el grid
+    ''' perpendicular más cercano al joint correspondiente dentro de la tolerancia.
+    ''' Beams en X → busca grids Direction="X" (líneas verticales, Ordinate=X).
+    ''' Beams en Y → busca grids Direction="Y" (líneas horizontales, Ordinate=Y).
+    Public Sub AsignarEjesAViga(viga As cViga,
+                                grids As List(Of cGridLine),
+                                joints As Dictionary(Of String, cJoint),
+                                Optional tolMax As Double = 0.5)
+
+        If grids Is Nothing OrElse grids.Count = 0 Then Exit Sub
+        If viga.Frames Is Nothing OrElse viga.Frames.Count = 0 Then Exit Sub
+
+        Dim esX As Boolean = Math.Abs(viga.Direccion.X) >= Math.Abs(viga.Direccion.Y)
+        Dim dirBuscar As String = If(esX, "X", "Y")
+
+        Dim gridsPerp = grids.Where(Function(g) g.Direction = dirBuscar AndAlso
+                                                Not String.IsNullOrWhiteSpace(g.GridID)).ToList()
+        If gridsPerp.Count = 0 Then Exit Sub
+
+        For Each frame In viga.Frames
+            frame.EjeApoyo_I = BuscarEjeMasCercano(frame.JointI, gridsPerp, joints, esX, tolMax)
+            frame.EjeApoyo_J = BuscarEjeMasCercano(frame.JointJ, gridsPerp, joints, esX, tolMax)
+        Next
+
+    End Sub
+
+    Private Function BuscarEjeMasCercano(jointId As String,
+                                         grids As List(Of cGridLine),
+                                         joints As Dictionary(Of String, cJoint),
+                                         esX As Boolean,
+                                         tolMax As Double) As String
+
+        Dim j As cJoint = Nothing
+        If Not joints.TryGetValue(jointId, j) Then Return ""
+
+        Dim coord As Double = If(esX, j.GlobalX, j.GlobalY)
+
+        Dim mejor As String = ""
+        Dim menorDist As Double = Double.MaxValue
+
+        For Each gl In grids
+            Dim dist = Math.Abs(coord - gl.Ordinate)
+            If dist < menorDist Then
+                menorDist = dist
+                mejor = gl.GridID
+            End If
+        Next
+
+        Return If(menorDist <= tolMax, mejor, "")
+
+    End Function
+
+    ''' Asigna ejes estructurales a todas las vigas de la lista.
+    Public Sub AsignarEjesAVigas(vigas As List(Of cViga),
+                                 grids As List(Of cGridLine),
+                                 joints As Dictionary(Of String, cJoint),
+                                 Optional tolMax As Double = 0.5)
+
+        If vigas Is Nothing OrElse grids Is Nothing Then Exit Sub
+        For Each v In vigas
+            AsignarEjesAViga(v, grids, joints, tolMax)
+        Next
+
+    End Sub
+
 
 End Class

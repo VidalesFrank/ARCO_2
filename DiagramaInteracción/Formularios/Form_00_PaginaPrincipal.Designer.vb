@@ -55,7 +55,10 @@ Partial Class Form_00_PaginaPrincipal
         Me.SoporteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.LicenciaToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
         Me.Panel2 = New System.Windows.Forms.Panel()
+        Me.PictureBox10 = New System.Windows.Forms.PictureBox()
+        Me.PictureBox9 = New System.Windows.Forms.PictureBox()
         Me.Button3 = New System.Windows.Forms.Button()
+        Me.BtnNervios = New System.Windows.Forms.Button()
         Me.Button2 = New System.Windows.Forms.Button()
         Me.PictureBox8 = New System.Windows.Forms.PictureBox()
         Me.Button1 = New System.Windows.Forms.Button()
@@ -85,10 +88,10 @@ Partial Class Form_00_PaginaPrincipal
         Me.Label1 = New System.Windows.Forms.Label()
         Me.Imag_Logo = New System.Windows.Forms.PictureBox()
         Me.Panel1 = New System.Windows.Forms.Panel()
-        Me.PictureBox9 = New System.Windows.Forms.PictureBox()
-        Me.PictureBox10 = New System.Windows.Forms.PictureBox()
         Me.Menu_Form00.SuspendLayout()
         Me.Panel2.SuspendLayout()
+        CType(Me.PictureBox10, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.PictureBox9, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.PictureBox8, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.PictureBox3, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.PictureBox7, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -103,8 +106,6 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel3.SuspendLayout()
         CType(Me.Imag_Logo, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel1.SuspendLayout()
-        CType(Me.PictureBox9, System.ComponentModel.ISupportInitialize).BeginInit()
-        CType(Me.PictureBox10, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'Menu_Form00
@@ -381,6 +382,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel2.Controls.Add(Me.PictureBox10)
         Me.Panel2.Controls.Add(Me.PictureBox9)
         Me.Panel2.Controls.Add(Me.Button3)
+        Me.Panel2.Controls.Add(Me.BtnNervios)
         Me.Panel2.Controls.Add(Me.Button2)
         Me.Panel2.Controls.Add(Me.PictureBox8)
         Me.Panel2.Controls.Add(Me.Button1)
@@ -407,10 +409,34 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel2.Controls.Add(Me.Panel3)
         Me.Panel2.Dock = System.Windows.Forms.DockStyle.Fill
         Me.Panel2.Location = New System.Drawing.Point(0, 43)
-        Me.Panel2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Panel2.Margin = New System.Windows.Forms.Padding(4)
         Me.Panel2.Name = "Panel2"
         Me.Panel2.Size = New System.Drawing.Size(1468, 612)
         Me.Panel2.TabIndex = 1
+        '
+        'PictureBox10
+        '
+        Me.PictureBox10.BackColor = System.Drawing.Color.White
+        Me.PictureBox10.Image = CType(resources.GetObject("PictureBox10.Image"), System.Drawing.Image)
+        Me.PictureBox10.Location = New System.Drawing.Point(1131, 257)
+        Me.PictureBox10.Margin = New System.Windows.Forms.Padding(4)
+        Me.PictureBox10.Name = "PictureBox10"
+        Me.PictureBox10.Size = New System.Drawing.Size(49, 57)
+        Me.PictureBox10.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox10.TabIndex = 44
+        Me.PictureBox10.TabStop = False
+        '
+        'PictureBox9
+        '
+        Me.PictureBox9.BackColor = System.Drawing.Color.White
+        Me.PictureBox9.Image = CType(resources.GetObject("PictureBox9.Image"), System.Drawing.Image)
+        Me.PictureBox9.Location = New System.Drawing.Point(456, 257)
+        Me.PictureBox9.Margin = New System.Windows.Forms.Padding(4)
+        Me.PictureBox9.Name = "PictureBox9"
+        Me.PictureBox9.Size = New System.Drawing.Size(49, 57)
+        Me.PictureBox9.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox9.TabIndex = 43
+        Me.PictureBox9.TabStop = False
         '
         'Button3
         '
@@ -428,6 +454,23 @@ Partial Class Form_00_PaginaPrincipal
         Me.Button3.Text = "         VIGAS "
         Me.Button3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         Me.Button3.UseVisualStyleBackColor = True
+        '
+        'BtnNervios
+        '
+        Me.BtnNervios.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.BtnNervios.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
+        Me.BtnNervios.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.BtnNervios.Font = New System.Drawing.Font("Segoe UI", 18.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.BtnNervios.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.BtnNervios.ImageAlign = System.Drawing.ContentAlignment.TopCenter
+        Me.BtnNervios.Location = New System.Drawing.Point(433, 438)
+        Me.BtnNervios.Margin = New System.Windows.Forms.Padding(0)
+        Me.BtnNervios.Name = "BtnNervios"
+        Me.BtnNervios.Size = New System.Drawing.Size(312, 80)
+        Me.BtnNervios.TabIndex = 50
+        Me.BtnNervios.Text = "         NERVIOS"
+        Me.BtnNervios.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.BtnNervios.UseVisualStyleBackColor = True
         '
         'Button2
         '
@@ -451,7 +494,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox8.BackColor = System.Drawing.Color.White
         Me.PictureBox8.Image = CType(resources.GetObject("PictureBox8.Image"), System.Drawing.Image)
         Me.PictureBox8.Location = New System.Drawing.Point(791, 257)
-        Me.PictureBox8.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox8.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox8.Name = "PictureBox8"
         Me.PictureBox8.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox8.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -480,7 +523,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox3.BackColor = System.Drawing.Color.White
         Me.PictureBox3.Image = CType(resources.GetObject("PictureBox3.Image"), System.Drawing.Image)
         Me.PictureBox3.Location = New System.Drawing.Point(1129, 353)
-        Me.PictureBox3.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox3.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox3.Name = "PictureBox3"
         Me.PictureBox3.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -492,7 +535,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox7.BackColor = System.Drawing.Color.White
         Me.PictureBox7.Image = CType(resources.GetObject("PictureBox7.Image"), System.Drawing.Image)
         Me.PictureBox7.Location = New System.Drawing.Point(455, 353)
-        Me.PictureBox7.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox7.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox7.Name = "PictureBox7"
         Me.PictureBox7.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox7.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -504,7 +547,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox6.BackColor = System.Drawing.Color.White
         Me.PictureBox6.Image = CType(resources.GetObject("PictureBox6.Image"), System.Drawing.Image)
         Me.PictureBox6.Location = New System.Drawing.Point(792, 353)
-        Me.PictureBox6.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox6.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox6.Name = "PictureBox6"
         Me.PictureBox6.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox6.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -516,7 +559,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox5.BackColor = System.Drawing.Color.White
         Me.PictureBox5.Image = CType(resources.GetObject("PictureBox5.Image"), System.Drawing.Image)
         Me.PictureBox5.Location = New System.Drawing.Point(1131, 161)
-        Me.PictureBox5.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox5.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox5.Name = "PictureBox5"
         Me.PictureBox5.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox5.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -528,7 +571,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox4.BackColor = System.Drawing.Color.White
         Me.PictureBox4.Image = CType(resources.GetObject("PictureBox4.Image"), System.Drawing.Image)
         Me.PictureBox4.Location = New System.Drawing.Point(456, 161)
-        Me.PictureBox4.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox4.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox4.Name = "PictureBox4"
         Me.PictureBox4.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox4.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -540,7 +583,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox2.BackColor = System.Drawing.Color.White
         Me.PictureBox2.Image = CType(resources.GetObject("PictureBox2.Image"), System.Drawing.Image)
         Me.PictureBox2.Location = New System.Drawing.Point(792, 161)
-        Me.PictureBox2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox2.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox2.Name = "PictureBox2"
         Me.PictureBox2.Size = New System.Drawing.Size(49, 57)
         Me.PictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -553,7 +596,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel4.Controls.Add(Me.Ref2)
         Me.Panel4.Dock = System.Windows.Forms.DockStyle.Bottom
         Me.Panel4.Location = New System.Drawing.Point(345, 544)
-        Me.Panel4.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Panel4.Margin = New System.Windows.Forms.Padding(4)
         Me.Panel4.Name = "Panel4"
         Me.Panel4.Size = New System.Drawing.Size(1123, 68)
         Me.Panel4.TabIndex = 31
@@ -652,7 +695,7 @@ Partial Class Form_00_PaginaPrincipal
         'Boton_Propiedades
         '
         Me.Boton_Propiedades.Location = New System.Drawing.Point(747, 775)
-        Me.Boton_Propiedades.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Boton_Propiedades.Margin = New System.Windows.Forms.Padding(4)
         Me.Boton_Propiedades.Name = "Boton_Propiedades"
         Me.Boton_Propiedades.Size = New System.Drawing.Size(157, 33)
         Me.Boton_Propiedades.TabIndex = 15
@@ -665,7 +708,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Imag_Col.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Imag_Col.Image = CType(resources.GetObject("Imag_Col.Image"), System.Drawing.Image)
         Me.Imag_Col.Location = New System.Drawing.Point(120, 817)
-        Me.Imag_Col.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Imag_Col.Margin = New System.Windows.Forms.Padding(4)
         Me.Imag_Col.Name = "Imag_Col"
         Me.Imag_Col.Size = New System.Drawing.Size(57, 57)
         Me.Imag_Col.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -694,7 +737,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Imag_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Imag_Pilas.Image = CType(resources.GetObject("Imag_Pilas.Image"), System.Drawing.Image)
         Me.Imag_Pilas.Location = New System.Drawing.Point(123, 737)
-        Me.Imag_Pilas.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Imag_Pilas.Margin = New System.Windows.Forms.Padding(4)
         Me.Imag_Pilas.Name = "Imag_Pilas"
         Me.Imag_Pilas.Size = New System.Drawing.Size(51, 54)
         Me.Imag_Pilas.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -722,7 +765,7 @@ Partial Class Form_00_PaginaPrincipal
         '
         Me.PictureBox1.Image = CType(resources.GetObject("PictureBox1.Image"), System.Drawing.Image)
         Me.PictureBox1.Location = New System.Drawing.Point(857, 582)
-        Me.PictureBox1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.PictureBox1.Margin = New System.Windows.Forms.Padding(4)
         Me.PictureBox1.Name = "PictureBox1"
         Me.PictureBox1.Size = New System.Drawing.Size(372, 94)
         Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage
@@ -747,7 +790,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Opcion1.AutoSize = True
         Me.Opcion1.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Opcion1.Location = New System.Drawing.Point(724, 737)
-        Me.Opcion1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Opcion1.Margin = New System.Windows.Forms.Padding(4)
         Me.Opcion1.Name = "Opcion1"
         Me.Opcion1.Size = New System.Drawing.Size(230, 29)
         Me.Opcion1.TabIndex = 1
@@ -762,7 +805,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel3.Controls.Add(Me.Imag_Logo)
         Me.Panel3.Dock = System.Windows.Forms.DockStyle.Left
         Me.Panel3.Location = New System.Drawing.Point(0, 0)
-        Me.Panel3.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Panel3.Margin = New System.Windows.Forms.Padding(4)
         Me.Panel3.Name = "Panel3"
         Me.Panel3.Size = New System.Drawing.Size(345, 612)
         Me.Panel3.TabIndex = 30
@@ -799,7 +842,7 @@ Partial Class Form_00_PaginaPrincipal
         '
         Me.Imag_Logo.Image = Global.ARCO.My.Resources.Resources.ARCO_LOGOGRIS
         Me.Imag_Logo.Location = New System.Drawing.Point(4, 0)
-        Me.Imag_Logo.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Imag_Logo.Margin = New System.Windows.Forms.Padding(4)
         Me.Imag_Logo.Name = "Imag_Logo"
         Me.Imag_Logo.Size = New System.Drawing.Size(340, 401)
         Me.Imag_Logo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage
@@ -816,30 +859,6 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel1.Size = New System.Drawing.Size(1468, 43)
         Me.Panel1.TabIndex = 23
         '
-        'PictureBox9
-        '
-        Me.PictureBox9.BackColor = System.Drawing.Color.White
-        Me.PictureBox9.Image = CType(resources.GetObject("PictureBox9.Image"), System.Drawing.Image)
-        Me.PictureBox9.Location = New System.Drawing.Point(456, 257)
-        Me.PictureBox9.Margin = New System.Windows.Forms.Padding(4)
-        Me.PictureBox9.Name = "PictureBox9"
-        Me.PictureBox9.Size = New System.Drawing.Size(49, 57)
-        Me.PictureBox9.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.PictureBox9.TabIndex = 43
-        Me.PictureBox9.TabStop = False
-        '
-        'PictureBox10
-        '
-        Me.PictureBox10.BackColor = System.Drawing.Color.White
-        Me.PictureBox10.Image = CType(resources.GetObject("PictureBox10.Image"), System.Drawing.Image)
-        Me.PictureBox10.Location = New System.Drawing.Point(1131, 257)
-        Me.PictureBox10.Margin = New System.Windows.Forms.Padding(4)
-        Me.PictureBox10.Name = "PictureBox10"
-        Me.PictureBox10.Size = New System.Drawing.Size(49, 57)
-        Me.PictureBox10.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.PictureBox10.TabIndex = 44
-        Me.PictureBox10.TabStop = False
-        '
         'Form_00_PaginaPrincipal
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
@@ -851,7 +870,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.Controls.Add(Me.Panel1)
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.MainMenuStrip = Me.Menu_Form00
-        Me.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Margin = New System.Windows.Forms.Padding(4)
         Me.Name = "Form_00_PaginaPrincipal"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "ARCO"
@@ -859,6 +878,8 @@ Partial Class Form_00_PaginaPrincipal
         Me.Menu_Form00.PerformLayout()
         Me.Panel2.ResumeLayout(False)
         Me.Panel2.PerformLayout()
+        CType(Me.PictureBox10, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.PictureBox9, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.PictureBox8, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.PictureBox3, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.PictureBox7, System.ComponentModel.ISupportInitialize).EndInit()
@@ -875,8 +896,6 @@ Partial Class Form_00_PaginaPrincipal
         CType(Me.Imag_Logo, System.ComponentModel.ISupportInitialize).EndInit()
         Me.Panel1.ResumeLayout(False)
         Me.Panel1.PerformLayout()
-        CType(Me.PictureBox9, System.ComponentModel.ISupportInitialize).EndInit()
-        CType(Me.PictureBox10, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
@@ -942,6 +961,7 @@ Partial Class Form_00_PaginaPrincipal
     Friend WithEvents Button1 As Button
     Friend WithEvents Button2 As Button
     Friend WithEvents Button3 As Button
+    Friend WithEvents BtnNervios As Button
     Friend WithEvents PictureBox10 As PictureBox
     Friend WithEvents PictureBox9 As PictureBox
 End Class

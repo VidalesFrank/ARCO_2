@@ -266,6 +266,7 @@
     <Compile Include="Clases\Columnas\cColumnas.vb" />
     <Compile Include="Clases\Columnas\Columnas.vb" />
     <Compile Include="Clases\Columnas\Elemento_Columna.vb" />
+    <Compile Include="Clases\Nervios\cNervios.vb" />
     <Compile Include="Clases\cParametrosSismicos.vb" />
     <Compile Include="Clases\cResultadosGlobales.vb" />
     <Compile Include="Clases\cTablasETABS.vb" />
@@ -359,6 +360,16 @@
     </Compile>
     <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
+    <Compile Include="Formularios\11_Nervios\NervioService.vb" />
+    <Compile Include="Formularios\11_Nervios\Form_11_SepararNervio.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_11_00_InfoNervios.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_11_01_Resultados.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
       <DependentUpon>Form_Logos.vb</DependentUpon>
     </Compile>
@@ -381,6 +392,12 @@
       <DependentUpon>Form_09_Vigas.vb</DependentUpon>
     </Compile>
     <Compile Include="Formularios\Form_09_Vigas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_11_Nervios.Designer.vb">
+      <DependentUpon>Form_11_Nervios.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_11_Nervios.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_AyudaImportacion.vb">

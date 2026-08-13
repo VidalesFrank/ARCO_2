@@ -593,7 +593,8 @@ Public Class DiagramaService
                 TransformX(offset),
                 TransformX(offset + sInicio),
                 pictureBox.Height,
-                margin)
+                margin,
+                df.Frame.EjeApoyo_I)
 
             End If
 
@@ -610,7 +611,8 @@ Public Class DiagramaService
                 TransformX(x1),
                 TransformX(x2),
                 pictureBox.Height,
-                margin)
+                margin,
+                df.Frame.EjeApoyo_J)
 
             Else
 
@@ -618,7 +620,8 @@ Public Class DiagramaService
                 TransformX(offset + sFinal),
                 TransformX(offset + L),
                 pictureBox.Height,
-                margin)
+                margin,
+                df.Frame.EjeApoyo_J)
 
             End If
 
@@ -645,7 +648,8 @@ Public Class DiagramaService
                          x1 As Single,
                          x2 As Single,
                          pictureHeight As Integer,
-                         margin As Single)
+                         margin As Single,
+                         Optional label As String = "")
 
         Dim rect As New RectangleF(
         x1,
@@ -656,6 +660,18 @@ Public Class DiagramaService
         Using brush As New SolidBrush(Color.FromArgb(90, Color.Gray))
             g.FillRectangle(brush, rect)
         End Using
+
+        If Not String.IsNullOrWhiteSpace(label) Then
+            Using fntEje As New Font("Segoe UI", 8.5F, FontStyle.Bold)
+                Dim sz = g.MeasureString(label, fntEje)
+                Dim xLbl = (x1 + x2) / 2.0F - sz.Width / 2.0F
+                Dim yLbl = margin - sz.Height - 2.0F
+                Using brBg As New SolidBrush(Color.FromArgb(210, Color.White))
+                    g.FillRectangle(brBg, xLbl - 1, yLbl - 1, sz.Width + 2, sz.Height + 2)
+                End Using
+                g.DrawString(label, fntEje, Brushes.DimGray, xLbl, yLbl)
+            End Using
+        End If
 
     End Sub
 
@@ -990,9 +1006,12 @@ Public Class DiagramaService
                                               combinaciones As HashSet(Of String)
                                               ) As Dictionary(Of String, List(Of cCombinacionBeamForce))
 
+        Dim beamKey As String = frame.ObjectLabel.Trim().ToUpperInvariant()
+        Dim storyKey As String = frame.Story.Trim().ToUpperInvariant()
+
         Dim bfFrame = beamForces _
-        .Where(Function(r) r.Beam = frame.ObjectLabel _
-        AndAlso r.Story = frame.Story _
+        .Where(Function(r) r.Beam.Trim().ToUpperInvariant() = beamKey _
+        AndAlso r.Story.Trim().ToUpperInvariant() = storyKey _
         AndAlso combinaciones.Contains(r.LoadCaseKey)) _
         .ToList()
 

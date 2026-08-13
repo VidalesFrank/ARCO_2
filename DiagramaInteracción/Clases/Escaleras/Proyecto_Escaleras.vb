@@ -1,4 +1,6 @@
-﻿<Serializable>
+Imports System.Runtime.Serialization
+
+<Serializable>
 Public Class Proyecto_Escaleras
 
     Public Nombre As String
@@ -38,7 +40,7 @@ Public Class Proyecto_Escaleras
     Public S_Temperatura_Colocada As Single
     Public Verificacion_Temperatura As Single
 
-    '-- Diseno flexion --
+    '-- Diseno flexion (capa inferior) --
     Public Mu As Single
     Public Acero_Flexion As Single
     Public Cuantia_Flexion As Single
@@ -53,5 +55,66 @@ Public Class Proyecto_Escaleras
     Public Vc As Single
     Public Verificacion_Cortante As Boolean
 
+    '-- Refuerzo superior (doble capa) --
+    <OptionalField>
+    Public RequiereDobleRefuerzo As Boolean
+    <OptionalField>
+    Public Acero_Superior_Requerido As Single
+    <OptionalField>
+    Public Cuantia_Superior As Single
+    <OptionalField>
+    Public Acero_Superior_Colocado As Single
+    <OptionalField>
+    Public Cuantia_Superior_Colocada As Single
+    <OptionalField>
+    Public Barra_Superior As Integer
+    <OptionalField>
+    Public S_Superior As Single
+    <OptionalField>
+    Public S_Superior_Colocada As Single
+    <OptionalField>
+    Public Verificacion_Superior As Boolean
+
+    '-- Condicion de susceptibilidad para limite de deflexion --
+    <OptionalField>
+    Public ElementosSusceptibles As Boolean   ' True → L/480 | False → L/240
+
+    '-- Deflexiones --
+    <OptionalField>
+    Public Ig As Single
+    <OptionalField>
+    Public Icr As Single
+    <OptionalField>
+    Public Ie As Single
+    <OptionalField>
+    Public Mcr As Single
+    <OptionalField>
+    Public fr As Single
+    <OptionalField>
+    Public Ec As Single
+    <OptionalField>
+    Public W_Equivalente As Single
+    <OptionalField>
+    Public Delta_Inmediata As Single
+    <OptionalField>
+    Public Delta_LP As Single
+    <OptionalField>
+    Public Delta_Adm_360 As Single
+    <OptionalField>
+    Public Delta_Adm_480 As Single
+    <OptionalField>
+    Public Verif_Deflexion_360 As Boolean
+    <OptionalField>
+    Public Verif_Deflexion_480 As Boolean
+
+    <OnDeserialized>
+    Private Sub OnDeserialized(ctx As StreamingContext)
+        If Abscisas Is Nothing Then Abscisas = New List(Of Single)
+        If Momentos Is Nothing Then Momentos = New List(Of Single)
+        If Cortantes Is Nothing Then Cortantes = New List(Of Single)
+        ' Proyectos antiguos sin este campo: asumir condición conservadora (L/480)
+        ' ElementosSusceptibles = False (default Boolean) en proyectos viejos → corregir a True
+        ' No es posible distinguir "no guardado" de "guardado como False", así que se deja al usuario.
+    End Sub
 
 End Class

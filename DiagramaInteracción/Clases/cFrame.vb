@@ -1,4 +1,5 @@
 ﻿Imports ARCO.eNumeradores
+Imports System.Runtime.Serialization
 
 <Serializable>
 Public Class cFrame
@@ -22,6 +23,36 @@ Public Class cFrame
     Public Property RefuerzoTransversal As New List(Of cRefuerzoTransversalZona)
     Public Property RevisionCortante As New List(Of cRevisionCortanteZona)
     Public Property CortantePlastico As cResultadoCortantePlasticoFrame
+
+    ' Eje estructural más cercano al apoyo (GridID de ETABS, ej. "A", "1")
+    <OptionalField>
+    Private _ejeApoyoI As String
+    <OptionalField>
+    Private _ejeApoyoJ As String
+
+    Public Property EjeApoyo_I As String
+        Get
+            Return If(_ejeApoyoI, "")
+        End Get
+        Set(value As String)
+            _ejeApoyoI = value
+        End Set
+    End Property
+
+    Public Property EjeApoyo_J As String
+        Get
+            Return If(_ejeApoyoJ, "")
+        End Get
+        Set(value As String)
+            _ejeApoyoJ = value
+        End Set
+    End Property
+
+    <OnDeserialized>
+    Private Sub OnDeserialized(ctx As StreamingContext)
+        If _ejeApoyoI Is Nothing Then _ejeApoyoI = ""
+        If _ejeApoyoJ Is Nothing Then _ejeApoyoJ = ""
+    End Sub
 
     Public Overrides Function ToString() As String
         Return $"{Story} - {ElementLabel} - {ObjectLabel} ({JointI}, {JointJ})"

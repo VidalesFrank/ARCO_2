@@ -44,7 +44,7 @@ Public Class VigaService
                 For Each f In framesPendientes.ToList()
 
                     'If f.Section.Nombre <> fBase.Section.Nombre Then Continue For
-                    If f.Story <> fBase.Story Then Continue For
+                    If Not String.Equals(f.Story.Trim(), fBase.Story.Trim(), StringComparison.OrdinalIgnoreCase) Then Continue For
 
                     'If viga.Frames.Any(Function(fv) CompartenJoint(fv, f)) AndAlso
                     '                                SonColineales(f, viga.Direccion, joints, tol) Then
@@ -89,7 +89,8 @@ Public Class VigaService
         'Dim combinaciones = Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.ToHashSet()
 
         Dim lookup = beamForces.Where(Function(r) combinaciones.Contains(r.LoadCaseKey)) _
-                                .GroupBy(Function(r) (r.Beam, r.Story)) _
+                                .GroupBy(Function(r) (r.Beam.Trim().ToUpperInvariant(),
+                                                      r.Story.Trim().ToUpperInvariant())) _
                                 .ToDictionary(Function(g) g.Key,
                                                 Function(g) g.ToList())
 
@@ -97,13 +98,8 @@ Public Class VigaService
 
             For Each frame In viga.Frames
 
-                'Dim bfFrame = Proyecto.Elementos.Vigas.BeamForces _
-                '.Where(Function(r) r.Beam = frame.ObjectLabel _
-                'AndAlso r.Story = frame.Story _
-                'AndAlso Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Contains(r.LoadCaseCombo)) _
-                '.ToList()
-
-                Dim key = (frame.ObjectLabel, frame.Story)
+                Dim key = (frame.ObjectLabel.Trim().ToUpperInvariant(),
+                           frame.Story.Trim().ToUpperInvariant())
 
                 Dim bfFrame As List(Of cCombinacionBeamForce) = Nothing
 
@@ -778,13 +774,15 @@ Public Class VigaService
                                           combinaciones As HashSet(Of String))
 
         Dim lookup = beamForces.Where(Function(r) combinaciones.Contains(r.LoadCaseKey)) _
-                               .GroupBy(Function(r) (r.Beam, r.Story)) _
+                               .GroupBy(Function(r) (r.Beam.Trim().ToUpperInvariant(),
+                                                     r.Story.Trim().ToUpperInvariant())) _
                                .ToDictionary(Function(g) g.Key, Function(g) g.ToList())
 
         For Each viga In vigas
             For Each frame In viga.Frames
 
-                Dim key = (frame.ObjectLabel, frame.Story)
+                Dim key = (frame.ObjectLabel.Trim().ToUpperInvariant(),
+                           frame.Story.Trim().ToUpperInvariant())
                 Dim bfFrame As List(Of cCombinacionBeamForce) = Nothing
                 If Not lookup.TryGetValue(key, bfFrame) Then Continue For
                 If bfFrame.Count = 0 Then Continue For
@@ -988,7 +986,8 @@ Public Class VigaService
 
         Dim lookup = beamForces _
             .Where(Function(r) combinaciones.Contains(r.LoadCaseKey)) _
-            .GroupBy(Function(r) (r.Beam, r.Story)) _
+            .GroupBy(Function(r) (r.Beam.Trim().ToUpperInvariant(),
+                                  r.Story.Trim().ToUpperInvariant())) _
             .ToDictionary(Function(g) g.Key, Function(g) g.ToList())
 
         For Each viga In vigas
@@ -1022,7 +1021,8 @@ Public Class VigaService
                 Dim Mn_pos_der = CalcularMnNominal(As_inf_der, fy_dis, fc, b_mm, d_mm)
 
                 ' Luz libre Ln (m): primera y última estación ETABS = caras de columnas
-                Dim key = (frame.ObjectLabel, frame.Story)
+                Dim key = (frame.ObjectLabel.Trim().ToUpperInvariant(),
+                           frame.Story.Trim().ToUpperInvariant())
                 Dim bfFrame As List(Of cCombinacionBeamForce) = Nothing
                 If Not lookup.TryGetValue(key, bfFrame) Then bfFrame = New List(Of cCombinacionBeamForce)()
 
@@ -1226,13 +1226,24 @@ Public Class VigaService
             If grupo Is Nothing OrElse grupo.Count = 0 Then Continue For
 
             Dim framesGrupo As New List(Of cFrame)
+            Dim storeyGrupo As String = Nothing
 
             For Each label In grupo
-                Dim vigaContenedora = vigas.FirstOrDefault(
-                    Function(v) v.Frames.Any(Function(f) f.ObjectLabel = label))
+                Dim vigaContenedora As cViga
+                If storeyGrupo Is Nothing Then
+                    ' First frame: accept any story, then lock to that story
+                    vigaContenedora = vigas.FirstOrDefault(
+                        Function(v) v.Frames.Any(Function(f) f.ObjectLabel = label))
+                Else
+                    ' Subsequent frames: must match the story already determined
+                    vigaContenedora = vigas.FirstOrDefault(
+                        Function(v) v.Piso.Equals(storeyGrupo, StringComparison.OrdinalIgnoreCase) AndAlso
+                                    v.Frames.Any(Function(f) f.ObjectLabel = label))
+                End If
                 If vigaContenedora Is Nothing Then Continue For
 
                 Dim frame = vigaContenedora.Frames.First(Function(f) f.ObjectLabel = label)
+                If storeyGrupo Is Nothing Then storeyGrupo = frame.Story
                 vigaContenedora.Frames.Remove(frame)
                 framesGrupo.Add(frame)
             Next
@@ -1258,5 +1269,36 @@ Public Class VigaService
         Next
 
     End Sub
+
+    ''' <summary>
+    ''' Valida cuántos frames quedaron sin fuerzas asignadas tras CalcularEnvolventesVigas.
+    ''' Retorna un resumen de diagnóstico. Retorna Nothing si todo está correcto.
+    ''' </summary>
+    Public Function DiagnosticarFuerzasAsignadas(vigas As List(Of cViga)) As String
+
+        Dim totalFrames As Integer = 0
+        Dim framesSinFuerzas As Integer = 0
+        Dim vigasSinFuerzas As Integer = 0
+
+        For Each viga In vigas
+            Dim vigaTieneAlgunaFuerza As Boolean = False
+            For Each frame In viga.Frames
+                totalFrames += 1
+                If frame.EnvolventeMomento Is Nothing OrElse frame.EnvolventeMomento.Estaciones.Count = 0 Then
+                    framesSinFuerzas += 1
+                Else
+                    vigaTieneAlgunaFuerza = True
+                End If
+            Next
+            If Not vigaTieneAlgunaFuerza Then vigasSinFuerzas += 1
+        Next
+
+        If framesSinFuerzas = 0 Then Return Nothing
+
+        Return $"Diagnóstico: {framesSinFuerzas} de {totalFrames} frames sin fuerzas " &
+               $"({vigasSinFuerzas} vigas completamente vacías). " &
+               "Verifique que los nombres de los frames y los pisos coincidan entre la geometría y los resultados."
+
+    End Function
 
 End Class

@@ -165,6 +165,11 @@
             For i = 0 To Lista_Cargas_Design.Items.Count - 1
                 Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Add(Lista_Cargas_Design.Items(i))
             Next
+        ElseIf OpcionLlamado = "Nervios" Then
+            Proyecto.Elementos.Nervios.ListA_Combinaciones_Design.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Nervios.ListA_Combinaciones_Design.Add(Lista_Cargas_Design.Items(i))
+            Next
         ElseIf OpcionLlamado = "ReplicarRefuerzo" Then
 
             Dim vigaOrigen As cViga = CType(Me.Tag, cViga)
