@@ -87,6 +87,30 @@ Public Class cFrameNervio
     <OptionalField> Public Frame_Apoyo_I As String  ' label del frame soporte izq
     <OptionalField> Public Frame_Apoyo_D As String  ' label del frame soporte der
 
+    ' ── Eje estructural más cercano al apoyo (GridID de ETABS o manual) ───────
+    <OptionalField>
+    Private _ejeApoyoI As String
+    <OptionalField>
+    Private _ejeApoyoD As String
+
+    Public Property EjeApoyo_I As String
+        Get
+            Return If(_ejeApoyoI, "")
+        End Get
+        Set(value As String)
+            _ejeApoyoI = value
+        End Set
+    End Property
+
+    Public Property EjeApoyo_D As String
+        Get
+            Return If(_ejeApoyoD, "")
+        End Get
+        Set(value As String)
+            _ejeApoyoD = value
+        End Set
+    End Property
+
     ' ── Sección T (activada por usuario) ──────────────────────────────────────
     <OptionalField> Public EsSeccionT As Boolean
     <OptionalField> Public Be As Double    ' m — ancho efectivo calculado NSR-10 C.8.10.2
@@ -98,21 +122,15 @@ Public Class cFrameNervio
     <OptionalField> Public fy As Double           ' MPa
     <OptionalField> Public Recubrimiento As Double ' m
 
-    ' ── Refuerzo superior (momentos negativos — apoyos) ──────────────────────
-    <OptionalField> Public Barras_Sup As Integer
-    <OptionalField> Public Calibre_Sup As String
-    <OptionalField> Public Capas_Sup As Integer
+    ' ── Refuerzo longitudinal discretizado por zona (Izquierda/Centro/Derecha) ─
+    ' Reutiliza cRefuerzoTramo (Clases/cFrame.vb): Posicion + Barras(calibre→cant.)
+    ' Superior = momentos negativos (apoyos); Inferior = momentos positivos (vano)
+    <OptionalField> Public RefuerzoSuperior As New List(Of cRefuerzoTramo)()
+    <OptionalField> Public RefuerzoInferior As New List(Of cRefuerzoTramo)()
 
-    ' ── Refuerzo inferior (momentos positivos — vano) ─────────────────────────
-    <OptionalField> Public Barras_Inf As Integer
-    <OptionalField> Public Calibre_Inf As String
-    <OptionalField> Public Capas_Inf As Integer
-
-    ' ── Estribos (opcionales) ─────────────────────────────────────────────────
-    <OptionalField> Public TieneEstribos As Boolean
-    <OptionalField> Public Estribo_Calibre As String
-    <OptionalField> Public Estribo_Ramas As Integer
-    <OptionalField> Public Estribo_Sep As Double  ' m
+    ' ── Refuerzo transversal (estribos) discretizado por zona ─────────────────
+    ' Reutiliza cRefuerzoTransversalZona (Clases/cFrame.vb)
+    <OptionalField> Public RefuerzoTransversal As New List(Of cRefuerzoTransversalZona)()
 
     ' ── Indica si el usuario ya modificó el refuerzo ─────────────────────────
     <OptionalField> Public Ref_Modificado As Boolean
@@ -124,15 +142,17 @@ Public Class cFrameNervio
     <OptionalField> Public Vu_I As Double       ' kN   — cortante cara izq
     <OptionalField> Public Vu_D As Double       ' kN   — cortante cara der
 
-    ' ── Capacidades calculadas ────────────────────────────────────────────────
-    <OptionalField> Public As_Prov_Sup As Double  ' cm²
-    <OptionalField> Public As_Prov_Inf As Double  ' cm²
-    <OptionalField> Public As_Min As Double        ' cm²
-    <OptionalField> Public As_Max As Double        ' cm²
-    <OptionalField> Public PhiMn_Sup As Double     ' kN·m
-    <OptionalField> Public PhiMn_Inf As Double     ' kN·m
-    <OptionalField> Public PhiVn_I As Double       ' kN
-    <OptionalField> Public PhiVn_D As Double       ' kN
+    ' ── Capacidades calculadas (por zona: Izq/Centro/Der con refuerzo propio) ──
+    <OptionalField> Public As_Prov_Sup_I As Double  ' cm² — refuerzo superior zona Izquierda
+    <OptionalField> Public As_Prov_Sup_D As Double  ' cm² — refuerzo superior zona Derecha
+    <OptionalField> Public As_Prov_Inf_C As Double  ' cm² — refuerzo inferior zona Centro
+    <OptionalField> Public As_Min As Double         ' cm²
+    <OptionalField> Public As_Max As Double         ' cm²
+    <OptionalField> Public PhiMn_Sup_I As Double    ' kN·m
+    <OptionalField> Public PhiMn_Sup_D As Double    ' kN·m
+    <OptionalField> Public PhiMn_Inf_C As Double    ' kN·m
+    <OptionalField> Public PhiVn_I As Double        ' kN
+    <OptionalField> Public PhiVn_D As Double        ' kN
 
     ' ── C/D por zona ──────────────────────────────────────────────────────────
     <OptionalField> Public CD_Flex_Sup_I As Double
@@ -161,15 +181,11 @@ Public Class cFrameNervio
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
         If Combinaciones Is Nothing Then Combinaciones = New List(Of cComboNervio)()
-        If String.IsNullOrEmpty(Calibre_Sup) Then Calibre_Sup = "#4"
-        If String.IsNullOrEmpty(Calibre_Inf) Then Calibre_Inf = "#4"
-        If String.IsNullOrEmpty(Estribo_Calibre) Then Estribo_Calibre = "#3"
-        If Barras_Sup = 0 Then Barras_Sup = 2
-        If Barras_Inf = 0 Then Barras_Inf = 2
-        If Capas_Sup = 0 Then Capas_Sup = 1
-        If Capas_Inf = 0 Then Capas_Inf = 1
-        If Estribo_Ramas = 0 Then Estribo_Ramas = 2
-        If Estribo_Sep = 0 Then Estribo_Sep = 0.15
+        If RefuerzoSuperior Is Nothing Then RefuerzoSuperior = New List(Of cRefuerzoTramo)()
+        If RefuerzoInferior Is Nothing Then RefuerzoInferior = New List(Of cRefuerzoTramo)()
+        If RefuerzoTransversal Is Nothing Then RefuerzoTransversal = New List(Of cRefuerzoTransversalZona)()
+        If _ejeApoyoI Is Nothing Then _ejeApoyoI = ""
+        If _ejeApoyoD Is Nothing Then _ejeApoyoD = ""
         If fy = 0 Then fy = 420
         If fc = 0 Then fc = 21
         If Recubrimiento = 0 Then Recubrimiento = 0.04

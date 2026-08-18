@@ -1,4 +1,4 @@
-<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class Form_11_Nervios
     Inherits System.Windows.Forms.Form
 
@@ -25,6 +25,7 @@ Partial Class Form_11_Nervios
         Me.ImportarDemandasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.OpcionesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ActualizarDemandasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.DefinirEjesManualmenteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Exportar_Zapatas = New System.Windows.Forms.ToolStripMenuItem()
         Me.Exportar_Excel = New System.Windows.Forms.ToolStripMenuItem()
 
@@ -43,6 +44,7 @@ Partial Class Form_11_Nervios
         Me.GbPlanta = New System.Windows.Forms.GroupBox()
         Me.ChkMostrarEtiquetas = New System.Windows.Forms.CheckBox()
         Me.ChkMostrarApoyos = New System.Windows.Forms.CheckBox()
+        Me.BtnVerPlantaAmpliada = New System.Windows.Forms.Button()
 
         Me.Panel_Bottom = New System.Windows.Forms.Panel()
         Me.Button1 = New System.Windows.Forms.Button()
@@ -69,6 +71,12 @@ Partial Class Form_11_Nervios
         Me.Tabla_Resultados_Flexion = New System.Windows.Forms.DataGridView()
         Me.GroupBox_Cortante = New System.Windows.Forms.GroupBox()
         Me.Tabla_Resultados_Cortante = New System.Windows.Forms.DataGridView()
+        Me.TabPage4 = New System.Windows.Forms.TabPage()
+        Me.SplitDiag = New System.Windows.Forms.SplitContainer()
+        Me.GroupBoxMomento = New System.Windows.Forms.GroupBox()
+        Me.Diagrama_Momento = New System.Windows.Forms.PictureBox()
+        Me.GroupBoxCortanteDiag = New System.Windows.Forms.GroupBox()
+        Me.Diagrama_Cortante = New System.Windows.Forms.PictureBox()
 
         Me.MenuStrip1.SuspendLayout()
         Me.Panel3.SuspendLayout()
@@ -105,6 +113,15 @@ Partial Class Form_11_Nervios
         CType(Me.Tabla_Resultados_Flexion, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox_Cortante.SuspendLayout()
         CType(Me.Tabla_Resultados_Cortante, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.TabPage4.SuspendLayout()
+        CType(Me.SplitDiag, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.SplitDiag.Panel1.SuspendLayout()
+        Me.SplitDiag.Panel2.SuspendLayout()
+        Me.SplitDiag.SuspendLayout()
+        Me.GroupBoxMomento.SuspendLayout()
+        CType(Me.Diagrama_Momento, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.GroupBoxCortanteDiag.SuspendLayout()
+        CType(Me.Diagrama_Cortante, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
 
         ' ── MenuStrip ─────────────────────────────────────────────────────────
@@ -132,6 +149,9 @@ Partial Class Form_11_Nervios
         Me.ActualizarDemandasToolStripMenuItem.Name = "ActualizarDemandasToolStripMenuItem"
         Me.ActualizarDemandasToolStripMenuItem.Text = "Combinaciones de diseño..."
         Me.OpcionesToolStripMenuItem.DropDownItems.Add(Me.ActualizarDemandasToolStripMenuItem)
+        Me.DefinirEjesManualmenteToolStripMenuItem.Name = "DefinirEjesManualmenteToolStripMenuItem"
+        Me.DefinirEjesManualmenteToolStripMenuItem.Text = "Definir ejes manualmente..."
+        Me.OpcionesToolStripMenuItem.DropDownItems.Add(Me.DefinirEjesManualmenteToolStripMenuItem)
 
         Me.Exportar_Zapatas.Name = "Exportar_Zapatas"
         Me.Exportar_Zapatas.Text = "Exportar"
@@ -144,12 +164,14 @@ Partial Class Form_11_Nervios
         Me.Panel3.Width = 270
         Me.Panel3.Padding = New System.Windows.Forms.Padding(4)
         Me.Panel3.Name = "Panel3"
+        Me.Panel3.BackColor = System.Drawing.Color.FromArgb(240, 240, 240)
 
         ' GroupBox Filtro piso
         Me.GbFiltro.Text = "Piso"
         Me.GbFiltro.Location = New System.Drawing.Point(4, 4)
         Me.GbFiltro.Size = New System.Drawing.Size(258, 56)
         Me.GbFiltro.Name = "GbFiltro"
+        Me.GbFiltro.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         Me.Lista_Pisos.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.Lista_Pisos.Location = New System.Drawing.Point(8, 22)
         Me.Lista_Pisos.Size = New System.Drawing.Size(242, 21)
@@ -161,6 +183,7 @@ Partial Class Form_11_Nervios
         Me.GbNervio.Location = New System.Drawing.Point(4, 64)
         Me.GbNervio.Size = New System.Drawing.Size(258, 152)
         Me.GbNervio.Name = "GbNervio"
+        Me.GbNervio.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
 
         Me.Lista_Nervios.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.Lista_Nervios.Location = New System.Drawing.Point(8, 20)
@@ -181,11 +204,19 @@ Partial Class Form_11_Nervios
         Me.BtnRenombrar.Size = New System.Drawing.Size(116, 26)
         Me.BtnRenombrar.Text = "Renombrar"
         Me.BtnRenombrar.Name = "BtnRenombrar"
+        Me.BtnRenombrar.BackColor = System.Drawing.Color.FromArgb(224, 224, 224)
+        Me.BtnRenombrar.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.BtnRenombrar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.BtnRenombrar.FlatAppearance.BorderSize = 0
 
         Me.BtnSeparar.Location = New System.Drawing.Point(132, 98)
         Me.BtnSeparar.Size = New System.Drawing.Size(118, 26)
         Me.BtnSeparar.Text = "Separar tramo"
         Me.BtnSeparar.Name = "BtnSeparar"
+        Me.BtnSeparar.BackColor = System.Drawing.Color.FromArgb(224, 224, 224)
+        Me.BtnSeparar.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.BtnSeparar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.BtnSeparar.FlatAppearance.BorderSize = 0
 
         Me.GbNervio.Controls.Add(Me.Lista_Nervios)
         Me.GbNervio.Controls.Add(Me.LblNombreNervio)
@@ -198,6 +229,7 @@ Partial Class Form_11_Nervios
         Me.GbLosa.Location = New System.Drawing.Point(4, 220)
         Me.GbLosa.Size = New System.Drawing.Size(258, 58)
         Me.GbLosa.Name = "GbLosa"
+        Me.GbLosa.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
 
         Me.LblTf.AutoSize = True
         Me.LblTf.Location = New System.Drawing.Point(8, 26)
@@ -218,8 +250,9 @@ Partial Class Form_11_Nervios
         ' GroupBox opciones planta
         Me.GbPlanta.Text = "Vista planta"
         Me.GbPlanta.Location = New System.Drawing.Point(4, 282)
-        Me.GbPlanta.Size = New System.Drawing.Size(258, 72)
+        Me.GbPlanta.Size = New System.Drawing.Size(258, 104)
         Me.GbPlanta.Name = "GbPlanta"
+        Me.GbPlanta.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
 
         Me.ChkMostrarEtiquetas.AutoSize = True
         Me.ChkMostrarEtiquetas.Location = New System.Drawing.Point(8, 22)
@@ -233,8 +266,19 @@ Partial Class Form_11_Nervios
         Me.ChkMostrarApoyos.Checked = True
         Me.ChkMostrarApoyos.Name = "ChkMostrarApoyos"
 
+        Me.BtnVerPlantaAmpliada.Location = New System.Drawing.Point(8, 68)
+        Me.BtnVerPlantaAmpliada.Size = New System.Drawing.Size(242, 28)
+        Me.BtnVerPlantaAmpliada.Text = "🔍  Ver planta ampliada"
+        Me.BtnVerPlantaAmpliada.Name = "BtnVerPlantaAmpliada"
+        Me.BtnVerPlantaAmpliada.BackColor = System.Drawing.Color.FromArgb(224, 224, 224)
+        Me.BtnVerPlantaAmpliada.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.BtnVerPlantaAmpliada.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.BtnVerPlantaAmpliada.FlatAppearance.BorderSize = 0
+        Me.BtnVerPlantaAmpliada.Font = New System.Drawing.Font("Segoe UI", 9, System.Drawing.FontStyle.Bold)
+
         Me.GbPlanta.Controls.Add(Me.ChkMostrarEtiquetas)
         Me.GbPlanta.Controls.Add(Me.ChkMostrarApoyos)
+        Me.GbPlanta.Controls.Add(Me.BtnVerPlantaAmpliada)
 
         Me.Panel3.Controls.Add(Me.GbFiltro)
         Me.Panel3.Controls.Add(Me.GbNervio)
@@ -276,9 +320,10 @@ Partial Class Form_11_Nervios
         Me.GroupBox1.Height = 250
         Me.GroupBox1.Name = "GroupBox1"
         Me.GroupBox1.Padding = New System.Windows.Forms.Padding(2)
+        Me.GroupBox1.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
 
         Me.PicPlanta.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.PicPlanta.BackColor = System.Drawing.Color.FromArgb(16, 20, 34)
+        Me.PicPlanta.BackColor = System.Drawing.Color.FromArgb(245, 248, 252)
         Me.PicPlanta.Name = "PicPlanta"
         Me.PicPlanta.BorderStyle = System.Windows.Forms.BorderStyle.None
         Me.GroupBox1.Controls.Add(Me.PicPlanta)
@@ -287,7 +332,7 @@ Partial Class Form_11_Nervios
         Me.TabControl1.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControl1.Name = "TabControl1"
         Me.TabControl1.TabPages.AddRange(New System.Windows.Forms.TabPage() {
-            Me.TabPage1, Me.TabPage2, Me.TabPage3})
+            Me.TabPage1, Me.TabPage2, Me.TabPage3, Me.TabPage4})
 
         ' ── TabPage1 "Refuerzo" ────────────────────────────────────────────────
         Me.TabPage1.Text = "Refuerzo"
@@ -310,6 +355,7 @@ Partial Class Form_11_Nervios
         Me.GroupBox5.Height = 168
         Me.GroupBox5.Name = "GroupBox5"
         Me.GroupBox5.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBox5.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         ApplyDgvStyle(Me.Ref_Superior)
         Me.Ref_Superior.Name = "Ref_Superior"
         Me.GroupBox5.Controls.Add(Me.Ref_Superior)
@@ -318,6 +364,7 @@ Partial Class Form_11_Nervios
         Me.GroupBox6.Dock = System.Windows.Forms.DockStyle.Fill
         Me.GroupBox6.Name = "GroupBox6"
         Me.GroupBox6.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBox6.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         ApplyDgvStyle(Me.Ref_Inferior)
         Me.Ref_Inferior.Name = "Ref_Inferior"
         Me.GroupBox6.Controls.Add(Me.Ref_Inferior)
@@ -331,6 +378,7 @@ Partial Class Form_11_Nervios
         Me.GroupBox8.Dock = System.Windows.Forms.DockStyle.Fill
         Me.GroupBox8.Name = "GroupBox8"
         Me.GroupBox8.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBox8.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         ApplyDgvStyle(Me.Ref_Cortante)
         Me.Ref_Cortante.Name = "Ref_Cortante"
         Me.GroupBox8.Controls.Add(Me.Ref_Cortante)
@@ -344,8 +392,8 @@ Partial Class Form_11_Nervios
         ApplyDgvStyle(Me.Tabla_Demandas)
         Me.Tabla_Demandas.Dock = System.Windows.Forms.DockStyle.Fill
         Me.Tabla_Demandas.Name = "Tabla_Demandas"
-        Me.Tabla_Demandas.ReadOnly = True
-        Me.Tabla_Demandas.RowHeadersWidth = 130
+        Me.Tabla_Demandas.ReadOnly = False  ' Es T / Eje Izq / Eje Der son editables (ver ConstruirTablaDemandas)
+        Me.Tabla_Demandas.RowHeadersWidth = 150
         Me.TabPage2.Controls.Add(Me.Tabla_Demandas)
 
         ' ── TabPage3 "Resultados" ──────────────────────────────────────────────
@@ -362,6 +410,7 @@ Partial Class Form_11_Nervios
         Me.GroupBox7.Dock = System.Windows.Forms.DockStyle.Fill
         Me.GroupBox7.Name = "GroupBox7"
         Me.GroupBox7.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBox7.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         ApplyDgvStyle(Me.Tabla_Resultados_Flexion)
         Me.Tabla_Resultados_Flexion.ReadOnly = True
         Me.Tabla_Resultados_Flexion.Name = "Tabla_Resultados_Flexion"
@@ -372,6 +421,7 @@ Partial Class Form_11_Nervios
         Me.GroupBox_Cortante.Dock = System.Windows.Forms.DockStyle.Fill
         Me.GroupBox_Cortante.Name = "GroupBox_Cortante"
         Me.GroupBox_Cortante.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBox_Cortante.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         ApplyDgvStyle(Me.Tabla_Resultados_Cortante)
         Me.Tabla_Resultados_Cortante.ReadOnly = True
         Me.Tabla_Resultados_Cortante.Name = "Tabla_Resultados_Cortante"
@@ -379,6 +429,42 @@ Partial Class Form_11_Nervios
         Me.SplitRes.Panel2.Controls.Add(Me.GroupBox_Cortante)
 
         Me.TabPage3.Controls.Add(Me.SplitRes)
+
+        ' ── TabPage4 "Diagramas" ───────────────────────────────────────────────
+        Me.TabPage4.Text = "Diagramas"
+        Me.TabPage4.Name = "TabPage4"
+
+        Me.SplitDiag.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.SplitDiag.Orientation = System.Windows.Forms.Orientation.Horizontal
+        Me.SplitDiag.SplitterDistance = 280
+        Me.SplitDiag.Name = "SplitDiag"
+        Me.SplitDiag.SplitterWidth = 4
+
+        Me.GroupBoxMomento.Text = "Diagrama de Momento (M3)"
+        Me.GroupBoxMomento.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.GroupBoxMomento.Name = "GroupBoxMomento"
+        Me.GroupBoxMomento.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBoxMomento.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.Diagrama_Momento.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.Diagrama_Momento.BackColor = System.Drawing.Color.White
+        Me.Diagrama_Momento.Name = "Diagrama_Momento"
+        Me.Diagrama_Momento.TabStop = False
+        Me.GroupBoxMomento.Controls.Add(Me.Diagrama_Momento)
+        Me.SplitDiag.Panel1.Controls.Add(Me.GroupBoxMomento)
+
+        Me.GroupBoxCortanteDiag.Text = "Diagrama de Cortante (V2)"
+        Me.GroupBoxCortanteDiag.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.GroupBoxCortanteDiag.Name = "GroupBoxCortanteDiag"
+        Me.GroupBoxCortanteDiag.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GroupBoxCortanteDiag.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.Diagrama_Cortante.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.Diagrama_Cortante.BackColor = System.Drawing.Color.White
+        Me.Diagrama_Cortante.Name = "Diagrama_Cortante"
+        Me.Diagrama_Cortante.TabStop = False
+        Me.GroupBoxCortanteDiag.Controls.Add(Me.Diagrama_Cortante)
+        Me.SplitDiag.Panel2.Controls.Add(Me.GroupBoxCortanteDiag)
+
+        Me.TabPage4.Controls.Add(Me.SplitDiag)
 
         Me.Panel_Main.Controls.Add(Me.TabControl1)
         Me.Panel_Main.Controls.Add(Me.GroupBox1)
@@ -398,6 +484,7 @@ Partial Class Form_11_Nervios
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.WindowState = System.Windows.Forms.FormWindowState.Maximized
         Me.Font = New System.Drawing.Font("Segoe UI", 9)
+        Me.BackColor = System.Drawing.Color.FromArgb(240, 240, 240)
 
         Me.MenuStrip1.ResumeLayout(False)
         Me.MenuStrip1.PerformLayout()
@@ -438,6 +525,15 @@ Partial Class Form_11_Nervios
         CType(Me.Tabla_Resultados_Flexion, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox_Cortante.ResumeLayout(False)
         CType(Me.Tabla_Resultados_Cortante, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.TabPage4.ResumeLayout(False)
+        CType(Me.SplitDiag, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.SplitDiag.Panel1.ResumeLayout(False)
+        Me.SplitDiag.Panel2.ResumeLayout(False)
+        Me.SplitDiag.ResumeLayout(False)
+        Me.GroupBoxMomento.ResumeLayout(False)
+        CType(Me.Diagrama_Momento, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.GroupBoxCortanteDiag.ResumeLayout(False)
+        CType(Me.Diagrama_Cortante, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
         Me.PerformLayout()
     End Sub
@@ -449,7 +545,7 @@ Partial Class Form_11_Nervios
         dgv.Dock = System.Windows.Forms.DockStyle.Fill
         dgv.RowHeadersWidth = 80
         dgv.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect
-        dgv.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(30, 60, 100)
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(87, 87, 87)
         dgv.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White
         dgv.ColumnHeadersDefaultCellStyle.Font = New System.Drawing.Font("Segoe UI", 8, System.Drawing.FontStyle.Bold)
         dgv.EnableHeadersVisualStyles = False
@@ -457,6 +553,10 @@ Partial Class Form_11_Nervios
         dgv.RowHeadersDefaultCellStyle.Font = New System.Drawing.Font("Segoe UI", 8)
         dgv.AlternatingRowsDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(245, 248, 255)
         dgv.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.AllCells
+        dgv.GridColor = System.Drawing.Color.FromArgb(210, 210, 210)
+        dgv.DefaultCellStyle.SelectionBackColor = System.Drawing.SystemColors.Highlight
+        dgv.DefaultCellStyle.SelectionForeColor = System.Drawing.SystemColors.HighlightText
+        dgv.BackgroundColor = System.Drawing.Color.White
     End Sub
 
     Friend WithEvents MenuStrip1 As System.Windows.Forms.MenuStrip
@@ -466,6 +566,7 @@ Partial Class Form_11_Nervios
     Friend WithEvents ImportarDemandasToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents OpcionesToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents ActualizarDemandasToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents DefinirEjesManualmenteToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents Exportar_Zapatas As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents Exportar_Excel As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents Panel3 As System.Windows.Forms.Panel
@@ -483,6 +584,7 @@ Partial Class Form_11_Nervios
     Friend WithEvents GbPlanta As System.Windows.Forms.GroupBox
     Friend WithEvents ChkMostrarEtiquetas As System.Windows.Forms.CheckBox
     Friend WithEvents ChkMostrarApoyos As System.Windows.Forms.CheckBox
+    Friend WithEvents BtnVerPlantaAmpliada As System.Windows.Forms.Button
     Friend WithEvents Panel_Bottom As System.Windows.Forms.Panel
     Friend WithEvents Button1 As System.Windows.Forms.Button
     Friend WithEvents Label1 As System.Windows.Forms.Label
@@ -507,4 +609,10 @@ Partial Class Form_11_Nervios
     Friend WithEvents Tabla_Resultados_Flexion As System.Windows.Forms.DataGridView
     Friend WithEvents GroupBox_Cortante As System.Windows.Forms.GroupBox
     Friend WithEvents Tabla_Resultados_Cortante As System.Windows.Forms.DataGridView
+    Friend WithEvents TabPage4 As System.Windows.Forms.TabPage
+    Friend WithEvents SplitDiag As System.Windows.Forms.SplitContainer
+    Friend WithEvents GroupBoxMomento As System.Windows.Forms.GroupBox
+    Friend WithEvents Diagrama_Momento As System.Windows.Forms.PictureBox
+    Friend WithEvents GroupBoxCortanteDiag As System.Windows.Forms.GroupBox
+    Friend WithEvents Diagrama_Cortante As System.Windows.Forms.PictureBox
 End Class

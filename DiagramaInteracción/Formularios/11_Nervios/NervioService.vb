@@ -45,73 +45,27 @@ Public Class NervioService
                                             "Element Forces - Beams",
                                             "Beam Forces")
 
-        Dim dt As DataTable
+        ' Reutiliza el lector robusto ya usado por el módulo de Vigas: mapea
+        ' columnas por nombre (independiente del orden y de E17/E23) en vez de
+        ' reimplementar el parseo con detección/índices frágiles.
+        Dim posibleTruncamiento As Boolean = False
+        Dim todas As List(Of cCombinacionBeamForce)
         Try
-            dt = LeerHojaExcel(rutaExcel, nombreHoja)
+            todas = CargarBeamForcesDesdeExcel(rutaExcel, nombreHoja, posibleTruncamiento)
         Catch ex As Exception
             Logger.Error(ex, "NervioService.ImportarBeamForcesNervios")
             Return New List(Of cCombinacionBeamForce)()
         End Try
 
-        ' Detectar si es E17 o E23 según columnas disponibles
-        Dim esE23 = dt.Columns.Contains("UniqueName") OrElse
-                    dt.Columns.Contains("Element") OrElse
-                    dt.Columns.Contains("OutputCase")
-
         ' Labels de nervios para filtrar
         Dim labelsNervios As New HashSet(Of String)(
-            frames.Where(Function(f) seccionesNervio.Contains(f.Section?.Nombre)) _
+            frames.Where(Function(f) f.Section IsNot Nothing AndAlso seccionesNervio.Contains(f.Section.Nombre)) _
                   .Select(Function(f) f.ObjectLabel),
             StringComparer.OrdinalIgnoreCase)
 
-        Dim result As New List(Of cCombinacionBeamForce)()
+        If labelsNervios.Count = 0 Then Return todas
 
-        For Each row As DataRow In dt.Rows
-            Try
-                Dim bf As cCombinacionBeamForce
-                If esE23 Then
-                    bf = ParseBeamForceE23(row)
-                Else
-                    bf = ParseBeamForceE17(row)
-                End If
-                If bf Is Nothing Then Continue For
-                If labelsNervios.Count > 0 AndAlso Not labelsNervios.Contains(bf.Beam) Then
-                    Continue For
-                End If
-                result.Add(bf)
-            Catch
-            End Try
-        Next
-
-        Return result
-    End Function
-
-    Private Function ParseBeamForceE23(row As DataRow) As cCombinacionBeamForce
-        Dim bf As New cCombinacionBeamForce()
-        bf.Story = row("Story").ToString().Trim()
-        bf.Beam = row("Beam").ToString().Trim()
-        If row.Table.Columns.Contains("UniqueName") Then
-            bf.UniqueName = row("UniqueName").ToString().Trim()
-        End If
-        bf.LoadCaseCombo = row("OutputCase").ToString().Trim()
-        If row.Table.Columns.Contains("StepType") Then
-            bf.stepType = row("StepType").ToString().Trim()
-        End If
-        bf.Station = ParseD(row("Station"))
-        bf.V2 = ParseD(row("V2"))
-        bf.M3 = ParseD(row("M3"))
-        Return bf
-    End Function
-
-    Private Function ParseBeamForceE17(row As DataRow) As cCombinacionBeamForce
-        Dim bf As New cCombinacionBeamForce()
-        bf.Story = row(0).ToString().Trim()
-        bf.Beam = row(1).ToString().Trim()
-        bf.LoadCaseCombo = row(3).ToString().Trim()
-        bf.Station = ParseD(row(6))
-        bf.V2 = ParseD(row(7))
-        bf.M3 = ParseD(row(10))
-        Return bf
+        Return todas.Where(Function(bf) labelsNervios.Contains(bf.Beam)).ToList()
     End Function
 
     ' ──────────────────────────────────────────────────────────────────────────
@@ -328,6 +282,16 @@ Public Class NervioService
     End Function
 
     ' ──────────────────────────────────────────────────────────────────────────
+    '  EJES: asigna el eje estructural más cercano a cada apoyo de cada nervio
+    ' ──────────────────────────────────────────────────────────────────────────
+    Public Sub AsignarEjesANervios(nervios As List(Of cNervio),
+                                    grids As List(Of cGridLine),
+                                    joints As Dictionary(Of String, cJoint),
+                                    Optional tolMax As Double = 0.5)
+        _geo.AsignarEjesANervios(nervios, grids, joints, tolMax)
+    End Sub
+
+    ' ──────────────────────────────────────────────────────────────────────────
     '  ANCHO EFECTIVO T — NSR-10 C.8.10.2 (ACI 318 Table 6.3.2.1)
     '  be = bw + 2 × min(8·hf, sw/2, ln/8)
     ' ──────────────────────────────────────────────────────────────────────────
@@ -454,11 +418,13 @@ Public Class NervioService
 
         If d_mm <= 0 OrElse bw_mm <= 0 Then Return
 
-        ' Área provista
-        Dim asSup = fn.Barras_Sup * AreaRefuerzo(fn.Calibre_Sup)  ' mm²
-        Dim asInf = fn.Barras_Inf * AreaRefuerzo(fn.Calibre_Inf)  ' mm²
-        fn.As_Prov_Sup = asSup / 100.0   ' cm²
-        fn.As_Prov_Inf = asInf / 100.0   ' cm²
+        ' Área provista por zona (mm²) — Superior en Izq/Der (apoyos), Inferior en Centro (vano)
+        Dim asSupI = AreaZona(fn.RefuerzoSuperior, PosicionTramoViga.Izquierda)
+        Dim asSupD = AreaZona(fn.RefuerzoSuperior, PosicionTramoViga.Derecha)
+        Dim asInfC = AreaZona(fn.RefuerzoInferior, PosicionTramoViga.Centro)
+        fn.As_Prov_Sup_I = asSupI / 100.0   ' cm²
+        fn.As_Prov_Sup_D = asSupD / 100.0   ' cm²
+        fn.As_Prov_Inf_C = asInfC / 100.0   ' cm²
 
         ' Mínimo y máximo
         Dim rhoMin = Math.Max(1.4 / fn.fy, 0.25 * Math.Sqrt(fn.fc) / fn.fy)
@@ -471,35 +437,44 @@ Public Class NervioService
         Dim a_max = 0.85 * c_max  ' β1≈0.85 para fc≤28MPa
         fn.As_Max = 0.85 * fn.fc * a_max * bw_mm / fn.fy / 100.0  ' cm²
 
-        ' φMn superior (negativo, alma rectangular bw)
-        fn.PhiMn_Sup = CapacidadFlexion(asSup, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
+        ' φMn superior por zona (negativo, alma rectangular bw)
+        fn.PhiMn_Sup_I = CapacidadFlexion(asSupI, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
+        fn.PhiMn_Sup_D = CapacidadFlexion(asSupD, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
 
-        ' φMn inferior (positivo)
+        ' φMn inferior en Centro (positivo)
         If fn.EsSeccionT AndAlso fn.Be > 0 Then
             Dim be_mm = fn.Be * 1000
             Dim tf_mm = fn.Tf * 1000
-            fn.PhiMn_Inf = CapacidadFlexionT(asInf, fn.fy, fn.fc, be_mm, bw_mm, tf_mm, d_mm, phi_f)
+            fn.PhiMn_Inf_C = CapacidadFlexionT(asInfC, fn.fy, fn.fc, be_mm, bw_mm, tf_mm, d_mm, phi_f)
         Else
-            fn.PhiMn_Inf = CapacidadFlexion(asInf, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
+            fn.PhiMn_Inf_C = CapacidadFlexion(asInfC, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
         End If
 
-        ' C/D por zona (C/D ≥ 1 → cumple)
-        fn.CD_Flex_Sup_I = If(fn.Mu_Neg_I > 0.001, fn.PhiMn_Sup / fn.Mu_Neg_I, 99.0)
-        fn.CD_Flex_Inf_C = If(fn.Mu_Pos_C > 0.001, fn.PhiMn_Inf / fn.Mu_Pos_C, 99.0)
-        fn.CD_Flex_Sup_D = If(fn.Mu_Neg_D > 0.001, fn.PhiMn_Sup / fn.Mu_Neg_D, 99.0)
+        ' C/D por zona (C/D ≥ 1 → cumple) — cada zona con su propia capacidad
+        fn.CD_Flex_Sup_I = If(fn.Mu_Neg_I > 0.001, fn.PhiMn_Sup_I / fn.Mu_Neg_I, 99.0)
+        fn.CD_Flex_Inf_C = If(fn.Mu_Pos_C > 0.001, fn.PhiMn_Inf_C / fn.Mu_Pos_C, 99.0)
+        fn.CD_Flex_Sup_D = If(fn.Mu_Neg_D > 0.001, fn.PhiMn_Sup_D / fn.Mu_Neg_D, 99.0)
 
         ' Verificación de cuantía mínima (como restricción adicional)
         ' Si As_prov < As_min, el C/D se penaliza a (As_prov/As_min)×C/D
-        If asSup < fn.As_Min * 100 AndAlso fn.Mu_Neg_I > 0.001 Then
-            fn.CD_Flex_Sup_I = Math.Min(fn.CD_Flex_Sup_I, (asSup / 100.0) / fn.As_Min)
+        If asSupI < fn.As_Min * 100 AndAlso fn.Mu_Neg_I > 0.001 Then
+            fn.CD_Flex_Sup_I = Math.Min(fn.CD_Flex_Sup_I, (asSupI / 100.0) / fn.As_Min)
         End If
-        If asInf < fn.As_Min * 100 AndAlso fn.Mu_Pos_C > 0.001 Then
-            fn.CD_Flex_Inf_C = Math.Min(fn.CD_Flex_Inf_C, (asInf / 100.0) / fn.As_Min)
+        If asInfC < fn.As_Min * 100 AndAlso fn.Mu_Pos_C > 0.001 Then
+            fn.CD_Flex_Inf_C = Math.Min(fn.CD_Flex_Inf_C, (asInfC / 100.0) / fn.As_Min)
         End If
-        If asSup < fn.As_Min * 100 AndAlso fn.Mu_Neg_D > 0.001 Then
-            fn.CD_Flex_Sup_D = Math.Min(fn.CD_Flex_Sup_D, (asSup / 100.0) / fn.As_Min)
+        If asSupD < fn.As_Min * 100 AndAlso fn.Mu_Neg_D > 0.001 Then
+            fn.CD_Flex_Sup_D = Math.Min(fn.CD_Flex_Sup_D, (asSupD / 100.0) / fn.As_Min)
         End If
     End Sub
+
+    ''' <summary>Suma el área de acero (mm²) de todos los calibres de la zona indicada.</summary>
+    Private Shared Function AreaZona(lista As List(Of cRefuerzoTramo), posicion As PosicionTramoViga) As Double
+        If lista Is Nothing Then Return 0
+        Dim tramo = lista.FirstOrDefault(Function(t) t.Posicion = posicion)
+        If tramo Is Nothing OrElse tramo.Barras Is Nothing Then Return 0
+        Return tramo.Barras.Sum(Function(kvp) kvp.Value * AreaRefuerzo(kvp.Key))
+    End Function
 
     ' φMn sección rectangular (kN·m)
     Private Shared Function CapacidadFlexion(As_mm2 As Double, fy As Double, fc As Double,
@@ -549,19 +524,23 @@ Public Class NervioService
 
         Dim Vc = factorNervio * 0.17 * Math.Sqrt(fn.fc) * bw_mm * d_mm / 1000.0  ' kN
 
-        Dim Vs As Double = 0
-        If fn.TieneEstribos AndAlso fn.Estribo_Sep > 0 Then
-            Dim Av = fn.Estribo_Ramas * AreaRefuerzo(fn.Estribo_Calibre)  ' mm²
-            Vs = Av * fn.fy * d_mm / (fn.Estribo_Sep * 1000.0) / 1000.0  ' kN
-        End If
+        ' Estribos por zona: Izquierda protege la cara izq, Derecha la cara der
+        fn.PhiVn_I = phi_v * (Vc + VsZona(fn.RefuerzoTransversal, PosicionTramoViga.Izquierda, fn.fy, d_mm))
+        fn.PhiVn_D = phi_v * (Vc + VsZona(fn.RefuerzoTransversal, PosicionTramoViga.Derecha, fn.fy, d_mm))
 
-        Dim phiVn = phi_v * (Vc + Vs)
-        fn.PhiVn_I = phiVn
-        fn.PhiVn_D = phiVn
-
-        fn.CD_Cortante_I = If(fn.Vu_I > 0.001, phiVn / fn.Vu_I, 99.0)
-        fn.CD_Cortante_D = If(fn.Vu_D > 0.001, phiVn / fn.Vu_D, 99.0)
+        fn.CD_Cortante_I = If(fn.Vu_I > 0.001, fn.PhiVn_I / fn.Vu_I, 99.0)
+        fn.CD_Cortante_D = If(fn.Vu_D > 0.001, fn.PhiVn_D / fn.Vu_D, 99.0)
     End Sub
+
+    ''' <summary>Vs (kN) aportado por los estribos de la zona indicada. Cero si no hay entrada para esa zona.</summary>
+    Private Shared Function VsZona(lista As List(Of cRefuerzoTransversalZona), posicion As PosicionTramoViga,
+                                    fy As Double, d_mm As Double) As Double
+        If lista Is Nothing Then Return 0
+        Dim zona = lista.FirstOrDefault(Function(z) z.Posicion = posicion)
+        If zona Is Nothing OrElse zona.Separacion <= 0 OrElse zona.CantEstribos <= 0 Then Return 0
+        Dim Av = zona.CantEstribos * AreaRefuerzo("#" & zona.NumeroBarra)  ' mm²
+        Return Av * fy * d_mm / (zona.Separacion * 1000.0) / 1000.0  ' kN
+    End Function
 
     ' ──────────────────────────────────────────────────────────────────────────
     '  DISEÑO COMPLETO de todos los nervios (llama flexión + cortante + be)

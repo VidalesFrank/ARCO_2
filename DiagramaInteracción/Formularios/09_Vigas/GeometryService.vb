@@ -206,5 +206,47 @@ Public Class GeometryService
 
     End Sub
 
+    ''' Asigna EjeApoyo_I / EjeApoyo_D a cada tramo de un nervio buscando el grid
+    ''' perpendicular más cercano al joint correspondiente dentro de la tolerancia.
+    ''' Mismo criterio que AsignarEjesAViga, pero cNervio no trae una Direccion
+    ''' precalculada: se obtiene del primer tramo del nervio.
+    Public Sub AsignarEjesANervio(nervio As cNervio,
+                                  grids As List(Of cGridLine),
+                                  joints As Dictionary(Of String, cJoint),
+                                  Optional tolMax As Double = 0.5)
+
+        If grids Is Nothing OrElse grids.Count = 0 Then Exit Sub
+        If nervio.Frames Is Nothing OrElse nervio.Frames.Count = 0 Then Exit Sub
+
+        Dim dir = PuntoJoint(nervio.Frames(0).JointJ, joints) - PuntoJoint(nervio.Frames(0).JointI, joints)
+        dir.Normalize()
+
+        Dim esX As Boolean = Math.Abs(dir.X) >= Math.Abs(dir.Y)
+        Dim dirBuscar As String = If(esX, "X", "Y")
+
+        Dim gridsPerp = grids.Where(Function(g) g.Direction = dirBuscar AndAlso
+                                                Not String.IsNullOrWhiteSpace(g.GridID)).ToList()
+        If gridsPerp.Count = 0 Then Exit Sub
+
+        For Each fn In nervio.Frames
+            fn.EjeApoyo_I = BuscarEjeMasCercano(fn.JointI, gridsPerp, joints, esX, tolMax)
+            fn.EjeApoyo_D = BuscarEjeMasCercano(fn.JointJ, gridsPerp, joints, esX, tolMax)
+        Next
+
+    End Sub
+
+    ''' Asigna ejes estructurales a todos los nervios de la lista.
+    Public Sub AsignarEjesANervios(nervios As List(Of cNervio),
+                                   grids As List(Of cGridLine),
+                                   joints As Dictionary(Of String, cJoint),
+                                   Optional tolMax As Double = 0.5)
+
+        If nervios Is Nothing OrElse grids Is Nothing Then Exit Sub
+        For Each n In nervios
+            AsignarEjesANervio(n, grids, joints, tolMax)
+        Next
+
+    End Sub
+
 
 End Class

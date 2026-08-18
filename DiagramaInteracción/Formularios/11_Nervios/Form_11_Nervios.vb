@@ -1,4 +1,5 @@
 Imports ARCO.Funciones_00_Varias
+Imports ARCO.eNumeradores
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 
@@ -7,23 +8,22 @@ Public Class Form_11_Nervios
     Public Shared Proyecto As Proyecto
 
     Private _svc As New NervioService()
+    Private _diagSvc As New NervioDiagramaService()
     Private _joints As Dictionary(Of String, cJoint)
     Private _nervioActual As cNervio
     Private _framesActuales As List(Of cFrameNervio)
     Private _cargando As Boolean = False
 
-    ' ── Constantes filas tablas de refuerzo ───────────────────────────────────
-    Private Shared ReadOnly BarSizes() As String = {"#3", "#4", "#5", "#6", "#8"}
-    Private Const FILA_CAPAS_SUP = 5   ' fila "Capas" en Ref_Superior
-    Private Const FILA_CAPAS_INF = 5   ' fila "Capas" en Ref_Inferior
-    Private Const FILA_EST_T = 6        ' fila "Es Sec. T" en Ref_Inferior
+    ' ── Constantes filas/zonas tablas de refuerzo (3 columnas por tramo: Izq/Centro/Der) ─
+    Private Shared ReadOnly BarSizes() As String = {"#3", "#4", "#5", "#6", "#7", "#8", "#10"}
+    Private Shared ReadOnly ZonaTexto() As String = {"Izq", "Centro", "Der"}
 
     Private Const FILA_COR_TIENE = 0
     Private Const FILA_COR_CALIBRE = 1
     Private Const FILA_COR_RAMAS = 2
     Private Const FILA_COR_SEP = 3
 
-    ' ── Constantes filas tabla demandas ───────────────────────────────────────
+    ' ── Constantes filas tabla demandas (1 columna por tramo) ─────────────────
     Private Const FILA_BW = 0
     Private Const FILA_H = 1
     Private Const FILA_L = 2
@@ -34,34 +34,31 @@ Public Class Form_11_Nervios
     Private Const FILA_MUD = 7
     Private Const FILA_VUI = 8
     Private Const FILA_VUD = 9
+    Private Const FILA_ESECT = 10
+    Private Const FILA_EJE_I = 11
+    Private Const FILA_EJE_D = 12
 
-    ' ── Constantes filas tabla resultados ─────────────────────────────────────
+    ' ── Constantes filas tabla resultados (3 columnas por tramo: Izq/Centro/Der) ─
     Private Const FILA_RES_ASMIN = 0
-    Private Const FILA_RES_ASSUP = 1
-    Private Const FILA_RES_PHMNSUP = 2
-    Private Const FILA_RES_ASINF = 3
-    Private Const FILA_RES_PHIMNINF = 4
-    Private Const FILA_RES_CDI = 5
-    Private Const FILA_RES_CDC = 6
-    Private Const FILA_RES_CDD = 7
-    Private Const FILA_RES_BE = 8
+    Private Const FILA_RES_ASPROV = 1
+    Private Const FILA_RES_PHIMN = 2
+    Private Const FILA_RES_CD = 3
+    Private Const FILA_RES_BE = 4
 
-    Private Const FILA_RES_PHIVNI = 0
-    Private Const FILA_RES_PHIVND = 1
-    Private Const FILA_RES_CDVI = 2
-    Private Const FILA_RES_CDVD = 3
-    Private Const FILA_RES_CUMPLE = 4
+    Private Const FILA_RES_PHIVN = 0
+    Private Const FILA_RES_CDV = 1
+    Private Const FILA_RES_CUMPLE = 2
 
-    ' ── Colores planta ────────────────────────────────────────────────────────
+    ' ── Colores planta — paleta categórica validada (contraste + daltonismo) sobre fondo claro ──
     Private Shared ReadOnly ColoresNervio As Color() = {
-        Color.FromArgb(80, 180, 255),
-        Color.FromArgb(255, 160, 60),
-        Color.FromArgb(80, 220, 120),
-        Color.FromArgb(220, 100, 200),
-        Color.FromArgb(255, 220, 60),
-        Color.FromArgb(100, 220, 220),
-        Color.FromArgb(255, 100, 100),
-        Color.FromArgb(180, 255, 100)
+        Color.FromArgb(42, 120, 214),   ' azul
+        Color.FromArgb(235, 104, 52),   ' naranja
+        Color.FromArgb(27, 175, 122),   ' aqua
+        Color.FromArgb(237, 161, 0),    ' amarillo
+        Color.FromArgb(232, 123, 164),  ' magenta
+        Color.FromArgb(0, 131, 0),      ' verde
+        Color.FromArgb(74, 58, 167),    ' violeta
+        Color.FromArgb(227, 73, 72)     ' rojo
     }
 
     ' ══════════════════════════════════════════════════════════════════════════
@@ -167,6 +164,33 @@ Public Class Form_11_Nervios
             Label1.Text = "Importando..."
             Application.DoEvents()
 
+            Dim hojas = ObtenerHojasExcel(ruta)
+
+            ' Bootstrap del modelo base (Joints/Frames/Secciones) si aún no se ha
+            ' cargado desde otro módulo (Vigas/Columnas/Muros). Sin esto, Frames
+            ' queda vacío y el diálogo de selección de secciones no muestra nada.
+            If Proyecto.Elementos.Frames.Count = 0 Then
+                Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
+                Dim hFrames = ResolverNombreHoja(hojas, "Objects and Elements - Frames", "Connectivity - Frame")
+                Proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(ruta, hJoints)
+                Proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(ruta, hFrames)
+
+                Proyecto.Elementos.Joints = DataTableToJoints(Proyecto.TablasEtabs.TablaOEJoints)
+                Proyecto.Elementos.Frames = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
+
+                Dim hAsigFrame = ResolverNombreHoja(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
+                Dim hSecDef = ResolverNombreHoja(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
+                Dim hMaterial = ResolverNombreHoja(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
+
+                Dim Data_Asig_Frame As DataTable = LeerHojaExcel(ruta, hAsigFrame)
+                Dim Data_Frame_Section As DataTable = LeerHojaExcel(ruta, hSecDef)
+                Dim Data_Material_Concrete As DataTable = LeerHojaExcel(ruta, hMaterial)
+
+                DataTableToAsignFrame(Proyecto.Elementos.Frames, Data_Asig_Frame, Data_Frame_Section, Data_Material_Concrete)
+
+                _joints = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
+            End If
+
             Dim nerv = Proyecto.Elementos.Nervios
             Dim todosFrames = Proyecto.Elementos.Frames
 
@@ -195,7 +219,6 @@ Public Class Form_11_Nervios
             End If
 
             ' Importar fuerzas
-            Dim hojas = ObtenerHojasExcel(ruta)
             nerv.BeamForces = _svc.ImportarBeamForcesNervios(ruta, hojas, secNervioSet, todosFrames)
 
             ' Combinaciones disponibles
@@ -207,6 +230,30 @@ Public Class Form_11_Nervios
 
             ' Detectar apoyos
             _svc.DetectarApoyos(nerv.Elementos, todosFrames, _joints, secNervioSet)
+
+            ' Ejes/grillas: cargar desde ETABS si aún no existen; si el archivo no
+            ' trae la hoja (o quedó vacía tras el filtro de diagonales), ofrecer
+            ' entrada manual — sin ejes no se puede identificar el apoyo en reportes.
+            If Proyecto.Elementos.Grids.GridLines.Count = 0 Then
+                Dim hGrids = ResolverNombreHoja(hojas, "Grid Definitions - Grid Lines", "Grid Lines")
+                Dim tablaGrids As DataTable = LeerHojaExcel(ruta, hGrids)
+                Proyecto.Elementos.Grids.GridLines = DataTableToGridLines(tablaGrids)
+            End If
+
+            If Proyecto.Elementos.Grids.GridLines.Count = 0 Then
+                Dim quiereManual = MessageBox.Show(
+                    "El archivo ETABS no incluye la definición de ejes/grillas." & vbCrLf &
+                    "¿Desea definir los ejes manualmente para poder identificarlos en los reportes?",
+                    "Ejes no encontrados", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+                If quiereManual = DialogResult.Yes Then
+                    Dim gridsManual As List(Of cGridLine) = Nothing
+                    If Form_DefinirEjesManual.Mostrar(Proyecto.Elementos.Grids.GridLines, gridsManual) Then
+                        Proyecto.Elementos.Grids.GridLines = gridsManual
+                    End If
+                End If
+            End If
+
+            _svc.AsignarEjesANervios(nerv.Elementos, Proyecto.Elementos.Grids.GridLines, _joints)
 
             ' Calcular paso auto y asignar tf
             Dim tf = CDbl(NudTf.Value)
@@ -273,6 +320,26 @@ Public Class Form_11_Nervios
             fOpc.Lista_Cargas_Design.Items.Add(combo)
         Next
         fOpc.ShowDialog()
+    End Sub
+
+    Private Sub DefinirEjesManualmenteToolStripMenuItem_Click(sender As Object, e As EventArgs) _
+        Handles DefinirEjesManualmenteToolStripMenuItem.Click
+
+        Dim gridsResultado As List(Of cGridLine) = Nothing
+        If Not Form_DefinirEjesManual.Mostrar(Proyecto.Elementos.Grids.GridLines, gridsResultado) Then Return
+
+        Proyecto.Elementos.Grids.GridLines = gridsResultado
+
+        Dim nerv = Proyecto.Elementos.Nervios
+        If nerv.Elementos.Count > 0 Then
+            _svc.AsignarEjesANervios(nerv.Elementos, Proyecto.Elementos.Grids.GridLines, _joints)
+            _cargando = True
+            LlenarTablas()
+            _cargando = False
+            DibujarPlanta()
+        End If
+
+        MessageBox.Show("Ejes actualizados.", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════
@@ -362,45 +429,66 @@ Public Class Form_11_Nervios
         ConstruirTablas()
         LlenarTablas()
         DibujarPlanta()
+        DibujarDiagramas()
+    End Sub
+
+    Private Sub DibujarDiagramas()
+        If _nervioActual Is Nothing Then Return
+        Dim nerv = Proyecto.Elementos.Nervios
+        Dim combosDiseno As New HashSet(Of String)(nerv.ListA_Combinaciones_Design)
+        _diagSvc.DibujarDiagramaMomento(_nervioActual, Diagrama_Momento, combosDiseno)
+        _diagSvc.DibujarDiagramaCortante(_nervioActual, Diagrama_Cortante, combosDiseno)
+    End Sub
+
+    Private Sub Diagrama_Momento_Resize(sender As Object, e As EventArgs) Handles Diagrama_Momento.Resize
+        DibujarDiagramas()
+    End Sub
+
+    Private Sub Diagrama_Cortante_Resize(sender As Object, e As EventArgs) Handles Diagrama_Cortante.Resize
+        DibujarDiagramas()
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════
-    '  CONSTRUCCIÓN DE TABLAS (columnas = 1 por tramo)
+    '  CONSTRUCCIÓN DE TABLAS
+    '  Refuerzo/Resultados: 3 columnas por tramo (Izq/Centro/Der), igual que Vigas.
+    '  Demandas: 1 columna por tramo (valores no discretizados por zona).
     ' ══════════════════════════════════════════════════════════════════════════
 
     Private Sub ConstruirTablas()
         If _framesActuales Is Nothing Then Return
 
-        ConstruirTablaRefuerzo(Ref_Superior, FILA_CAPAS_SUP + 1)  ' 6 filas (bar #3..#8 + Capas)
-        ConstruirTablaRefuerzo(Ref_Inferior, FILA_EST_T + 1)       ' 7 filas (+ Es Sec. T)
+        ConstruirTablaRefuerzo(Ref_Superior)
+        ConstruirTablaRefuerzo(Ref_Inferior)
         ConstruirTablaRefuerzoCortante()
         ConstruirTablaDemandas()
         ConstruirTablaResultados()
     End Sub
 
-    Private Sub ConstruirTablaRefuerzo(dgv As DataGridView, nFilas As Integer)
+    ''' <summary>Agrega 3 columnas por tramo (Izq/Centro/Der), header "{frame}\n{zona}".</summary>
+    Private Sub AgregarColumnasPorZona(dgv As DataGridView, ancho As Integer)
+        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        dgv.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True
+
+        For Each fn In _framesActuales
+            For Each zonaTxt In ZonaTexto
+                Dim col As New DataGridViewTextBoxColumn()
+                col.HeaderText = fn.ObjectLabel & vbCrLf & zonaTxt
+                col.Width = ancho
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+                dgv.Columns.Add(col)
+            Next
+        Next
+    End Sub
+
+    Private Sub ConstruirTablaRefuerzo(dgv As DataGridView)
         dgv.Columns.Clear()
         dgv.Rows.Clear()
 
-        ' Columnas: 1 por tramo
-        For Each fn In _framesActuales
-            Dim col As New DataGridViewTextBoxColumn()
-            col.HeaderText = fn.ObjectLabel
-            col.Width = 60
-            col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            dgv.Columns.Add(col)
-        Next
+        AgregarColumnasPorZona(dgv, 55)
 
-        ' Filas: calibres + Capas [+ Es Sec. T]
-        For i As Integer = 0 To nFilas - 1
+        For Each barra In BarSizes
             Dim rowIdx = dgv.Rows.Add()
-            If i < BarSizes.Length Then
-                dgv.Rows(rowIdx).HeaderCell.Value = BarSizes(i)
-            ElseIf i = FILA_CAPAS_SUP Then
-                dgv.Rows(rowIdx).HeaderCell.Value = "Capas"
-            Else
-                dgv.Rows(rowIdx).HeaderCell.Value = "Es T (S/N)"
-            End If
+            dgv.Rows(rowIdx).HeaderCell.Value = barra
         Next
     End Sub
 
@@ -408,13 +496,7 @@ Public Class Form_11_Nervios
         Ref_Cortante.Columns.Clear()
         Ref_Cortante.Rows.Clear()
 
-        For Each fn In _framesActuales
-            Dim col As New DataGridViewTextBoxColumn()
-            col.HeaderText = fn.ObjectLabel
-            col.Width = 70
-            col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            Ref_Cortante.Columns.Add(col)
-        Next
+        AgregarColumnasPorZona(Ref_Cortante, 62)
 
         Dim etiquetas = {"Tiene est.", "Calibre", "Ramas", "Sep (m)"}
         For Each lbl In etiquetas
@@ -437,10 +519,18 @@ Public Class Form_11_Nervios
 
         Dim etiquetas = {"Bw (m)", "H (m)", "L (m)", "b_apoyo I (m)", "b_apoyo D (m)",
                          "Mu neg I (kN·m)", "Mu pos C (kN·m)", "Mu neg D (kN·m)",
-                         "Vu I (kN)", "Vu D (kN)"}
+                         "Vu I (kN)", "Vu D (kN)", "Es Sección T (S/N)", "Eje Izq", "Eje Der"}
         For Each lbl In etiquetas
             Dim rowIdx = Tabla_Demandas.Rows.Add()
             Tabla_Demandas.Rows(rowIdx).HeaderCell.Value = lbl
+        Next
+
+        ' Solo Es T / Eje Izq / Eje Der son editables; el resto son valores calculados/importados
+        For row As Integer = FILA_BW To FILA_VUD
+            For col As Integer = 0 To Tabla_Demandas.Columns.Count - 1
+                Tabla_Demandas.Rows(row).Cells(col).Style.BackColor = Color.FromArgb(240, 240, 240)
+                Tabla_Demandas.Rows(row).Cells(col).ReadOnly = True
+            Next
         Next
     End Sub
 
@@ -450,27 +540,16 @@ Public Class Form_11_Nervios
         Tabla_Resultados_Cortante.Columns.Clear()
         Tabla_Resultados_Cortante.Rows.Clear()
 
-        For Each fn In _framesActuales
-            Dim c1 As New DataGridViewTextBoxColumn()
-            c1.HeaderText = fn.ObjectLabel : c1.Width = 80
-            c1.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            Tabla_Resultados_Flexion.Columns.Add(c1)
+        AgregarColumnasPorZona(Tabla_Resultados_Flexion, 70)
+        AgregarColumnasPorZona(Tabla_Resultados_Cortante, 70)
 
-            Dim c2 As New DataGridViewTextBoxColumn()
-            c2.HeaderText = fn.ObjectLabel : c2.Width = 80
-            c2.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            Tabla_Resultados_Cortante.Columns.Add(c2)
-        Next
-
-        Dim etqFlex = {"As_min (cm²)", "As sup (cm²)", "φMn sup (kN·m)",
-                       "As inf (cm²)", "φMn inf (kN·m)",
-                       "C/D flex I", "C/D flex C", "C/D flex D", "Be (m)"}
+        Dim etqFlex = {"As_min (cm²)", "As prov (cm²)", "φMn (kN·m)", "C/D flexión", "Be (m)"}
         For Each lbl In etqFlex
             Dim r = Tabla_Resultados_Flexion.Rows.Add()
             Tabla_Resultados_Flexion.Rows(r).HeaderCell.Value = lbl
         Next
 
-        Dim etqCor = {"φVn I (kN)", "φVn D (kN)", "C/D cort I", "C/D cort D", "Cumple"}
+        Dim etqCor = {"φVn (kN)", "C/D cortante", "Cumple"}
         For Each lbl In etqCor
             Dim r = Tabla_Resultados_Cortante.Rows.Add()
             Tabla_Resultados_Cortante.Rows(r).HeaderCell.Value = lbl
@@ -494,39 +573,58 @@ Public Class Form_11_Nervios
     End Sub
 
     Private Sub LlenarRefuerzo()
-        For col As Integer = 0 To _framesActuales.Count - 1
-            Dim fn = _framesActuales(col)
+        For fi As Integer = 0 To _framesActuales.Count - 1
+            Dim fn = _framesActuales(fi)
 
-            ' Ref_Superior
-            For row As Integer = 0 To BarSizes.Length - 1
-                Ref_Superior.Rows(row).Cells(col).Value =
-                    If(BarSizes(row) = fn.Calibre_Sup, fn.Barras_Sup, 0)
+            For zi As Integer = 0 To 2
+                Dim col = fi * 3 + zi
+                Dim posicion = ObtenerPosicion(zi)
+
+                LlenarColumnaZona(Ref_Superior, col, fn.RefuerzoSuperior, posicion)
+                LlenarColumnaZona(Ref_Inferior, col, fn.RefuerzoInferior, posicion)
+                LlenarColumnaCortante(col, fn.RefuerzoTransversal, posicion)
+
+                ColorizarCeldasConValor(Ref_Superior, col)
+                ColorizarCeldasConValor(Ref_Inferior, col)
             Next
-            Ref_Superior.Rows(FILA_CAPAS_SUP).Cells(col).Value = fn.Capas_Sup
-
-            ' Ref_Inferior
-            For row As Integer = 0 To BarSizes.Length - 1
-                Ref_Inferior.Rows(row).Cells(col).Value =
-                    If(BarSizes(row) = fn.Calibre_Inf, fn.Barras_Inf, 0)
-            Next
-            Ref_Inferior.Rows(FILA_CAPAS_INF).Cells(col).Value = fn.Capas_Inf
-            Ref_Inferior.Rows(FILA_EST_T).Cells(col).Value = If(fn.EsSeccionT, "S", "N")
-
-            ' Ref_Cortante
-            Ref_Cortante.Rows(FILA_COR_TIENE).Cells(col).Value = If(fn.TieneEstribos, "S", "N")
-            Ref_Cortante.Rows(FILA_COR_CALIBRE).Cells(col).Value = fn.Estribo_Calibre
-            Ref_Cortante.Rows(FILA_COR_RAMAS).Cells(col).Value = fn.Estribo_Ramas
-            Ref_Cortante.Rows(FILA_COR_SEP).Cells(col).Value = fn.Estribo_Sep.ToString("F3")
-
-            ' Resaltar calibre activo en Ref_Superior
-            ColorizarFilaActiva(Ref_Superior, fn.Calibre_Sup, col)
-            ColorizarFilaActiva(Ref_Inferior, fn.Calibre_Inf, col)
         Next
     End Sub
 
-    Private Sub ColorizarFilaActiva(dgv As DataGridView, calibreActivo As String, col As Integer)
+    ''' <summary>Convierte el índice de columna zonal (0/1/2) a Izquierda/Centro/Derecha.</summary>
+    Private Shared Function ObtenerPosicion(zi As Integer) As PosicionTramoViga
+        Select Case zi
+            Case 0 : Return PosicionTramoViga.Izquierda
+            Case 1 : Return PosicionTramoViga.Centro
+            Case Else : Return PosicionTramoViga.Derecha
+        End Select
+    End Function
+
+    Private Sub LlenarColumnaZona(dgv As DataGridView, col As Integer,
+                                   lista As List(Of cRefuerzoTramo), posicion As PosicionTramoViga)
+        Dim tramo = If(lista, New List(Of cRefuerzoTramo)).FirstOrDefault(Function(t) t.Posicion = posicion)
         For row As Integer = 0 To BarSizes.Length - 1
-            Dim esActivo = BarSizes(row) = calibreActivo
+            Dim cant As Integer = 0
+            If tramo IsNot Nothing AndAlso tramo.Barras IsNot Nothing Then
+                tramo.Barras.TryGetValue(BarSizes(row), cant)
+            End If
+            dgv.Rows(row).Cells(col).Value = cant
+        Next
+    End Sub
+
+    Private Sub LlenarColumnaCortante(col As Integer, lista As List(Of cRefuerzoTransversalZona), posicion As PosicionTramoViga)
+        Dim zona = If(lista, New List(Of cRefuerzoTransversalZona)).FirstOrDefault(Function(z) z.Posicion = posicion)
+        Ref_Cortante.Rows(FILA_COR_TIENE).Cells(col).Value = If(zona IsNot Nothing AndAlso zona.CantEstribos > 0, "S", "N")
+        Ref_Cortante.Rows(FILA_COR_CALIBRE).Cells(col).Value = "#" & If(zona IsNot Nothing AndAlso zona.NumeroBarra > 0, zona.NumeroBarra, 3)
+        Ref_Cortante.Rows(FILA_COR_RAMAS).Cells(col).Value = If(zona IsNot Nothing AndAlso zona.CantEstribos > 0, zona.CantEstribos, 2)
+        Ref_Cortante.Rows(FILA_COR_SEP).Cells(col).Value = If(zona IsNot Nothing AndAlso zona.Separacion > 0, zona.Separacion, 0.15).ToString("F3")
+    End Sub
+
+    ''' <summary>Resalta las celdas de calibre con cantidad > 0 (puede haber varios calibres combinados por zona).</summary>
+    Private Sub ColorizarCeldasConValor(dgv As DataGridView, col As Integer)
+        For row As Integer = 0 To BarSizes.Length - 1
+            Dim v As Integer = 0
+            Integer.TryParse(dgv.Rows(row).Cells(col).Value?.ToString(), v)
+            Dim esActivo = v > 0
             dgv.Rows(row).Cells(col).Style.BackColor =
                 If(esActivo, Color.FromArgb(200, 230, 255), Color.Empty)
             dgv.Rows(row).Cells(col).Style.Font =
@@ -547,44 +645,40 @@ Public Class Form_11_Nervios
             Tabla_Demandas.Rows(FILA_MUD).Cells(col).Value = fn.Mu_Neg_D.ToString("F2")
             Tabla_Demandas.Rows(FILA_VUI).Cells(col).Value = fn.Vu_I.ToString("F2")
             Tabla_Demandas.Rows(FILA_VUD).Cells(col).Value = fn.Vu_D.ToString("F2")
+            Tabla_Demandas.Rows(FILA_ESECT).Cells(col).Value = If(fn.EsSeccionT, "S", "N")
+            Tabla_Demandas.Rows(FILA_EJE_I).Cells(col).Value = If(String.IsNullOrWhiteSpace(fn.EjeApoyo_I), "—", fn.EjeApoyo_I)
+            Tabla_Demandas.Rows(FILA_EJE_D).Cells(col).Value = If(String.IsNullOrWhiteSpace(fn.EjeApoyo_D), "—", fn.EjeApoyo_D)
         Next
     End Sub
 
+    Private Sub Tabla_Demandas_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) _
+        Handles Tabla_Demandas.CellValueChanged
+        If _cargando OrElse _framesActuales Is Nothing Then Return
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 OrElse e.ColumnIndex >= _framesActuales.Count Then Return
+
+        Dim fn = _framesActuales(e.ColumnIndex)
+        Select Case e.RowIndex
+            Case FILA_ESECT
+                Dim v = Tabla_Demandas.Rows(FILA_ESECT).Cells(e.ColumnIndex).Value?.ToString().ToUpperInvariant()
+                fn.EsSeccionT = (v = "S" OrElse v = "SI" OrElse v = "Y" OrElse v = "TRUE")
+                fn.Ref_Modificado = True
+                RecalcularFrame(fn)
+                _cargando = True
+                LlenarResultadosColumna(e.ColumnIndex)
+                _cargando = False
+                DibujarPlanta()
+            Case FILA_EJE_I
+                fn.EjeApoyo_I = Tabla_Demandas.Rows(FILA_EJE_I).Cells(e.ColumnIndex).Value?.ToString().Trim()
+                DibujarPlanta()
+            Case FILA_EJE_D
+                fn.EjeApoyo_D = Tabla_Demandas.Rows(FILA_EJE_D).Cells(e.ColumnIndex).Value?.ToString().Trim()
+                DibujarPlanta()
+        End Select
+    End Sub
+
     Private Sub LlenarResultados()
-        For col As Integer = 0 To _framesActuales.Count - 1
-            Dim fn = _framesActuales(col)
-
-            ' Flexión
-            Tabla_Resultados_Flexion.Rows(FILA_RES_ASMIN).Cells(col).Value = fn.As_Min.ToString("F2")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_ASSUP).Cells(col).Value = fn.As_Prov_Sup.ToString("F2")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_PHMNSUP).Cells(col).Value = fn.PhiMn_Sup.ToString("F1")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_ASINF).Cells(col).Value = fn.As_Prov_Inf.ToString("F2")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_PHIMNINF).Cells(col).Value = fn.PhiMn_Inf.ToString("F1")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_CDI).Cells(col).Value = fn.CD_Flex_Sup_I.ToString("F2")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_CDC).Cells(col).Value = fn.CD_Flex_Inf_C.ToString("F2")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_CDD).Cells(col).Value = fn.CD_Flex_Sup_D.ToString("F2")
-            Tabla_Resultados_Flexion.Rows(FILA_RES_BE).Cells(col).Value =
-                If(fn.EsSeccionT, fn.Be.ToString("F3"), "—")
-
-            ' Semáforo C/D flexión
-            ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CDI).Cells(col), fn.CD_Flex_Sup_I)
-            ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CDC).Cells(col), fn.CD_Flex_Inf_C)
-            ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CDD).Cells(col), fn.CD_Flex_Sup_D)
-
-            ' Cortante
-            Tabla_Resultados_Cortante.Rows(FILA_RES_PHIVNI).Cells(col).Value = fn.PhiVn_I.ToString("F1")
-            Tabla_Resultados_Cortante.Rows(FILA_RES_PHIVND).Cells(col).Value = fn.PhiVn_D.ToString("F1")
-            Tabla_Resultados_Cortante.Rows(FILA_RES_CDVI).Cells(col).Value = fn.CD_Cortante_I.ToString("F2")
-            Tabla_Resultados_Cortante.Rows(FILA_RES_CDVD).Cells(col).Value = fn.CD_Cortante_D.ToString("F2")
-            Tabla_Resultados_Cortante.Rows(FILA_RES_CUMPLE).Cells(col).Value =
-                If(fn.Cumple, "✓ Cumple", "✗ No cumple")
-
-            ColorearCD(Tabla_Resultados_Cortante.Rows(FILA_RES_CDVI).Cells(col), fn.CD_Cortante_I)
-            ColorearCD(Tabla_Resultados_Cortante.Rows(FILA_RES_CDVD).Cells(col), fn.CD_Cortante_D)
-
-            Dim cumpleCell = Tabla_Resultados_Cortante.Rows(FILA_RES_CUMPLE).Cells(col)
-            cumpleCell.Style.BackColor = If(fn.Cumple, Color.FromArgb(200, 240, 200), Color.FromArgb(255, 200, 200))
-            cumpleCell.Style.ForeColor = If(fn.Cumple, Color.DarkGreen, Color.DarkRed)
+        For fi As Integer = 0 To _framesActuales.Count - 1
+            LlenarResultadosColumna(fi)
         Next
     End Sub
 
@@ -640,87 +734,85 @@ Public Class Form_11_Nervios
     End Sub
 
     Private Sub GuardarRefuerzoSupYRecalcular(col As Integer)
-        If col >= _framesActuales.Count Then Return
-        Dim fn = _framesActuales(col)
-
-        ' Leer calibre activo (primera fila con valor > 0)
-        For row As Integer = 0 To BarSizes.Length - 1
-            Dim v As Integer = 0
-            Integer.TryParse(Ref_Superior.Rows(row).Cells(col).Value?.ToString(), v)
-            If v > 0 Then
-                fn.Calibre_Sup = BarSizes(row)
-                fn.Barras_Sup = v
-                Exit For
-            End If
-        Next
-
-        Dim capas As Integer = 1
-        Integer.TryParse(Ref_Superior.Rows(FILA_CAPAS_SUP).Cells(col).Value?.ToString(), capas)
-        fn.Capas_Sup = Math.Max(1, capas)
-        fn.Ref_Modificado = True
-
-        RecalcularFrame(fn)
-        _cargando = True
-        ColorizarFilaActiva(Ref_Superior, fn.Calibre_Sup, col)
-        LlenarResultadosColumna(col)
-        _cargando = False
-        DibujarPlanta()
+        GuardarZonaLongitudinalYRecalcular(Ref_Superior, col, Function(fn) fn.RefuerzoSuperior)
     End Sub
 
     Private Sub GuardarRefuerzoInfYRecalcular(col As Integer)
-        If col >= _framesActuales.Count Then Return
-        Dim fn = _framesActuales(col)
+        GuardarZonaLongitudinalYRecalcular(Ref_Inferior, col, Function(fn) fn.RefuerzoInferior)
+    End Sub
 
+    ''' <summary>Lee la columna (calibre → cantidad, puede haber varios calibres combinados) y la
+    ''' guarda en la zona correspondiente de la lista seleccionada (RefuerzoSuperior/Inferior).</summary>
+    Private Sub GuardarZonaLongitudinalYRecalcular(dgv As DataGridView, col As Integer,
+                                                    listaSelector As Func(Of cFrameNervio, List(Of cRefuerzoTramo)))
+        Dim fi = col \ 3
+        If fi >= _framesActuales.Count Then Return
+        Dim fn = _framesActuales(fi)
+        Dim posicion = ObtenerPosicion(col Mod 3)
+        Dim lista = listaSelector(fn)
+
+        Dim barras As New Dictionary(Of String, Integer)
         For row As Integer = 0 To BarSizes.Length - 1
             Dim v As Integer = 0
-            Integer.TryParse(Ref_Inferior.Rows(row).Cells(col).Value?.ToString(), v)
-            If v > 0 Then
-                fn.Calibre_Inf = BarSizes(row)
-                fn.Barras_Inf = v
-                Exit For
-            End If
+            Integer.TryParse(dgv.Rows(row).Cells(col).Value?.ToString(), v)
+            If v > 0 Then barras(BarSizes(row)) = v
         Next
 
-        Dim capas As Integer = 1
-        Integer.TryParse(Ref_Inferior.Rows(FILA_CAPAS_INF).Cells(col).Value?.ToString(), capas)
-        fn.Capas_Inf = Math.Max(1, capas)
-
-        Dim esT = Ref_Inferior.Rows(FILA_EST_T).Cells(col).Value?.ToString().ToUpperInvariant()
-        fn.EsSeccionT = (esT = "S" OrElse esT = "SI" OrElse esT = "Y" OrElse esT = "TRUE")
+        Dim tramo = lista.FirstOrDefault(Function(t) t.Posicion = posicion)
+        If tramo Is Nothing Then
+            tramo = New cRefuerzoTramo With {.Frame = fn.ObjectLabel, .Posicion = posicion}
+            lista.Add(tramo)
+        End If
+        tramo.Barras = barras
 
         fn.Ref_Modificado = True
         RecalcularFrame(fn)
         _cargando = True
-        ColorizarFilaActiva(Ref_Inferior, fn.Calibre_Inf, col)
-        LlenarResultadosColumna(col)
+        ColorizarCeldasConValor(dgv, col)
+        LlenarResultadosColumna(fi)
         _cargando = False
         DibujarPlanta()
     End Sub
 
     Private Sub GuardarCortanteYRecalcular(col As Integer)
-        If col >= _framesActuales.Count Then Return
-        Dim fn = _framesActuales(col)
+        Dim fi = col \ 3
+        If fi >= _framesActuales.Count Then Return
+        Dim fn = _framesActuales(fi)
+        Dim posicion = ObtenerPosicion(col Mod 3)
 
         Dim tieneStr = Ref_Cortante.Rows(FILA_COR_TIENE).Cells(col).Value?.ToString().ToUpperInvariant()
-        fn.TieneEstribos = (tieneStr = "S" OrElse tieneStr = "SI" OrElse tieneStr = "Y")
+        Dim tiene = (tieneStr = "S" OrElse tieneStr = "SI" OrElse tieneStr = "Y")
 
         Dim cal = Ref_Cortante.Rows(FILA_COR_CALIBRE).Cells(col).Value?.ToString()
-        If Not String.IsNullOrWhiteSpace(cal) Then fn.Estribo_Calibre = cal.Trim()
+        Dim numBarra As Integer = 3
+        If Not String.IsNullOrWhiteSpace(cal) Then
+            Integer.TryParse(cal.Trim().TrimStart("#"c), numBarra)
+            If numBarra <= 0 Then numBarra = 3
+        End If
 
         Dim ramas As Integer = 2
         Integer.TryParse(Ref_Cortante.Rows(FILA_COR_RAMAS).Cells(col).Value?.ToString(), ramas)
-        fn.Estribo_Ramas = Math.Max(1, ramas)
+        ramas = Math.Max(1, ramas)
 
         Dim sep As Double = 0.15
         Double.TryParse(Ref_Cortante.Rows(FILA_COR_SEP).Cells(col).Value?.ToString(),
                         Globalization.NumberStyles.Any,
                         Globalization.CultureInfo.CurrentCulture, sep)
-        fn.Estribo_Sep = If(sep > 0, sep, 0.15)
-        fn.Ref_Modificado = True
+        If sep <= 0 Then sep = 0.15
 
+        Dim zona = fn.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = posicion)
+        If zona Is Nothing Then
+            zona = New cRefuerzoTransversalZona With {.Posicion = posicion}
+            fn.RefuerzoTransversal.Add(zona)
+        End If
+        zona.NumeroBarra = numBarra
+        zona.CantEstribos = If(tiene, ramas, 0)
+        zona.Separacion = sep
+
+        fn.Ref_Modificado = True
         RecalcularFrame(fn)
         _cargando = True
-        LlenarResultadosColumna(col)
+        LlenarResultadosColumna(fi)
         _cargando = False
         DibujarPlanta()
     End Sub
@@ -742,38 +834,49 @@ Public Class Form_11_Nervios
                     fn.CD_Cortante_D >= 0.9
     End Sub
 
-    Private Sub LlenarResultadosColumna(col As Integer)
-        If col >= _framesActuales.Count Then Return
-        Dim fn = _framesActuales(col)
+    ''' <summary>Escribe las 3 columnas (Izq/Centro/Der) de resultados del tramo fi, cada una
+    ''' con la capacidad de su propia zona de refuerzo.</summary>
+    Private Sub LlenarResultadosColumna(fi As Integer)
+        If fi >= _framesActuales.Count Then Return
+        Dim fn = _framesActuales(fi)
+        Dim colIzq = fi * 3 + 0
+        Dim colCentro = fi * 3 + 1
+        Dim colDer = fi * 3 + 2
 
-        Tabla_Resultados_Flexion.Rows(FILA_RES_ASMIN).Cells(col).Value = fn.As_Min.ToString("F2")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_ASSUP).Cells(col).Value = fn.As_Prov_Sup.ToString("F2")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_PHMNSUP).Cells(col).Value = fn.PhiMn_Sup.ToString("F1")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_ASINF).Cells(col).Value = fn.As_Prov_Inf.ToString("F2")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_PHIMNINF).Cells(col).Value = fn.PhiMn_Inf.ToString("F1")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_CDI).Cells(col).Value = fn.CD_Flex_Sup_I.ToString("F2")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_CDC).Cells(col).Value = fn.CD_Flex_Inf_C.ToString("F2")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_CDD).Cells(col).Value = fn.CD_Flex_Sup_D.ToString("F2")
-        Tabla_Resultados_Flexion.Rows(FILA_RES_BE).Cells(col).Value =
-            If(fn.EsSeccionT, fn.Be.ToString("F3"), "—")
+        EscribirColumnaFlexion(colIzq, fn.As_Min, fn.As_Prov_Sup_I, fn.PhiMn_Sup_I, fn.CD_Flex_Sup_I, Nothing)
+        EscribirColumnaFlexion(colCentro, fn.As_Min, fn.As_Prov_Inf_C, fn.PhiMn_Inf_C, fn.CD_Flex_Inf_C,
+                                If(fn.EsSeccionT, CType(fn.Be, Double?), Nothing))
+        EscribirColumnaFlexion(colDer, fn.As_Min, fn.As_Prov_Sup_D, fn.PhiMn_Sup_D, fn.CD_Flex_Sup_D, Nothing)
 
-        ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CDI).Cells(col), fn.CD_Flex_Sup_I)
-        ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CDC).Cells(col), fn.CD_Flex_Inf_C)
-        ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CDD).Cells(col), fn.CD_Flex_Sup_D)
+        EscribirColumnaCortante(colIzq, fn.PhiVn_I, fn.CD_Cortante_I, fn.Cumple)
+        EscribirColumnaCortante(colCentro, Nothing, Nothing, fn.Cumple)
+        EscribirColumnaCortante(colDer, fn.PhiVn_D, fn.CD_Cortante_D, fn.Cumple)
+    End Sub
 
-        Tabla_Resultados_Cortante.Rows(FILA_RES_PHIVNI).Cells(col).Value = fn.PhiVn_I.ToString("F1")
-        Tabla_Resultados_Cortante.Rows(FILA_RES_PHIVND).Cells(col).Value = fn.PhiVn_D.ToString("F1")
-        Tabla_Resultados_Cortante.Rows(FILA_RES_CDVI).Cells(col).Value = fn.CD_Cortante_I.ToString("F2")
-        Tabla_Resultados_Cortante.Rows(FILA_RES_CDVD).Cells(col).Value = fn.CD_Cortante_D.ToString("F2")
-        Tabla_Resultados_Cortante.Rows(FILA_RES_CUMPLE).Cells(col).Value =
-            If(fn.Cumple, "✓ Cumple", "✗ No cumple")
+    Private Sub EscribirColumnaFlexion(col As Integer, asMin As Double, asProv As Double,
+                                        phiMn As Double, cd As Double, be As Double?)
+        Tabla_Resultados_Flexion.Rows(FILA_RES_ASMIN).Cells(col).Value = asMin.ToString("F2")
+        Tabla_Resultados_Flexion.Rows(FILA_RES_ASPROV).Cells(col).Value = asProv.ToString("F2")
+        Tabla_Resultados_Flexion.Rows(FILA_RES_PHIMN).Cells(col).Value = phiMn.ToString("F1")
+        Tabla_Resultados_Flexion.Rows(FILA_RES_CD).Cells(col).Value = cd.ToString("F2")
+        Tabla_Resultados_Flexion.Rows(FILA_RES_BE).Cells(col).Value = If(be.HasValue, be.Value.ToString("F3"), "—")
+        ColorearCD(Tabla_Resultados_Flexion.Rows(FILA_RES_CD).Cells(col), cd)
+    End Sub
 
-        ColorearCD(Tabla_Resultados_Cortante.Rows(FILA_RES_CDVI).Cells(col), fn.CD_Cortante_I)
-        ColorearCD(Tabla_Resultados_Cortante.Rows(FILA_RES_CDVD).Cells(col), fn.CD_Cortante_D)
+    Private Sub EscribirColumnaCortante(col As Integer, phiVn As Double?, cd As Double?, cumple As Boolean)
+        Tabla_Resultados_Cortante.Rows(FILA_RES_PHIVN).Cells(col).Value = If(phiVn.HasValue, phiVn.Value.ToString("F1"), "—")
+        Tabla_Resultados_Cortante.Rows(FILA_RES_CDV).Cells(col).Value = If(cd.HasValue, cd.Value.ToString("F2"), "—")
+        If cd.HasValue Then
+            ColorearCD(Tabla_Resultados_Cortante.Rows(FILA_RES_CDV).Cells(col), cd.Value)
+        Else
+            Tabla_Resultados_Cortante.Rows(FILA_RES_CDV).Cells(col).Style.BackColor = Color.Empty
+            Tabla_Resultados_Cortante.Rows(FILA_RES_CDV).Cells(col).Style.ForeColor = Color.DimGray
+        End If
 
         Dim cumpleCell = Tabla_Resultados_Cortante.Rows(FILA_RES_CUMPLE).Cells(col)
-        cumpleCell.Style.BackColor = If(fn.Cumple, Color.FromArgb(200, 240, 200), Color.FromArgb(255, 200, 200))
-        cumpleCell.Style.ForeColor = If(fn.Cumple, Color.DarkGreen, Color.DarkRed)
+        cumpleCell.Value = If(cumple, "✓ Cumple", "✗ No cumple")
+        cumpleCell.Style.BackColor = If(cumple, Color.FromArgb(200, 240, 200), Color.FromArgb(255, 200, 200))
+        cumpleCell.Style.ForeColor = If(cumple, Color.DarkGreen, Color.DarkRed)
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════
@@ -790,7 +893,7 @@ Public Class Form_11_Nervios
 
         Dim bmp As New Bitmap(Math.Max(PicPlanta.Width, 100), Math.Max(PicPlanta.Height, 100))
         Using g As Graphics = Graphics.FromImage(bmp)
-            g.Clear(Color.FromArgb(16, 20, 34))
+            g.Clear(Color.FromArgb(245, 248, 252))
             g.SmoothingMode = SmoothingMode.AntiAlias
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit
 
@@ -833,7 +936,7 @@ Public Class Form_11_Nervios
         ' Fondo de estructura
         Dim framesTodos = Proyecto.Elementos.Frames _
             .Where(Function(f) nervios.Any(Function(n) n.Piso = f.Story)).ToList()
-        Using penFondo As New Pen(Color.FromArgb(40, 60, 80), 1)
+        Using penFondo As New Pen(Color.FromArgb(210, 210, 210), 1)
             For Each f In framesTodos
                 Dim ji As cJoint = Nothing, jj As cJoint = Nothing
                 If _joints.TryGetValue(f.JointI, ji) AndAlso _joints.TryGetValue(f.JointJ, jj) Then
@@ -843,11 +946,23 @@ Public Class Form_11_Nervios
         End Using
 
         Dim fontLabel As New Font("Segoe UI", 7)
+        Dim fontEje As New Font("Segoe UI", 7, FontStyle.Bold)
         For idx As Integer = 0 To nervios.Count - 1
             Dim nerv = nervios(idx)
             Dim color = ColoresNervio(idx Mod ColoresNervio.Length)
             Dim esSeleccionado = ReferenceEquals(nerv, _nervioActual)
             Dim grosor = If(esSeleccionado, 4.0F, 2.5F)
+
+            If esSeleccionado Then
+                Using penHalo As New Pen(Color.FromArgb(70, color), grosor + 5)
+                    For Each fn In nerv.Frames
+                        Dim ji As cJoint = Nothing, jj As cJoint = Nothing
+                        If Not _joints.TryGetValue(fn.JointI, ji) OrElse
+                           Not _joints.TryGetValue(fn.JointJ, jj) Then Continue For
+                        g.DrawLine(penHalo, Tx(ji.GlobalX), Ty(ji.GlobalY), Tx(jj.GlobalX), Ty(jj.GlobalY))
+                    Next
+                End Using
+            End If
 
             Using penNervio As New Pen(color, grosor)
                 For Each fn In nerv.Frames
@@ -861,23 +976,39 @@ Public Class Form_11_Nervios
 
                     If fn.Ref_Modificado Then
                         Dim cdMin = Math.Min(fn.CD_Flex_Inf_C, Math.Min(fn.CD_Cortante_I, fn.CD_Cortante_D))
-                        Dim clrCD = If(cdMin >= 1.0, Color.LimeGreen, If(cdMin >= 0.9, Color.Orange, Color.Red))
+                        Dim clrCD = If(cdMin >= 1.0, Color.FromArgb(0, 131, 0),
+                                     If(cdMin >= 0.9, Color.FromArgb(237, 161, 0), Color.FromArgb(227, 73, 72)))
                         Dim xm = (p1.X + p2.X) / 2
                         Dim ym = (p1.Y + p2.Y) / 2
-                        Using brushCD As New SolidBrush(clrCD)
+                        Using penCD As New Pen(Color.White, 1.5F), brushCD As New SolidBrush(clrCD)
                             g.FillEllipse(brushCD, xm - 5, ym - 5, 10, 10)
+                            g.DrawEllipse(penCD, xm - 5, ym - 5, 10, 10)
                         End Using
                     End If
 
                     If ChkMostrarEtiquetas.Checked Then
                         Dim xm = (p1.X + p2.X) / 2
                         Dim ym = (p1.Y + p2.Y) / 2
-                        g.DrawString(fn.ObjectLabel, fontLabel, Brushes.White, xm + 4, ym - 8)
+                        DibujarEtiquetaConFondo(g, fn.ObjectLabel, fontLabel, color, xm + 4, ym - 16)
                     End If
 
                     If ChkMostrarApoyos.Checked Then
-                        If fn.B_Apoyo_I > 0 Then g.FillEllipse(Brushes.Orange, p1.X - 4, p1.Y - 4, 8, 8)
-                        If fn.B_Apoyo_D > 0 Then g.FillEllipse(Brushes.Orange, p2.X - 4, p2.Y - 4, 8, 8)
+                        Using penApoyo As New Pen(Color.White, 1.2F), brushApoyo As New SolidBrush(Color.FromArgb(235, 104, 52))
+                            If fn.B_Apoyo_I > 0 Then
+                                g.FillEllipse(brushApoyo, p1.X - 4, p1.Y - 4, 8, 8)
+                                g.DrawEllipse(penApoyo, p1.X - 4, p1.Y - 4, 8, 8)
+                            End If
+                            If fn.B_Apoyo_D > 0 Then
+                                g.FillEllipse(brushApoyo, p2.X - 4, p2.Y - 4, 8, 8)
+                                g.DrawEllipse(penApoyo, p2.X - 4, p2.Y - 4, 8, 8)
+                            End If
+                        End Using
+                        If Not String.IsNullOrWhiteSpace(fn.EjeApoyo_I) Then
+                            DibujarEtiquetaConFondo(g, fn.EjeApoyo_I, fontEje, Color.FromArgb(150, 90, 20), p1.X + 6, p1.Y + 4)
+                        End If
+                        If Not String.IsNullOrWhiteSpace(fn.EjeApoyo_D) Then
+                            DibujarEtiquetaConFondo(g, fn.EjeApoyo_D, fontEje, Color.FromArgb(150, 90, 20), p2.X + 6, p2.Y + 4)
+                        End If
                     End If
                 Next
             End Using
@@ -886,14 +1017,28 @@ Public Class Form_11_Nervios
                 Dim fn0 = nerv.Frames(0)
                 Dim ji As cJoint = Nothing
                 If _joints.TryGetValue(fn0.JointI, ji) Then
-                    Using brNombre As New SolidBrush(color)
-                        g.DrawString(nerv.ToString(), New Font("Segoe UI", 8, FontStyle.Bold),
-                                     brNombre, Tx(ji.GlobalX), Ty(ji.GlobalY) - 14)
+                    Using fontNombre As New Font("Segoe UI", 8, FontStyle.Bold)
+                        DibujarEtiquetaConFondo(g, nerv.ToString(), fontNombre, color, Tx(ji.GlobalX), Ty(ji.GlobalY) - 16)
                     End Using
                 End If
             End If
         Next
         fontLabel.Dispose()
+        fontEje.Dispose()
+    End Sub
+
+    ''' <summary>Dibuja texto con una placa de fondo blanco translúcido detrás — legible sobre
+    ''' cualquier elemento del plano, sea cual sea su color.</summary>
+    Private Shared Sub DibujarEtiquetaConFondo(g As Graphics, texto As String, font As Font,
+                                                colorTexto As Color, x As Single, y As Single)
+        If String.IsNullOrEmpty(texto) Then Return
+        Dim sz = g.MeasureString(texto, font)
+        Using bBg As New SolidBrush(Color.FromArgb(215, Color.White))
+            g.FillRectangle(bBg, x - 2, y - 1, sz.Width + 4, sz.Height + 2)
+        End Using
+        Using brTexto As New SolidBrush(colorTexto)
+            g.DrawString(texto, font, brTexto, x, y)
+        End Using
     End Sub
 
     Private Sub PicPlanta_Resize(sender As Object, e As EventArgs) Handles PicPlanta.Resize
@@ -972,6 +1117,22 @@ Public Class Form_11_Nervios
         DibujarPlanta()
     End Sub
 
+    Private Sub BtnVerPlantaAmpliada_Click(sender As Object, e As EventArgs) Handles BtnVerPlantaAmpliada.Click
+        If Proyecto Is Nothing OrElse Proyecto.Elementos.Nervios.Elementos.Count = 0 Then
+            MessageBox.Show("Primero importe y calcule los nervios.", "Sin datos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim frm As New Form_PlantaInteractivaNervios()
+        frm.Nervios = Proyecto.Elementos.Nervios.Elementos
+        frm.Joints = _joints
+        frm.GridLines = Proyecto.Elementos.Grids.GridLines
+        frm.NervioSeleccionado = _nervioActual
+        frm.PisoActual = If(Lista_Pisos.SelectedItem IsNot Nothing, Lista_Pisos.SelectedItem.ToString(), "")
+        frm.Show(Me)
+    End Sub
+
     ' ══════════════════════════════════════════════════════════════════════════
     '  EDICIÓN DE NERVIO
     ' ══════════════════════════════════════════════════════════════════════════
@@ -1017,8 +1178,8 @@ Public Class Form_11_Nervios
     End Sub
 
     Private Sub Exportar_Excel_Click(sender As Object, e As EventArgs) Handles Exportar_Excel.Click
-        MessageBox.Show("Exportación a Excel — próximamente.", "Información",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Form_11_01_Resultados.Proyecto = Proyecto
+        Form_11_01_Resultados.Show()
     End Sub
 
 End Class

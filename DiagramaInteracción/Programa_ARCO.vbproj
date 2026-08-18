@@ -361,10 +361,11 @@
     <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
     <Compile Include="Formularios\11_Nervios\NervioService.vb" />
+    <Compile Include="Formularios\11_Nervios\NervioDiagramaService.vb" />
     <Compile Include="Formularios\11_Nervios\Form_11_SepararNervio.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\11_Nervios\Form_11_00_InfoNervios.vb">
+    <Compile Include="Formularios\11_Nervios\Form_PlantaInteractivaNervios.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\11_Nervios\Form_11_01_Resultados.vb">
@@ -404,6 +405,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_FiltroSecciones.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_DefinirEjesManual.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_PlantaInteractiva.vb">

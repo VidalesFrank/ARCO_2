@@ -1,4 +1,4 @@
-Imports ARCO.Funciones_00_Varias
+﻿Imports ARCO.Funciones_00_Varias
 
 ' ═══════════════════════════════════════════════════════════════════════════════
 '  Form_11_01_Resultados — Tabla de resultados Módulo 11 Nervios
@@ -18,24 +18,27 @@ Public Class Form_11_01_Resultados
     Private Const COL_NERVIO = 0
     Private Const COL_PISO = 1
     Private Const COL_FRAME = 2
-    Private Const COL_SEC = 3
-    Private Const COL_BW = 4
-    Private Const COL_H = 5
-    Private Const COL_BEF = 6
-    Private Const COL_MUI = 7
-    Private Const COL_MUC = 8
-    Private Const COL_MUD = 9
-    Private Const COL_VUI = 10
-    Private Const COL_VUD = 11
-    Private Const COL_ASMIN = 12
-    Private Const COL_ASSUP = 13
-    Private Const COL_ASINF = 14
-    Private Const COL_CDI = 15
-    Private Const COL_CDC = 16
-    Private Const COL_CDD = 17
-    Private Const COL_CDVI = 18
-    Private Const COL_CDVD = 19
-    Private Const COL_CUMPLE = 20
+    Private Const COL_EJE_I = 3
+    Private Const COL_EJE_D = 4
+    Private Const COL_SEC = 5
+    Private Const COL_BW = 6
+    Private Const COL_H = 7
+    Private Const COL_BEF = 8
+    Private Const COL_MUI = 9
+    Private Const COL_MUC = 10
+    Private Const COL_MUD = 11
+    Private Const COL_VUI = 12
+    Private Const COL_VUD = 13
+    Private Const COL_ASMIN = 14
+    Private Const COL_ASSUP_I = 15
+    Private Const COL_ASINF_C = 16
+    Private Const COL_ASSUP_D = 17
+    Private Const COL_CDI = 18
+    Private Const COL_CDC = 19
+    Private Const COL_CDD = 20
+    Private Const COL_CDVI = 21
+    Private Const COL_CDVD = 22
+    Private Const COL_CUMPLE = 23
 
     Public Sub New()
         InitUI()
@@ -68,8 +71,10 @@ Public Class Form_11_01_Resultados
         BtnExportar.Text = "Exportar Excel"
         BtnExportar.Location = New Point(560, 8)
         BtnExportar.Size = New Size(120, 26)
-        BtnExportar.BackColor = Drawing.Color.FromArgb(0, 120, 215)
-        BtnExportar.ForeColor = Drawing.Color.White
+        BtnExportar.BackColor = Drawing.Color.FromArgb(224, 224, 224)
+        BtnExportar.ForeColor = Drawing.Color.FromArgb(87, 87, 87)
+        BtnExportar.FlatStyle = FlatStyle.Flat
+        BtnExportar.FlatAppearance.BorderSize = 0
 
         panFiltros.Controls.AddRange(New Control() {lblPiso, CmbPiso, ChkSoloFallan, BtnFiltrar, BtnExportar})
 
@@ -82,10 +87,10 @@ Public Class Form_11_01_Resultados
         Tabla.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
         Tabla.RowHeadersVisible = False
         Tabla.EnableHeadersVisualStyles = False
-        Tabla.ColumnHeadersDefaultCellStyle.BackColor = Drawing.Color.FromArgb(30, 60, 100)
+        Tabla.ColumnHeadersDefaultCellStyle.BackColor = Drawing.Color.FromArgb(87, 87, 87)
         Tabla.ColumnHeadersDefaultCellStyle.ForeColor = Drawing.Color.White
         Tabla.ColumnHeadersDefaultCellStyle.Font = New Drawing.Font("Segoe UI", 8.5F, Drawing.FontStyle.Bold)
-        Tabla.AlternatingRowsDefaultCellStyle.BackColor = Drawing.Color.FromArgb(245, 248, 255)
+        Tabla.AlternatingRowsDefaultCellStyle.BackColor = Drawing.Color.FromArgb(245, 245, 245)
 
         InicializarColumnas()
 
@@ -95,10 +100,10 @@ Public Class Form_11_01_Resultados
 
     Private Sub InicializarColumnas()
         Dim cols() As String = {
-            "Nervio", "Piso", "Frame", "Sección", "bw(m)", "h(m)", "be(m)",
+            "Nervio", "Piso", "Frame", "Eje Izq", "Eje Der", "Sección", "bw(m)", "h(m)", "be(m)",
             "Mu_neg_I", "Mu_pos_C", "Mu_neg_D",
             "Vu_I(kN)", "Vu_D(kN)",
-            "As_min(cm²)", "As_sup(cm²)", "As_inf(cm²)",
+            "As_min(cm²)", "As_sup_I(cm²)", "As_inf_C(cm²)", "As_sup_D(cm²)",
             "C/D FI", "C/D FC", "C/D FD", "C/D VI", "C/D VD", "Cumple"}
 
         Tabla.Columns.Clear()
@@ -155,12 +160,16 @@ Public Class Form_11_01_Resultados
                            Math.Min(fn.CD_Cortante_I, fn.CD_Cortante_D))))
 
                 Dim rowIdx = Tabla.Rows.Add(
-                    nerv.ToString(), nerv.Piso, fn.ObjectLabel, fn.NombreSeccion,
+                    nerv.ToString(), nerv.Piso, fn.ObjectLabel,
+                    If(String.IsNullOrWhiteSpace(fn.EjeApoyo_I), "—", fn.EjeApoyo_I),
+                    If(String.IsNullOrWhiteSpace(fn.EjeApoyo_D), "—", fn.EjeApoyo_D),
+                    fn.NombreSeccion,
                     fn.Bw.ToString("F3"), fn.H.ToString("F3"),
                     If(fn.EsSeccionT, fn.Be.ToString("F3"), "—"),
                     fn.Mu_Neg_I.ToString("F2"), fn.Mu_Pos_C.ToString("F2"), fn.Mu_Neg_D.ToString("F2"),
                     fn.Vu_I.ToString("F2"), fn.Vu_D.ToString("F2"),
-                    fn.As_Min.ToString("F2"), fn.As_Prov_Sup.ToString("F2"), fn.As_Prov_Inf.ToString("F2"),
+                    fn.As_Min.ToString("F2"), fn.As_Prov_Sup_I.ToString("F2"),
+                    fn.As_Prov_Inf_C.ToString("F2"), fn.As_Prov_Sup_D.ToString("F2"),
                     fn.CD_Flex_Sup_I.ToString("F2"), fn.CD_Flex_Inf_C.ToString("F2"),
                     fn.CD_Flex_Sup_D.ToString("F2"), fn.CD_Cortante_I.ToString("F2"),
                     fn.CD_Cortante_D.ToString("F2"),
@@ -214,7 +223,7 @@ Public Class Form_11_01_Resultados
                     For c As Integer = 0 To Tabla.Columns.Count - 1
                         ws.Cell(1, c + 1).Value = Tabla.Columns(c).HeaderText
                         ws.Cell(1, c + 1).Style.Font.Bold = True
-                        ws.Cell(1, c + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 60, 100)
+                        ws.Cell(1, c + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(87, 87, 87)
                         ws.Cell(1, c + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White
                     Next
                     ' Filas
