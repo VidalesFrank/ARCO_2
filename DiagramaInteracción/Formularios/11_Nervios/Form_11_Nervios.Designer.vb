@@ -74,9 +74,17 @@ Partial Class Form_11_Nervios
         Me.TabPage4 = New System.Windows.Forms.TabPage()
         Me.SplitDiag = New System.Windows.Forms.SplitContainer()
         Me.GroupBoxMomento = New System.Windows.Forms.GroupBox()
+        Me.PanelDiagCtrl = New System.Windows.Forms.Panel()
+        Me.ChkMostrarCapacidad = New System.Windows.Forms.CheckBox()
         Me.Diagrama_Momento = New System.Windows.Forms.PictureBox()
         Me.GroupBoxCortanteDiag = New System.Windows.Forms.GroupBox()
         Me.Diagrama_Cortante = New System.Windows.Forms.PictureBox()
+        Me.TabPage5 = New System.Windows.Forms.TabPage()
+        Me.SplitNervios = New System.Windows.Forms.SplitContainer()
+        Me.GbTablaNervios = New System.Windows.Forms.GroupBox()
+        Me.Tabla_Nervios = New System.Windows.Forms.DataGridView()
+        Me.GbTablaFrames = New System.Windows.Forms.GroupBox()
+        Me.Tabla_Frames_Nervio = New System.Windows.Forms.DataGridView()
 
         Me.MenuStrip1.SuspendLayout()
         Me.Panel3.SuspendLayout()
@@ -119,9 +127,19 @@ Partial Class Form_11_Nervios
         Me.SplitDiag.Panel2.SuspendLayout()
         Me.SplitDiag.SuspendLayout()
         Me.GroupBoxMomento.SuspendLayout()
+        Me.PanelDiagCtrl.SuspendLayout()
         CType(Me.Diagrama_Momento, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBoxCortanteDiag.SuspendLayout()
         CType(Me.Diagrama_Cortante, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.TabPage5.SuspendLayout()
+        CType(Me.SplitNervios, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.SplitNervios.Panel1.SuspendLayout()
+        Me.SplitNervios.Panel2.SuspendLayout()
+        Me.SplitNervios.SuspendLayout()
+        Me.GbTablaNervios.SuspendLayout()
+        CType(Me.Tabla_Nervios, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.GbTablaFrames.SuspendLayout()
+        CType(Me.Tabla_Frames_Nervio, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
 
         ' ── MenuStrip ─────────────────────────────────────────────────────────
@@ -332,7 +350,46 @@ Partial Class Form_11_Nervios
         Me.TabControl1.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControl1.Name = "TabControl1"
         Me.TabControl1.TabPages.AddRange(New System.Windows.Forms.TabPage() {
-            Me.TabPage1, Me.TabPage2, Me.TabPage3, Me.TabPage4})
+            Me.TabPage5, Me.TabPage1, Me.TabPage2, Me.TabPage3, Me.TabPage4})
+
+        ' ── TabPage5 "Nervios" ─────────────────────────────────────────────────
+        Me.TabPage5.Text = "Nervios"
+        Me.TabPage5.Name = "TabPage5"
+        Me.TabPage5.Padding = New System.Windows.Forms.Padding(3)
+
+        Me.SplitNervios.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.SplitNervios.Orientation = System.Windows.Forms.Orientation.Horizontal
+        Me.SplitNervios.SplitterDistance = 260
+        Me.SplitNervios.Name = "SplitNervios"
+        Me.SplitNervios.SplitterWidth = 4
+
+        Me.GbTablaNervios.Text = "Lista de nervios del piso"
+        Me.GbTablaNervios.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.GbTablaNervios.Name = "GbTablaNervios"
+        Me.GbTablaNervios.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GbTablaNervios.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        ApplyDgvStyle(Me.Tabla_Nervios)
+        Me.Tabla_Nervios.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
+        Me.Tabla_Nervios.MultiSelect = False
+        Me.Tabla_Nervios.ReadOnly = True
+        Me.Tabla_Nervios.Name = "Tabla_Nervios"
+        Me.GbTablaNervios.Controls.Add(Me.Tabla_Nervios)
+        Me.SplitNervios.Panel1.Controls.Add(Me.GbTablaNervios)
+
+        Me.GbTablaFrames.Text = "Composición del nervio seleccionado (frames ETABS)"
+        Me.GbTablaFrames.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.GbTablaFrames.Name = "GbTablaFrames"
+        Me.GbTablaFrames.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
+        Me.GbTablaFrames.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        ApplyDgvStyle(Me.Tabla_Frames_Nervio)
+        Me.Tabla_Frames_Nervio.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
+        Me.Tabla_Frames_Nervio.MultiSelect = False
+        Me.Tabla_Frames_Nervio.ReadOnly = True
+        Me.Tabla_Frames_Nervio.Name = "Tabla_Frames_Nervio"
+        Me.GbTablaFrames.Controls.Add(Me.Tabla_Frames_Nervio)
+        Me.SplitNervios.Panel2.Controls.Add(Me.GbTablaFrames)
+
+        Me.TabPage5.Controls.Add(Me.SplitNervios)
 
         ' ── TabPage1 "Refuerzo" ────────────────────────────────────────────────
         Me.TabPage1.Text = "Refuerzo"
@@ -445,11 +502,26 @@ Partial Class Form_11_Nervios
         Me.GroupBoxMomento.Name = "GroupBoxMomento"
         Me.GroupBoxMomento.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
         Me.GroupBoxMomento.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+
+        Me.PanelDiagCtrl.Dock = System.Windows.Forms.DockStyle.Top
+        Me.PanelDiagCtrl.Height = 22
+        Me.PanelDiagCtrl.Name = "PanelDiagCtrl"
+        Me.PanelDiagCtrl.BackColor = System.Drawing.Color.Transparent
+
+        Me.ChkMostrarCapacidad.AutoSize = True
+        Me.ChkMostrarCapacidad.Checked = True
+        Me.ChkMostrarCapacidad.CheckState = System.Windows.Forms.CheckState.Checked
+        Me.ChkMostrarCapacidad.Text = "Mostrar φMn(x)"
+        Me.ChkMostrarCapacidad.Name = "ChkMostrarCapacidad"
+        Me.ChkMostrarCapacidad.Location = New System.Drawing.Point(6, 2)
+        Me.PanelDiagCtrl.Controls.Add(Me.ChkMostrarCapacidad)
+
         Me.Diagrama_Momento.Dock = System.Windows.Forms.DockStyle.Fill
         Me.Diagrama_Momento.BackColor = System.Drawing.Color.White
         Me.Diagrama_Momento.Name = "Diagrama_Momento"
         Me.Diagrama_Momento.TabStop = False
         Me.GroupBoxMomento.Controls.Add(Me.Diagrama_Momento)
+        Me.GroupBoxMomento.Controls.Add(Me.PanelDiagCtrl)
         Me.SplitDiag.Panel1.Controls.Add(Me.GroupBoxMomento)
 
         Me.GroupBoxCortanteDiag.Text = "Diagrama de Cortante (V2)"
@@ -531,9 +603,20 @@ Partial Class Form_11_Nervios
         Me.SplitDiag.Panel2.ResumeLayout(False)
         Me.SplitDiag.ResumeLayout(False)
         Me.GroupBoxMomento.ResumeLayout(False)
+        Me.PanelDiagCtrl.ResumeLayout(False)
+        Me.PanelDiagCtrl.PerformLayout()
         CType(Me.Diagrama_Momento, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBoxCortanteDiag.ResumeLayout(False)
         CType(Me.Diagrama_Cortante, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.TabPage5.ResumeLayout(False)
+        CType(Me.SplitNervios, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.SplitNervios.Panel1.ResumeLayout(False)
+        Me.SplitNervios.Panel2.ResumeLayout(False)
+        Me.SplitNervios.ResumeLayout(False)
+        Me.GbTablaNervios.ResumeLayout(False)
+        CType(Me.Tabla_Nervios, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.GbTablaFrames.ResumeLayout(False)
+        CType(Me.Tabla_Frames_Nervio, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
         Me.PerformLayout()
     End Sub
@@ -612,7 +695,15 @@ Partial Class Form_11_Nervios
     Friend WithEvents TabPage4 As System.Windows.Forms.TabPage
     Friend WithEvents SplitDiag As System.Windows.Forms.SplitContainer
     Friend WithEvents GroupBoxMomento As System.Windows.Forms.GroupBox
+    Friend WithEvents PanelDiagCtrl As System.Windows.Forms.Panel
+    Friend WithEvents ChkMostrarCapacidad As System.Windows.Forms.CheckBox
     Friend WithEvents Diagrama_Momento As System.Windows.Forms.PictureBox
     Friend WithEvents GroupBoxCortanteDiag As System.Windows.Forms.GroupBox
     Friend WithEvents Diagrama_Cortante As System.Windows.Forms.PictureBox
+    Friend WithEvents TabPage5 As System.Windows.Forms.TabPage
+    Friend WithEvents SplitNervios As System.Windows.Forms.SplitContainer
+    Friend WithEvents GbTablaNervios As System.Windows.Forms.GroupBox
+    Friend WithEvents Tabla_Nervios As System.Windows.Forms.DataGridView
+    Friend WithEvents GbTablaFrames As System.Windows.Forms.GroupBox
+    Friend WithEvents Tabla_Frames_Nervio As System.Windows.Forms.DataGridView
 End Class

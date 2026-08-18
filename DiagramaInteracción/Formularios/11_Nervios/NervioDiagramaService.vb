@@ -30,11 +30,14 @@ Public Class NervioDiagramaService
     Private Const COLOR_CARA_G As Integer = 90
     Private Const COLOR_CARA_B As Integer = 20
 
-    Public Sub DibujarDiagramaMomento(nervio As cNervio, pictureBox As PictureBox, combosDiseno As HashSet(Of String))
+    Public Sub DibujarDiagramaMomento(nervio As cNervio, pictureBox As PictureBox,
+                                       combosDiseno As HashSet(Of String),
+                                       Optional mostrarCapacidad As Boolean = False)
         ' Mu_Neg_I/D son magnitudes de momento NEGATIVO (hogging) por definición
         ' (NervioService.CalcularEnvolventesNervios) — el signo siempre es negativo.
         Dibujar(nervio, pictureBox, combosDiseno, Function(c) c.Momentos,
-                Function(fn) fn.Mu_Neg_I, Function(fn) fn.Mu_Neg_D, "kN·m", signoFijo:=-1)
+                Function(fn) fn.Mu_Neg_I, Function(fn) fn.Mu_Neg_D, "kN·m", signoFijo:=-1,
+                nervioCapacidad:=If(mostrarCapacidad, nervio, Nothing))
     End Sub
 
     Public Sub DibujarDiagramaCortante(nervio As cNervio, pictureBox As PictureBox, combosDiseno As HashSet(Of String))
@@ -50,7 +53,8 @@ Public Class NervioDiagramaService
                          valorCaraI As Func(Of cFrameNervio, Double),
                          valorCaraD As Func(Of cFrameNervio, Double),
                          unidad As String,
-                         signoFijo As Integer)
+                         signoFijo As Integer,
+                         Optional nervioCapacidad As cNervio = Nothing)
 
         If pictureBox.Width <= 0 OrElse pictureBox.Height <= 0 Then Return
 
@@ -117,6 +121,13 @@ Public Class NervioDiagramaService
                 todasY.Add(valorCaraI(fn))
                 todasY.Add(valorCaraD(fn))
 
+                ' Capacidades φMn también entran en la escala para que las líneas queden visibles
+                If nervioCapacidad IsNot Nothing AndAlso fn.Ref_Modificado Then
+                    todasY.Add(fn.PhiMn_Inf_C)
+                    todasY.Add(-fn.PhiMn_Sup_I)
+                    todasY.Add(-fn.PhiMn_Sup_D)
+                End If
+
                 datos.Add((fn, xOffset, L, combos, estacionesRef, envMax, envMin))
                 xOffset += L
             Next
@@ -181,6 +192,76 @@ Public Class NervioDiagramaService
                     If puntosInf.Count >= 2 Then g.DrawLines(penEnv, puntosInf.ToArray())
                 Next
             End Using
+
+            ' ── Capacidad φMn(x) — solo diagrama de momento ───────────────────────
+            If nervioCapacidad IsNot Nothing Then
+                For Each d In datos
+                    Dim fn = d.fn
+                    Dim xOff = d.offset
+                    Dim L = d.L
+                    If L <= 0 OrElse Not fn.Ref_Modificado Then Continue For
+
+                    Dim xMid = xOff + L / 2.0
+
+                    ' Zonas con C/D < 0.9 — relleno rojo translúcido
+                    Using brFail As New SolidBrush(Color.FromArgb(45, 220, 0, 0))
+                        If fn.CD_Flex_Sup_I > 0 AndAlso fn.CD_Flex_Sup_I < 0.9 AndAlso fn.PhiMn_Sup_I > 0 Then
+                            Dim x1 = TransformX(xOff) : Dim x2 = TransformX(xMid)
+                            Dim yT = yZero : Dim yB = TransformY(-fn.PhiMn_Sup_I)
+                            If yB > yT Then g.FillRectangle(brFail, x1, yT, x2 - x1, yB - yT)
+                        End If
+                        If fn.CD_Flex_Inf_C > 0 AndAlso fn.CD_Flex_Inf_C < 0.9 AndAlso fn.PhiMn_Inf_C > 0 Then
+                            Dim x1 = TransformX(xOff + L * 0.25) : Dim x2 = TransformX(xOff + L * 0.75)
+                            Dim yT = TransformY(fn.PhiMn_Inf_C) : Dim yB = yZero
+                            If yB > yT Then g.FillRectangle(brFail, x1, yT, x2 - x1, yB - yT)
+                        End If
+                        If fn.CD_Flex_Sup_D > 0 AndAlso fn.CD_Flex_Sup_D < 0.9 AndAlso fn.PhiMn_Sup_D > 0 Then
+                            Dim x1 = TransformX(xMid) : Dim x2 = TransformX(xOff + L)
+                            Dim yT = yZero : Dim yB = TransformY(-fn.PhiMn_Sup_D)
+                            If yB > yT Then g.FillRectangle(brFail, x1, yT, x2 - x1, yB - yT)
+                        End If
+                    End Using
+
+                    ' φMn(+) inferior — línea verde discontinua sobre el eje cero
+                    If fn.PhiMn_Inf_C > 0 Then
+                        Using penPos As New Pen(Color.FromArgb(0, 150, 0), 2.0F) With {.DashStyle = DashStyle.Dash}
+                            g.DrawLine(penPos, TransformX(xOff), TransformY(fn.PhiMn_Inf_C),
+                                                TransformX(xOff + L), TransformY(fn.PhiMn_Inf_C))
+                        End Using
+                    End If
+
+                    ' φMn(-) superior — línea naranja discontinua bajo el eje cero (mitad izq / der)
+                    If fn.PhiMn_Sup_I > 0 Then
+                        Using penNeg As New Pen(Color.FromArgb(210, 120, 0), 2.0F) With {.DashStyle = DashStyle.Dash}
+                            g.DrawLine(penNeg, TransformX(xOff), TransformY(-fn.PhiMn_Sup_I),
+                                                TransformX(xMid), TransformY(-fn.PhiMn_Sup_I))
+                        End Using
+                    End If
+                    If fn.PhiMn_Sup_D > 0 Then
+                        Using penNeg As New Pen(Color.FromArgb(210, 120, 0), 2.0F) With {.DashStyle = DashStyle.Dash}
+                            g.DrawLine(penNeg, TransformX(xMid), TransformY(-fn.PhiMn_Sup_D),
+                                                TransformX(xOff + L), TransformY(-fn.PhiMn_Sup_D))
+                        End Using
+                    End If
+                Next
+
+                ' Leyenda breve en esquina superior derecha
+                Using fontLeg As New Font("Segoe UI", 8)
+                    Dim xLeg = CSng(bmp.Width) - 110.0F
+                    Using penL1 As New Pen(Color.FromArgb(0, 150, 0), 2.0F) With {.DashStyle = DashStyle.Dash}
+                        g.DrawLine(penL1, xLeg, 8, xLeg + 22, 8)
+                    End Using
+                    Using brL1 As New SolidBrush(Color.FromArgb(0, 120, 0))
+                        g.DrawString("φMn(+)", fontLeg, brL1, xLeg + 25, 2)
+                    End Using
+                    Using penL2 As New Pen(Color.FromArgb(210, 120, 0), 2.0F) With {.DashStyle = DashStyle.Dash}
+                        g.DrawLine(penL2, xLeg, 22, xLeg + 22, 22)
+                    End Using
+                    Using brL2 As New SolidBrush(Color.FromArgb(180, 100, 0))
+                        g.DrawString("φMn(-)", fontLeg, brL2, xLeg + 25, 16)
+                    End Using
+                End Using
+            End If
 
             ' ── Apoyos (rectángulo gris) y separadores de tramo ──
             Using brushApoyo As New SolidBrush(Color.FromArgb(60, 120, 120, 120))

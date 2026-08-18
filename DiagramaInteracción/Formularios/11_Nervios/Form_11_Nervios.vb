@@ -71,6 +71,7 @@ Public Class Form_11_Nervios
             Me.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)
         Catch
         End Try
+        ConstruirTablasNavegacion()
         SincronizarDesdeProyecto()
     End Sub
 
@@ -142,6 +143,8 @@ Public Class Form_11_Nervios
         Else
             LimpiarTablas()
         End If
+
+        LlenarTablaNervios()
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════
@@ -426,8 +429,20 @@ Public Class Form_11_Nervios
         Nombre_Nervio.Text = If(Not String.IsNullOrWhiteSpace(nervio.NombrePlano),
                                 nervio.NombrePlano, nervio.Nombre)
 
+        ' Sync Tabla_Nervios selection without triggering its handler
+        _cargando = True
+        For Each row As DataGridViewRow In Tabla_Nervios.Rows
+            Dim sel = ReferenceEquals(row.Tag, nervio)
+            If row.Selected <> sel Then row.Selected = sel
+            If sel AndAlso Not row.Displayed Then
+                Tabla_Nervios.FirstDisplayedScrollingRowIndex = row.Index
+            End If
+        Next
+        _cargando = False
+
         ConstruirTablas()
         LlenarTablas()
+        LlenarTablaFrames(nervio)
         DibujarPlanta()
         DibujarDiagramas()
     End Sub
@@ -436,8 +451,14 @@ Public Class Form_11_Nervios
         If _nervioActual Is Nothing Then Return
         Dim nerv = Proyecto.Elementos.Nervios
         Dim combosDiseno As New HashSet(Of String)(nerv.ListA_Combinaciones_Design)
-        _diagSvc.DibujarDiagramaMomento(_nervioActual, Diagrama_Momento, combosDiseno)
+        _diagSvc.DibujarDiagramaMomento(_nervioActual, Diagrama_Momento, combosDiseno,
+                                         mostrarCapacidad:=ChkMostrarCapacidad.Checked)
         _diagSvc.DibujarDiagramaCortante(_nervioActual, Diagrama_Cortante, combosDiseno)
+    End Sub
+
+    Private Sub ChkMostrarCapacidad_CheckedChanged(sender As Object, e As EventArgs) _
+        Handles ChkMostrarCapacidad.CheckedChanged
+        DibujarDiagramas()
     End Sub
 
     Private Sub Diagrama_Momento_Resize(sender As Object, e As EventArgs) Handles Diagrama_Momento.Resize
@@ -705,6 +726,7 @@ Public Class Form_11_Nervios
         Tabla_Demandas.Columns.Clear() : Tabla_Demandas.Rows.Clear()
         Tabla_Resultados_Flexion.Columns.Clear() : Tabla_Resultados_Flexion.Rows.Clear()
         Tabla_Resultados_Cortante.Columns.Clear() : Tabla_Resultados_Cortante.Rows.Clear()
+        Tabla_Frames_Nervio.Rows.Clear()
         Nombre_Nervio.Text = ""
     End Sub
 
@@ -877,6 +899,152 @@ Public Class Form_11_Nervios
         cumpleCell.Value = If(cumple, "✓ Cumple", "✗ No cumple")
         cumpleCell.Style.BackColor = If(cumple, Color.FromArgb(200, 240, 200), Color.FromArgb(255, 200, 200))
         cumpleCell.Style.ForeColor = If(cumple, Color.DarkGreen, Color.DarkRed)
+    End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  TABLA DE NAVEGACIÓN — Tabla_Nervios + Tabla_Frames_Nervio (TabPage5)
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    Private Sub ConstruirTablasNavegacion()
+        ' Tabla_Nervios — columnas fijas, una fila por nervio del piso
+        Tabla_Nervios.Columns.Clear()
+        Tabla_Nervios.Rows.Clear()
+        Tabla_Nervios.Columns.Add("Nombre", "Nombre")
+        Tabla_Nervios.Columns.Add("Piso", "Piso")
+        Tabla_Nervios.Columns.Add("Tramos", "Tramos")
+        Tabla_Nervios.Columns.Add("Long_m", "Long (m)")
+        Tabla_Nervios.Columns.Add("Estado", "Estado")
+        For Each c As DataGridViewColumn In Tabla_Nervios.Columns
+            c.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        Next
+        Tabla_Nervios.Columns(0).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+
+        ' Tabla_Frames_Nervio — columnas fijas, una fila por frame del nervio seleccionado
+        Tabla_Frames_Nervio.Columns.Clear()
+        Tabla_Frames_Nervio.Rows.Clear()
+        Tabla_Frames_Nervio.Columns.Add("Frame", "Frame")
+        Tabla_Frames_Nervio.Columns.Add("Seccion", "Sección")
+        Tabla_Frames_Nervio.Columns.Add("Bw", "Bw (m)")
+        Tabla_Frames_Nervio.Columns.Add("H", "H (m)")
+        Tabla_Frames_Nervio.Columns.Add("L", "L (m)")
+        Tabla_Frames_Nervio.Columns.Add("bI", "b_I (m)")
+        Tabla_Frames_Nervio.Columns.Add("bD", "b_D (m)")
+        Tabla_Frames_Nervio.Columns.Add("EjeI", "Eje I")
+        Tabla_Frames_Nervio.Columns.Add("EjeD", "Eje D")
+        Tabla_Frames_Nervio.Columns.Add("CD", "C/D mín")
+        For Each c As DataGridViewColumn In Tabla_Frames_Nervio.Columns
+            c.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        Next
+        Tabla_Frames_Nervio.Columns(0).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+        Tabla_Frames_Nervio.Columns(1).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+    End Sub
+
+    Private Sub LlenarTablaNervios()
+        If Tabla_Nervios.Columns.Count = 0 Then ConstruirTablasNavegacion()
+        If Proyecto Is Nothing Then Return
+
+        Dim pisoSel = If(Lista_Pisos.SelectedItem?.ToString(), "")
+        Dim nerv = Proyecto.Elementos.Nervios
+        Dim lista = If(String.IsNullOrEmpty(pisoSel),
+                       nerv.Elementos,
+                       nerv.Elementos.Where(Function(n) n.Piso = pisoSel).ToList())
+
+        _cargando = True
+        Try
+            Tabla_Nervios.Rows.Clear()
+            For Each n In lista
+                Dim longTotal = n.Frames.Sum(Function(f) f.Longitud)
+                Dim tieneCalculo = n.Frames.Any(Function(f) f.Ref_Modificado)
+                Dim todoCumple = tieneCalculo AndAlso n.Frames.All(Function(f) f.Cumple)
+                Dim estadoTxt = If(tieneCalculo, If(todoCumple, "✓ Cumple", "✗ Falla"), "—")
+
+                Dim r = Tabla_Nervios.Rows.Add(
+                    If(Not String.IsNullOrWhiteSpace(n.NombrePlano), n.NombrePlano, n.Nombre),
+                    n.Piso,
+                    n.Frames.Count,
+                    longTotal.ToString("F2"),
+                    estadoTxt)
+
+                Tabla_Nervios.Rows(r).Tag = n
+
+                Dim cellEstado = Tabla_Nervios.Rows(r).Cells(4)
+                If tieneCalculo Then
+                    cellEstado.Style.BackColor = If(todoCumple,
+                        Color.FromArgb(200, 240, 200), Color.FromArgb(255, 200, 200))
+                    cellEstado.Style.ForeColor = If(todoCumple, Color.DarkGreen, Color.DarkRed)
+                Else
+                    cellEstado.Style.BackColor = Color.Empty
+                    cellEstado.Style.ForeColor = Color.DimGray
+                End If
+            Next
+
+            ' Restaurar selección en la fila del nervio activo
+            If _nervioActual IsNot Nothing Then
+                For Each row As DataGridViewRow In Tabla_Nervios.Rows
+                    If ReferenceEquals(row.Tag, _nervioActual) Then
+                        row.Selected = True
+                        Exit For
+                    End If
+                Next
+            End If
+        Finally
+            _cargando = False
+        End Try
+    End Sub
+
+    Private Sub LlenarTablaFrames(nervio As cNervio)
+        If Tabla_Frames_Nervio.Columns.Count = 0 Then ConstruirTablasNavegacion()
+        Tabla_Frames_Nervio.Rows.Clear()
+        If nervio Is Nothing Then Return
+
+        For Each fn In nervio.Frames
+            Dim cdStr As String = "—"
+            If fn.Ref_Modificado Then
+                Dim vals() As Double = {fn.CD_Flex_Sup_I, fn.CD_Flex_Inf_C, fn.CD_Flex_Sup_D,
+                                        fn.CD_Cortante_I, fn.CD_Cortante_D}
+                Dim cdMin = vals.Where(Function(v) v > 0).DefaultIfEmpty(0).Min()
+                cdStr = cdMin.ToString("F2")
+            End If
+
+            Dim r = Tabla_Frames_Nervio.Rows.Add(
+                fn.ObjectLabel,
+                fn.NombreSeccion,
+                fn.Bw.ToString("F3"),
+                fn.H.ToString("F3"),
+                fn.Longitud.ToString("F2"),
+                fn.B_Apoyo_I.ToString("F3"),
+                fn.B_Apoyo_D.ToString("F3"),
+                If(String.IsNullOrWhiteSpace(fn.EjeApoyo_I), "—", fn.EjeApoyo_I),
+                If(String.IsNullOrWhiteSpace(fn.EjeApoyo_D), "—", fn.EjeApoyo_D),
+                cdStr)
+
+            If fn.Ref_Modificado AndAlso cdStr <> "—" Then
+                Dim cdVal As Double = 0
+                Double.TryParse(cdStr, cdVal)
+                ColorearCD(Tabla_Frames_Nervio.Rows(r).Cells(9), cdVal)
+            End If
+        Next
+    End Sub
+
+    Private Sub Tabla_Nervios_SelectionChanged(sender As Object, e As EventArgs) _
+        Handles Tabla_Nervios.SelectionChanged
+        If _cargando Then Return
+        If Tabla_Nervios.SelectedRows.Count = 0 Then Return
+        Dim nervio = TryCast(Tabla_Nervios.SelectedRows(0).Tag, cNervio)
+        If nervio Is Nothing OrElse ReferenceEquals(nervio, _nervioActual) Then Return
+
+        ' Sync Lista_Nervios without triggering its handler
+        Dim src = TryCast(Lista_Nervios.DataSource, List(Of cNervio))
+        If src IsNot Nothing Then
+            Dim idx = src.IndexOf(nervio)
+            If idx >= 0 Then
+                _cargando = True
+                Lista_Nervios.SelectedIndex = idx
+                _cargando = False
+            End If
+        End If
+
+        CargarNervioCompleto(nervio)
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════
