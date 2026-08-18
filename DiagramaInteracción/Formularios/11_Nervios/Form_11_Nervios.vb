@@ -13,6 +13,7 @@ Public Class Form_11_Nervios
     Private _nervioActual As cNervio
     Private _framesActuales As List(Of cFrameNervio)
     Private _cargando As Boolean = False
+    Private _plantaAmpliada As Form_PlantaInteractivaNervios = Nothing
 
     ' ── Constantes filas/zonas tablas de refuerzo (3 columnas por tramo: Izq/Centro/Der) ─
     Private Shared ReadOnly BarSizes() As String = {"#3", "#4", "#5", "#6", "#7", "#8", "#10"}
@@ -445,6 +446,9 @@ Public Class Form_11_Nervios
         LlenarTablaFrames(nervio)
         DibujarPlanta()
         DibujarDiagramas()
+        If _plantaAmpliada IsNot Nothing AndAlso Not _plantaAmpliada.IsDisposed Then
+            _plantaAmpliada.ActualizarSeleccion(nervio)
+        End If
     End Sub
 
     Private Sub DibujarDiagramas()
@@ -1292,13 +1296,56 @@ Public Class Form_11_Nervios
             Return
         End If
 
+        If _plantaAmpliada IsNot Nothing AndAlso Not _plantaAmpliada.IsDisposed Then
+            _plantaAmpliada.ActualizarSeleccion(_nervioActual)
+            _plantaAmpliada.Activate()
+            Return
+        End If
+
         Dim frm As New Form_PlantaInteractivaNervios()
         frm.Nervios = Proyecto.Elementos.Nervios.Elementos
         frm.Joints = _joints
         frm.GridLines = Proyecto.Elementos.Grids.GridLines
         frm.NervioSeleccionado = _nervioActual
         frm.PisoActual = If(Lista_Pisos.SelectedItem IsNot Nothing, Lista_Pisos.SelectedItem.ToString(), "")
+        AddHandler frm.NervioSeleccionada, AddressOf PlantaAmpliada_NervioSeleccionada
+        AddHandler frm.FormClosed, Sub(s, ev) _plantaAmpliada = Nothing
+        _plantaAmpliada = frm
         frm.Show(Me)
+    End Sub
+
+    Private Sub PlantaAmpliada_NervioSeleccionada(nervio As cNervio)
+        If _cargando Then Return
+        If ReferenceEquals(nervio, _nervioActual) Then Return
+
+        _cargando = True
+        Try
+            ' Sync floor selector if needed
+            Dim pisoNervio = nervio.Piso
+            Dim pisoCurrent = If(Lista_Pisos.SelectedItem IsNot Nothing, Lista_Pisos.SelectedItem.ToString(), "")
+            If Not pisoNervio.Equals(pisoCurrent, StringComparison.OrdinalIgnoreCase) Then
+                Dim idxPiso = Lista_Pisos.Items.IndexOf(pisoNervio)
+                If idxPiso >= 0 Then Lista_Pisos.SelectedIndex = idxPiso
+            End If
+
+            ' Rebuild nervio list for the now-selected floor (suppressed via _cargando)
+            Dim nerv = Proyecto.Elementos.Nervios
+            Dim pisoSel = If(Lista_Pisos.SelectedItem?.ToString(), "")
+            Dim lista = If(String.IsNullOrEmpty(pisoSel), nerv.Elementos,
+                           nerv.Elementos.Where(Function(n) n.Piso = pisoSel).ToList())
+            Lista_Nervios.DataSource = Nothing
+            Lista_Nervios.DataSource = lista
+            Lista_Nervios.DisplayMember = "NombrePlano"
+
+            ' Select the target nervio by reference
+            Dim idxNervio = lista.IndexOf(nervio)
+            If idxNervio >= 0 Then Lista_Nervios.SelectedIndex = idxNervio
+        Finally
+            _cargando = False
+        End Try
+
+        LlenarTablaNervios()
+        CargarNervioCompleto(nervio)
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════

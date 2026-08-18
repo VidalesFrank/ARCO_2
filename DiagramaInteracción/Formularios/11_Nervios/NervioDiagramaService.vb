@@ -45,7 +45,8 @@ Public Class NervioDiagramaService
         ' en la estación más cercana a la cara, para que el marcador quede del
         ' lado correcto de la curva.
         Dibujar(nervio, pictureBox, combosDiseno, Function(c) c.Cortantes,
-                Function(fn) fn.Vu_I, Function(fn) fn.Vu_D, "kN", signoFijo:=0)
+                Function(fn) fn.Vu_I, Function(fn) fn.Vu_D, "kN", signoFijo:=0,
+                nervioVnCapacidad:=nervio)
     End Sub
 
     Private Sub Dibujar(nervio As cNervio, pictureBox As PictureBox, combosDiseno As HashSet(Of String),
@@ -54,7 +55,8 @@ Public Class NervioDiagramaService
                          valorCaraD As Func(Of cFrameNervio, Double),
                          unidad As String,
                          signoFijo As Integer,
-                         Optional nervioCapacidad As cNervio = Nothing)
+                         Optional nervioCapacidad As cNervio = Nothing,
+                         Optional nervioVnCapacidad As cNervio = Nothing)
 
         If pictureBox.Width <= 0 OrElse pictureBox.Height <= 0 Then Return
 
@@ -121,11 +123,17 @@ Public Class NervioDiagramaService
                 todasY.Add(valorCaraI(fn))
                 todasY.Add(valorCaraD(fn))
 
-                ' Capacidades φMn también entran en la escala para que las líneas queden visibles
+                ' Capacidades φMn/φVn también entran en la escala para que las líneas queden visibles
                 If nervioCapacidad IsNot Nothing AndAlso fn.Ref_Modificado Then
                     todasY.Add(fn.PhiMn_Inf_C)
                     todasY.Add(-fn.PhiMn_Sup_I)
                     todasY.Add(-fn.PhiMn_Sup_D)
+                End If
+                If nervioVnCapacidad IsNot Nothing AndAlso fn.Ref_Modificado Then
+                    todasY.Add(fn.PhiVn_I)
+                    todasY.Add(-fn.PhiVn_I)
+                    todasY.Add(fn.PhiVn_D)
+                    todasY.Add(-fn.PhiVn_D)
                 End If
 
                 datos.Add((fn, xOffset, L, combos, estacionesRef, envMax, envMin))
@@ -259,6 +267,67 @@ Public Class NervioDiagramaService
                     End Using
                     Using brL2 As New SolidBrush(Color.FromArgb(180, 100, 0))
                         g.DrawString("φMn(-)", fontLeg, brL2, xLeg + 25, 16)
+                    End Using
+                End Using
+            End If
+
+            ' ── Capacidad φVn(x) — solo diagrama de cortante ──────────────────────
+            If nervioVnCapacidad IsNot Nothing Then
+                For Each d In datos
+                    Dim fn = d.fn
+                    Dim xOff = d.offset
+                    Dim L = d.L
+                    If L <= 0 OrElse Not fn.Ref_Modificado Then Continue For
+
+                    Dim xMid = xOff + L / 2.0
+
+                    ' Exceedance highlights — ambos lados del eje cero
+                    Using brFail As New SolidBrush(Color.FromArgb(45, 220, 0, 0))
+                        If fn.CD_Cortante_I > 0 AndAlso fn.CD_Cortante_I < 0.9 AndAlso fn.PhiVn_I > 0 Then
+                            Dim x1 = TransformX(xOff) : Dim x2 = TransformX(xMid)
+                            Dim yTp = TransformY(fn.PhiVn_I) : Dim yBp = yZero
+                            If yBp > yTp Then g.FillRectangle(brFail, x1, yTp, x2 - x1, yBp - yTp)
+                            Dim yTn = yZero : Dim yBn = TransformY(-fn.PhiVn_I)
+                            If yBn > yTn Then g.FillRectangle(brFail, x1, yTn, x2 - x1, yBn - yTn)
+                        End If
+                        If fn.CD_Cortante_D > 0 AndAlso fn.CD_Cortante_D < 0.9 AndAlso fn.PhiVn_D > 0 Then
+                            Dim x1 = TransformX(xMid) : Dim x2 = TransformX(xOff + L)
+                            Dim yTp = TransformY(fn.PhiVn_D) : Dim yBp = yZero
+                            If yBp > yTp Then g.FillRectangle(brFail, x1, yTp, x2 - x1, yBp - yTp)
+                            Dim yTn = yZero : Dim yBn = TransformY(-fn.PhiVn_D)
+                            If yBn > yTn Then g.FillRectangle(brFail, x1, yTn, x2 - x1, yBn - yTn)
+                        End If
+                    End Using
+
+                    ' φVn_I — ±φVn líneas violeta discontinuas (mitad izquierda)
+                    If fn.PhiVn_I > 0 Then
+                        Using penV As New Pen(Color.FromArgb(74, 58, 167), 2.0F) With {.DashStyle = DashStyle.Dash}
+                            g.DrawLine(penV, TransformX(xOff), TransformY(fn.PhiVn_I),
+                                              TransformX(xMid), TransformY(fn.PhiVn_I))
+                            g.DrawLine(penV, TransformX(xOff), TransformY(-fn.PhiVn_I),
+                                              TransformX(xMid), TransformY(-fn.PhiVn_I))
+                        End Using
+                    End If
+
+                    ' φVn_D — ±φVn líneas violeta discontinuas (mitad derecha)
+                    If fn.PhiVn_D > 0 Then
+                        Using penV As New Pen(Color.FromArgb(74, 58, 167), 2.0F) With {.DashStyle = DashStyle.Dash}
+                            g.DrawLine(penV, TransformX(xMid), TransformY(fn.PhiVn_D),
+                                              TransformX(xOff + L), TransformY(fn.PhiVn_D))
+                            g.DrawLine(penV, TransformX(xMid), TransformY(-fn.PhiVn_D),
+                                              TransformX(xOff + L), TransformY(-fn.PhiVn_D))
+                        End Using
+                    End If
+                Next
+
+                ' Leyenda breve en esquina superior derecha
+                Using fontLeg As New Font("Segoe UI", 8)
+                    Dim xLeg = CSng(bmp.Width) - 80.0F
+                    Using penLV As New Pen(Color.FromArgb(74, 58, 167), 2.0F) With {.DashStyle = DashStyle.Dash}
+                        g.DrawLine(penLV, xLeg, 8, xLeg + 22, 8)
+                    End Using
+                    Using brLV As New SolidBrush(Color.FromArgb(60, 45, 140))
+                        g.DrawString("φVn", fontLeg, brLV, xLeg + 25, 2)
                     End Using
                 End Using
             End If

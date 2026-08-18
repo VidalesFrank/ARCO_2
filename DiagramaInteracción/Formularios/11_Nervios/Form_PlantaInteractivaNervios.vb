@@ -17,6 +17,9 @@ Public Class Form_PlantaInteractivaNervios
     Public Property NervioSeleccionado As cNervio
     Public Property PisoActual As String
 
+    ' ── Evento de selección ──────────────────────────────────
+    Public Event NervioSeleccionada(n As cNervio)
+
     ' ── Estado de la vista ────────────────────────────────────
     Private _zoom As Double = 50.0
     Private _panX As Double = 0.0
@@ -24,6 +27,8 @@ Public Class Form_PlantaInteractivaNervios
 
     ' ── Interacción ───────────────────────────────────────────
     Private _isDragging As Boolean = False
+    Private _hasDragged As Boolean = False
+    Private _mouseDownPt As Point
     Private _lastMouse As Point
     Private _mousePos As Point
     Private _hoveredNervio As cNervio = Nothing
@@ -200,6 +205,8 @@ Public Class Form_PlantaInteractivaNervios
     Private Sub Panel_MouseDown(sender As Object, e As MouseEventArgs)
         If e.Button = MouseButtons.Left OrElse e.Button = MouseButtons.Middle Then
             _isDragging = True
+            _hasDragged = False
+            _mouseDownPt = e.Location
             _lastMouse = e.Location
             _panel.Cursor = Cursors.SizeAll
         End If
@@ -208,6 +215,9 @@ Public Class Form_PlantaInteractivaNervios
     Private Sub Panel_MouseMove(sender As Object, e As MouseEventArgs)
         _mousePos = e.Location
         If _isDragging Then
+            Dim dx = Math.Abs(e.X - _mouseDownPt.X)
+            Dim dy = Math.Abs(e.Y - _mouseDownPt.Y)
+            If dx > 5 OrElse dy > 5 Then _hasDragged = True
             _panX += e.X - _lastMouse.X
             _panY += e.Y - _lastMouse.Y
             _lastMouse = e.Location
@@ -218,8 +228,21 @@ Public Class Form_PlantaInteractivaNervios
     End Sub
 
     Private Sub Panel_MouseUp(sender As Object, e As MouseEventArgs)
+        Dim wasDragging = _isDragging
         _isDragging = False
         _panel.Cursor = Cursors.Hand
+        If wasDragging AndAlso Not _hasDragged AndAlso e.Button = MouseButtons.Left Then
+            If _hoveredNervio IsNot Nothing Then
+                NervioSeleccionado = _hoveredNervio
+                _panel.Invalidate()
+                RaiseEvent NervioSeleccionada(_hoveredNervio)
+            End If
+        End If
+    End Sub
+
+    Public Sub ActualizarSeleccion(n As cNervio)
+        NervioSeleccionado = n
+        _panel.Invalidate()
     End Sub
 
     ' =====================================================================
