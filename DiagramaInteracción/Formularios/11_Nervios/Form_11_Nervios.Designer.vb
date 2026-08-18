@@ -38,6 +38,8 @@ Partial Class Form_11_Nervios
         Me.Nombre_Nervio = New System.Windows.Forms.TextBox()
         Me.BtnRenombrar = New System.Windows.Forms.Button()
         Me.BtnSeparar = New System.Windows.Forms.Button()
+        Me.BtnUnir = New System.Windows.Forms.Button()
+        Me.BtnEliminar = New System.Windows.Forms.Button()
         Me.GbLosa = New System.Windows.Forms.GroupBox()
         Me.LblTf = New System.Windows.Forms.Label()
         Me.NudTf = New System.Windows.Forms.NumericUpDown()
@@ -199,7 +201,7 @@ Partial Class Form_11_Nervios
         ' GroupBox Nervio selección
         Me.GbNervio.Text = "Nervio"
         Me.GbNervio.Location = New System.Drawing.Point(4, 64)
-        Me.GbNervio.Size = New System.Drawing.Size(258, 152)
+        Me.GbNervio.Size = New System.Drawing.Size(258, 180)
         Me.GbNervio.Name = "GbNervio"
         Me.GbNervio.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
 
@@ -236,15 +238,35 @@ Partial Class Form_11_Nervios
         Me.BtnSeparar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.BtnSeparar.FlatAppearance.BorderSize = 0
 
+        Me.BtnUnir.Location = New System.Drawing.Point(8, 130)
+        Me.BtnUnir.Size = New System.Drawing.Size(116, 26)
+        Me.BtnUnir.Text = "Unir nervios"
+        Me.BtnUnir.Name = "BtnUnir"
+        Me.BtnUnir.BackColor = System.Drawing.Color.FromArgb(224, 224, 224)
+        Me.BtnUnir.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.BtnUnir.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.BtnUnir.FlatAppearance.BorderSize = 0
+
+        Me.BtnEliminar.Location = New System.Drawing.Point(132, 130)
+        Me.BtnEliminar.Size = New System.Drawing.Size(118, 26)
+        Me.BtnEliminar.Text = "Eliminar nervio"
+        Me.BtnEliminar.Name = "BtnEliminar"
+        Me.BtnEliminar.BackColor = System.Drawing.Color.FromArgb(220, 80, 70)
+        Me.BtnEliminar.ForeColor = System.Drawing.Color.White
+        Me.BtnEliminar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.BtnEliminar.FlatAppearance.BorderSize = 0
+
         Me.GbNervio.Controls.Add(Me.Lista_Nervios)
         Me.GbNervio.Controls.Add(Me.LblNombreNervio)
         Me.GbNervio.Controls.Add(Me.Nombre_Nervio)
         Me.GbNervio.Controls.Add(Me.BtnRenombrar)
         Me.GbNervio.Controls.Add(Me.BtnSeparar)
+        Me.GbNervio.Controls.Add(Me.BtnUnir)
+        Me.GbNervio.Controls.Add(Me.BtnEliminar)
 
         ' GroupBox Losa
         Me.GbLosa.Text = "Losa"
-        Me.GbLosa.Location = New System.Drawing.Point(4, 220)
+        Me.GbLosa.Location = New System.Drawing.Point(4, 248)
         Me.GbLosa.Size = New System.Drawing.Size(258, 58)
         Me.GbLosa.Name = "GbLosa"
         Me.GbLosa.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
@@ -267,7 +289,7 @@ Partial Class Form_11_Nervios
 
         ' GroupBox opciones planta
         Me.GbPlanta.Text = "Vista planta"
-        Me.GbPlanta.Location = New System.Drawing.Point(4, 282)
+        Me.GbPlanta.Location = New System.Drawing.Point(4, 310)
         Me.GbPlanta.Size = New System.Drawing.Size(258, 104)
         Me.GbPlanta.Name = "GbPlanta"
         Me.GbPlanta.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
@@ -661,6 +683,8 @@ Partial Class Form_11_Nervios
     Friend WithEvents Nombre_Nervio As System.Windows.Forms.TextBox
     Friend WithEvents BtnRenombrar As System.Windows.Forms.Button
     Friend WithEvents BtnSeparar As System.Windows.Forms.Button
+    Friend WithEvents BtnUnir As System.Windows.Forms.Button
+    Friend WithEvents BtnEliminar As System.Windows.Forms.Button
     Friend WithEvents GbLosa As System.Windows.Forms.GroupBox
     Friend WithEvents LblTf As System.Windows.Forms.Label
     Friend WithEvents NudTf As System.Windows.Forms.NumericUpDown

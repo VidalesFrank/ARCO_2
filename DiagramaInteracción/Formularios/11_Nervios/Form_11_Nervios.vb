@@ -1384,6 +1384,114 @@ Public Class Form_11_Nervios
         End Using
     End Sub
 
+    Private Sub BtnUnir_Click(sender As Object, e As EventArgs) Handles BtnUnir.Click
+        If _nervioActual Is Nothing Then Return
+
+        Dim pisoSel = _nervioActual.Piso
+        Dim candidatos = Proyecto.Elementos.Nervios.Elementos.
+            Where(Function(n) n.Piso.Equals(pisoSel, StringComparison.OrdinalIgnoreCase) AndAlso
+                               Not ReferenceEquals(n, _nervioActual)).ToList()
+
+        If candidatos.Count = 0 Then
+            MessageBox.Show("No hay otros nervios en el mismo piso para unir.", "Sin candidatos",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim seleccionado As cNervio = Nothing
+
+        If candidatos.Count = 1 Then
+            Dim r = MessageBox.Show($"¿Unir ""{_nervioActual}"" con ""{candidatos(0)}""?{Environment.NewLine}" &
+                                    "Los tramos del segundo nervio pasarán al primero y el segundo será eliminado.",
+                                    "Confirmar unión", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+            If r = DialogResult.Yes Then seleccionado = candidatos(0)
+        Else
+            seleccionado = ElegirNervioParaUnir(candidatos)
+        End If
+
+        If seleccionado Is Nothing Then Return
+
+        For Each fn In seleccionado.Frames
+            _nervioActual.Frames.Add(fn)
+        Next
+        Proyecto.Elementos.Nervios.Elementos.Remove(seleccionado)
+
+        _cargando = True
+        RefrescarListaPisos()
+        RefrescarListaNervios()
+        _cargando = False
+        DibujarPlanta()
+    End Sub
+
+    Private Function ElegirNervioParaUnir(candidatos As List(Of cNervio)) As cNervio
+        Dim result As cNervio = Nothing
+        Dim frm As New Form With {
+            .Text = "Elegir nervio a absorber",
+            .Size = New Size(360, 320),
+            .StartPosition = FormStartPosition.CenterParent,
+            .FormBorderStyle = FormBorderStyle.FixedDialog,
+            .MaximizeBox = False
+        }
+        Dim lbl As New Label With {
+            .Text = $"Seleccione el nervio que se unirá a ""{_nervioActual}"":" & Environment.NewLine &
+                    "(sus tramos pasarán al nervio actual y será eliminado)",
+            .Location = New Point(10, 10),
+            .Size = New Size(330, 40),
+            .AutoSize = False
+        }
+        Dim lst As New ListBox With {
+            .Location = New Point(10, 56),
+            .Size = New Size(330, 180),
+            .SelectionMode = SelectionMode.One
+        }
+        For Each c In candidatos
+            lst.Items.Add(c)
+        Next
+        lst.DisplayMember = "NombrePlano"
+        If lst.Items.Count > 0 Then lst.SelectedIndex = 0
+
+        Dim btnOk As New Button With {
+            .Text = "Unir",
+            .Location = New Point(10, 248),
+            .Size = New Size(100, 28),
+            .DialogResult = DialogResult.OK
+        }
+        Dim btnCancel As New Button With {
+            .Text = "Cancelar",
+            .Location = New Point(120, 248),
+            .Size = New Size(100, 28),
+            .DialogResult = DialogResult.Cancel
+        }
+        frm.Controls.AddRange(New Control() {lbl, lst, btnOk, btnCancel})
+        frm.AcceptButton = btnOk
+        frm.CancelButton = btnCancel
+
+        If frm.ShowDialog(Me) = DialogResult.OK AndAlso lst.SelectedIndex >= 0 Then
+            result = TryCast(lst.SelectedItem, cNervio)
+        End If
+        frm.Dispose()
+        Return result
+    End Function
+
+    Private Sub BtnEliminar_Click(sender As Object, e As EventArgs) Handles BtnEliminar.Click
+        If _nervioActual Is Nothing Then Return
+        Dim nombre = If(Not String.IsNullOrWhiteSpace(_nervioActual.NombrePlano),
+                        _nervioActual.NombrePlano, _nervioActual.Nombre)
+        Dim r = MessageBox.Show($"¿Eliminar el nervio ""{nombre}""?{Environment.NewLine}" &
+                                "Esta acción no se puede deshacer.",
+                                "Confirmar eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+        If r <> DialogResult.Yes Then Return
+
+        Proyecto.Elementos.Nervios.Elementos.Remove(_nervioActual)
+        _nervioActual = Nothing
+        _framesActuales = Nothing
+        _cargando = True
+        RefrescarListaPisos()
+        RefrescarListaNervios()
+        _cargando = False
+        DibujarPlanta()
+    End Sub
+
     ' ══════════════════════════════════════════════════════════════════════════
     '  GUARDAR / EXPORTAR
     ' ══════════════════════════════════════════════════════════════════════════
