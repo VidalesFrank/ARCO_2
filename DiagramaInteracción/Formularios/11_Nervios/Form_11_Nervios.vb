@@ -15,6 +15,13 @@ Public Class Form_11_Nervios
     Private _cargando As Boolean = False
     Private _plantaAmpliada As Form_PlantaInteractivaNervios = Nothing
 
+    ' ── Portapapeles interno para copiar/pegar columnas de refuerzo ──────────
+    Private _cbSup As Integer() = Nothing    ' 7 cantidades por calibre (Ref_Superior)
+    Private _cbInf As Integer() = Nothing    ' 7 cantidades por calibre (Ref_Inferior)
+    Private _cbCor As String() = Nothing     ' 4 valores (Tiene/Calibre/Ramas/Sep)
+    Private _ctxDgv As DataGridView = Nothing
+    Private _ctxCol As Integer = -1
+
     ' ── Constantes filas/zonas tablas de refuerzo (3 columnas por tramo: Izq/Centro/Der) ─
     Private Shared ReadOnly BarSizes() As String = {"#3", "#4", "#5", "#6", "#7", "#8", "#10"}
     Private Shared ReadOnly ZonaTexto() As String = {"Izq", "Centro", "Der"}
@@ -429,6 +436,8 @@ Public Class Form_11_Nervios
 
         Nombre_Nervio.Text = If(Not String.IsNullOrWhiteSpace(nervio.NombrePlano),
                                 nervio.NombrePlano, nervio.Nombre)
+
+        ActualizarCmbTipoNervio(nervio)
 
         ' Sync Tabla_Nervios selection without triggering its handler
         _cargando = True
@@ -918,10 +927,13 @@ Public Class Form_11_Nervios
         Tabla_Nervios.Columns.Add("Tramos", "Tramos")
         Tabla_Nervios.Columns.Add("Long_m", "Long (m)")
         Tabla_Nervios.Columns.Add("Estado", "Estado")
+        Tabla_Nervios.Columns.Add("Tipo", "Tipo")
+        Tabla_Nervios.Columns.Add("Rige", "Rige")
         For Each c As DataGridViewColumn In Tabla_Nervios.Columns
             c.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         Next
         Tabla_Nervios.Columns(0).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+        Tabla_Nervios.Columns("Tipo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
 
         ' Tabla_Frames_Nervio — columnas fijas, una fila por frame del nervio seleccionado
         Tabla_Frames_Nervio.Columns.Clear()
@@ -953,6 +965,28 @@ Public Class Form_11_Nervios
                        nerv.Elementos,
                        nerv.Elementos.Where(Function(n) n.Piso = pisoSel).ToList())
 
+        ' Calcular qué nervio "rige" en cada familia Patrón
+        Dim rigePorFamilia As New Dictionary(Of String, cNervio)(StringComparer.OrdinalIgnoreCase)
+        For Each n In Proyecto.Elementos.Nervios.Elementos
+            If n.EsPatron Then
+                Dim familia = Proyecto.Elementos.Nervios.Elementos.
+                    Where(Function(x) x.EsPatron AndAlso ReferenceEquals(x, n) OrElse
+                                      Not String.IsNullOrEmpty(x.PatronRef) AndAlso
+                                      x.PatronRef.Equals(n.Nombre, StringComparison.OrdinalIgnoreCase)).ToList()
+                Dim conCalculo = familia.Where(Function(x) x.Frames.Any(Function(f) f.Ref_Modificado)).ToList()
+                If conCalculo.Count > 0 Then
+                    Dim gobernante = conCalculo.OrderBy(Function(x)
+                        Dim vals() As Double = x.Frames.Where(Function(f) f.Ref_Modificado).
+                            SelectMany(Function(f) {f.CD_Flex_Sup_I, f.CD_Flex_Inf_C, f.CD_Flex_Sup_D,
+                                                    f.CD_Cortante_I, f.CD_Cortante_D}).
+                            Where(Function(v) v > 0).DefaultIfEmpty(99.0).ToArray()
+                        Return vals.Min()
+                    End Function).First()
+                    rigePorFamilia(n.Nombre) = gobernante
+                End If
+            End If
+        Next
+
         _cargando = True
         Try
             Tabla_Nervios.Rows.Clear()
@@ -962,12 +996,30 @@ Public Class Form_11_Nervios
                 Dim todoCumple = tieneCalculo AndAlso n.Frames.All(Function(f) f.Cumple)
                 Dim estadoTxt = If(tieneCalculo, If(todoCumple, "✓ Cumple", "✗ Falla"), "—")
 
+                Dim tipoTxt As String = "—"
+                If n.EsPatron Then
+                    tipoTxt = "PATRÓN"
+                ElseIf Not String.IsNullOrEmpty(n.PatronRef) Then
+                    tipoTxt = "Similar: " & n.PatronRef
+                End If
+
+                Dim rigeTxt As String = ""
+                Dim familiaRef = If(n.EsPatron, n.Nombre,
+                                    If(Not String.IsNullOrEmpty(n.PatronRef), n.PatronRef, ""))
+                If Not String.IsNullOrEmpty(familiaRef) AndAlso
+                   rigePorFamilia.ContainsKey(familiaRef) AndAlso
+                   ReferenceEquals(rigePorFamilia(familiaRef), n) Then
+                    rigeTxt = "★"
+                End If
+
                 Dim r = Tabla_Nervios.Rows.Add(
                     If(Not String.IsNullOrWhiteSpace(n.NombrePlano), n.NombrePlano, n.Nombre),
                     n.Piso,
                     n.Frames.Count,
                     longTotal.ToString("F2"),
-                    estadoTxt)
+                    estadoTxt,
+                    tipoTxt,
+                    rigeTxt)
 
                 Tabla_Nervios.Rows(r).Tag = n
 
@@ -979,6 +1031,19 @@ Public Class Form_11_Nervios
                 Else
                     cellEstado.Style.BackColor = Color.Empty
                     cellEstado.Style.ForeColor = Color.DimGray
+                End If
+
+                ' Estilo fila patrón: fondo azul muy suave
+                If n.EsPatron Then
+                    Tabla_Nervios.Rows(r).DefaultCellStyle.BackColor = Color.FromArgb(225, 235, 255)
+                    Tabla_Nervios.Rows(r).DefaultCellStyle.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                ElseIf Not String.IsNullOrEmpty(n.PatronRef) Then
+                    Tabla_Nervios.Rows(r).DefaultCellStyle.BackColor = Color.FromArgb(240, 245, 255)
+                End If
+
+                If rigeTxt = "★" Then
+                    Tabla_Nervios.Rows(r).Cells(6).Style.ForeColor = Color.FromArgb(200, 100, 0)
+                    Tabla_Nervios.Rows(r).Cells(6).Style.Font = New Font("Segoe UI", 10, FontStyle.Bold)
                 End If
             Next
 
@@ -1490,6 +1555,195 @@ Public Class Form_11_Nervios
         RefrescarListaNervios()
         _cargando = False
         DibujarPlanta()
+    End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  SISTEMA PATRÓN / SIMILAR
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    Private Sub ActualizarCmbTipoNervio(nervio As cNervio)
+        _cargando = True
+        CmbTipoNervio.Items.Clear()
+        CmbTipoNervio.Items.Add("— Independiente —")
+        CmbTipoNervio.Items.Add("★  Es Patrón")
+
+        Dim piso = nervio.Piso
+        Dim patronesDisponibles = Proyecto.Elementos.Nervios.Elementos.
+            Where(Function(n) n.EsPatron AndAlso
+                              n.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase) AndAlso
+                              Not ReferenceEquals(n, nervio)).ToList()
+        For Each p In patronesDisponibles
+            CmbTipoNervio.Items.Add("Similar a: " & p.Nombre)
+        Next
+
+        If nervio.EsPatron Then
+            CmbTipoNervio.SelectedIndex = 1
+        ElseIf Not String.IsNullOrEmpty(nervio.PatronRef) Then
+            Dim idx = CmbTipoNervio.Items.IndexOf("Similar a: " & nervio.PatronRef)
+            CmbTipoNervio.SelectedIndex = If(idx >= 0, idx, 0)
+        Else
+            CmbTipoNervio.SelectedIndex = 0
+        End If
+        _cargando = False
+    End Sub
+
+    Private Sub CmbTipoNervio_SelectedIndexChanged(sender As Object, e As EventArgs) _
+        Handles CmbTipoNervio.SelectedIndexChanged
+        If _cargando OrElse _nervioActual Is Nothing OrElse CmbTipoNervio.SelectedIndex < 0 Then Return
+        Dim txt = CmbTipoNervio.SelectedItem?.ToString()
+
+        If CmbTipoNervio.SelectedIndex = 0 Then
+            ' Independiente
+            _nervioActual.EsPatron = False
+            _nervioActual.PatronRef = ""
+        ElseIf CmbTipoNervio.SelectedIndex = 1 Then
+            ' Es Patrón
+            _nervioActual.EsPatron = True
+            _nervioActual.PatronRef = ""
+        ElseIf txt IsNot Nothing AndAlso txt.StartsWith("Similar a: ") Then
+            Dim patronNombre = txt.Substring("Similar a: ".Length)
+            _nervioActual.EsPatron = False
+            _nervioActual.PatronRef = patronNombre
+            ' Copiar refuerzo del Patrón automáticamente
+            Dim patron = Proyecto.Elementos.Nervios.Elementos.
+                FirstOrDefault(Function(n) n.Nombre.Equals(patronNombre, StringComparison.OrdinalIgnoreCase))
+            If patron IsNot Nothing Then CopiarRefuerzoDePatron(patron, _nervioActual)
+        End If
+
+        LlenarTablaNervios()
+    End Sub
+
+    Private Sub BtnPropagar_Click(sender As Object, e As EventArgs) Handles BtnPropagar.Click
+        If _nervioActual Is Nothing Then Return
+        If Not _nervioActual.EsPatron Then
+            MessageBox.Show("El nervio actual no está marcado como Patrón.", "Aviso",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim similares = Proyecto.Elementos.Nervios.Elementos.
+            Where(Function(n) Not String.IsNullOrEmpty(n.PatronRef) AndAlso
+                               n.PatronRef.Equals(_nervioActual.Nombre, StringComparison.OrdinalIgnoreCase)).ToList()
+        If similares.Count = 0 Then
+            MessageBox.Show("No hay nervios marcados como 'Similar a este Patrón'.", "Sin similares",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        For Each sim In similares
+            CopiarRefuerzoDePatron(_nervioActual, sim)
+        Next
+        LlenarTablaNervios()
+        MessageBox.Show($"Refuerzo propagado a {similares.Count} nervio(s) similar(es).", "Propagación completa",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information)
+    End Sub
+
+    Private Sub CopiarRefuerzoDePatron(patron As cNervio, destino As cNervio)
+        ' Hace la copia frame a frame, emparejando por índice de posición relativa
+        Dim nFrames = Math.Min(patron.Frames.Count, destino.Frames.Count)
+        For i As Integer = 0 To nFrames - 1
+            Dim src = patron.Frames(i)
+            Dim dst = destino.Frames(i)
+            ' Copia profunda refuerzo longitudinal
+            dst.RefuerzoSuperior = CopiarListaRefuerzoTramo(src.RefuerzoSuperior)
+            dst.RefuerzoInferior = CopiarListaRefuerzoTramo(src.RefuerzoInferior)
+            ' Copia refuerzo transversal
+            dst.RefuerzoTransversal = New List(Of cRefuerzoTransversalZona)(
+                src.RefuerzoTransversal.Select(Function(z) New cRefuerzoTransversalZona With {
+                    .Posicion = z.Posicion,
+                    .NumeroBarra = z.NumeroBarra,
+                    .CantEstribos = z.CantEstribos,
+                    .NumEstribos = z.NumEstribos,
+                    .Separacion = z.Separacion
+                }))
+            dst.Ref_Modificado = True
+            RecalcularFrame(dst)
+        Next
+    End Sub
+
+    Private Shared Function CopiarListaRefuerzoTramo(origen As List(Of cRefuerzoTramo)) As List(Of cRefuerzoTramo)
+        Return New List(Of cRefuerzoTramo)(
+            origen.Select(Function(t) New cRefuerzoTramo With {
+                .Frame = t.Frame,
+                .Posicion = t.Posicion,
+                .Barras = New Dictionary(Of String, Integer)(t.Barras, StringComparer.OrdinalIgnoreCase)
+            }))
+    End Function
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  COPIAR / PEGAR COLUMNA DE REFUERZO
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    Private Sub CtxRefuerzo_Opening(sender As Object, e As System.ComponentModel.CancelEventArgs) _
+        Handles CtxRefuerzo.Opening
+        Dim dgv = TryCast(CtxRefuerzo.SourceControl, DataGridView)
+        If dgv Is Nothing Then e.Cancel = True : Return
+        Dim hit = dgv.HitTest(dgv.PointToClient(Cursor.Position).X, dgv.PointToClient(Cursor.Position).Y)
+        If hit.ColumnIndex < 0 Then e.Cancel = True : Return
+        _ctxDgv = dgv
+        _ctxCol = hit.ColumnIndex
+        ' Habilitar Pegar solo si hay datos compatibles en el portapapeles
+        CtxPegarCol.Enabled = (dgv Is Ref_Superior AndAlso _cbSup IsNot Nothing) OrElse
+                               (dgv Is Ref_Inferior AndAlso _cbInf IsNot Nothing) OrElse
+                               (dgv Is Ref_Cortante AndAlso _cbCor IsNot Nothing)
+    End Sub
+
+    Private Sub CtxCopiarCol_Click(sender As Object, e As EventArgs) Handles CtxCopiarCol.Click
+        If _ctxDgv Is Nothing OrElse _ctxCol < 0 Then Return
+        If _ctxDgv Is Ref_Superior Then
+            _cbSup = LeerColumnaDgvInt(Ref_Superior, _ctxCol, BarSizes.Length)
+        ElseIf _ctxDgv Is Ref_Inferior Then
+            _cbInf = LeerColumnaDgvInt(Ref_Inferior, _ctxCol, BarSizes.Length)
+        ElseIf _ctxDgv Is Ref_Cortante Then
+            _cbCor = LeerColumnaDgvStr(Ref_Cortante, _ctxCol, 4)
+        End If
+    End Sub
+
+    Private Sub CtxPegarCol_Click(sender As Object, e As EventArgs) Handles CtxPegarCol.Click
+        If _ctxDgv Is Nothing OrElse _ctxCol < 0 Then Return
+        If _ctxDgv Is Ref_Superior AndAlso _cbSup IsNot Nothing Then
+            EscribirColumnaDgvInt(Ref_Superior, _ctxCol, _cbSup)
+            GuardarRefuerzoSupYRecalcular(_ctxCol)
+            ColorizarCeldasConValor(Ref_Superior, _ctxCol)
+        ElseIf _ctxDgv Is Ref_Inferior AndAlso _cbInf IsNot Nothing Then
+            EscribirColumnaDgvInt(Ref_Inferior, _ctxCol, _cbInf)
+            GuardarRefuerzoInfYRecalcular(_ctxCol)
+            ColorizarCeldasConValor(Ref_Inferior, _ctxCol)
+        ElseIf _ctxDgv Is Ref_Cortante AndAlso _cbCor IsNot Nothing Then
+            _cargando = True
+            EscribirColumnaDgvStr(Ref_Cortante, _ctxCol, _cbCor)
+            _cargando = False
+            GuardarCortanteYRecalcular(_ctxCol)
+        End If
+        DibujarDiagramas()
+    End Sub
+
+    Private Shared Function LeerColumnaDgvInt(dgv As DataGridView, col As Integer, nRows As Integer) As Integer()
+        Dim buf(nRows - 1) As Integer
+        For row As Integer = 0 To nRows - 1
+            Integer.TryParse(dgv.Rows(row).Cells(col).Value?.ToString(), buf(row))
+        Next
+        Return buf
+    End Function
+
+    Private Shared Function LeerColumnaDgvStr(dgv As DataGridView, col As Integer, nRows As Integer) As String()
+        Dim buf(nRows - 1) As String
+        For row As Integer = 0 To nRows - 1
+            buf(row) = dgv.Rows(row).Cells(col).Value?.ToString()
+        Next
+        Return buf
+    End Function
+
+    Private Sub EscribirColumnaDgvInt(dgv As DataGridView, col As Integer, buf As Integer())
+        _cargando = True
+        For row As Integer = 0 To Math.Min(buf.Length - 1, dgv.Rows.Count - 1)
+            dgv.Rows(row).Cells(col).Value = buf(row)
+        Next
+        _cargando = False
+    End Sub
+
+    Private Sub EscribirColumnaDgvStr(dgv As DataGridView, col As Integer, buf As String())
+        For row As Integer = 0 To Math.Min(buf.Length - 1, dgv.Rows.Count - 1)
+            dgv.Rows(row).Cells(col).Value = buf(row)
+        Next
     End Sub
 
     ' ══════════════════════════════════════════════════════════════════════════

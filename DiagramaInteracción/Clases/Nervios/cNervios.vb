@@ -52,10 +52,15 @@ Public Class cNervio
     <OptionalField> Public Tf_Losa As Double      ' m, espesor losa (default 0.05)
     <OptionalField> Public Paso_Nervios As Double  ' m, separación c-c entre nervios (0 = auto)
 
+    ' Sistema Patrón/Similar
+    <OptionalField> Public EsPatron As Boolean       ' True = nervio Patrón de su familia
+    <OptionalField> Public PatronRef As String       ' Nombre del nervio Patrón (vacío si independiente o es patron)
+
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
         If Frames Is Nothing Then Frames = New List(Of cFrameNervio)()
         If Tf_Losa = 0 Then Tf_Losa = 0.05
+        If PatronRef Is Nothing Then PatronRef = ""
     End Sub
 
     Public Overrides Function ToString() As String
