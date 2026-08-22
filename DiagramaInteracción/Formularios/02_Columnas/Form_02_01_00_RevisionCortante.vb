@@ -10,8 +10,15 @@
         For i = 0 To (Seccion.Count - 1) * 2 Step 2
             Tabla_Resultados.Rows(i).Cells(0).Value = Seccion(i / 2).Piso
             Tabla_Resultados.Rows(i).Cells(1).Value = Seccion(i / 2).Seccion
-            Tabla_Resultados.Rows(i).Cells(2).Value = "Largo"
-            Tabla_Resultados.Rows(i + 1).Cells(2).Value = "Corto"
+            If Seccion(i / 2).EsCircular Then
+                Tabla_Resultados.Rows(i).Cells(2).Value = "Dir. 2"
+                Tabla_Resultados.Rows(i + 1).Cells(2).Value = "Dir. 3"
+                Tabla_Resultados.Rows(i).DefaultCellStyle.BackColor = Color.FromArgb(240, 238, 255)
+                Tabla_Resultados.Rows(i + 1).DefaultCellStyle.BackColor = Color.FromArgb(240, 238, 255)
+            Else
+                Tabla_Resultados.Rows(i).Cells(2).Value = "Largo"
+                Tabla_Resultados.Rows(i + 1).Cells(2).Value = "Corto"
+            End If
             Tabla_Resultados.Rows(i).Cells(3).Value = Seccion(i / 2).Vc_2
             Tabla_Resultados.Rows(i + 1).Cells(3).Value = Seccion(i / 2).Vc_3
             Tabla_Resultados.Rows(i).Cells(4).Value = Seccion(i / 2).Vs_2

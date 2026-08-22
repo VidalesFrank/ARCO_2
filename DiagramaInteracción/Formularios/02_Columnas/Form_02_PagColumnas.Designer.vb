@@ -41,6 +41,7 @@ Partial Class Form_02_PagColumnas
         Me.Diseno_Col_Pier = New System.Windows.Forms.ToolStripMenuItem()
         Me.Secciones_Col_Pier = New System.Windows.Forms.ToolStripMenuItem()
         Me.Fuerzas_Col_Pier = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Importar_Todo_Col = New System.Windows.Forms.ToolStripMenuItem()
         Me.Insertar_Columnas = New System.Windows.Forms.ToolStripMenuItem()
         Me.Insertar_Secciones_Col = New System.Windows.Forms.ToolStripMenuItem()
         Me.Ver_Columnas = New System.Windows.Forms.ToolStripMenuItem()
@@ -191,7 +192,7 @@ Partial Class Form_02_PagColumnas
         '
         'Importar_Columnas
         '
-        Me.Importar_Columnas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Importar_Col_Frame, Me.Importar_Col_Pier})
+        Me.Importar_Columnas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Importar_Col_Frame, Me.Importar_Col_Pier, Me.Importar_Todo_Col})
         Me.Importar_Columnas.ForeColor = System.Drawing.Color.White
         Me.Importar_Columnas.Name = "Importar_Columnas"
         Me.Importar_Columnas.Size = New System.Drawing.Size(71, 26)
@@ -268,6 +269,14 @@ Partial Class Form_02_PagColumnas
         Me.Fuerzas_Col_Pier.Size = New System.Drawing.Size(180, 22)
         Me.Fuerzas_Col_Pier.Text = "Fuerzas"
         Me.Fuerzas_Col_Pier.Visible = False
+        '
+        'Importar_Todo_Col
+        '
+        Me.Importar_Todo_Col.BackColor = System.Drawing.Color.FromArgb(CType(CType(60, Byte), Integer), CType(CType(100, Byte), Integer), CType(CType(60, Byte), Integer))
+        Me.Importar_Todo_Col.ForeColor = System.Drawing.Color.White
+        Me.Importar_Todo_Col.Name = "Importar_Todo_Col"
+        Me.Importar_Todo_Col.Size = New System.Drawing.Size(220, 22)
+        Me.Importar_Todo_Col.Text = "Importar Todo (Frame + Pier)"
         '
         'Insertar_Columnas
         '
@@ -968,6 +977,7 @@ Partial Class Form_02_PagColumnas
     Friend WithEvents Diseno_Col_Pier As ToolStripMenuItem
     Friend WithEvents Secciones_Col_Pier As ToolStripMenuItem
     Friend WithEvents Fuerzas_Col_Pier As ToolStripMenuItem
+    Friend WithEvents Importar_Todo_Col As ToolStripMenuItem
     Friend WithEvents Insertar_Columnas As ToolStripMenuItem
     Friend WithEvents Insertar_Secciones_Col As ToolStripMenuItem
     Friend WithEvents Ver_Columnas As ToolStripMenuItem

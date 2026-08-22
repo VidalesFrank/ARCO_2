@@ -11,7 +11,6 @@ Public Class Form_02_02_DiagramaColumna
     Private Const REC As Single = 0.05F
 
     Private Shared ReadOnly BarNombres As String() = {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10"}
-    Private Shared ReadOnly BarAreas As Single() = {31.67F, 71.26F, 126.7F, 198.1F, 284.5F, 387.1F, 509.7F, 819.4F}
 
     ' ── Estado ──────────────────────────────────────────────────
     Private _tramo As Tramo_Columna = Nothing
@@ -369,7 +368,7 @@ Public Class Form_02_02_DiagramaColumna
         tablaResultados.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "cM2u", .HeaderText = "M2u (kN·m)", .Width = 85, .DefaultCellStyle = New DataGridViewCellStyle() With {.Format = "F2"}})
         tablaResultados.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "cPhiMn3", .HeaderText = "φMn3 (kN·m)", .Width = 88, .DefaultCellStyle = New DataGridViewCellStyle() With {.Format = "F2"}})
         tablaResultados.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "cPhiMn2", .HeaderText = "φMn2 (kN·m)", .Width = 88, .DefaultCellStyle = New DataGridViewCellStyle() With {.Format = "F2"}})
-        tablaResultados.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "cDC", .HeaderText = "D/C", .Width = 55, .DefaultCellStyle = New DataGridViewCellStyle() With {.Format = "F3"}})
+        tablaResultados.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "cDC", .HeaderText = "C/D", .Width = 55, .DefaultCellStyle = New DataGridViewCellStyle() With {.Format = "F3"}})
         tablaResultados.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "cEstado", .HeaderText = "Estado", .Width = 70})
 
         panelResultados.Controls.Add(tablaResultados)
@@ -426,7 +425,9 @@ Public Class Form_02_02_DiagramaColumna
     Private Sub CargarColumnas()
         cmbCol.Items.Clear()
         For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
-            cmbCol.Items.Add(col.Name_Label)
+            If col.Lista_Tramos_Columnas.Any(Function(t) Not t.EsCircular) Then
+                cmbCol.Items.Add(col.Name_Label)
+            End If
         Next
         If cmbCol.Items.Count > 0 Then cmbCol.SelectedIndex = 0
     End Sub
@@ -436,7 +437,7 @@ Public Class Form_02_02_DiagramaColumna
         Dim col = GetColumnaActual()
         If col Is Nothing Then Return
         For Each t In col.Lista_Tramos_Columnas
-            cmbTramo.Items.Add(t.Piso)
+            If Not t.EsCircular Then cmbTramo.Items.Add(t.Piso)
         Next
         If cmbTramo.Items.Count > 0 Then cmbTramo.SelectedIndex = 0
     End Sub
@@ -875,11 +876,12 @@ Public Class Form_02_02_DiagramaColumna
             Dim phiMn3 = InterpolarMnEnPu(_tramo.Lista_DI_M3_P_Phi, _tramo.Lista_DI_M3_Phi, Pu_dia)
             Dim phiMn2 = InterpolarMnEnPu(_tramo.Lista_DI_M2_P_Phi, _tramo.Lista_DI_M2_Phi, Pu_dia)
             Dim estado = If(cc.DC <= 1.0, "Cumple", "No cumple")
+            Dim cdVal As Single = If(cc.DC > 0, 1.0F / cc.DC, 0.0F)
             Dim rowIdx = tablaResultados.Rows.Add(cc.Nombre, Math.Round(cc.Pu, 1),
                                                    Math.Round(Math.Abs(cc.M3u), 2),
                                                    Math.Round(Math.Abs(cc.M2u), 2),
                                                    Math.Round(phiMn3, 2), Math.Round(phiMn2, 2),
-                                                   cc.DC, estado)
+                                                   cdVal, estado)
             tablaResultados.Rows(rowIdx).DefaultCellStyle.BackColor =
                 If(cc.DC <= 1.0, Color.FromArgb(220, 245, 222), Color.FromArgb(255, 220, 220))
         Next
@@ -894,8 +896,9 @@ Public Class Form_02_02_DiagramaColumna
             Return
         End If
         Dim cumple = fi <= 1.0F
+        Dim cd = If(fi > 0, 1.0F / fi, 0.0F)
         lblResumen.ForeColor = If(cumple, Color.FromArgb(0, 120, 50), Color.FromArgb(180, 30, 30))
-        lblResumen.Text = $"D/C gobernante = {fi:F3}  [{If(cumple, "CUMPLE ✓", "NO CUMPLE ✗")}]   " &
+        lblResumen.Text = $"C/D gobernante = {cd:F3}  [{If(cumple, "CUMPLE ✓", "NO CUMPLE ✗")}]   " &
                           $"Combo crítica: {_tramo.Combo_Gobernante_DI}   " &
                           $"Pu = {_tramo.Pu_Gob_DI:F0} kN   " &
                           $"M3u = {_tramo.M3u_Gob_DI:F2} kN·m   M2u = {_tramo.M2u_Gob_DI:F2} kN·m"
@@ -1079,7 +1082,7 @@ Public Class Form_02_02_DiagramaColumna
     Private Function GetTramoActual() As Tramo_Columna
         Dim col = GetColumnaActual()
         If col Is Nothing OrElse cmbTramo.SelectedIndex < 0 Then Return Nothing
-        Return col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = cmbTramo.Text)
+        Return col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = cmbTramo.Text AndAlso Not t.EsCircular)
     End Function
 
     Private Function ScreenToSection(pt As Point) As (X As Single, Y As Single)
@@ -1088,9 +1091,7 @@ Public Class Form_02_02_DiagramaColumna
     End Function
 
     Private Function AreaBarra(nombre As String) As Single
-        Dim idx = Array.IndexOf(BarNombres, nombre)
-        If idx >= 0 Then Return BarAreas(idx)
-        Return AreaRefuerzo(nombre)
+        Return CSng(AreaRefuerzo(nombre))
     End Function
 
     Private Function DbMts(asb As Single) As Single
@@ -1100,7 +1101,7 @@ Public Class Form_02_02_DiagramaColumna
     Private Function NombreBarraPorArea(asb As Single) As String
         Dim minDiff = Single.MaxValue : Dim mejor = "#4"
         For i = 0 To BarNombres.Length - 1
-            Dim diff = Math.Abs(BarAreas(i) - asb)
+            Dim diff = Math.Abs(CSng(AreaRefuerzo(BarNombres(i))) - asb)
             If diff < minDiff Then minDiff = diff : mejor = BarNombres(i)
         Next
         Return mejor

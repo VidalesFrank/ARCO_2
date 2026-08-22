@@ -637,11 +637,10 @@ Public Class Funciones_02_Columnas
                                 tramo.Lista_Combinaciones)
         For Each combo In combosAEvaluar
             Dim Pu_dia As Single = -combo.P
-            Dim M3u As Single = Math.Abs(combo.M3)
-            Dim M2u As Single = Math.Abs(combo.M2)
+            Dim Mu As Single = CSng(Math.Sqrt(combo.M3 ^ 2 + combo.M2 ^ 2))
             Dim phiMn_at_Pu As Single = InterpolarMnEnPu(phiP, phiMn, Pu_dia)
             Dim DC As Single = 0
-            If phiMn_at_Pu > 0.001F Then DC = (M3u + M2u) / phiMn_at_Pu
+            If phiMn_at_Pu > 0.001F Then DC = Mu / phiMn_at_Pu
             If DC > maxDC Then
                 maxDC = DC
                 comboGob = combo.Name

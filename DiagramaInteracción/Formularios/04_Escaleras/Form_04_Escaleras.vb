@@ -400,12 +400,30 @@ Public Class Form_04_Escaleras
 
         Proyecto.RequiereDobleRefuerzo = por_espesor OrElse por_cuantia
 
-        ' Mínimo capa superior: ρ_temp = 0.0018 (fy ≥ 420 MPa, NSR-10 C.7.12.2.1b)
-        Dim rho_sup As Single = If(fy >= 420, 0.0018F, 0.002F)
-        Proyecto.Cuantia_Superior = rho_sup
-        Proyecto.Acero_Superior_Requerido = rho_sup * b * h * 1.0E6F   ' mm²
+        ' ρ de retracción total (NSR-10 C.7.12.2.1b)
+        Dim rho_ret As Single = If(fy >= 420, 0.0018F, 0.002F)
 
-        ' Separación tentativa con barra colocada en C_RefSup_Barra
+        If Proyecto.RequiereDobleRefuerzo Then
+            ' Con doble capa: el acero de retracción total se reparte entre las dos capas
+            ' → cada capa lleva la mitad (NSR-10 C.7.12.3 permite distribuirlo en ambos lechos)
+            Dim rho_porCapa = rho_ret / 2.0F
+            Proyecto.Acero_Temperatura = rho_porCapa * b * h * 1.0E6F          ' mm² — capa inferior
+            Proyecto.Cuantia_Superior = rho_porCapa
+            Proyecto.Acero_Superior_Requerido = rho_porCapa * b * h * 1.0E6F   ' mm² — capa superior
+        Else
+            ' Capa única: todo el acero de retracción va en la capa inferior
+            Proyecto.Acero_Temperatura = rho_ret * b * h * 1.0E6F
+            Proyecto.Cuantia_Superior = rho_ret
+            Proyecto.Acero_Superior_Requerido = rho_ret * b * h * 1.0E6F
+        End If
+
+        ' Recalcular separación de temperatura con el As_req actualizado
+        If C_BarraTemperatura IsNot Nothing AndAlso C_BarraTemperatura.SelectedIndex >= 0 Then
+            Dim aBarTemp As Single = AreaRefuerzo(C_BarraTemperatura.Text)
+            Proyecto.S_Temperatura = Math.Round(Math.Min(0.45F, aBarTemp / Proyecto.Acero_Temperatura), 2)
+        End If
+
+        ' Separación tentativa capa superior
         If Proyecto.RequiereDobleRefuerzo AndAlso C_RefSup_Barra IsNot Nothing AndAlso C_RefSup_Barra.SelectedIndex >= 0 Then
             Dim AreaBarra As Single = AreaRefuerzo(C_RefSup_Barra.Text)
             Proyecto.S_Superior = Math.Round(Math.Min(0.45F, AreaBarra / Proyecto.Acero_Superior_Requerido), 3)
@@ -450,7 +468,8 @@ Public Class Form_04_Escaleras
             If S_Colocada > 0 Then
                 Proyecto.Cuantia_Temperaruta_Colocada = (Proyecto.A_Estudio / S_Colocada) * AreaRefuerzo(C_BarraTemperatura.Text) / (Proyecto.A_Estudio * Proyecto.h * 1000000)
                 Proyecto.S_Temperatura_Colocada = S_Colocada
-                If Proyecto.Cuantia_Temperaruta_Colocada >= 0.9 * Proyecto.Cuantia_Temperatura Then
+                Dim cuantiaRefTemp = Proyecto.Cuantia_Temperatura * If(Proyecto.RequiereDobleRefuerzo, 0.5F, 1.0F)
+                If Proyecto.Cuantia_Temperaruta_Colocada >= 0.9 * cuantiaRefTemp Then
                     CasillaCumple(T_VerificacionTemperatura) : T_VerificacionTemperatura.Text = "Cumple"
                 Else
                     CasillaNocumple(T_VerificacionTemperatura) : T_VerificacionTemperatura.Text = "No cumple"
@@ -547,7 +566,8 @@ Public Class Form_04_Escaleras
         T_AsTemperatura.Text = Math.Round(Proyecto.Acero_Temperatura, 0)
         T_SRequeridaTemperatura.Text = Format(Proyecto.S_Temperatura, "##,##0.000")
         T_SColocadaTemperatura.Text = Format(Proyecto.S_Temperatura_Colocada, "##,##0.000")
-        If Proyecto.Cuantia_Temperaruta_Colocada >= 0.9 * Proyecto.Cuantia_Temperatura Then
+        Dim cuantiaRefTempRel = Proyecto.Cuantia_Temperatura * If(Proyecto.RequiereDobleRefuerzo, 0.5F, 1.0F)
+        If Proyecto.Cuantia_Temperaruta_Colocada >= 0.9 * cuantiaRefTempRel Then
             CasillaCumple(T_VerificacionTemperatura) : T_VerificacionTemperatura.Text = "Cumple"
         Else
             CasillaNocumple(T_VerificacionTemperatura) : T_VerificacionTemperatura.Text = "No cumple"

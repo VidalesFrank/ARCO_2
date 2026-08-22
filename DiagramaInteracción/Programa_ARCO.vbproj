@@ -277,9 +277,12 @@
     <Compile Include="Clases\Escaleras\Proyecto_Escaleras.vb" />
     <Compile Include="Clases\Funcion_Proyecto.vb" />
     <Compile Include="Clases\MurosNoEstructurales\Proyecto_MNE.vb" />
+    <Compile Include="Clases\E2k\E2kModel.vb" />
+    <Compile Include="Clases\E2k\E2kParser.vb" />
     <Compile Include="Clases\Muros\cMuros.vb" />
     <Compile Include="Clases\Muros\Muros.vb" />
     <Compile Include="Clases\Muros\SeccionMuro.vb" />
+    <Compile Include="Clases\Pilas\cCandidatoPila.vb" />
     <Compile Include="Clases\Pilas\cCombinacionPila.vb" />
     <Compile Include="Clases\Pilas\cPilas.vb" />
     <Compile Include="Clases\Pilas\Elemento_Pila.vb" />
@@ -291,6 +294,10 @@
     <Compile Include="eNum\ColoresProyecto.vb" />
     <Compile Include="eNum\eDiccionarios.vb" />
     <Compile Include="eNum\eNum.vb" />
+    <Compile Include="Formularios\E2k\E2kRenderer.vb" />
+    <Compile Include="Formularios\E2k\Form_VisualizadorE2K.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\04_Escaleras\Form_04_Escaleras.Designer.vb">
       <DependentUpon>Form_04_Escaleras.vb</DependentUpon>
     </Compile>
@@ -502,6 +509,9 @@
     <Compile Include="Formularios\02_Columnas\Form_02_02_DiagramaColumna.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_02_DiagramaCircular.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\02_Columnas\Form_02_03_DI_3D.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -546,6 +556,9 @@
       <DependentUpon>Form_04_SeccionRectangular.vb</DependentUpon>
     </Compile>
     <Compile Include="Formularios\Form_04_SeccionRectangular.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_01_ImportarETABS.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\01_Pilas\Form_01_PagPilas.Designer.vb">

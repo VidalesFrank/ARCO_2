@@ -30,8 +30,13 @@ Public Class Form_02_01_ResultadosColumnas
             Tabla_Resultados.Rows(i + 1).Cells(5).Value = Seccion(i / 2).F_Flexo_Bottom
             Tabla_Resultados.Rows(i).Cells(6).Value = Seccion(i / 2).F_Flexo_Modelo_Top
             Tabla_Resultados.Rows(i + 1).Cells(6).Value = Seccion(i / 2).F_Flexo_Modelo_Bottom
-            Tabla_Resultados.Rows(i).Cells(7).Value = "Largo"
-            Tabla_Resultados.Rows(i + 1).Cells(7).Value = "Corto"
+            If Seccion(i / 2).EsCircular Then
+                Tabla_Resultados.Rows(i).Cells(7).Value = "Dir. 2"
+                Tabla_Resultados.Rows(i + 1).Cells(7).Value = "Dir. 3"
+            Else
+                Tabla_Resultados.Rows(i).Cells(7).Value = "Largo"
+                Tabla_Resultados.Rows(i + 1).Cells(7).Value = "Corto"
+            End If
             Tabla_Resultados.Rows(i).Cells(8).Value = Seccion(i / 2).Vn_2
             Tabla_Resultados.Rows(i + 1).Cells(8).Value = Seccion(i / 2).Vn_3
             Tabla_Resultados.Rows(i).Cells(9).Value = Seccion(i / 2).Vu_2
@@ -46,19 +51,19 @@ Public Class Form_02_01_ResultadosColumnas
             Tabla_Resultados.Rows(i + 1).Cells(13).Value = Seccion(i / 2).F_Ash_Corto
         Next
 
-        ' Columna D/C Biaxial (una sola fila por tramo, filas pares)
+        ' Columna C/D Biaxial (una sola fila por tramo, filas pares)
         Dim colDIBiaxial = Tabla_Resultados.Columns("ColDIBiaxial")
         If colDIBiaxial IsNot Nothing Then
             For i = 0 To (Seccion.Count - 1) * 2 Step 2
                 Dim dc = Seccion(i \ 2).F_Interaccion
-                If dc > 0 Then Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value = dc
+                If dc > 0 Then Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value = Math.Round(1.0 / dc, 3)
             Next
         End If
 
         For i = 0 To Seccion.Count * 2 - 1
-            If Tabla_Resultados.Rows(i).Cells(5).Value < 0.9 Then
+            If Tabla_Resultados.Rows(i).Cells(5).Value < 0.9 AndAlso Tabla_Resultados.Rows(i).Cells(5).Value > 0 Then
                 FuncionColorCumple(Tabla_Resultados, i, 5, "No cumple")
-            Else
+            ElseIf Tabla_Resultados.Rows(i).Cells(5).Value >= 0.9 Then
                 FuncionColorCumple(Tabla_Resultados, i, 5, "Cumple")
             End If
             If Tabla_Resultados.Rows(i).Cells(6).Value < 0.9 And Tabla_Resultados.Rows(i).Cells(6).Value > 0 Then
@@ -76,12 +81,12 @@ Public Class Form_02_01_ResultadosColumnas
             Else
                 FuncionColorCumple(Tabla_Resultados, i, 13, "Cumple")
             End If
-            ' Color D/C Biaxial (solo filas pares)
+            ' Color C/D Biaxial (solo filas pares)
             If colDIBiaxial IsNot Nothing AndAlso i Mod 2 = 0 Then
-                Dim dcVal As Object = Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value
-                If dcVal IsNot Nothing Then
-                    Dim dc As Single = CSng(dcVal)
-                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, If(dc <= 1.0F, "Cumple", "No cumple"))
+                Dim cdValObj As Object = Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value
+                If cdValObj IsNot Nothing Then
+                    Dim cdVal As Single = CSng(cdValObj)
+                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, If(cdVal >= 1.0F, "Cumple", "No cumple"))
                 End If
             End If
         Next
@@ -138,7 +143,7 @@ Public Class Form_02_01_ResultadosColumnas
         If Tabla_Resultados.Columns("ColDIBiaxial") Is Nothing Then
             Dim colDI As New DataGridViewTextBoxColumn()
             colDI.Name = "ColDIBiaxial"
-            colDI.HeaderText = "D/C Biaxial"
+            colDI.HeaderText = "C/D Biaxial"
             colDI.MinimumWidth = 6
             Tabla_Resultados.Columns.Add(colDI)
         End If

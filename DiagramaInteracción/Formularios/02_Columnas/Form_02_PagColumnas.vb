@@ -664,6 +664,63 @@ Public Class Form_02_PagColumnas
         End With
     End Sub
 
+    Private Sub ImportarTodoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Todo_Col.Click
+        Dim openFD As New OpenFileDialog()
+        With openFD
+            .Title = "Seleccionar archivo ETABS (Frame + Pier + Circulares)"
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*xlsx|Todos los archivos(*.*)|*.*"
+            .Multiselect = False
+            If .ShowDialog <> Windows.Forms.DialogResult.OK Then Return
+        End With
+
+        Dim ruta As String = openFD.FileName
+        Dim sb As New System.Text.StringBuilder()
+        sb.AppendLine($"Importación unificada: {System.IO.Path.GetFileName(ruta)}")
+        sb.AppendLine(New String("─"c, 52))
+
+        ' Activar todos los flags
+        Proyecto.Elementos.Columnas.Elementos_Frame = True
+        Proyecto.Elementos.Columnas.Info_Diseño = True
+        Proyecto.Elementos.Columnas.Info_Secciones = True
+        Proyecto.Elementos.Columnas.Info_Fuerzas = True
+
+        ' Frame
+        sb.AppendLine(If(Importar_Datos_de_Excel(ruta, Tabla_Diseño_Flexo, "Diseño", "Frame"),
+                         "  ✔  Diseño Frame         (Conc Col Sum)",
+                         "  ✘  Diseño Frame         — hoja no encontrada"))
+        sb.AppendLine(If(Importar_Datos_de_Excel(ruta, Tabla_secciones, "Secciones", "Frame"),
+                         "  ✔  Secciones Frame      (Conc Rect + Conc Circle)",
+                         "  ✘  Secciones Frame      — hoja no encontrada"))
+        sb.AppendLine(If(Importar_Datos_de_Excel(ruta, Tabla_Fuerzas, "Fuerzas", "Frame"),
+                         "  ✔  Fuerzas Frame        (Element Forces - Columns)",
+                         "  ✘  Fuerzas Frame        — hoja no encontrada"))
+
+        ' Pier — opcional; si no hay hoja desactiva el flag
+        Dim okPierDiseno    = Importar_Datos_de_Excel(ruta, Tabla_Diseño_Pier,    "Diseño",    "Pier")
+        Dim okPierSecciones = Importar_Datos_de_Excel(ruta, Tabla_Secciones_Pier, "Secciones", "Pier")
+        Dim okPierFuerzas   = Importar_Datos_de_Excel(ruta, Tabla_Fuerzas_Pier,   "Fuerzas",   "Pier")
+        Dim hayPier = okPierDiseno OrElse okPierSecciones OrElse okPierFuerzas
+        Proyecto.Elementos.Columnas.Elementos_Pier = hayPier
+
+        sb.AppendLine(If(okPierDiseno,
+                         "  ✔  Diseño Pier          (Pier Dgn Sum)",
+                         "  —  Diseño Pier          — no encontrado (puede no tener Pier)"))
+        sb.AppendLine(If(okPierSecciones,
+                         "  ✔  Secciones Pier       (Pier Section Properties)",
+                         "  —  Secciones Pier       — no encontrado"))
+        sb.AppendLine(If(okPierFuerzas,
+                         "  ✔  Fuerzas Pier         (Pier Forces)",
+                         "  —  Fuerzas Pier         — no encontrado"))
+
+        sb.AppendLine(New String("─"c, 52))
+        Dim nCirc = _SeccionesCirculares.Count
+        sb.AppendLine(If(nCirc > 0,
+                         $"  ✔  Secciones circulares detectadas: {nCirc} tipos",
+                         "  —  No se detectaron secciones circulares"))
+
+        MessageBox.Show(sb.ToString(), "Importación completada", MessageBoxButtons.OK, MessageBoxIcon.Information)
+    End Sub
+
     Public Function Importar_Datos_de_Excel(ByRef path As String,
                                             ByVal Datagrid As DataGridView,
                                             ByVal Op As String,
@@ -1265,6 +1322,18 @@ Public Class Form_02_PagColumnas
         AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Columnas")
         Menu_Columnas.Items.Add(itemAyuda)
 
+        ' Actualizar Diseño As Req (Frame / Pier)
+        Dim itemActDis As New ToolStripMenuItem("Actualizar Diseño As Req")
+        itemActDis.ForeColor = Color.White
+        itemActDis.BackColor = Color.FromArgb(87, 87, 87)
+        Dim subActFrame As New ToolStripMenuItem("Frame")
+        Dim subActPier As New ToolStripMenuItem("Pier")
+        AddHandler subActFrame.Click, AddressOf ActualizarDisenoFrame_Click
+        AddHandler subActPier.Click, AddressOf ActualizarDisenoPier_Click
+        itemActDis.DropDownItems.Add(subActFrame)
+        itemActDis.DropDownItems.Add(subActPier)
+        OpcionesToolStripMenuItem.DropDownItems.Insert(1, itemActDis)
+
         AddHandler _timerAutoSaveColumnas.Tick, AddressOf AutoSaveColumnas_Tick
         _timerAutoSaveColumnas.Start()
     End Sub
@@ -1289,6 +1358,257 @@ Public Class Form_02_PagColumnas
                                 "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
         If r = DialogResult.Yes Then GuardarToolStripMenuItem_Click(sender, e)
         If r = DialogResult.Cancel Then e.Cancel = True
+    End Sub
+
+    '--------------- Actualizar Diseño As Req (Frame / Pier) ---------------
+
+    ''' <summary>
+    ''' Abre la hoja de diseño desde un Excel ETABS y retorna su DataTable.
+    ''' Detecta automáticamente "Conc Col Sum - ACI 318-14" (Frame) o "Pier Dgn Sum" (Pier).
+    ''' Retorna Nothing si la hoja no existe.
+    ''' </summary>
+    Private Function LeerTablaDiseno(path As String, tipoElemento As String) As DataTable
+        Dim stConexion As String = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={path};Extended Properties='Excel 12.0 Xml;HDR=YES;IMEX=1;';"
+        Using cnConex As New OleDbConnection(stConexion)
+            cnConex.Open()
+            Dim schema = cnConex.GetOleDbSchemaTable(OleDb.OleDbSchemaGuid.Tables, Nothing)
+            Dim sheetNames = schema.Rows.Cast(Of DataRow)().Select(Function(r) r("TABLE_NAME").ToString()).ToList()
+
+            Dim nombreHoja As String = ""
+            If tipoElemento = "Frame" Then
+                If sheetNames.Any(Function(s) s.Contains("Conc Col Sum")) Then
+                    nombreHoja = sheetNames.First(Function(s) s.Contains("Conc Col Sum"))
+                ElseIf sheetNames.Any(Function(s) s.Contains("Concrete Column Summary")) Then
+                    nombreHoja = sheetNames.First(Function(s) s.Contains("Concrete Column Summary"))
+                End If
+            Else
+                If sheetNames.Any(Function(s) s.Contains("Pier Dgn Sum")) Then
+                    nombreHoja = sheetNames.First(Function(s) s.Contains("Pier Dgn Sum"))
+                ElseIf sheetNames.Any(Function(s) s.Contains("Shear Wall Pier Summary")) Then
+                    nombreHoja = sheetNames.First(Function(s) s.Contains("Shear Wall Pier Summary"))
+                End If
+            End If
+
+            If String.IsNullOrEmpty(nombreHoja) Then Return Nothing
+
+            Dim da As New OleDbDataAdapter(New OleDbCommand($"Select * From [{nombreHoja}]", cnConex))
+            Dim ds As New DataSet()
+            da.Fill(ds)
+            Return ds.Tables(0)
+        End Using
+    End Function
+
+    Private Sub ActualizarDisenoFrame_Click(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show("No hay elementos procesados. Importe y calcule primero.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim ofd As New OpenFileDialog With {
+            .Title = "Actualizar Diseño Frame — Conc Col Sum - ACI 318-14",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
+            .Multiselect = False
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            Dim dt As DataTable = LeerTablaDiseno(ofd.FileName, "Frame")
+            If dt Is Nothing OrElse dt.Rows.Count < 3 Then
+                MsgBox("No se encontró la hoja 'Conc Col Sum - ACI 318-14' en el archivo.",
+                       MsgBoxStyle.Exclamation, "Hoja no encontrada")
+                Return
+            End If
+
+            Dim Col_Piso As Integer = 0
+            Dim Col_Label As Integer = 1
+            Dim Salto As Integer = 3
+            Dim Col_As_Req As Integer = 10
+
+            ' Detectar columna "Required Reinforcing" desde la fila de encabezados (row 0)
+            For ci = 0 To Math.Min(dt.Columns.Count - 1, 14)
+                Dim h As String = If(dt.Rows(0)(ci) IsNot DBNull.Value, dt.Rows(0)(ci).ToString().Trim(), "")
+                If h.ToUpperInvariant().Contains("REQUIRED") Then
+                    Col_As_Req = ci
+                    Exit For
+                End If
+            Next
+
+            ' Detectar Salto dinámicamente (igual que Button2_Click)
+            If dt.Rows.Count >= 4 Then
+                Dim secRef As String = If(dt.Rows(2)(Col_Label) IsNot DBNull.Value, dt.Rows(2)(Col_Label).ToString(), "")
+                For j = 1 To 7
+                    If 2 + j < dt.Rows.Count Then
+                        Dim secJ As String = If(dt.Rows(2 + j)(Col_Label) IsNot DBNull.Value, dt.Rows(2 + j)(Col_Label).ToString(), "")
+                        If secJ <> secRef Then Salto = j : Exit For
+                    End If
+                Next
+            End If
+
+            Dim actualizados As Integer = 0
+            Dim I0 As Integer = 2
+            Dim Section As String = If(dt.Rows.Count > 2 AndAlso dt.Rows(2)(Col_Label) IsNot DBNull.Value,
+                                       dt.Rows(2)(Col_Label).ToString(), "")
+
+            For i = 2 To dt.Rows.Count - 1
+                ' Redetectar Salto por elemento (igual que importación)
+                For j = 1 To 7
+                    If I0 + j >= dt.Rows.Count Then Exit For
+                    Dim sj As String = If(dt.Rows(I0 + j)(Col_Label) IsNot DBNull.Value, dt.Rows(I0 + j)(Col_Label).ToString(), "")
+                    If sj <> Section Then Salto = j : Exit For
+                Next
+
+                Dim cellStory As Object = dt.Rows(i)(Col_Piso)
+                If cellStory Is DBNull.Value OrElse cellStory.ToString() = "" Then Continue For
+
+                ' Filtro estación: columna 4 = 0 (estación base, igual que importación)
+                Dim st4Val As Single = 0
+                Dim st4Ok As Boolean = False
+                If dt.Columns.Count > 4 AndAlso dt.Rows(i)(4) IsNot DBNull.Value Then
+                    st4Ok = Single.TryParse(dt.Rows(i)(4).ToString(),
+                                            System.Globalization.NumberStyles.Float,
+                                            System.Globalization.CultureInfo.InvariantCulture, st4Val)
+                End If
+                If Not st4Ok OrElse st4Val <> 0 Then Continue For
+
+                Dim nombre As String = If(dt.Rows(i)(Col_Label) IsNot DBNull.Value, dt.Rows(i)(Col_Label).ToString(), "")
+                If nombre = "" Then Continue For
+
+                Dim asBottom As Single = 0
+                Dim asTop As Single = 0
+                Single.TryParse(If(dt.Rows(i)(Col_As_Req) IsNot DBNull.Value, dt.Rows(i)(Col_As_Req).ToString(), ""),
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, asBottom)
+                Dim rowTop As Integer = i + Salto - 1
+                If rowTop < dt.Rows.Count Then
+                    Single.TryParse(If(dt.Rows(rowTop)(Col_As_Req) IsNot DBNull.Value, dt.Rows(rowTop)(Col_As_Req).ToString(), ""),
+                                    System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, asTop)
+                End If
+
+                Dim piso As String = cellStory.ToString()
+                For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+                    If col.Name_Elemento = nombre Then
+                        Dim tramo = col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = piso)
+                        If tramo IsNot Nothing Then
+                            tramo.As_Req_Bottom = asBottom * 1000000  ' m² → mm²
+                            tramo.As_Req_Top = asTop * 1000000
+                            actualizados += 1
+                        End If
+                    End If
+                Next
+
+                Section = nombre
+                I0 = i
+            Next
+
+            _hayCambiosColumnas = True
+            If Combo_Elementos.SelectedIndex >= 0 Then Combo_Elementos_SelectedIndexChanged(Nothing, EventArgs.Empty)
+            MsgBox($"Diseño Frame actualizado: {actualizados} tramo(s) con nuevo As Req.",
+                   MsgBoxStyle.Information, "Actualizar Diseño As Req — Frame")
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_02_PagColumnas.ActualizarDisenoFrame", "Error al actualizar As_Req desde Excel.")
+            MsgBox("Error al procesar el archivo: " & ex.Message, MsgBoxStyle.Critical, "Actualizar Diseño")
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
+    End Sub
+
+    Private Sub ActualizarDisenoPier_Click(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show("No hay elementos procesados. Importe y calcule primero.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim ofd As New OpenFileDialog With {
+            .Title = "Actualizar Diseño Pier — Pier Dgn Sum",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
+            .Multiselect = False
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            Dim dt As DataTable = LeerTablaDiseno(ofd.FileName, "Pier")
+            If dt Is Nothing OrElse dt.Rows.Count < 3 Then
+                MsgBox("No se encontró la hoja 'Pier Dgn Sum' en el archivo.",
+                       MsgBoxStyle.Exclamation, "Hoja no encontrada")
+                Return
+            End If
+
+            Dim Col_Piso As Integer = 0
+            Dim Col_Label As Integer = 1
+            Dim Salto As Integer = 2
+            Dim Col_As_Req As Integer = 9
+
+            ' Detectar columna "Required Reinforcing" desde la fila de encabezados (row 0)
+            For ci = 0 To Math.Min(dt.Columns.Count - 1, 12)
+                Dim h As String = If(dt.Rows(0)(ci) IsNot DBNull.Value, dt.Rows(0)(ci).ToString().Trim(), "")
+                If h.ToUpperInvariant().Contains("REQUIRED") Then
+                    Col_As_Req = ci
+                    Exit For
+                End If
+            Next
+
+            Dim actualizados As Integer = 0
+            Dim sinDimensiones As Integer = 0
+
+            For i = 2 To dt.Rows.Count - 1 Step Salto
+                Dim cellStory As Object = dt.Rows(i)(Col_Piso)
+                If cellStory Is DBNull.Value OrElse cellStory.ToString() = "" Then Continue For
+
+                Dim nombre As String = If(dt.Rows(i)(Col_Label) IsNot DBNull.Value, dt.Rows(i)(Col_Label).ToString(), "")
+                If nombre = "" Then Continue For
+
+                Dim cuantiaBot As Single = 0
+                Dim cuantiaTop As Single = 0
+                Single.TryParse(If(dt.Rows(i)(Col_As_Req) IsNot DBNull.Value, dt.Rows(i)(Col_As_Req).ToString(), ""),
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, cuantiaBot)
+                Dim rowTop As Integer = i + Salto - 1
+                If rowTop < dt.Rows.Count Then
+                    Single.TryParse(If(dt.Rows(rowTop)(Col_As_Req) IsNot DBNull.Value, dt.Rows(rowTop)(Col_As_Req).ToString(), ""),
+                                    System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, cuantiaTop)
+                End If
+
+                Dim piso As String = cellStory.ToString()
+                For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+                    If col.Name_Elemento = nombre Then
+                        Dim tramo = col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = piso)
+                        If tramo IsNot Nothing Then
+                            tramo.Cuantia_Req_Bottom = cuantiaBot
+                            tramo.Cuantia_Req_Top = cuantiaTop
+                            If tramo.B_Modelo > 0 AndAlso tramo.H_Modelo > 0 Then
+                                tramo.As_Req_Bottom = tramo.B_Modelo * tramo.H_Modelo * cuantiaBot * 10000
+                                tramo.As_Req_Top = tramo.B_Modelo * tramo.H_Modelo * cuantiaTop * 10000
+                            Else
+                                sinDimensiones += 1
+                            End If
+                            actualizados += 1
+                        End If
+                    End If
+                Next
+            Next
+
+            _hayCambiosColumnas = True
+            If Combo_Elementos.SelectedIndex >= 0 Then Combo_Elementos_SelectedIndexChanged(Nothing, EventArgs.Empty)
+
+            Dim msg As String = $"Diseño Pier actualizado: {actualizados} tramo(s) con nuevo As Req."
+            If sinDimensiones > 0 Then
+                msg &= $"{vbCrLf}⚠ {sinDimensiones} tramo(s) sin dimensiones: solo se actualizó la cuantía. Importe secciones Pier para calcular As."
+            End If
+            MsgBox(msg, MsgBoxStyle.Information, "Actualizar Diseño As Req — Pier")
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_02_PagColumnas.ActualizarDisenoPier", "Error al actualizar As_Req Pier desde Excel.")
+            MsgBox("Error al procesar el archivo: " & ex.Message, MsgBoxStyle.Critical, "Actualizar Diseño")
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
     End Sub
 
 End Class

@@ -263,6 +263,40 @@ Public Class Form_00_PaginaPrincipal
                                 End Sub
         OpcionesToolStripMenuItem1.DropDownItems.Add(sepAS)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuAS)
+
+        ' Visualizador de modelo ETABS (.e2k)
+        Dim sepE2K As New ToolStripSeparator()
+        Dim mnuE2K As New ToolStripMenuItem("Visualizador ETABS (.e2k)…")
+        mnuE2K.BackColor = Color.FromArgb(87, 87, 86)
+        mnuE2K.ForeColor = Color.White
+        AddHandler mnuE2K.Click, AddressOf VisualizadorE2K_Click
+        OpcionesToolStripMenuItem1.DropDownItems.Add(sepE2K)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuE2K)
+    End Sub
+
+    Private Sub VisualizadorE2K_Click(sender As Object, e As EventArgs)
+        Dim ofd As New OpenFileDialog() With {
+            .Filter = "Modelo ETABS (*.e2k)|*.e2k|Todos los archivos (*.*)|*.*",
+            .Title = "Abrir modelo ETABS (.e2k)"
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+        Try
+            Cursor = Cursors.WaitCursor
+            Dim model = E2kParser.Parse(ofd.FileName)
+            Cursor = Cursors.Default
+            If model.Points.Count = 0 AndAlso model.Lines.Count = 0 Then
+                MessageBox.Show("No se encontraron elementos en el archivo. Verifique que sea un modelo ETABS válido.",
+                                "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+            Dim frm As New Form_VisualizadorE2K(model)
+            frm.Show()
+        Catch ex As Exception
+            Cursor = Cursors.Default
+            Logger.Error(ex, "Form_00_PaginaPrincipal.VisualizadorE2K_Click")
+            MessageBox.Show("Error al abrir el modelo: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
     Private Sub AbrirProyectoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles AbrirProyectoToolStripMenuItem.Click

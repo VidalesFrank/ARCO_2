@@ -1,0 +1,1219 @@
+# PROMPT — INTEGRACIÓN DE IMPORTACIÓN DE FUERZAS PARA PILAS DESDE FRAMES/JOINTS Y PIERS/SHELLS EN ARCO
+
+Estoy desarrollando **ARCO**, una aplicación de escritorio en **Visual Basic .NET** para análisis y diseño estructural.
+
+Actualmente ARCO ya tiene un **módulo de Pilas completamente funcional**, con lógica de cálculo, diseño, formularios, almacenamiento de información y una metodología existente para importar ciertos datos de cimentación.
+
+## OBJETIVO PRINCIPAL
+
+Necesito ampliar el módulo de Pilas para que pueda reconocer e importar automáticamente las demandas provenientes de un modelo de ETABS bajo **dos situaciones estructurales diferentes**:
+
+1. **Columnas modeladas como Frame**, cuya cimentación llega a un Joint.
+2. **Columnas, muros o elementos modelados como Shell**, agrupados mediante un **Pier**, cuyas demandas deben obtenerse a partir de las fuerzas en la base del Pier.
+
+La modificación debe ser estrictamente una **mejora incremental del módulo actual**.
+
+### REGLA FUNDAMENTAL
+
+**NO eliminar, reemplazar ni romper ninguna funcionalidad actual del módulo de Pilas.**
+
+Todo lo que hoy funciona debe continuar funcionando.
+
+La nueva funcionalidad debe incorporarse como:
+
+> **una nueva opción/fuente para importar fuerzas de diseño de las pilas.**
+
+No quiero reconstruir el módulo de Pilas desde cero.
+
+---
+
+# 1. PRIMER PASO OBLIGATORIO: REVISAR EL PROYECTO ACTUAL
+
+Antes de modificar código, debes estudiar la arquitectura actual de ARCO.
+
+Revisa particularmente:
+
+* formulario principal del módulo de Pilas;
+* clases utilizadas para las pilas;
+* motor de cálculo y diseño;
+* forma actual de importar fuerzas;
+* lectura de archivos Excel;
+* lectura de información proveniente de ETABS;
+* manejo de Frames;
+* manejo de Joints;
+* manejo de Shells/Areas;
+* manejo de Story;
+* combinaciones de carga;
+* almacenamiento del proyecto;
+* lógica de selección de elementos;
+* formularios asociados;
+* cualquier funcionalidad anterior relacionada con importación de cimentaciones como Shell.
+
+Quiero reutilizar todo lo que ya existe y evitar duplicidades.
+
+La filosofía debe ser:
+
+**revisar → reutilizar → ampliar → refactorizar únicamente si es necesario.**
+
+---
+
+# 2. ARCHIVO EXCEL DE REFERENCIA
+
+Te voy a proporcionar un archivo Excel exportado desde ETABS.
+
+Debes analizar este archivo antes de implementar la nueva funcionalidad.
+
+No asumas nombres de tablas o columnas si puedes obtenerlos directamente del archivo.
+
+Quiero que identifiques:
+
+* hojas disponibles;
+* nombres exactos;
+* encabezados;
+* estructura de los datos;
+* relaciones entre tablas;
+* información de Frames;
+* información de Joints;
+* coordenadas;
+* Story;
+* Joint Reactions;
+* Pier Forces;
+* asignaciones de Pier;
+* información de Areas/Shells;
+* combinaciones/casos de carga;
+* cualquier otra tabla que permita reconstruir correctamente el modelo.
+
+Antes de programar, explícame brevemente qué información encontraste y cómo propones utilizarla.
+
+---
+
+# 3. DOS TIPOS DE ELEMENTOS QUE PUEDEN ALIMENTAR UNA PILA
+
+La nueva arquitectura debe soportar al menos estos dos casos.
+
+## CASO A — COLUMNA MODELADA COMO FRAME
+
+Conceptualmente:
+
+```text
+FRAME / COLUMNA
+       ↓
+     JOINT
+       ↓
+   CIMENTACIÓN
+       ↓
+      PILA
+```
+
+Para estos elementos, necesitamos detectar automáticamente cuál es el Joint inferior correspondiente al elemento Frame.
+
+Luego debemos buscar sus demandas/reacciones en las tablas de ETABS.
+
+La relación sería:
+
+```text
+Frame
+  ↓
+Joint inferior
+  ↓
+Joint Reaction
+  ↓
+Fuerzas para diseño de la pila
+```
+
+---
+
+# 4. DETECCIÓN DEL JOINT INFERIOR DE UN FRAME
+
+No asumir que el Joint I o J siempre corresponde a la base.
+
+Utilizar las coordenadas y elevaciones.
+
+Para cada Frame vertical:
+
+```text
+Joint I → Xi, Yi, Zi
+Joint J → Xj, Yj, Zj
+```
+
+El Joint de menor elevación debe identificarse como el extremo inferior, dentro de las tolerancias correspondientes.
+
+Por ejemplo:
+
+```text
+Zbase = Min(Zi, Zj)
+```
+
+La lógica debe funcionar aunque ETABS haya definido el Frame en dirección ascendente o descendente.
+
+---
+
+# 5. COLUMNAS FRAME QUE REALMENTE CORRESPONDEN A PILAS
+
+No debemos asumir que todo Frame vertical del modelo genera automáticamente una pila.
+
+Debemos limitar la búsqueda al nivel de cimentación o al nivel que corresponda según la estructura actual de ARCO.
+
+Analiza cómo ARCO identifica actualmente:
+
+* columnas;
+* apoyos;
+* cimentaciones;
+* Story inferior;
+* elementos asociados al módulo de Pilas.
+
+Utiliza esta información como primer filtro.
+
+Posteriormente podemos proporcionar al usuario una lista de candidatos.
+
+---
+
+# 6. FUERZAS PARA ELEMENTOS FRAME
+
+Para una columna Frame que llega directamente a un Joint de cimentación, utilizar las **Joint Reactions** correspondientes al Joint inferior.
+
+Necesitamos recuperar las seis componentes relevantes:
+
+```text
+Fx
+Fy
+Fz
+
+Mx
+My
+Mz
+```
+
+Posteriormente transformarlas a la convención interna que utiliza actualmente el módulo de Pilas.
+
+NO modificar las convenciones existentes del módulo.
+
+Crear una capa de transformación entre ETABS y ARCO.
+
+Conceptualmente:
+
+```text
+ETABS Joint Reaction
+        ↓
+Transformación de signos/ejes
+        ↓
+PilaLoadResult
+        ↓
+Motor existente de Pilas
+```
+
+---
+
+# 7. CASO B — ELEMENTO MODELADO COMO SHELL / PIER
+
+También tenemos columnas o muros modelados mediante elementos Shell.
+
+Estos Shells pueden estar agrupados en ETABS mediante una etiqueta:
+
+```text
+PIER
+```
+
+Conceptualmente:
+
+```text
+SHELLS
+   ↓
+PIER
+   ↓
+Pier Forces - Bottom
+   ↓
+CIMENTACIÓN
+   ↓
+PILA
+```
+
+Para estos elementos **NO quiero tomar cada Joint inferior del Shell como una pila diferente**.
+
+Un Pier puede tener múltiples nodos en su base debido a la discretización del Shell.
+
+La unidad estructural debe ser el **Pier completo**.
+
+---
+
+# 8. FUERZAS DE DISEÑO DEL PIER
+
+Para los elementos Shell/Pier, las fuerzas principales para diseño deben provenir de:
+
+> **Pier Forces en la base del Pier**
+
+Es decir, utilizar la fila correspondiente a:
+
+```text
+Pier
+Story
+Load Case / Combo
+Location = Bottom
+```
+
+y obtener las seis componentes disponibles, típicamente:
+
+```text
+P
+V2
+V3
+T
+M2
+M3
+```
+
+Debes verificar los encabezados y convenciones reales del Excel que te voy a entregar.
+
+No asumir nombres exactos sin revisar el archivo.
+
+---
+
+# 9. NO UTILIZAR LOS JOINTS DEL SHELL COMO PILAS INDEPENDIENTES
+
+Este punto es crítico.
+
+Si un Pier tiene una base discretizada así:
+
+```text
+●────●────●────●────●
+       PIER P1
+```
+
+NO significa que existan cuatro pilas.
+
+Son cuatro nodos del modelo numérico pertenecientes a una misma base estructural.
+
+La demanda principal debe corresponder al resultante del Pier.
+
+Conceptualmente:
+
+```text
+PIER P1
+   ↓
+P, Vx, Vy, Mx, My, T
+   ↓
+PILA
+```
+
+---
+
+# 10. GEOMETRÍA DEL PIER
+
+Necesitamos también saber dónde está ubicado físicamente el Pier para poder asociarlo a una pila.
+
+Utiliza la información disponible en:
+
+* Pier Assignments;
+* Area/Shell Connectivity;
+* Point Coordinates;
+* Story;
+* geometría de Areas;
+
+o las tablas equivalentes que existan realmente en el Excel.
+
+La relación conceptual debería ser:
+
+```text
+Pier
+ ↓
+Areas / Shells
+ ↓
+Points / Joints
+ ↓
+Nodos inferiores
+ ↓
+Geometría de la base
+ ↓
+Centro geométrico
+```
+
+Determinar al menos:
+
+```text
+PierName
+Story
+X
+Y
+Zbase
+Dirección
+```
+
+---
+
+# 11. PUNTO REPRESENTATIVO DEL PIER
+
+Para poder mostrarlo en planta y asociarlo con una pila, calcular un punto representativo de la base.
+
+Preferiblemente:
+
+```text
+Xc
+Yc
+Zbase
+```
+
+correspondiente al centro geométrico de la base del Pier.
+
+No usar arbitrariamente el primer Joint encontrado.
+
+---
+
+# 12. JOINT REACTIONS DEL PIER COMO VALIDACIÓN
+
+Para los Piers quiero que las **Pier Forces sean la fuente principal de demandas**.
+
+Sin embargo, si la información disponible lo permite, podemos utilizar los Joint Reactions de los nodos inferiores como herramienta de validación.
+
+Conceptualmente:
+
+```text
+FUENTE DE DISEÑO:
+Pier Forces - Bottom
+
+FUENTE DE CONTROL:
+Joint Reactions integradas
+```
+
+No mezclar ambas para generar una única combinación de carga.
+
+La validación puede implementarse posteriormente o dejarse preparada en arquitectura.
+
+---
+
+# 13. ARQUITECTURA UNIFICADA
+
+Quiero evitar que el motor de diseño de Pilas tenga código diferente dependiendo de si la carga viene de un Frame o de un Pier.
+
+Crear una capa intermedia común.
+
+Conceptualmente:
+
+```text
+              ETABS
+
+        ┌───────────────┐
+        │               │
+      FRAME           PIER
+        │               │
+        ↓               ↓
+ Joint Reaction     Pier Forces
+        │               │
+        └───────┬───────┘
+                ↓
+       PILA LOAD RESULT
+                ↓
+       MÓDULO DE PILAS
+                ↓
+       MOTOR DE DISEÑO ACTUAL
+```
+
+Puede llamarse, por ejemplo:
+
+```text
+PileLoadSource
+FoundationLoadResult
+PileDemand
+StructuralSupport
+```
+
+o utilizar las clases ya existentes en ARCO.
+
+No crear clases nuevas si ya existe una estructura compatible.
+
+---
+
+# 14. TIPO DE FUENTE
+
+Cada conjunto de fuerzas debe conservar información acerca de su origen.
+
+Por ejemplo:
+
+```text
+SourceType = JointReaction
+```
+
+o:
+
+```text
+SourceType = PierForce
+```
+
+Además:
+
+```text
+SourceName
+Story
+X
+Y
+Z
+```
+
+Ejemplos:
+
+```text
+Pila P-01
+SourceType = JointReaction
+SourceName = Joint 1254
+```
+
+y:
+
+```text
+Pila P-02
+SourceType = PierForce
+SourceName = PIER P7
+```
+
+Esto será muy importante para trazabilidad.
+
+---
+
+# 15. IMPORTACIÓN COMO NUEVA OPCIÓN
+
+La interfaz actual del módulo de Pilas debe conservarse.
+
+Agregar una nueva opción del tipo:
+
+```text
+IMPORTAR FUERZAS DESDE ETABS
+```
+
+o integrarla dentro de la funcionalidad existente de importación.
+
+Dentro de ella, el usuario debería poder importar el Excel y ARCO detectar automáticamente:
+
+```text
+COLUMNAS FRAME / JOINT
+
+PIERS / SHELL
+```
+
+No quiero dos módulos independientes.
+
+Debe ser una sola herramienta de importación.
+
+---
+
+# 16. FLUJO DE IMPORTACIÓN PROPUESTO
+
+El flujo deseado es:
+
+```text
+1. Usuario abre módulo de Pilas.
+
+2. Selecciona:
+   Importar fuerzas desde ETABS.
+
+3. Selecciona archivo Excel.
+
+4. ARCO analiza las tablas.
+
+5. ARCO reconstruye:
+   Stories
+   Points
+   Frames
+   Areas
+   Piers
+   Reactions
+   Pier Forces
+
+6. ARCO identifica posibles apoyos de cimentación.
+
+7. Clasifica cada candidato:
+
+   FRAME / JOINT
+   o
+   PIER / SHELL
+
+8. Obtiene las fuerzas.
+
+9. Presenta los candidatos al usuario.
+
+10. Usuario valida.
+
+11. ARCO asocia las demandas con las pilas.
+
+12. El motor actual de Pilas continúa funcionando normalmente.
+```
+
+---
+
+# 17. DETECCIÓN AUTOMÁTICA
+
+Quiero que ARCO pueda generar una propuesta automática.
+
+Por ejemplo:
+
+```text
+ELEMENTOS DETECTADOS
+
+C01
+Tipo: Frame
+Joint base: J1045
+Story: Base
+X: 4.20
+Y: 7.50
+
+C02
+Tipo: Frame
+Joint base: J1048
+Story: Base
+X: 8.60
+Y: 7.50
+
+P1
+Tipo: Pier
+Story: Base
+X: 12.10
+Y: 7.50
+
+P2
+Tipo: Pier
+Story: Base
+X: 16.30
+Y: 7.50
+```
+
+---
+
+# 18. NO ASOCIAR AUTOMÁTICAMENTE SIN CONTROL
+
+La detección puede ser automática, pero el usuario debe poder revisar la información antes de guardarla definitivamente.
+
+No quiero que una detección geométrica incorrecta genere automáticamente una pila incorrecta.
+
+La filosofía debe ser:
+
+```text
+Detección automática
+      ↓
+Propuesta
+      ↓
+Validación visual
+      ↓
+Corrección manual
+      ↓
+Importación definitiva
+```
+
+---
+
+# 19. VISTA EN PLANTA
+
+Si es posible reutilizando los componentes gráficos actuales de ARCO, quiero una pequeña vista en planta para validar los elementos detectados.
+
+Representar:
+
+* Frames/columnas;
+* Piers;
+* puntos base;
+* coordenadas;
+* elementos seleccionados;
+* pilas existentes si ya están creadas.
+
+Por ejemplo:
+
+```text
+     C01                PIER P2
+      │              ███████████
+      ●                   ⊕
+      │                   │
+
+   Joint 145           Pier Base
+```
+
+Al seleccionar una fila de la tabla, resaltar el elemento correspondiente.
+
+---
+
+# 20. TABLA DE ELEMENTOS DETECTADOS
+
+Una tabla posible:
+
+```text
+Seleccionar
+Nombre
+Tipo
+Story
+Fuente
+X
+Y
+No. combinaciones
+Estado
+```
+
+Ejemplo:
+
+```text
+✓ | C01 | FRAME | Base | Joint J145 | 4.20 | 7.50 | 32 | OK
+✓ | P1  | PIER  | Base | Pier P1    | 8.60 | 7.50 | 32 | OK
+```
+
+---
+
+# 21. VISTA DE FUERZAS
+
+Al seleccionar un elemento, mostrar las fuerzas encontradas.
+
+Para Frame:
+
+```text
+Joint J145
+
+Combo     P      Vx      Vy      Mx      My      T
+----------------------------------------------------
+COMB1
+COMB2
+COMB3
+...
+```
+
+Para Pier:
+
+```text
+PIER P1 — Bottom
+
+Combo     P      Vx      Vy      Mx      My      T
+----------------------------------------------------
+COMB1
+COMB2
+COMB3
+...
+```
+
+Aunque ETABS utilice nombres como:
+
+```text
+P, V2, V3, T, M2, M3
+```
+
+internamente transformarlos al sistema utilizado por el módulo de Pilas.
+
+---
+
+# 22. CONVENCIONES Y SIGNOS
+
+Este punto debe revisarse cuidadosamente.
+
+No asumir que:
+
+```text
+V2 = Vx
+V3 = Vy
+M2 = Mx
+M3 = My
+```
+
+sin verificar orientación y convenciones.
+
+Analiza:
+
+* sistema local del Pier;
+* sistema global de ETABS;
+* sistema utilizado actualmente por ARCO;
+* signos de Joint Reactions;
+* signos de Pier Forces.
+
+Crear una sola función/capa responsable de realizar estas transformaciones.
+
+No dispersar cambios de signo dentro de diferentes partes del código.
+
+---
+
+# 23. COMBINACIONES
+
+Mantener exactamente la filosofía de combinaciones utilizada actualmente por el módulo de Pilas.
+
+La nueva importación debe proporcionar las demandas, pero **NO debe crear un motor de combinaciones paralelo**.
+
+Si el Excel contiene resultados de combinaciones ya evaluadas, determinar cómo se están utilizando actualmente en ARCO.
+
+Quiero evitar:
+
+* aplicar combinaciones dos veces;
+* mezclar Load Cases con Load Combos;
+* perder combinaciones;
+* duplicar resultados.
+
+---
+
+# 24. ASOCIACIÓN CON LAS PILAS EXISTENTES
+
+Si el módulo ya tiene pilas creadas, ARCO debe poder asociar los elementos detectados con ellas.
+
+Inicialmente puede proponerse por proximidad geométrica:
+
+```text
+Distancia =
+sqrt((Xpila-Xsource)^2 + (Ypila-Ysource)^2)
+```
+
+pero la asociación final debe poder corregirse manualmente.
+
+Ejemplo:
+
+```text
+PIER P1
+       ↓
+PILA P-03
+```
+
+o:
+
+```text
+JOINT J145
+       ↓
+PILA P-07
+```
+
+---
+
+# 25. PREPARAR LA ARQUITECTURA PARA VARIOS ELEMENTOS SOBRE UNA PILA
+
+Aunque la primera implementación pueda trabajar principalmente 1 a 1, quiero evitar una arquitectura que obligue a:
+
+```text
+1 pila = 1 Frame
+```
+
+o:
+
+```text
+1 pila = 1 Pier
+```
+
+Una pila podría posteriormente recibir:
+
+```text
+Frame + Frame
+
+Pier + Frame
+
+Pier + Pier
+```
+
+Por lo tanto, conceptualizar:
+
+```text
+PILA
+ ↓
+StructuralSupports[]
+```
+
+en lugar de:
+
+```text
+PILA
+ ↓
+FrameID
+```
+
+Si actualmente la arquitectura no permite esto, no hagas una refactorización destructiva de inmediato.
+
+Propón primero cómo extenderla manteniendo compatibilidad.
+
+---
+
+# 26. NO AFECTAR EL FORMATO DE IMPORTACIÓN ANTERIOR
+
+Existe una funcionalidad previa que permitía importar información asociada a cimentaciones/Shell.
+
+Esa funcionalidad debe mantenerse.
+
+No eliminar:
+
+* métodos existentes;
+* formatos existentes;
+* botones;
+* opciones;
+* estructuras de datos;
+
+sin determinar primero si están siendo utilizados.
+
+Si existen funcionalidades antiguas que pueden reutilizarse, integrarlas.
+
+El objetivo es:
+
+```text
+IMPORTACIÓN ACTUAL
++
+NUEVA IMPORTACIÓN ETABS
+```
+
+no:
+
+```text
+NUEVA IMPORTACIÓN
+reemplaza
+IMPORTACIÓN ACTUAL
+```
+
+---
+
+# 27. COMPATIBILIDAD CON PROYECTOS EXISTENTES
+
+Los archivos/proyectos existentes de ARCO deben seguir abriendo correctamente.
+
+Si necesitamos agregar nuevos campos para almacenar:
+
+```text
+SourceType
+SourceName
+PierName
+JointName
+X
+Y
+```
+
+deben tener valores predeterminados compatibles con proyectos antiguos.
+
+Evitar cambios que rompan la serialización/deserialización existente.
+
+---
+
+# 28. EVITAR LÓGICA DENTRO DEL FORMULARIO
+
+No quiero que toda esta funcionalidad termine dentro de:
+
+```text
+FrmPilas.vb
+```
+
+Separar:
+
+### Lectura
+
+```text
+ETABSExcelReader
+```
+
+### Reconstrucción del modelo
+
+```text
+ETABSModelService
+```
+
+### Identificación de apoyos
+
+```text
+FoundationSupportDetector
+```
+
+### Obtención de fuerzas
+
+```text
+FoundationLoadExtractor
+```
+
+### Transformación de coordenadas/fuerzas
+
+```text
+ForceTransformationService
+```
+
+### Asociación
+
+```text
+PileSupportAssociationService
+```
+
+Estos nombres son únicamente conceptuales.
+
+Primero revisa las clases actuales para reutilizar lo existente.
+
+---
+
+# 29. TOLERANCIAS GEOMÉTRICAS
+
+No utilizar comparaciones exactas de coordenadas `Double`.
+
+Centralizar una tolerancia para:
+
+* igualdad de coordenadas;
+* identificación del Story;
+* asociación de elementos;
+* coincidencia Frame–Joint;
+* Pier–Pila.
+
+Por ejemplo:
+
+```text
+GeometryTolerance
+```
+
+No repetir constantes diferentes en cada función.
+
+---
+
+# 30. VALIDACIONES NECESARIAS
+
+El importador debe detectar y reportar:
+
+* Frame sin Joint inferior;
+* Joint sin reacciones;
+* Pier sin Pier Forces;
+* Pier sin geometría reconstruible;
+* elemento sin coordenadas;
+* combinaciones faltantes;
+* componentes de fuerza incompletas;
+* duplicados;
+* Story no reconocido;
+* Pier sin asignaciones;
+* más de una posible asociación con una pila.
+
+No ocultar silenciosamente errores.
+
+---
+
+# 31. TRAZABILIDAD
+
+Quiero poder saber posteriormente de dónde salió cada demanda.
+
+Ejemplo:
+
+```text
+PILA P-07
+
+Fuente:
+ETABS
+
+Tipo:
+Pier
+
+Elemento:
+P3
+
+Story:
+BASE
+
+Location:
+Bottom
+
+Archivo:
+Modelo_Estructural.xlsx
+```
+
+o:
+
+```text
+PILA P-08
+
+Fuente:
+ETABS
+
+Tipo:
+Joint Reaction
+
+Frame:
+C45
+
+Joint:
+J325
+
+Story:
+BASE
+```
+
+---
+
+# 32. NO MODIFICAR EL MOTOR DE DISEÑO SIN NECESIDAD
+
+El resultado final de esta implementación debe ser simplemente proporcionar al módulo existente algo equivalente a:
+
+```text
+P
+Vx
+Vy
+Mx
+My
+T
+```
+
+para cada combinación.
+
+A partir de ahí:
+
+> **el motor de Pilas existente debe continuar haciendo el diseño como lo hace actualmente.**
+
+No modificar las ecuaciones de diseño salvo que se encuentre un error independiente y se documente antes.
+
+---
+
+# 33. METODOLOGÍA DE IMPLEMENTACIÓN
+
+## ETAPA 1 — DIAGNÓSTICO
+
+Primero revisa:
+
+* proyecto ARCO;
+* módulo actual de Pilas;
+* importador actual;
+* clases;
+* almacenamiento;
+* Excel que voy a proporcionar.
+
+Luego preséntame:
+
+1. Cómo funciona actualmente el módulo de Pilas.
+2. Cómo funciona la importación actual.
+3. Qué tablas encontraste en el Excel.
+4. Qué tablas necesitas para Frames/Joints.
+5. Qué tablas necesitas para Piers/Shells.
+6. Qué código existente podemos reutilizar.
+7. Qué archivos deben modificarse.
+8. Qué archivos nuevos serían realmente necesarios.
+
+No programes masivamente antes de esta revisión.
+
+---
+
+## ETAPA 2 — MODELO DE DATOS
+
+Define cómo representar de manera común:
+
+```text
+Frame / Joint
+```
+
+y:
+
+```text
+Pier / Shell
+```
+
+sin afectar las estructuras actuales.
+
+Explícame el modelo antes de realizar refactorizaciones grandes.
+
+---
+
+## ETAPA 3 — LECTOR DEL EXCEL
+
+Implementa una lectura robusta de las hojas realmente disponibles.
+
+No depender únicamente del número o posición de columnas.
+
+Preferir identificación por encabezados normalizados cuando sea posible.
+
+Considerar:
+
+* espacios;
+* cambios menores de nomenclatura;
+* columnas adicionales;
+* orden diferente.
+
+---
+
+## ETAPA 4 — DETECCIÓN DE ELEMENTOS
+
+Implementar:
+
+```text
+Frame → Joint inferior → Joint Reaction
+```
+
+y:
+
+```text
+Pier → Areas → geometría base → Pier Forces Bottom
+```
+
+---
+
+## ETAPA 5 — INTERFAZ DE VALIDACIÓN
+
+Integrar los resultados en el formulario existente o en un formulario complementario consistente con la arquitectura actual de ARCO.
+
+---
+
+## ETAPA 6 — ASOCIACIÓN CON PILAS
+
+Permitir asociación automática propuesta y corrección manual.
+
+---
+
+## ETAPA 7 — PRUEBAS
+
+Validar al menos:
+
+### Caso 1
+
+Una columna Frame + una pila.
+
+### Caso 2
+
+Varias columnas Frame.
+
+### Caso 3
+
+Un Pier formado por varios Shells.
+
+### Caso 4
+
+Varios Piers.
+
+### Caso 5
+
+Modelo mixto Frame + Pier.
+
+### Caso 6
+
+Frame sin reacción.
+
+### Caso 7
+
+Pier sin Pier Forces.
+
+### Caso 8
+
+Archivo con columnas adicionales.
+
+### Caso 9
+
+Proyecto antiguo de ARCO.
+
+### Caso 10
+
+Importación mediante el método anterior.
+
+---
+
+# 34. RESULTADO FINAL ESPERADO
+
+Quiero que el módulo de Pilas evolucione a una arquitectura de este tipo:
+
+```text
+                     ETABS EXCEL
+                          │
+          ┌───────────────┴───────────────┐
+          │                               │
+      COLUMNAS FRAME                 SHELL / PIER
+          │                               │
+          ↓                               ↓
+     JOINT BASE                     PIER BOTTOM
+          │                               │
+          ↓                               ↓
+   JOINT REACTIONS                   PIER FORCES
+          │                               │
+          └───────────────┬───────────────┘
+                          ↓
+                DEMANDA NORMALIZADA
+                          ↓
+              ASOCIACIÓN CON PILA
+                          ↓
+                MÓDULO ACTUAL PILAS
+                          ↓
+               MOTOR ACTUAL DISEÑO
+```
+
+La nueva funcionalidad debe conseguir que ARCO pueda interpretar automáticamente modelos mixtos de ETABS, donde algunas columnas estén representadas mediante Frames y otras mediante Shell/Pier.
+
+La prioridad es:
+
+**integración + compatibilidad + trazabilidad + robustez.**
+
+No quiero reemplazar lo que ya funciona.
+
+Quiero que lo existente permanezca operativo y que esta sea una **nueva alternativa profesional para importar las fuerzas de diseño directamente desde los resultados de ETABS**.
+
+Comienza por revisar el código existente y el Excel que te voy a proporcionar. Antes de realizar cambios importantes, entrégame un diagnóstico concreto de la arquitectura actual, las tablas identificadas y el plan de implementación por archivos.

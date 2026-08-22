@@ -7,8 +7,10 @@ Public Class Form_02_00_PagInfoColumnas
         Try
             Tabla_Info_Seccion.Rows.Clear()
 
-            Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Elemento
-            Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
+            Dim col As Columna = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text)
+            If col Is Nothing Then Return
+            Dim Elemento As String = col.Name_Elemento
+            Dim Seccion = col.Lista_Tramos_Columnas
 
             For i = 0 To (Seccion.Count - 1) * 2
                 Tabla_Info_Seccion.Rows.Add()
@@ -18,11 +20,24 @@ Public Class Form_02_00_PagInfoColumnas
                 Tabla_Info_Seccion.Rows(i).Cells(0).Value = Seccion(i / 2).Piso
                 Tabla_Info_Seccion.Rows(i).Cells(1).Value = Seccion(i / 2).fc
                 Tabla_Info_Seccion.Rows(i).Cells(2).Value = Seccion(i / 2).B_Plano
-                Tabla_Info_Seccion.Rows(i).Cells(3).Value = Seccion(i / 2).H_Plano
                 Tabla_Info_Seccion.Rows(i).Cells(4).Value = "Top"
                 Tabla_Info_Seccion.Rows(i + 1).Cells(4).Value = "Bottom"
 
-                If Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Ref_Modificado = False Then
+                If Seccion(i / 2).EsCircular Then
+                    ' Columna circular: la columna 3 (Alto) no aplica — mostrar Ø en columna 2
+                    Tabla_Info_Seccion.Rows(i).Cells(3).Value = Nothing
+                    Tabla_Info_Seccion.Rows(i).Cells(3).ReadOnly = True
+                    Tabla_Info_Seccion.Rows(i).Cells(3).Style.BackColor = Color.FromArgb(215, 215, 215)
+                    Tabla_Info_Seccion.Rows(i).Cells(3).Style.ForeColor = Color.FromArgb(165, 165, 165)
+                    Tabla_Info_Seccion.Rows(i + 1).Cells(3).ReadOnly = True
+                    Tabla_Info_Seccion.Rows(i + 1).Cells(3).Style.BackColor = Color.FromArgb(215, 215, 215)
+                    ' Marcar columna 2 como "Ø" con color distintivo
+                    Tabla_Info_Seccion.Rows(i).Cells(2).Style.BackColor = Color.FromArgb(210, 230, 255)
+                Else
+                    Tabla_Info_Seccion.Rows(i).Cells(3).Value = Seccion(i / 2).H_Plano
+                End If
+
+                If Not col.Ref_Modificado Then
                     For j = 5 To 12
                         Tabla_Info_Seccion.Rows(i).Cells(j).Value = 0
                         Tabla_Info_Seccion.Rows(i + 1).Cells(j).Value = 0
@@ -76,21 +91,29 @@ Public Class Form_02_00_PagInfoColumnas
 
         Catch ex As Exception
         Finally
-            T_Seccion.Text = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Label
+            T_Seccion.Text = Combo_Elementos.Text
         End Try
 
     End Sub
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         'Try
-        Dim Seccion = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
-        Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Elemento
-        Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Name_Label = T_Seccion.Text
+        Dim colActual As Columna = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text)
+        If colActual Is Nothing Then Return
+        Dim Seccion = colActual.Lista_Tramos_Columnas
+        Dim Elemento As String = colActual.Name_Elemento
+        colActual.Name_Label = T_Seccion.Text
 
         For i = 0 To (Seccion.Count - 1) * 2 Step 2
             Seccion(i / 2).fc = Tabla_Info_Seccion.Rows(i).Cells(1).Value
             Seccion(i / 2).B_Plano = Tabla_Info_Seccion.Rows(i).Cells(2).Value
-            Seccion(i / 2).H_Plano = Tabla_Info_Seccion.Rows(i).Cells(3).Value
+            If Seccion(i / 2).EsCircular Then
+                ' Para circular: alto = diámetro (mismo valor)
+                Seccion(i / 2).H_Plano = Seccion(i / 2).B_Plano
+                Seccion(i / 2).Diametro = Seccion(i / 2).B_Plano
+            Else
+                Seccion(i / 2).H_Plano = Tabla_Info_Seccion.Rows(i).Cells(3).Value
+            End If
 
             Seccion(i / 2).Refuerzo_Col_Top.Barras_2 = Tabla_Info_Seccion.Rows(i).Cells(5).Value
             Seccion(i / 2).Refuerzo_Col_Top.Barras_3 = Tabla_Info_Seccion.Rows(i).Cells(6).Value
@@ -231,13 +254,16 @@ Public Class Form_02_00_PagInfoColumnas
         Next
 
         If Op_SeccionPrincipal.Checked = True Then
-            Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = True
+            colActual.Secciones_Principal = True
         End If
 
-        Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Ref_Modificado = True
+        colActual.Ref_Modificado = True
 
-        If Proyecto.Elementos.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento) < Combo_Elementos.Items.Count - 1 Then
-            Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(Proyecto.Elementos.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento) + 1).Name_Elemento
+        ' Refrescar combo para reflejar el nuevo Name_Label y avanzar al siguiente elemento
+        Dim currentIdx As Integer = Proyecto.Elementos.Columnas.Lista_Columnas.FindIndex(Function(p) p.Name_Elemento = Elemento)
+        RefrescarCombo()
+        If currentIdx >= 0 AndAlso currentIdx < Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1 Then
+            Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(currentIdx + 1).Name_Label
         Else
             MessageBox.Show("Hecho.", "Información Ingresada", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
@@ -334,6 +360,21 @@ Public Class Form_02_00_PagInfoColumnas
         AddHandler btnDI.Click, AddressOf Btn_DiagramaBiaxial_Click
         Panel1.Controls.Add(btnDI)
 
+        ' Botón para el diagrama de columnas circulares
+        Dim btnCirc As New Button()
+        btnCirc.Name = "Btn_DiagramaCircular"
+        btnCirc.Text = "Diagrama Circular"
+        btnCirc.Size = New Size(140, Button2.Height)
+        btnCirc.BackColor = Color.FromArgb(100, 60, 160)
+        btnCirc.ForeColor = Color.White
+        btnCirc.FlatStyle = FlatStyle.Flat
+        btnCirc.FlatAppearance.BorderSize = 0
+        btnCirc.Top = Button2.Top
+        btnCirc.Left = btnDI.Right + 8
+        btnCirc.Anchor = AnchorStyles.Bottom
+        AddHandler btnCirc.Click, AddressOf Btn_DiagramaCircular_Click
+        Panel1.Controls.Add(btnCirc)
+
     End Sub
 
     Private Sub Btn_DiagramaBiaxial_Click(sender As Object, e As EventArgs)
@@ -346,13 +387,32 @@ Public Class Form_02_00_PagInfoColumnas
         frm.Show()
     End Sub
 
+    Private Sub Btn_DiagramaCircular_Click(sender As Object, e As EventArgs)
+        Dim hayCirculares = Proyecto.Elementos.Columnas.Lista_Columnas.Any(
+            Function(c) c.Lista_Tramos_Columnas.Any(Function(t) t.EsCircular))
+        If Not hayCirculares Then
+            MessageBox.Show("No se detectaron columnas circulares en el proyecto." & vbCrLf &
+                            "Verifique que haya importado las secciones desde ETABS.",
+                            "Sin columnas circulares", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim frm As New Form_02_02_DiagramaCircular()
+        frm.Show()
+    End Sub
+
     Public Sub RefrescarCombo()
+        Dim textoActual As String = Combo_Elementos.Text
         Combo_Elementos.Items.Clear()
         If Proyecto.Elementos.Columnas.Lista_Columnas.Count > 0 Then
-            For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
-                Combo_Elementos.Items.Add(Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento)
+            For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+                Combo_Elementos.Items.Add(col.Name_Label)
             Next
-            Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Elemento
+            ' Restaurar la selección actual si todavía existe; si no, ir al primero
+            If Combo_Elementos.Items.Contains(textoActual) Then
+                Combo_Elementos.Text = textoActual
+            Else
+                Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Label
+            End If
         End If
     End Sub
 
@@ -365,6 +425,8 @@ Public Class Form_02_00_PagInfoColumnas
 
         Dim ctls = Panel1.Controls.Find("Btn_DiagramaBiaxial", False)
         If ctls.Length > 0 Then ctls(0).Left = Button2.Right + 10
+        Dim ctlsCirc = Panel1.Controls.Find("Btn_DiagramaCircular", False)
+        If ctlsCirc.Length > 0 AndAlso ctls.Length > 0 Then ctlsCirc(0).Left = ctls(0).Right + 8
 
     End Sub
 
@@ -560,8 +622,11 @@ Public Class Form_02_00_PagInfoColumnas
                 For i = 0 To Secciones_Principales.Count - 1
                     C_Lista_Secciones_Principales.Items.Add(Secciones_Principales(i).Name_Label)
                 Next
-                Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Similar = True
-                Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = False
+                Dim colSim = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text)
+                If colSim IsNot Nothing Then
+                    colSim.Secciones_Similar = True
+                    colSim.Secciones_Principal = False
+                End If
                 C_Lista_Secciones_Principales.Enabled = True
             End If
         End If
@@ -573,7 +638,7 @@ Public Class Form_02_00_PagInfoColumnas
         ' Refuerzo: copiado de la sección principal seleccionada
         Dim SeccionPrincipal = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = C_Lista_Secciones_Principales.Text).Lista_Tramos_Columnas
         ' Geometría: mantenida de la sección actual (no se copia del principal)
-        Dim SeccionActual = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Lista_Tramos_Columnas
+        Dim SeccionActual = Proyecto.Elementos.Columnas.Lista_Columnas.Find(Function(p) p.Name_Label = Combo_Elementos.Text)?.Lista_Tramos_Columnas
 
         For i = 0 To (SeccionPrincipal.Count - 1) * 2
             Tabla_Info_Seccion.Rows.Add()

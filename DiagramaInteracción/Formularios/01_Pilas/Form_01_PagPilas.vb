@@ -1,5 +1,6 @@
 ﻿Imports System.Data.OleDb
 Imports System.IO
+Imports System.Linq
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports ARCO.Funciones_00_Varias
 Imports ARCO.Funciones_01_Pilas
@@ -1179,6 +1180,17 @@ Public Class Form_01_PagPilas
         AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Pilas")
         MenuStrip1.Items.Add(itemAyuda)
 
+        ' Nuevo ítem: Importar ETABS con detección automática Frame + Pier
+        Dim sep As New ToolStripSeparator()
+        sep.BackColor = Color.FromArgb(87, 87, 87)
+        Importar_Pilas.DropDownItems.Add(sep)
+
+        Dim itemETABSFP As New ToolStripMenuItem("Importar ETABS (Frame + Pier)...")
+        itemETABSFP.ForeColor = Color.White
+        itemETABSFP.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler itemETABSFP.Click, AddressOf ImportarETABSFramePier_Click
+        Importar_Pilas.DropDownItems.Add(itemETABSFP)
+
         AddHandler _timerAutoSavePilas.Tick, AddressOf AutoSavePilas_Tick
         _timerAutoSavePilas.Start()
     End Sub
@@ -1212,6 +1224,69 @@ Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
                                 "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
         If r = DialogResult.Yes Then GuardarToolStripMenuItem_Click(sender, e)
         If r = DialogResult.Cancel Then e.Cancel = True
+    End Sub
+
+    ' ─── Importación automática ETABS E23: detecta Frame y Pier en un solo paso ───
+    Private Sub ImportarETABSFramePier_Click(sender As Object, e As EventArgs)
+        Dim ofd As New OpenFileDialog()
+        ofd.Title = "Seleccionar archivo ETABS E23 (Joint Reactions + Pier Forces)"
+        ofd.Filter = "Archivos Excel (*.xls;*.xlsx)|*.xls;*.xlsx|Todos los archivos (*.*)|*.*"
+        ofd.Multiselect = False
+
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Dim rutaArchivo As String = ofd.FileName
+        Me.Cursor = Cursors.WaitCursor
+
+        Dim candidatos As List(Of cCandidatoPila)
+        Try
+            candidatos = DetectarCandidatosETABS(rutaArchivo)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_01_PagPilas.ImportarETABSFramePier_Click", "Error durante detección de candidatos")
+            MessageBox.Show("Error al procesar el archivo ETABS:" & vbCrLf & ex.Message,
+                            "Error de lectura", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
+
+        If candidatos.Count = 0 Then
+            MessageBox.Show("No se detectaron apoyos en el archivo." & vbCrLf &
+                            "Verifique que contenga las hojas:" & vbCrLf &
+                            "  - 'Joint Reactions'" & vbCrLf &
+                            "  - 'Objects and Elements - Joints'" & vbCrLf &
+                            "  - 'Objects and Elements - Frames'" & vbCrLf &
+                            "  - 'Pier Forces'",
+                            "Sin candidatos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim frmValidar As New Form_01_ImportarETABS(candidatos)
+        frmValidar.ShowDialog()
+
+        If Not frmValidar.ImportacionConfirmada Then Return
+
+        _hayCambiosPilas = True
+
+        MostrarSelectorCombinacionesPilas()
+
+        Dim nFrames As Integer = Proyecto.Elementos.Pilas.Reactions _
+            .Where(Function(r) r.SourceType = "Frame") _
+            .Select(Function(r) r.JointLabel) _
+            .Distinct().Count()
+        Dim nPiers As Integer = Proyecto.Elementos.Pilas.Reactions _
+            .Where(Function(r) r.SourceType = "Pier") _
+            .Select(Function(r) r.JointLabel) _
+            .Distinct().Count()
+        Dim nCombos As Integer = Proyecto.Elementos.Pilas.Lista_Combinaciones.Count
+
+        MessageBox.Show("Importacion completada exitosamente:" & vbCrLf &
+                        "  - Pilas tipo Frame: " & nFrames & vbCrLf &
+                        "  - Pilas tipo Pier:  " & nPiers & vbCrLf &
+                        "  - Total apoyos: " & (nFrames + nPiers) & vbCrLf &
+                        "  - Combinaciones disponibles: " & nCombos,
+                        "Importacion ETABS completada",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
 End Class
