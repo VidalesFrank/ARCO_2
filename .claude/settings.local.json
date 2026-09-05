@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/manual\")",
+      "Bash(mkdir -p \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/criterios\")",
+      "Bash(mkdir -p \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/img\")",
+      "Bash(cp \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Resources/ARCO_LOGOGRIS.png\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/img/\")",
+      "Bash(cp \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Resources/ARCO_LOGOVerde.png\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/img/\")",
+      "Bash(cp -r \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/bin/Debug/\")",
+      "Bash(cp -r \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/bin/Release/\")"
+    ]
+  }
+}

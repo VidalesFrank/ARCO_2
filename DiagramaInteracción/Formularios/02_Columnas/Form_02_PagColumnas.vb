@@ -1,5 +1,8 @@
 ﻿Imports System.Data.OleDb
 Imports System.IO
+Imports System.IO.Compression
+Imports System.Threading.Tasks
+Imports System.Xml
 Imports ARCO.Funciones_02_Columnas
 
 Public Class Form_02_PagColumnas
@@ -32,6 +35,8 @@ Public Class Form_02_PagColumnas
 
             If Proyecto.Elementos.Columnas.Info_Diseño = True Then
                 Tabla = Tabla_Diseño_Flexo
+
+                If Tabla.Rows.Count <= 2 Then GoTo SkipFrameDiseno
 
                 Dim Col_Piso As Integer = Col_Diseno(0)
                 Dim Col_Label As Integer = Col_Diseno(1)
@@ -81,6 +86,7 @@ Public Class Form_02_PagColumnas
                         Combo_Elementos.Items.Add(Columna_.Name_Elemento)
                     End If
                 Next
+SkipFrameDiseno:
             End If
 
             If Proyecto.Elementos.Columnas.Info_Secciones = True Then
@@ -233,14 +239,16 @@ Public Class Form_02_PagColumnas
             If Proyecto.Elementos.Columnas.Info_Diseño = True Then
                 Tabla = Tabla_Diseño_Pier
 
+                If Tabla.Rows.Count <= 2 Then GoTo SkipPierDiseno
+
                 Dim Col_Piso As Integer = Col_Diseno(0)
                 Dim Col_Label As Integer = Col_Diseno(1)
                 Dim Col_Seccion As Integer = Col_Diseno(2)
                 Dim Salto As Integer = Col_Diseno(3)
                 Dim Col_As_Req As Integer = Col_Diseno(4)
 
-                For i = 0 To 12
-                    Dim C As String = Tabla.Rows(0).Cells(i).Value.ToString
+                For i = 0 To Math.Min(12, Tabla.Columns.Count - 1)
+                    Dim C As String = If(Tabla.Rows(0).Cells(i).Value IsNot Nothing, Tabla.Rows(0).Cells(i).Value.ToString(), "")
                     If C.Contains("Required") Then
                         Col_As_Req = i
                     End If
@@ -254,7 +262,9 @@ Public Class Form_02_PagColumnas
                         Seccion.Seccion = Tabla.Rows(i).Cells(Col_Seccion).Value
 
                         Seccion.Cuantia_Req_Bottom = Convert.ToSingle(Tabla.Rows(i).Cells(Col_As_Req).Value)
-                        Seccion.Cuantia_Req_Top = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_As_Req).Value)
+                        If i + Salto - 1 < Tabla.Rows.Count Then
+                            Seccion.Cuantia_Req_Top = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_As_Req).Value)
+                        End If
 
                         Columna.Lista_Tramos_Columnas.Add(Seccion)
                     End If
@@ -272,6 +282,7 @@ Public Class Form_02_PagColumnas
                         Combo_Elementos.Items.Add(Columna_.Name_Elemento)
                     End If
                 Next
+SkipPierDiseno:
             End If
 
             If Proyecto.Elementos.Columnas.Info_Secciones = True Then
@@ -665,66 +676,189 @@ Public Class Form_02_PagColumnas
     End Sub
 
     Private Sub ImportarTodoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Todo_Col.Click
-        Dim openFD As New OpenFileDialog()
-        With openFD
-            .Title = "Seleccionar archivo ETABS (Frame + Pier + Circulares)"
-            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*xlsx|Todos los archivos(*.*)|*.*"
+        ' -- 1. Selector de archivo
+        Dim openFD As New OpenFileDialog() With {
+            .Title = "Seleccionar archivo ETABS (Frame + Pier)",
+            .Filter = "Archivos Excel(*.xlsx)|*.xlsx|Todos los archivos(*.*)|*.*",
             .Multiselect = False
-            If .ShowDialog <> Windows.Forms.DialogResult.OK Then Return
-        End With
-
+        }
+        If openFD.ShowDialog() <> Windows.Forms.DialogResult.OK Then Return
         Dim ruta As String = openFD.FileName
-        Dim sb As New System.Text.StringBuilder()
-        sb.AppendLine($"Importación unificada: {System.IO.Path.GetFileName(ruta)}")
-        sb.AppendLine(New String("─"c, 52))
 
-        ' Activar todos los flags
-        Proyecto.Elementos.Columnas.Elementos_Frame = True
-        Proyecto.Elementos.Columnas.Info_Diseño = True
+        ' -- 2. Fase 1: leer hojas de diseno + geometria en una sola pasada (sincrono)
+        Dim dtFrameD As DataTable = Nothing
+        Dim dtPierD  As DataTable = Nothing
+        Dim dtJoints As DataTable = Nothing
+        Dim dtObjFrm As DataTable = Nothing
+        Dim dtFrameS_p1 As DataTable = Nothing
+        Dim dtPierS_p1  As DataTable = Nothing
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            Using za As New ZipArchive(File.OpenRead(ruta), ZipArchiveMode.Read)
+                Dim wbMap = ZipLeerWorkbookMap(za)
+                Dim sst   = ZipLeerSharedStrings(za)
+                dtFrameD    = ZipLeerHoja(za, wbMap, sst, Nothing, 1, "Conc Col Sum", "Concrete Column Summary")
+                dtPierD     = ZipLeerHoja(za, wbMap, sst, Nothing, 1, "Pier Dgn Sum", "Shear Wall Pier Summary")
+                dtJoints    = ZipLeerHoja(za, wbMap, sst, Nothing, 0, "Objects and Elements - Joints", "Joint Coordinates")
+                dtObjFrm    = ZipLeerHoja(za, wbMap, sst, Nothing, 0, "Objects and Elements - Frames", "Connectivity - Frame")
+                dtFrameS_p1 = ZipLeerHoja(za, wbMap, sst, Nothing, 1, "Frame Sec Def - Conc Rect", "Frame Sections")
+                dtPierS_p1  = ZipLeerHoja(za, wbMap, sst, Nothing, 1, "Pier Section Properties")
+            End Using
+        Catch ex As Exception
+            Me.Cursor = Cursors.Arrow
+            MsgBox(ex.Message, MsgBoxStyle.Critical, "Error al leer archivo")
+            Return
+        End Try
+        Me.Cursor = Cursors.Arrow
+
+        ' -- 3. Detectar automaticamente que tipos de elemento existen
+        Dim etiqFrame As New List(Of String)()
+        Dim etiqPier  As New List(Of String)()
+        If dtFrameD IsNot Nothing Then
+            For r = 2 To dtFrameD.Rows.Count - 1
+                Dim lbl As String = If(dtFrameD.Rows(r)(1) IsNot DBNull.Value, dtFrameD.Rows(r)(1).ToString().Trim(), "")
+                If lbl <> "" AndAlso Not etiqFrame.Contains(lbl) Then etiqFrame.Add(lbl)
+            Next
+        End If
+        If dtPierD IsNot Nothing Then
+            For r = 2 To dtPierD.Rows.Count - 1
+                Dim lbl As String = If(dtPierD.Rows(r)(1) IsNot DBNull.Value, dtPierD.Rows(r)(1).ToString().Trim(), "")
+                If lbl <> "" AndAlso Not etiqPier.Contains(lbl) Then etiqPier.Add(lbl)
+            Next
+        End If
+        If etiqFrame.Count = 0 AndAlso etiqPier.Count = 0 Then
+            MsgBox("No se encontraron elementos en las hojas de diseno del archivo.", MsgBoxStyle.Exclamation, "Sin elementos")
+            Return
+        End If
+
+        ' -- 4. Construir candidatos con coordenadas + backdrop
+        Dim backdrop As GeometriaEstructural = Nothing
+        Dim candidatos = ConstruirCandidatosColumnas(
+            etiqFrame, dtFrameD, dtFrameS_p1, dtJoints, dtObjFrm,
+            etiqPier,  dtPierD,  dtPierS_p1,
+            backdrop)
+
+        ' -- 5. Formulario de seleccion con vista en planta
+        Dim selFrame As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim selPier  As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Using frmSel As New Form_02_SeleccionColumnas(
+            candidatos,
+            If(backdrop IsNot Nothing, backdrop.JointsXY, Nothing),
+            If(backdrop IsNot Nothing, backdrop.FramesXY, Nothing))
+            If frmSel.ShowDialog(Me) <> DialogResult.OK Then Return
+            selFrame = frmSel.SelFrame
+            selPier  = frmSel.SelPier
+        End Using
+        If selFrame.Count = 0 AndAlso selPier.Count = 0 Then Return
+
+        ' ── 6. Fase 2: cargar secciones + fuerzas FILTRADAS ─────────────────────────────
+        Dim dtFrameD2 As DataTable = Nothing   ' diseño Frame filtrado por seleccion
+        Dim dtFrameS  As DataTable = Nothing
+        Dim dtFrameF  As DataTable = Nothing
+        Dim dtPierD2  As DataTable = Nothing   ' diseño Pier filtrado por seleccion
+        Dim dtPierS   As DataTable = Nothing
+        Dim dtPierF   As DataTable = Nothing
+        Dim dtCircle  As DataTable = Nothing
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            Using za As New ZipArchive(File.OpenRead(ruta), ZipArchiveMode.Read)
+                Dim wbMap = ZipLeerWorkbookMap(za)
+                Dim sst   = ZipLeerSharedStrings(za)
+                ' Diseño filtrado: solo los elementos seleccionados llegan a Calcular
+                If selFrame.Count > 0 Then
+                    dtFrameD2 = ZipLeerHoja(za, wbMap, sst, selFrame, 1, "Conc Col Sum", "Concrete Column Summary")
+                    dtFrameS  = ZipLeerHoja(za, wbMap, sst, Nothing,  1, "Frame Sec Def - Conc Rect", "Frame Sections")
+                    dtFrameF  = ZipLeerHoja(za, wbMap, sst, selFrame, 1, "Element Forces - Columns",  "Column Forces")
+                    dtCircle  = ZipLeerHoja(za, wbMap, sst, Nothing,  1, "Frame Sec Def - Conc Circle", "Conc Circle")
+                End If
+                If selPier.Count > 0 Then
+                    dtPierD2 = ZipLeerHoja(za, wbMap, sst, selPier, 1, "Pier Dgn Sum", "Shear Wall Pier Summary")
+                    dtPierS  = ZipLeerHoja(za, wbMap, sst, Nothing, 1, "Pier Section Properties")
+                    dtPierF  = ZipLeerHoja(za, wbMap, sst, selPier, 1, "Pier Forces")
+                End If
+            End Using
+        Catch ex As Exception
+            Me.Cursor = Cursors.Arrow
+            MsgBox(ex.Message, MsgBoxStyle.Critical, "Error al importar")
+            Return
+        End Try
+        Me.Cursor = Cursors.Arrow
+
+        ' ── 7. Vincular DataTables a DataGridViews ───────────────────────────────────────
+        ' Para diseño se usa la versión filtrada de Fase 2; si falla el filtro, cae al resultado de Fase 1
+        Proyecto.Elementos.Columnas.Info_Diseño   = True
         Proyecto.Elementos.Columnas.Info_Secciones = True
-        Proyecto.Elementos.Columnas.Info_Fuerzas = True
+        Proyecto.Elementos.Columnas.Info_Fuerzas  = True
+        Dim okFrameDiseno    As Boolean = VincularDGV(If(dtFrameD2 IsNot Nothing, dtFrameD2, dtFrameD), Tabla_Diseño_Flexo)
+        Dim okFrameSecciones As Boolean = VincularDGV(dtFrameS,  Tabla_secciones)
+        Dim okFrameFuerzas   As Boolean = VincularDGV(dtFrameF,  Tabla_Fuerzas)
+        Dim okPierDiseno     As Boolean = VincularDGV(If(dtPierD2 IsNot Nothing, dtPierD2, dtPierD),   Tabla_Diseño_Pier)
+        Dim okPierSecciones  As Boolean = VincularDGV(dtPierS,   Tabla_Secciones_Pier)
+        Dim okPierFuerzas    As Boolean = VincularDGV(dtPierF,   Tabla_Fuerzas_Pier)
 
-        ' Frame
-        sb.AppendLine(If(Importar_Datos_de_Excel(ruta, Tabla_Diseño_Flexo, "Diseño", "Frame"),
-                         "  ✔  Diseño Frame         (Conc Col Sum)",
-                         "  ✘  Diseño Frame         — hoja no encontrada"))
-        sb.AppendLine(If(Importar_Datos_de_Excel(ruta, Tabla_secciones, "Secciones", "Frame"),
-                         "  ✔  Secciones Frame      (Conc Rect + Conc Circle)",
-                         "  ✘  Secciones Frame      — hoja no encontrada"))
-        sb.AppendLine(If(Importar_Datos_de_Excel(ruta, Tabla_Fuerzas, "Fuerzas", "Frame"),
-                         "  ✔  Fuerzas Frame        (Element Forces - Columns)",
-                         "  ✘  Fuerzas Frame        — hoja no encontrada"))
+        ' ── Secciones circulares ──────────────────────────────────────────────────────
+        If dtCircle IsNot Nothing AndAlso dtCircle.Rows.Count >= 3 Then
+            _SeccionesCirculares.Clear()
+            Dim colName As Integer = -1, colDiam As Integer = -1, colMat As Integer = -1
+            For ci = 0 To dtCircle.Columns.Count - 1
+                Dim hdr As String = If(dtCircle.Rows(0)(ci) IsNot DBNull.Value, dtCircle.Rows(0)(ci).ToString().Trim().ToUpperInvariant(), "")
+                If hdr = "NAME" Then colName = ci
+                If hdr = "DIAMETER" Then colDiam = ci
+                If hdr = "MATERIAL" Then colMat = ci
+            Next
+            If colName >= 0 AndAlso colDiam >= 0 Then
+                For r = 2 To dtCircle.Rows.Count - 1
+                    Dim nm   As String = If(dtCircle.Rows(r)(colName) IsNot DBNull.Value, dtCircle.Rows(r)(colName).ToString().Trim(), "")
+                    Dim matS As String = If(colMat >= 0 AndAlso dtCircle.Rows(r)(colMat) IsNot DBNull.Value, dtCircle.Rows(r)(colMat).ToString().Trim(), "")
+                    Dim diamObj As Object = If(dtCircle.Rows(r)(colDiam) IsNot DBNull.Value, dtCircle.Rows(r)(colDiam), Nothing)
+                    Dim diam As Single = 0
+                    If diamObj IsNot Nothing Then
+                        If TypeOf diamObj Is Double Then
+                            diam = CSng(CDbl(diamObj))
+                        Else
+                            Single.TryParse(diamObj.ToString(), Globalization.NumberStyles.Float,
+                                            Globalization.CultureInfo.InvariantCulture, diam)
+                        End If
+                    End If
+                    If nm <> "" AndAlso diam > 0 Then
+                        _SeccionesCirculares(nm) = Tuple.Create(diam, matS)
+                    End If
+                Next
+            End If
+        End If
 
-        ' Pier — opcional; si no hay hoja desactiva el flag
-        Dim okPierDiseno    = Importar_Datos_de_Excel(ruta, Tabla_Diseño_Pier,    "Diseño",    "Pier")
-        Dim okPierSecciones = Importar_Datos_de_Excel(ruta, Tabla_Secciones_Pier, "Secciones", "Pier")
-        Dim okPierFuerzas   = Importar_Datos_de_Excel(ruta, Tabla_Fuerzas_Pier,   "Fuerzas",   "Pier")
-        Dim hayPier = okPierDiseno OrElse okPierSecciones OrElse okPierFuerzas
-        Proyecto.Elementos.Columnas.Elementos_Pier = hayPier
+        ' ── 9. Flags y resumen ────────────────────────────────────────────────────────────
+        _hayCambiosColumnas = True
+        Proyecto.Elementos.Columnas.Elementos_Frame = selFrame.Count > 0
+        Proyecto.Elementos.Columnas.Elementos_Pier  = selPier.Count > 0
 
-        sb.AppendLine(If(okPierDiseno,
-                         "  ✔  Diseño Pier          (Pier Dgn Sum)",
-                         "  —  Diseño Pier          — no encontrado (puede no tener Pier)"))
-        sb.AppendLine(If(okPierSecciones,
-                         "  ✔  Secciones Pier       (Pier Section Properties)",
-                         "  —  Secciones Pier       — no encontrado"))
-        sb.AppendLine(If(okPierFuerzas,
-                         "  ✔  Fuerzas Pier         (Pier Forces)",
-                         "  —  Fuerzas Pier         — no encontrado"))
-
-        sb.AppendLine(New String("─"c, 52))
-        Dim nCirc = _SeccionesCirculares.Count
-        sb.AppendLine(If(nCirc > 0,
-                         $"  ✔  Secciones circulares detectadas: {nCirc} tipos",
-                         "  —  No se detectaron secciones circulares"))
-
-        MessageBox.Show(sb.ToString(), "Importación completada", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Dim sb As New System.Text.StringBuilder()
+        sb.AppendLine($"Archivo: {Path.GetFileName(ruta)}")
+        sb.AppendLine(New String("─"c, 50))
+        If selFrame.Count > 0 Then
+            sb.AppendLine($"  FRAME: {selFrame.Count} elementos importados")
+            sb.AppendLine(If(okFrameDiseno,    "    ✔  Diseño (Conc Col Sum)",          "    —  Diseño — no encontrado"))
+            sb.AppendLine(If(okFrameSecciones, "    ✔  Secciones (Conc Rect)",          "    —  Secciones — no encontrado"))
+            sb.AppendLine(If(okFrameFuerzas,   "    ✔  Fuerzas (Element Forces - Col)", "    —  Fuerzas — no encontrado"))
+        End If
+        If selPier.Count > 0 Then
+            sb.AppendLine($"  PIER: {selPier.Count} elementos importados")
+            sb.AppendLine(If(okPierDiseno,    "    ✔  Diseño (Pier Dgn Sum)",     "    —  Diseño — no encontrado"))
+            sb.AppendLine(If(okPierSecciones, "    ✔  Secciones (Pier Sec Prop)", "    —  Secciones — no encontrado"))
+            sb.AppendLine(If(okPierFuerzas,   "    ✔  Fuerzas (Pier Forces)",     "    —  Fuerzas — no encontrado"))
+        End If
+        Dim nCirc As Integer = _SeccionesCirculares.Count
+        If nCirc > 0 Then sb.AppendLine($"  ✔  Secciones circulares: {nCirc} tipos")
+        sb.AppendLine(New String("─"c, 50))
+        sb.AppendLine("Ejecute 'Calcular' para procesar los elementos.")
+        MsgBox(sb.ToString(), MsgBoxStyle.Information, "Importación exitosa")
     End Sub
 
     Public Function Importar_Datos_de_Excel(ByRef path As String,
                                             ByVal Datagrid As DataGridView,
                                             ByVal Op As String,
-                                            ByVal Elemento As String) As Boolean
+                                            ByVal Elemento As String,
+                                            Optional suppressMsg As Boolean = False) As Boolean
         Try
             Me.Cursor = Cursors.WaitCursor
             Dim Ds As New DataSet
@@ -788,7 +922,9 @@ Public Class Form_02_PagColumnas
 
             If String.IsNullOrEmpty(nombreHoja) Then
                 cnConex.Close()
-                MsgBox($"No se encontró la hoja de {Op} ({Elemento}) en el archivo.{vbCrLf}Verifique que el archivo corresponde al tipo correcto.", MsgBoxStyle.Exclamation, "Hoja no encontrada")
+                If Not suppressMsg Then
+                    MsgBox($"No se encontró la hoja de {Op} ({Elemento}) en el archivo.{vbCrLf}Verifique que el archivo corresponde al tipo correcto.", MsgBoxStyle.Exclamation, "Hoja no encontrada")
+                End If
                 Return False
             End If
 
@@ -982,32 +1118,24 @@ Public Class Form_02_PagColumnas
     End Sub
 
     Private Sub FrameToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FrameToolStripMenuItem.Click
-        Proyecto.Elementos.Columnas.Elementos_Frame = True
-        Proyecto.Elementos.Columnas.Info_Fuerzas = True
-
         Dim openFD As New OpenFileDialog With {
             .Title = "Seleccionar archivo Excel (Frame)",
             .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
             .Multiselect = False
         }
         If openFD.ShowDialog = Windows.Forms.DialogResult.OK Then
-            Importar_Datos_de_Excel(openFD.FileName, Tabla_Fuerzas, "Fuerzas", "Frame")
-            ProcesarFuerzasEnvolvente(Tabla_Fuerzas, "Frame")
+            ActualizarFuerzasFrame(openFD.FileName)
         End If
     End Sub
 
     Private Sub PierToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles PierToolStripMenuItem.Click
-        Proyecto.Elementos.Columnas.Elementos_Pier = True
-        Proyecto.Elementos.Columnas.Info_Fuerzas = True
-
         Dim openFD As New OpenFileDialog With {
             .Title = "Seleccionar archivo Excel (Pier)",
             .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
             .Multiselect = False
         }
         If openFD.ShowDialog = Windows.Forms.DialogResult.OK Then
-            Importar_Datos_de_Excel(openFD.FileName, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
-            ProcesarFuerzasEnvolvente(Tabla_Fuerzas_Pier, "Pier")
+            ActualizarFuerzasPier(openFD.FileName)
         End If
     End Sub
 
@@ -1334,8 +1462,39 @@ Public Class Form_02_PagColumnas
         itemActDis.DropDownItems.Add(subActPier)
         OpcionesToolStripMenuItem.DropDownItems.Insert(1, itemActDis)
 
+        ' Actualizar Todo (demandas + diseño + análisis en un solo paso)
+        Dim itemActTodo As New ToolStripMenuItem("Actualizar Todo")
+        itemActTodo.ForeColor = Color.White
+        itemActTodo.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler itemActTodo.Click, AddressOf ActualizarTodo_Click
+        OpcionesToolStripMenuItem.DropDownItems.Insert(2, itemActTodo)
+
+        ' Tipo transversal columnas circulares (persiste en proyecto)
+        Dim itemTransCirc As New ToolStripMenuItem("Transversal Circular")
+        itemTransCirc.ForeColor = Color.White
+        itemTransCirc.BackColor = Color.FromArgb(87, 87, 87)
+        Dim subEspiral As New ToolStripMenuItem("Espiral") With {.CheckOnClick = False}
+        Dim subEstribo As New ToolStripMenuItem("Estribo cerrado") With {.CheckOnClick = False}
+        AddHandler itemTransCirc.DropDownOpening, Sub(s2, ev2)
+            Dim tc As String = If(String.IsNullOrEmpty(Proyecto.Elementos.Columnas.Trans_Circular), "Espiral", Proyecto.Elementos.Columnas.Trans_Circular)
+            subEspiral.Checked = (tc = "Espiral")
+            subEstribo.Checked = (tc = "Estribo cerrado")
+        End Sub
+        AddHandler subEspiral.Click, Sub(s2, ev2)
+            Proyecto.Elementos.Columnas.Trans_Circular = "Espiral"
+            subEspiral.Checked = True : subEstribo.Checked = False
+        End Sub
+        AddHandler subEstribo.Click, Sub(s2, ev2)
+            Proyecto.Elementos.Columnas.Trans_Circular = "Estribo cerrado"
+            subEspiral.Checked = False : subEstribo.Checked = True
+        End Sub
+        itemTransCirc.DropDownItems.Add(subEspiral)
+        itemTransCirc.DropDownItems.Add(subEstribo)
+        OpcionesToolStripMenuItem.DropDownItems.Insert(3, itemTransCirc)
+
         AddHandler _timerAutoSaveColumnas.Tick, AddressOf AutoSaveColumnas_Tick
         _timerAutoSaveColumnas.Start()
+        RefrescarDesdeProyecto()
     End Sub
 
     Private Sub AutoSaveColumnas_Tick(sender As Object, e As EventArgs)
@@ -1414,100 +1573,14 @@ Public Class Form_02_PagColumnas
 
         Me.Cursor = Cursors.WaitCursor
         Try
-            Dim dt As DataTable = LeerTablaDiseno(ofd.FileName, "Frame")
-            If dt Is Nothing OrElse dt.Rows.Count < 3 Then
+            Dim actualizados As Integer = ActualizarDisenoFrameCore(ofd.FileName)
+            If actualizados < 0 Then
                 MsgBox("No se encontró la hoja 'Conc Col Sum - ACI 318-14' en el archivo.",
                        MsgBoxStyle.Exclamation, "Hoja no encontrada")
                 Return
             End If
-
-            Dim Col_Piso As Integer = 0
-            Dim Col_Label As Integer = 1
-            Dim Salto As Integer = 3
-            Dim Col_As_Req As Integer = 10
-
-            ' Detectar columna "Required Reinforcing" desde la fila de encabezados (row 0)
-            For ci = 0 To Math.Min(dt.Columns.Count - 1, 14)
-                Dim h As String = If(dt.Rows(0)(ci) IsNot DBNull.Value, dt.Rows(0)(ci).ToString().Trim(), "")
-                If h.ToUpperInvariant().Contains("REQUIRED") Then
-                    Col_As_Req = ci
-                    Exit For
-                End If
-            Next
-
-            ' Detectar Salto dinámicamente (igual que Button2_Click)
-            If dt.Rows.Count >= 4 Then
-                Dim secRef As String = If(dt.Rows(2)(Col_Label) IsNot DBNull.Value, dt.Rows(2)(Col_Label).ToString(), "")
-                For j = 1 To 7
-                    If 2 + j < dt.Rows.Count Then
-                        Dim secJ As String = If(dt.Rows(2 + j)(Col_Label) IsNot DBNull.Value, dt.Rows(2 + j)(Col_Label).ToString(), "")
-                        If secJ <> secRef Then Salto = j : Exit For
-                    End If
-                Next
-            End If
-
-            Dim actualizados As Integer = 0
-            Dim I0 As Integer = 2
-            Dim Section As String = If(dt.Rows.Count > 2 AndAlso dt.Rows(2)(Col_Label) IsNot DBNull.Value,
-                                       dt.Rows(2)(Col_Label).ToString(), "")
-
-            For i = 2 To dt.Rows.Count - 1
-                ' Redetectar Salto por elemento (igual que importación)
-                For j = 1 To 7
-                    If I0 + j >= dt.Rows.Count Then Exit For
-                    Dim sj As String = If(dt.Rows(I0 + j)(Col_Label) IsNot DBNull.Value, dt.Rows(I0 + j)(Col_Label).ToString(), "")
-                    If sj <> Section Then Salto = j : Exit For
-                Next
-
-                Dim cellStory As Object = dt.Rows(i)(Col_Piso)
-                If cellStory Is DBNull.Value OrElse cellStory.ToString() = "" Then Continue For
-
-                ' Filtro estación: columna 4 = 0 (estación base, igual que importación)
-                Dim st4Val As Single = 0
-                Dim st4Ok As Boolean = False
-                If dt.Columns.Count > 4 AndAlso dt.Rows(i)(4) IsNot DBNull.Value Then
-                    st4Ok = Single.TryParse(dt.Rows(i)(4).ToString(),
-                                            System.Globalization.NumberStyles.Float,
-                                            System.Globalization.CultureInfo.InvariantCulture, st4Val)
-                End If
-                If Not st4Ok OrElse st4Val <> 0 Then Continue For
-
-                Dim nombre As String = If(dt.Rows(i)(Col_Label) IsNot DBNull.Value, dt.Rows(i)(Col_Label).ToString(), "")
-                If nombre = "" Then Continue For
-
-                Dim asBottom As Single = 0
-                Dim asTop As Single = 0
-                Single.TryParse(If(dt.Rows(i)(Col_As_Req) IsNot DBNull.Value, dt.Rows(i)(Col_As_Req).ToString(), ""),
-                                System.Globalization.NumberStyles.Float,
-                                System.Globalization.CultureInfo.InvariantCulture, asBottom)
-                Dim rowTop As Integer = i + Salto - 1
-                If rowTop < dt.Rows.Count Then
-                    Single.TryParse(If(dt.Rows(rowTop)(Col_As_Req) IsNot DBNull.Value, dt.Rows(rowTop)(Col_As_Req).ToString(), ""),
-                                    System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, asTop)
-                End If
-
-                Dim piso As String = cellStory.ToString()
-                For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
-                    If col.Name_Elemento = nombre Then
-                        Dim tramo = col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = piso)
-                        If tramo IsNot Nothing Then
-                            tramo.As_Req_Bottom = asBottom * 1000000  ' m² → mm²
-                            tramo.As_Req_Top = asTop * 1000000
-                            actualizados += 1
-                        End If
-                    End If
-                Next
-
-                Section = nombre
-                I0 = i
-            Next
-
-            _hayCambiosColumnas = True
-            If Combo_Elementos.SelectedIndex >= 0 Then Combo_Elementos_SelectedIndexChanged(Nothing, EventArgs.Empty)
             MsgBox($"Diseño Frame actualizado: {actualizados} tramo(s) con nuevo As Req.",
                    MsgBoxStyle.Information, "Actualizar Diseño As Req — Frame")
-
         Catch ex As Exception
             Logger.Error(ex, "Form_02_PagColumnas.ActualizarDisenoFrame", "Error al actualizar As_Req desde Excel.")
             MsgBox("Error al procesar el archivo: " & ex.Message, MsgBoxStyle.Critical, "Actualizar Diseño")
@@ -1532,77 +1605,18 @@ Public Class Form_02_PagColumnas
 
         Me.Cursor = Cursors.WaitCursor
         Try
-            Dim dt As DataTable = LeerTablaDiseno(ofd.FileName, "Pier")
-            If dt Is Nothing OrElse dt.Rows.Count < 3 Then
+            Dim sinDim As Integer = 0
+            Dim actualizados As Integer = ActualizarDisenoPierCore(ofd.FileName, sinDim)
+            If actualizados < 0 Then
                 MsgBox("No se encontró la hoja 'Pier Dgn Sum' en el archivo.",
                        MsgBoxStyle.Exclamation, "Hoja no encontrada")
                 Return
             End If
-
-            Dim Col_Piso As Integer = 0
-            Dim Col_Label As Integer = 1
-            Dim Salto As Integer = 2
-            Dim Col_As_Req As Integer = 9
-
-            ' Detectar columna "Required Reinforcing" desde la fila de encabezados (row 0)
-            For ci = 0 To Math.Min(dt.Columns.Count - 1, 12)
-                Dim h As String = If(dt.Rows(0)(ci) IsNot DBNull.Value, dt.Rows(0)(ci).ToString().Trim(), "")
-                If h.ToUpperInvariant().Contains("REQUIRED") Then
-                    Col_As_Req = ci
-                    Exit For
-                End If
-            Next
-
-            Dim actualizados As Integer = 0
-            Dim sinDimensiones As Integer = 0
-
-            For i = 2 To dt.Rows.Count - 1 Step Salto
-                Dim cellStory As Object = dt.Rows(i)(Col_Piso)
-                If cellStory Is DBNull.Value OrElse cellStory.ToString() = "" Then Continue For
-
-                Dim nombre As String = If(dt.Rows(i)(Col_Label) IsNot DBNull.Value, dt.Rows(i)(Col_Label).ToString(), "")
-                If nombre = "" Then Continue For
-
-                Dim cuantiaBot As Single = 0
-                Dim cuantiaTop As Single = 0
-                Single.TryParse(If(dt.Rows(i)(Col_As_Req) IsNot DBNull.Value, dt.Rows(i)(Col_As_Req).ToString(), ""),
-                                System.Globalization.NumberStyles.Float,
-                                System.Globalization.CultureInfo.InvariantCulture, cuantiaBot)
-                Dim rowTop As Integer = i + Salto - 1
-                If rowTop < dt.Rows.Count Then
-                    Single.TryParse(If(dt.Rows(rowTop)(Col_As_Req) IsNot DBNull.Value, dt.Rows(rowTop)(Col_As_Req).ToString(), ""),
-                                    System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, cuantiaTop)
-                End If
-
-                Dim piso As String = cellStory.ToString()
-                For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
-                    If col.Name_Elemento = nombre Then
-                        Dim tramo = col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = piso)
-                        If tramo IsNot Nothing Then
-                            tramo.Cuantia_Req_Bottom = cuantiaBot
-                            tramo.Cuantia_Req_Top = cuantiaTop
-                            If tramo.B_Modelo > 0 AndAlso tramo.H_Modelo > 0 Then
-                                tramo.As_Req_Bottom = tramo.B_Modelo * tramo.H_Modelo * cuantiaBot * 10000
-                                tramo.As_Req_Top = tramo.B_Modelo * tramo.H_Modelo * cuantiaTop * 10000
-                            Else
-                                sinDimensiones += 1
-                            End If
-                            actualizados += 1
-                        End If
-                    End If
-                Next
-            Next
-
-            _hayCambiosColumnas = True
-            If Combo_Elementos.SelectedIndex >= 0 Then Combo_Elementos_SelectedIndexChanged(Nothing, EventArgs.Empty)
-
             Dim msg As String = $"Diseño Pier actualizado: {actualizados} tramo(s) con nuevo As Req."
-            If sinDimensiones > 0 Then
-                msg &= $"{vbCrLf}⚠ {sinDimensiones} tramo(s) sin dimensiones: solo se actualizó la cuantía. Importe secciones Pier para calcular As."
+            If sinDim > 0 Then
+                msg &= $"{vbCrLf}⚠ {sinDim} tramo(s) sin dimensiones: solo se actualizó la cuantía. Importe secciones Pier para calcular As."
             End If
             MsgBox(msg, MsgBoxStyle.Information, "Actualizar Diseño As Req — Pier")
-
         Catch ex As Exception
             Logger.Error(ex, "Form_02_PagColumnas.ActualizarDisenoPier", "Error al actualizar As_Req Pier desde Excel.")
             MsgBox("Error al procesar el archivo: " & ex.Message, MsgBoxStyle.Critical, "Actualizar Diseño")
@@ -1610,5 +1624,671 @@ Public Class Form_02_PagColumnas
             Me.Cursor = Cursors.Arrow
         End Try
     End Sub
+
+    '--------------- Helpers para Actualizar Todo ---------------
+
+    Private Sub ActualizarFuerzasFrame(rutaArchivo As String)
+        Proyecto.Elementos.Columnas.Elementos_Frame = True
+        Proyecto.Elementos.Columnas.Info_Fuerzas = True
+        Importar_Datos_de_Excel(rutaArchivo, Tabla_Fuerzas, "Fuerzas", "Frame")
+        ProcesarFuerzasEnvolvente(Tabla_Fuerzas, "Frame")
+    End Sub
+
+    Private Sub ActualizarFuerzasPier(rutaArchivo As String)
+        Proyecto.Elementos.Columnas.Elementos_Pier = True
+        Proyecto.Elementos.Columnas.Info_Fuerzas = True
+        Importar_Datos_de_Excel(rutaArchivo, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
+        ProcesarFuerzasEnvolvente(Tabla_Fuerzas_Pier, "Pier")
+    End Sub
+
+    ''' <summary>Actualiza As_Req desde hoja Frame. Devuelve tramos actualizados, o -1 si la hoja no existe.</summary>
+    Private Function ActualizarDisenoFrameCore(rutaArchivo As String) As Integer
+        Dim dt As DataTable = LeerTablaDiseno(rutaArchivo, "Frame")
+        If dt Is Nothing OrElse dt.Rows.Count < 3 Then Return -1
+
+        Dim Col_Piso As Integer = 0
+        Dim Col_Label As Integer = 1
+        Dim Salto As Integer = 3
+        Dim Col_As_Req As Integer = 10
+
+        For ci = 0 To Math.Min(dt.Columns.Count - 1, 14)
+            Dim h As String = If(dt.Rows(0)(ci) IsNot DBNull.Value, dt.Rows(0)(ci).ToString().Trim(), "")
+            If h.ToUpperInvariant().Contains("REQUIRED") Then
+                Col_As_Req = ci
+                Exit For
+            End If
+        Next
+
+        If dt.Rows.Count >= 4 Then
+            Dim secRef As String = If(dt.Rows(2)(Col_Label) IsNot DBNull.Value, dt.Rows(2)(Col_Label).ToString(), "")
+            For j = 1 To 7
+                If 2 + j < dt.Rows.Count Then
+                    Dim secJ As String = If(dt.Rows(2 + j)(Col_Label) IsNot DBNull.Value, dt.Rows(2 + j)(Col_Label).ToString(), "")
+                    If secJ <> secRef Then Salto = j : Exit For
+                End If
+            Next
+        End If
+
+        Dim actualizados As Integer = 0
+        Dim I0 As Integer = 2
+        Dim Section As String = If(dt.Rows.Count > 2 AndAlso dt.Rows(2)(Col_Label) IsNot DBNull.Value,
+                                   dt.Rows(2)(Col_Label).ToString(), "")
+
+        For i = 2 To dt.Rows.Count - 1
+            For j = 1 To 7
+                If I0 + j >= dt.Rows.Count Then Exit For
+                Dim sj As String = If(dt.Rows(I0 + j)(Col_Label) IsNot DBNull.Value, dt.Rows(I0 + j)(Col_Label).ToString(), "")
+                If sj <> Section Then Salto = j : Exit For
+            Next
+
+            Dim cellStory As Object = dt.Rows(i)(Col_Piso)
+            If cellStory Is DBNull.Value OrElse cellStory.ToString() = "" Then Continue For
+
+            Dim st4Val As Single = 0
+            Dim st4Ok As Boolean = False
+            If dt.Columns.Count > 4 AndAlso dt.Rows(i)(4) IsNot DBNull.Value Then
+                st4Ok = Single.TryParse(dt.Rows(i)(4).ToString(),
+                                        System.Globalization.NumberStyles.Float,
+                                        System.Globalization.CultureInfo.InvariantCulture, st4Val)
+            End If
+            If Not st4Ok OrElse st4Val <> 0 Then Continue For
+
+            Dim nombre As String = If(dt.Rows(i)(Col_Label) IsNot DBNull.Value, dt.Rows(i)(Col_Label).ToString(), "")
+            If nombre = "" Then Continue For
+
+            Dim asBottom As Single = 0
+            Dim asTop As Single = 0
+            Single.TryParse(If(dt.Rows(i)(Col_As_Req) IsNot DBNull.Value, dt.Rows(i)(Col_As_Req).ToString(), ""),
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, asBottom)
+            Dim rowTop As Integer = i + Salto - 1
+            If rowTop < dt.Rows.Count Then
+                Single.TryParse(If(dt.Rows(rowTop)(Col_As_Req) IsNot DBNull.Value, dt.Rows(rowTop)(Col_As_Req).ToString(), ""),
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, asTop)
+            End If
+
+            Dim piso As String = cellStory.ToString()
+            For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+                If col.Name_Elemento = nombre Then
+                    Dim tramo = col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = piso)
+                    If tramo IsNot Nothing Then
+                        tramo.As_Req_Bottom = asBottom * 1000000
+                        tramo.As_Req_Top = asTop * 1000000
+                        actualizados += 1
+                    End If
+                End If
+            Next
+
+            Section = nombre
+            I0 = i
+        Next
+
+        _hayCambiosColumnas = True
+        If Combo_Elementos.SelectedIndex >= 0 Then Combo_Elementos_SelectedIndexChanged(Nothing, EventArgs.Empty)
+        Return actualizados
+    End Function
+
+    ''' <summary>Actualiza As_Req desde hoja Pier. Devuelve tramos actualizados, o -1 si la hoja no existe.</summary>
+    Private Function ActualizarDisenoPierCore(rutaArchivo As String, ByRef sinDimensiones As Integer) As Integer
+        sinDimensiones = 0
+        Dim dt As DataTable = LeerTablaDiseno(rutaArchivo, "Pier")
+        If dt Is Nothing OrElse dt.Rows.Count < 3 Then Return -1
+
+        Dim Col_Piso As Integer = 0
+        Dim Col_Label As Integer = 1
+        Dim Salto As Integer = 2
+        Dim Col_As_Req As Integer = 9
+
+        For ci = 0 To Math.Min(dt.Columns.Count - 1, 12)
+            Dim h As String = If(dt.Rows(0)(ci) IsNot DBNull.Value, dt.Rows(0)(ci).ToString().Trim(), "")
+            If h.ToUpperInvariant().Contains("REQUIRED") Then
+                Col_As_Req = ci
+                Exit For
+            End If
+        Next
+
+        Dim actualizados As Integer = 0
+
+        For i = 2 To dt.Rows.Count - 1 Step Salto
+            Dim cellStory As Object = dt.Rows(i)(Col_Piso)
+            If cellStory Is DBNull.Value OrElse cellStory.ToString() = "" Then Continue For
+
+            Dim nombre As String = If(dt.Rows(i)(Col_Label) IsNot DBNull.Value, dt.Rows(i)(Col_Label).ToString(), "")
+            If nombre = "" Then Continue For
+
+            Dim cuantiaBot As Single = 0
+            Dim cuantiaTop As Single = 0
+            Single.TryParse(If(dt.Rows(i)(Col_As_Req) IsNot DBNull.Value, dt.Rows(i)(Col_As_Req).ToString(), ""),
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, cuantiaBot)
+            Dim rowTop As Integer = i + Salto - 1
+            If rowTop < dt.Rows.Count Then
+                Single.TryParse(If(dt.Rows(rowTop)(Col_As_Req) IsNot DBNull.Value, dt.Rows(rowTop)(Col_As_Req).ToString(), ""),
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, cuantiaTop)
+            End If
+
+            Dim piso As String = cellStory.ToString()
+            For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+                If col.Name_Elemento = nombre Then
+                    Dim tramo = col.Lista_Tramos_Columnas.Find(Function(t) t.Piso = piso)
+                    If tramo IsNot Nothing Then
+                        tramo.Cuantia_Req_Bottom = cuantiaBot
+                        tramo.Cuantia_Req_Top = cuantiaTop
+                        If tramo.B_Modelo > 0 AndAlso tramo.H_Modelo > 0 Then
+                            tramo.As_Req_Bottom = tramo.B_Modelo * tramo.H_Modelo * cuantiaBot * 10000
+                            tramo.As_Req_Top = tramo.B_Modelo * tramo.H_Modelo * cuantiaTop * 10000
+                        Else
+                            sinDimensiones += 1
+                        End If
+                        actualizados += 1
+                    End If
+                End If
+            Next
+        Next
+
+        _hayCambiosColumnas = True
+        If Combo_Elementos.SelectedIndex >= 0 Then Combo_Elementos_SelectedIndexChanged(Nothing, EventArgs.Empty)
+        Return actualizados
+    End Function
+
+    Private Sub ActualizarTodo_Click(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show("No hay elementos procesados. Importe y calcule primero.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        If Not Proyecto.Elementos.Columnas.Elementos_Frame AndAlso
+           Not Proyecto.Elementos.Columnas.Elementos_Pier Then
+            MessageBox.Show("No se han definido elementos Frame ni Pier. Use 'Actualizar Demandas' primero para indicar el tipo de elementos.",
+                            "Sin elementos definidos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim ofd As New OpenFileDialog With {
+            .Title = "Actualizar Todo — Seleccione exportación ETABS",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx",
+            .Multiselect = False
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Me.Cursor = Cursors.WaitCursor
+        Dim resumen As New System.Text.StringBuilder()
+        Try
+            Dim path As String = ofd.FileName
+
+            If Proyecto.Elementos.Columnas.Elementos_Frame Then
+                ActualizarFuerzasFrame(path)
+                resumen.AppendLine("• Fuerzas Frame: importadas.")
+                Dim actFrame As Integer = ActualizarDisenoFrameCore(path)
+                If actFrame >= 0 Then
+                    resumen.AppendLine($"• Diseño Frame: {actFrame} tramo(s) actualizado(s).")
+                Else
+                    resumen.AppendLine("• Diseño Frame: hoja 'Conc Col Sum - ACI 318-14' no encontrada.")
+                End If
+            End If
+
+            If Proyecto.Elementos.Columnas.Elementos_Pier Then
+                ActualizarFuerzasPier(path)
+                resumen.AppendLine("• Fuerzas Pier: importadas.")
+                Dim sinDim As Integer = 0
+                Dim actPier As Integer = ActualizarDisenoPierCore(path, sinDim)
+                If actPier >= 0 Then
+                    resumen.AppendLine($"• Diseño Pier: {actPier} tramo(s) actualizado(s).")
+                    If sinDim > 0 Then
+                        resumen.AppendLine($"  ⚠ {sinDim} tramo(s) sin dimensiones: solo cuantía actualizada.")
+                    End If
+                Else
+                    resumen.AppendLine("• Diseño Pier: hoja 'Pier Dgn Sum' no encontrada.")
+                End If
+            End If
+
+            Button2_Click(Nothing, EventArgs.Empty)
+            resumen.AppendLine("• Análisis completo ejecutado.")
+
+            MsgBox(resumen.ToString(), MsgBoxStyle.Information, "Actualizar Todo — Columnas")
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_02_PagColumnas.ActualizarTodo", "Error en Actualizar Todo.")
+            MsgBox("Error al procesar: " & ex.Message, MsgBoxStyle.Critical, "Actualizar Todo")
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
+    End Sub
+
+    ''' <summary>Lee xl/workbook.xml + xl/_rels/workbook.xml.rels; devuelve sheetName→entryPath.</summary>
+    Private Shared Function ZipLeerWorkbookMap(za As ZipArchive) As Dictionary(Of String, String)
+        Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        Dim sheetRId As New Dictionary(Of String, String)()
+        Dim wbEntry = za.Entries.FirstOrDefault(Function(e) e.FullName.Equals("xl/workbook.xml", StringComparison.OrdinalIgnoreCase))
+        If wbEntry Is Nothing Then Return result
+        Using stream = wbEntry.Open()
+            Using xr = XmlReader.Create(stream)
+                While xr.Read()
+                    If xr.NodeType = XmlNodeType.Element AndAlso xr.LocalName = "sheet" Then
+                        Dim nm  = xr.GetAttribute("name")
+                        Dim rid = xr.GetAttribute("r:id")
+                        If rid Is Nothing Then rid = xr.GetAttribute("id", "http://schemas.openxmlformats.org/officeDocument/2006/relationships")
+                        If nm IsNot Nothing AndAlso rid IsNot Nothing Then sheetRId(nm) = rid
+                    End If
+                End While
+            End Using
+        End Using
+        Dim ridToPath As New Dictionary(Of String, String)()
+        Dim relsEntry = za.Entries.FirstOrDefault(Function(e) e.FullName.Equals("xl/_rels/workbook.xml.rels", StringComparison.OrdinalIgnoreCase))
+        If relsEntry IsNot Nothing Then
+            Using stream = relsEntry.Open()
+                Using xr = XmlReader.Create(stream)
+                    While xr.Read()
+                        If xr.NodeType = XmlNodeType.Element AndAlso xr.LocalName = "Relationship" Then
+                            Dim rid    = xr.GetAttribute("Id")
+                            Dim target = xr.GetAttribute("Target")
+                            If rid IsNot Nothing AndAlso target IsNot Nothing Then
+                                If Not target.StartsWith("/") Then target = "xl/" & target Else target = target.TrimStart("/"c)
+                                ridToPath(rid) = target
+                            End If
+                        End If
+                    End While
+                End Using
+            End Using
+        End If
+        For Each kvp In sheetRId
+            If ridToPath.ContainsKey(kvp.Value) Then result(kvp.Key) = ridToPath(kvp.Value)
+        Next
+        Return result
+    End Function
+
+    ''' <summary>Lee xl/sharedStrings.xml; devuelve array de texto indexado.</summary>
+    Private Shared Function ZipLeerSharedStrings(za As ZipArchive) As String()
+        Dim entry = za.Entries.FirstOrDefault(Function(e) e.FullName.Equals("xl/sharedStrings.xml", StringComparison.OrdinalIgnoreCase))
+        If entry Is Nothing Then Return New String() {}
+        Dim ssts As New List(Of String)()
+        Using stream = entry.Open()
+            Using xr = XmlReader.Create(stream)
+                Dim inSi As Boolean = False, inT As Boolean = False
+                Dim buf As New System.Text.StringBuilder()
+                While xr.Read()
+                    Select Case xr.NodeType
+                        Case XmlNodeType.Element
+                            If xr.LocalName = "si" Then
+                                inSi = True : buf.Clear()
+                            ElseIf xr.LocalName = "t" AndAlso inSi Then
+                                inT = True
+                            End If
+                        Case XmlNodeType.Text, XmlNodeType.Whitespace, XmlNodeType.SignificantWhitespace
+                            If inT Then buf.Append(xr.Value)
+                        Case XmlNodeType.EndElement
+                            If xr.LocalName = "t" Then
+                                inT = False
+                            ElseIf xr.LocalName = "si" Then
+                                ssts.Add(buf.ToString())
+                                inSi = False
+                            End If
+                    End Select
+                End While
+            End Using
+        End Using
+        Return ssts.ToArray()
+    End Function
+
+    ''' <summary>Lee una hoja xlsx como DataTable ETABS: Rows(0)=headers, Rows(1)=units, Rows(2+)=datos.
+    ''' Si selectedLabels no es Nothing, filtra filas de datos por la columna labelColIdx.</summary>
+    Private Shared Function ZipLeerHoja(za As ZipArchive, wbMap As Dictionary(Of String, String),
+                                        sstLookup() As String, selectedLabels As HashSet(Of String),
+                                        labelColIdx As Integer, ParamArray keywords As String()) As DataTable
+        Dim entryPath As String = Nothing
+        For Each kw In keywords
+            For Each shName In wbMap.Keys
+                If shName.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0 Then
+                    entryPath = wbMap(shName) : Exit For
+                End If
+            Next
+            If entryPath IsNot Nothing Then Exit For
+        Next
+        If entryPath Is Nothing Then Return Nothing
+        Dim entry = za.Entries.FirstOrDefault(Function(e) e.FullName.Equals(entryPath, StringComparison.OrdinalIgnoreCase))
+        If entry Is Nothing Then Return Nothing
+
+        Dim allRows As New List(Of Object())()
+        Dim maxCols As Integer = 0
+        Dim excelRowIdx As Integer = 0
+        Dim filtrar As Boolean = (selectedLabels IsNot Nothing AndAlso selectedLabels.Count > 0)
+
+        Using stream = entry.Open()
+            Using xr = XmlReader.Create(stream)
+                Dim inRow As Boolean = False, inCell As Boolean = False, inV As Boolean = False
+                Dim cellType As String = "", cellRef As String = ""
+                Dim cellVal As New System.Text.StringBuilder()
+                Dim rowData As List(Of Object) = Nothing
+
+                While xr.Read()
+                    Select Case xr.NodeType
+                        Case XmlNodeType.Element
+                            Select Case xr.LocalName
+                                Case "row"
+                                    excelRowIdx += 1 : inRow = True
+                                    rowData = New List(Of Object)()
+                                Case "c"
+                                    If inRow Then
+                                        inCell = True
+                                        cellRef  = If(xr.GetAttribute("r"), "")
+                                        cellType = If(xr.GetAttribute("t"), "")
+                                        cellVal.Clear()
+                                    End If
+                                Case "v", "t"
+                                    If inCell AndAlso Not xr.IsEmptyElement Then inV = True
+                            End Select
+                        Case XmlNodeType.Text, XmlNodeType.Whitespace
+                            If inV Then cellVal.Append(xr.Value)
+                        Case XmlNodeType.EndElement
+                            Select Case xr.LocalName
+                                Case "v", "t"
+                                    inV = False
+                                Case "c"
+                                    If inCell AndAlso rowData IsNot Nothing Then
+                                        Dim colLetters As String = ""
+                                        For Each ch In cellRef
+                                            If Char.IsLetter(ch) Then colLetters &= ch Else Exit For
+                                        Next
+                                        Dim colIdx As Integer = XmlColToIndex(colLetters)
+                                        While rowData.Count < colIdx : rowData.Add(DBNull.Value) : End While
+                                        rowData.Add(ZipCellValue(cellType, cellVal.ToString(), sstLookup))
+                                    End If
+                                    inCell = False : cellRef = "" : cellType = "" : cellVal.Clear()
+                                Case "row"
+                                    If rowData IsNot Nothing Then
+                                        Dim agregar As Boolean = True
+                                        If filtrar AndAlso excelRowIdx > 3 Then
+                                            Dim lbl As String = ""
+                                            If rowData.Count > labelColIdx AndAlso rowData(labelColIdx) IsNot DBNull.Value Then
+                                                lbl = rowData(labelColIdx).ToString().Trim()
+                                            End If
+                                            agregar = selectedLabels.Contains(lbl)
+                                        End If
+                                        If agregar Then
+                                            If rowData.Count > maxCols Then maxCols = rowData.Count
+                                            allRows.Add(rowData.ToArray())
+                                        End If
+                                    End If
+                                    inRow = False : rowData = Nothing
+                                Case "sheetData"
+                                    Exit While
+                            End Select
+                    End Select
+                End While
+            End Using
+        End Using
+
+        If allRows.Count < 2 Then Return Nothing
+        Dim dt As New DataTable()
+        For i = 0 To maxCols - 1 : dt.Columns.Add("C" & i, GetType(Object)) : Next
+        For r = 1 To allRows.Count - 1
+            Dim dr = dt.NewRow()
+            Dim rv = allRows(r)
+            For c = 0 To Math.Min(rv.Length, maxCols) - 1
+                dr(c) = If(rv(c) Is Nothing, DBNull.Value, rv(c))
+            Next
+            dt.Rows.Add(dr)
+        Next
+        Return dt
+    End Function
+
+    ''' <summary>Convierte referencia de columna Excel ("A"→0, "Z"→25, "AA"→26) a índice base 0.</summary>
+    Private Shared Function XmlColToIndex(colLetters As String) As Integer
+        Dim idx As Integer = 0
+        For Each ch In colLetters.ToUpperInvariant()
+            idx = idx * 26 + (AscW(ch) - AscW("A"c) + 1)
+        Next
+        Return idx - 1
+    End Function
+
+    ''' <summary>Convierte tipo+valor bruto de celda xlsx a Object (s=shared string, b=bool, numérico=Double).</summary>
+    Private Shared Function ZipCellValue(cellType As String, rawVal As String, sstLookup() As String) As Object
+        If String.IsNullOrEmpty(rawVal) Then Return DBNull.Value
+        Select Case cellType
+            Case "s"
+                Dim idx As Integer
+                If Integer.TryParse(rawVal, idx) AndAlso idx >= 0 AndAlso idx < sstLookup.Length Then Return sstLookup(idx)
+                Return ""
+            Case "b"
+                Return If(rawVal = "1", "True", "False")
+            Case "str", "inlineStr"
+                Return rawVal
+            Case "e"
+                Return DBNull.Value
+            Case Else
+                Dim dbl As Double
+                If Double.TryParse(rawVal, Globalization.NumberStyles.Float,
+                                   Globalization.CultureInfo.InvariantCulture, dbl) Then Return dbl
+                Return rawVal
+        End Select
+    End Function
+
+    ''' <summary>
+    ''' Busca una hoja en la lista por cualquiera de los keywords y devuelve su DataTable.
+    ''' Sigue disponible para compatibilidad con importaciones individuales vía OleDb.
+    ''' </summary>
+    Private Function LeerDataTableOleDb(cn As OleDbConnection,
+                                        hojas As List(Of String),
+                                        ParamArray keywords As String()) As DataTable
+        Dim nombre As String = Nothing
+        For Each kw As String In keywords
+            nombre = hojas.FirstOrDefault(Function(h) h.ToUpperInvariant().Contains(kw.ToUpperInvariant()))
+            If nombre IsNot Nothing Then Exit For
+        Next
+        If nombre Is Nothing Then Return Nothing
+
+        Try
+            Dim ds As New DataSet
+            Dim da As New OleDbDataAdapter(New OleDbCommand($"SELECT * FROM [{nombre}]", cn))
+            da.Fill(ds)
+            Return ds.Tables(0)
+        Catch ex As Exception
+            Logger.Warning("LeerDataTableOleDb", $"Error al leer hoja '{nombre}': {ex.Message}")
+            Return Nothing
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Vincula un DataTable a un DataGridView. Se llama en el hilo UI tras completar el hilo STA.
+    ''' </summary>
+    Private Function VincularDGV(dt As DataTable, dgv As DataGridView) As Boolean
+        If dt Is Nothing Then Return False
+        dgv.Columns.Clear()
+        dgv.DataSource = dt
+        Return True
+    End Function
+
+    ' ─── Helpers para leer DataTables ZIP (Row 0 = headers) ────────────────────
+    Private Shared Function ZipColIdx(dt As DataTable, ParamArray kws As String()) As Integer
+        If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return -1
+        Dim hr = dt.Rows(0)
+        For Each kw In kws
+            Dim kLow = kw.ToLowerInvariant()
+            For ci = 0 To dt.Columns.Count - 1
+                Dim h = If(hr(ci) IsNot DBNull.Value, hr(ci).ToString().Trim().ToLowerInvariant(), "")
+                If h.Contains(kLow) Then Return ci
+            Next
+        Next
+        Return -1
+    End Function
+
+    Private Shared Function ZipStr(row As DataRow, col As Integer) As String
+        If col < 0 OrElse col >= row.Table.Columns.Count Then Return ""
+        Return If(row(col) IsNot DBNull.Value, row(col).ToString().Trim(), "")
+    End Function
+
+    Private Shared Function ZipDbl(row As DataRow, col As Integer) As Double
+        Dim s = ZipStr(row, col)
+        Dim d As Double = 0
+        Double.TryParse(s, Globalization.NumberStyles.Float,
+                        Globalization.CultureInfo.InvariantCulture, d)
+        Return d
+    End Function
+
+    ' ─── Construcción de candidatos de columna con coordenadas y backdrop ────────
+    Private Function ConstruirCandidatosColumnas(
+            etiqFrame As List(Of String),
+            dtFrameD As DataTable, dtFrameS As DataTable,
+            dtJoints As DataTable, dtObjFrm As DataTable,
+            etiqPier As List(Of String),
+            dtPierD As DataTable, dtPierS As DataTable,
+            ByRef backdrop As GeometriaEstructural) As List(Of cCandidatoColumna)
+
+        Dim candidatos As New List(Of cCandidatoColumna)()
+        backdrop = New GeometriaEstructural()
+
+        ' 1. Joints: elementLabel -> PointF(X, Y)
+        Dim byElem As New Dictionary(Of String, PointF)(StringComparer.OrdinalIgnoreCase)
+        If dtJoints IsNot Nothing AndAlso dtJoints.Rows.Count > 2 Then
+            Dim colEN = ZipColIdx(dtJoints, "element name")
+            Dim colOT = ZipColIdx(dtJoints, "object type")
+            Dim colGX = ZipColIdx(dtJoints, "global x")
+            Dim colGY = ZipColIdx(dtJoints, "global y")
+            For r = 2 To dtJoints.Rows.Count - 1
+                Dim row = dtJoints.Rows(r)
+                If colOT >= 0 Then
+                    Dim tp = ZipStr(row, colOT)
+                    If tp.Length > 0 AndAlso Not tp.ToUpperInvariant().Contains("JOINT") Then Continue For
+                End If
+                Dim en = ZipStr(row, colEN)
+                If en = "" Then Continue For
+                Dim gx = CSng(ZipDbl(row, colGX))
+                Dim gy = CSng(ZipDbl(row, colGY))
+                backdrop.JointsXY.Add(New PointF(gx, gy))
+                If Not byElem.ContainsKey(en) Then byElem(en) = New PointF(gx, gy)
+            Next
+        End If
+
+        ' 2. Frames: objectLabel -> PointF centroide
+        Dim frameToXY As New Dictionary(Of String, PointF)(StringComparer.OrdinalIgnoreCase)
+        If dtObjFrm IsNot Nothing AndAlso dtObjFrm.Rows.Count > 2 Then
+            Dim colOT = ZipColIdx(dtObjFrm, "object type")
+            Dim colLb = ZipColIdx(dtObjFrm, "object label")
+            Dim colJI = ZipColIdx(dtObjFrm, "elm jti")
+            Dim colJJ = ZipColIdx(dtObjFrm, "elm jtj")
+            For r = 2 To dtObjFrm.Rows.Count - 1
+                Dim row = dtObjFrm.Rows(r)
+                If colOT >= 0 AndAlso Not ZipStr(row, colOT).ToUpperInvariant().Contains("FRAME") Then Continue For
+                Dim lbl = ZipStr(row, colLb)
+                If lbl = "" Then Continue For
+                Dim jtI = ZipStr(row, colJI)
+                Dim jtJ = ZipStr(row, colJJ)
+                Dim ptI As PointF, ptJ As PointF
+                Dim haI = byElem.TryGetValue(jtI, ptI)
+                Dim haJ = byElem.TryGetValue(jtJ, ptJ)
+                If haI Then backdrop.FramesXY.Add(Tuple.Create(ptI, If(haJ, ptJ, ptI)))
+                If Not frameToXY.ContainsKey(lbl) Then
+                    If haI AndAlso haJ Then
+                        frameToXY(lbl) = New PointF(CSng((ptI.X + ptJ.X) / 2), CSng((ptI.Y + ptJ.Y) / 2))
+                    ElseIf haI Then
+                        frameToXY(lbl) = ptI
+                    ElseIf haJ Then
+                        frameToXY(lbl) = ptJ
+                    End If
+                End If
+            Next
+        End If
+
+        ' 3. Secciones Frame: nombre -> (B, H)
+        Dim secDims As New Dictionary(Of String, PointF)(StringComparer.OrdinalIgnoreCase)
+        If dtFrameS IsNot Nothing AndAlso dtFrameS.Rows.Count > 2 Then
+            Dim cN = ZipColIdx(dtFrameS, "name")
+            Dim cD = ZipColIdx(dtFrameS, "depth", "t3")
+            Dim cW = ZipColIdx(dtFrameS, "width", "t2")
+            For r = 2 To dtFrameS.Rows.Count - 1
+                Dim row = dtFrameS.Rows(r)
+                Dim nm  = ZipStr(row, cN)
+                If nm = "" Then Continue For
+                Dim dep = CSng(ZipDbl(row, cD))
+                Dim wid = CSng(ZipDbl(row, cW))
+                secDims(nm) = New PointF(Math.Min(dep, wid), Math.Max(dep, wid))
+            Next
+        End If
+
+        ' 4. Seccion y piso de cada Frame label (col 3 = Design Sect, col 0 = Story en Conc Col Sum)
+        Dim frameToSec   As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        Dim frameToStory As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        If dtFrameD IsNot Nothing AndAlso dtFrameD.Rows.Count > 2 Then
+            For r = 2 To dtFrameD.Rows.Count - 1
+                Dim row = dtFrameD.Rows(r)
+                Dim lbl = ZipStr(row, 1)
+                If lbl = "" Then Continue For
+                If Not frameToSec.ContainsKey(lbl) Then
+                    Dim sec = ZipStr(row, 3)   ' col 3 = Design Section (col 2 = UniqueName, no es seccion)
+                    If sec <> "" Then frameToSec(lbl) = sec
+                    Dim sto = ZipStr(row, 0)   ' col 0 = Story — primera aparicion = piso mas bajo
+                    If sto <> "" Then frameToStory(lbl) = sto
+                End If
+            Next
+        End If
+
+        ' 5. Candidatos Frame
+        For Each lbl In etiqFrame
+            Dim cand As New cCandidatoColumna()
+            cand.Label = lbl : cand.Tipo = "Frame"
+            Dim coord As PointF = PointF.Empty
+            frameToXY.TryGetValue(lbl, coord)
+            cand.X = coord.X : cand.Y = coord.Y
+            Dim secNom As String = ""
+            frameToSec.TryGetValue(lbl, secNom)
+            cand.Seccion = secNom
+            Dim dims As PointF = PointF.Empty
+            If secNom <> "" Then secDims.TryGetValue(secNom, dims)
+            cand.B = dims.X : cand.H = dims.Y
+            Dim storyNom As String = ""
+            frameToStory.TryGetValue(lbl, storyNom)
+            cand.Story = storyNom
+            cand.Seleccionado = True
+            candidatos.Add(cand)
+        Next
+
+        ' 6. Piers: coordenadas de Pier Section Properties
+        Dim pierBase As New Dictionary(Of String, Object())(StringComparer.OrdinalIgnoreCase)
+        If dtPierS IsNot Nothing AndAlso dtPierS.Rows.Count > 2 Then
+            Dim cPN = ZipColIdx(dtPierS, "pier")
+            Dim cPS = ZipColIdx(dtPierS, "story")
+            Dim cPX = ZipColIdx(dtPierS, "cg bottom x", "xcg", "xbottom", "x cg")
+            Dim cPY = ZipColIdx(dtPierS, "cg bottom y", "ycg", "ybottom", "y cg")
+            Dim cPB = ZipColIdx(dtPierS, "thickbot", "thick")
+            Dim cPH = ZipColIdx(dtPierS, "lengbot", "leng")
+            For r = 2 To dtPierS.Rows.Count - 1
+                Dim row = dtPierS.Rows(r)
+                Dim pn = ZipStr(row, cPN)
+                If pn = "" OrElse pierBase.ContainsKey(pn) Then Continue For
+                Dim pb = ZipDbl(row, cPB) : Dim ph = ZipDbl(row, cPH)
+                pierBase(pn) = New Object() {
+                    ZipStr(row, cPS), ZipDbl(row, cPX), ZipDbl(row, cPY),
+                    Math.Min(pb, ph), Math.Max(pb, ph)
+                }
+            Next
+        End If
+
+        For Each lbl In etiqPier
+            Dim cand As New cCandidatoColumna()
+            cand.Label = lbl : cand.Tipo = "Pier"
+            Dim info As Object() = Nothing
+            If pierBase.TryGetValue(lbl, info) Then
+                cand.Story = CStr(info(0))
+                cand.X = CDbl(info(1)) : cand.Y = CDbl(info(2))
+                cand.B = CDbl(info(3)) : cand.H = CDbl(info(4))
+            End If
+            If dtPierD IsNot Nothing AndAlso dtPierD.Rows.Count > 2 Then
+                For r2 = 2 To dtPierD.Rows.Count - 1
+                    Dim row = dtPierD.Rows(r2)
+                    If ZipStr(row, 1) = lbl Then
+                        cand.Seccion = ZipStr(row, 1)
+                        If cand.Story = "" Then cand.Story = ZipStr(row, 0)
+                        Exit For
+                    End If
+                Next
+            End If
+            cand.Seleccionado = True
+            candidatos.Add(cand)
+        Next
+
+        Return candidatos
+    End Function
 
 End Class

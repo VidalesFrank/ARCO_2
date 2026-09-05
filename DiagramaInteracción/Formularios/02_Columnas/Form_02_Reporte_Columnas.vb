@@ -283,12 +283,15 @@ Public Class Form_02_Reporte_Columnas
                     .Vu3 = tr.Vu_3, .Vc3 = tr.Vc_3, .Vn3 = tr.Vn_3, .FV3 = tr.F_Cortante_3
                 })
 
+                ' Para circular: Ash provista total = estribo circular + ganchos (ambas col. muestran el total)
+                Dim ashProvL As Single = If(tr.EsCircular, tr.Ash_Col_Largo + tr.Ash_Col_Corto, tr.Ash_Col_Largo)
+                Dim ashProvC As Single = If(tr.EsCircular, tr.Ash_Col_Largo + tr.Ash_Col_Corto, tr.Ash_Col_Corto)
                 _filasConf.Add(New FilaConfinamiento With {
                     .Elemento = col.Name_Label, .Piso = tr.Piso,
                     .B = tr.B_Plano, .H = tr.H_Plano, .BarraLongMin = tr.Barra_Long_Min,
-                    .S0_L = tr.S0_L, .AshLReq = tr.Ash_L, .AshLProv = tr.Ash_Col_Largo,
+                    .S0_L = tr.S0_L, .AshLReq = tr.Ash_L, .AshLProv = ashProvL,
                     .FAshL = tr.F_Ash_Largo,
-                    .S0_C = tr.S0_C, .AshCReq = tr.Ash_C, .AshCProv = tr.Ash_Col_Corto,
+                    .S0_C = tr.S0_C, .AshCReq = tr.Ash_C, .AshCProv = ashProvC,
                     .FAshC = tr.F_Ash_Corto,
                     .L0Req = Math.Max(tr.L0_L, tr.L0_C),
                     .L0Prov = tr.L0_Prov,
@@ -342,12 +345,12 @@ Public Class Form_02_Reporte_Columnas
                 .FL0Min = If(fMinL0 = Single.MaxValue, -1, fMinL0),
                 .ALRMax = alrMax
             }
-            fr.Cumple = (fr.FFlexMin < 0 OrElse fr.FFlexMin >= 1.0F) AndAlso
-                        (fr.FV2Min < 0 OrElse fr.FV2Min >= 1.0F) AndAlso
-                        (fr.FV3Min < 0 OrElse fr.FV3Min >= 1.0F) AndAlso
-                        (fr.FAshLMin < 0 OrElse fr.FAshLMin >= 1.0F) AndAlso
-                        (fr.FAshCMin < 0 OrElse fr.FAshCMin >= 1.0F) AndAlso
-                        (fr.FL0Min < 0 OrElse fr.FL0Min >= 1.0F)
+            fr.Cumple = (fr.FFlexMin < 0 OrElse fr.FFlexMin >= 0.9F) AndAlso
+                        (fr.FV2Min < 0 OrElse fr.FV2Min >= 0.9F) AndAlso
+                        (fr.FV3Min < 0 OrElse fr.FV3Min >= 0.9F) AndAlso
+                        (fr.FAshLMin < 0 OrElse fr.FAshLMin >= 0.9F) AndAlso
+                        (fr.FAshCMin < 0 OrElse fr.FAshCMin >= 0.9F) AndAlso
+                        (fr.FL0Min < 0 OrElse fr.FL0Min >= 0.9F)
             _filasResumen.Add(fr)
         Next
     End Sub
@@ -357,7 +360,7 @@ Public Class Form_02_Reporte_Columnas
         DgvFlex.Rows.Clear()
         For i = 0 To _filasFlex.Count - 1
             Dim f = _filasFlex(i)
-            Dim cumple = (f.FFlexTop >= 1.0F OrElse f.FFlexTop = 0) AndAlso (f.FFlexBot >= 1.0F OrElse f.FFlexBot = 0)
+            Dim cumple = (f.FFlexTop >= 0.9F OrElse f.FFlexTop = 0) AndAlso (f.FFlexBot >= 0.9F OrElse f.FFlexBot = 0)
             If ChkSoloBad.Checked AndAlso cumple Then Continue For
             Dim r = DgvFlex.Rows(DgvFlex.Rows.Add())
             If i Mod 2 = 1 Then r.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
@@ -383,7 +386,7 @@ Public Class Form_02_Reporte_Columnas
         DgvCortante.Rows.Clear()
         For i = 0 To _filasCortante.Count - 1
             Dim f = _filasCortante(i)
-            Dim cumple = (f.FV2 >= 1.0F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 1.0F OrElse f.FV3 = 0)
+            Dim cumple = (f.FV2 >= 0.9F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 0.9F OrElse f.FV3 = 0)
             If ChkSoloBad.Checked AndAlso cumple Then Continue For
             Dim r = DgvCortante.Rows(DgvCortante.Rows.Add())
             If i Mod 2 = 1 Then r.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
@@ -417,8 +420,8 @@ Public Class Form_02_Reporte_Columnas
         DgvConfinamiento.Rows.Clear()
         For i = 0 To _filasConf.Count - 1
             Dim f = _filasConf(i)
-            Dim cumpleAsh = (f.FAshL >= 1.0F OrElse f.FAshL = 0) AndAlso (f.FAshC >= 1.0F OrElse f.FAshC = 0)
-            Dim cumpleL0 = (f.FL0 >= 1.0F OrElse f.FL0 = 0)
+            Dim cumpleAsh = (f.FAshL >= 0.9F OrElse f.FAshL = 0) AndAlso (f.FAshC >= 0.9F OrElse f.FAshC = 0)
+            Dim cumpleL0 = (f.FL0 >= 0.9F OrElse f.FL0 = 0)
             Dim cumple = cumpleAsh AndAlso cumpleL0
             If ChkSoloBad.Checked AndAlso cumple Then Continue For
             Dim r = DgvConfinamiento.Rows(DgvConfinamiento.Rows.Add())
@@ -508,7 +511,7 @@ Public Class Form_02_Reporte_Columnas
         If factor <= 0 Then
             cell.Style.BackColor = Color.FromArgb(238, 238, 238)
             cell.Style.ForeColor = Color.Gray
-        ElseIf factor >= 1.0F Then
+        ElseIf factor >= 0.9F Then
             cell.Style.BackColor = ClOK : cell.Style.ForeColor = ClOKTxt
         Else
             cell.Style.BackColor = ClMal : cell.Style.ForeColor = ClMalTxt
@@ -590,7 +593,7 @@ Public Class Form_02_Reporte_Columnas
 
     Private Sub FXL(cell As IXLCell, factor As Single)
         If factor <= 0 Then Return
-        If factor >= 1.0F Then
+        If factor >= 0.9F Then
             cell.Style.Fill.BackgroundColor = XlClOK : cell.Style.Font.FontColor = XlClOKTxt
         Else
             cell.Style.Fill.BackgroundColor = XlClMal : cell.Style.Font.FontColor = XlClMalTxt : cell.Style.Font.Bold = True
@@ -622,7 +625,7 @@ Public Class Form_02_Reporte_Columnas
             ws.Cell(r, 8).Value = If(f.FFlexTop > 0, CObj(CDbl(Math.Round(f.FFlexTop, 2))), "-")
             ws.Cell(r, 9).Value = CDbl(Math.Round(f.AsReqBot, 0)) : ws.Cell(r, 10).Value = CDbl(Math.Round(f.AsColBot, 0))
             ws.Cell(r, 11).Value = If(f.FFlexBot > 0, CObj(CDbl(Math.Round(f.FFlexBot, 2))), "-")
-            Dim ok = (f.FFlexTop >= 1.0F OrElse f.FFlexTop = 0) AndAlso (f.FFlexBot >= 1.0F OrElse f.FFlexBot = 0)
+            Dim ok = (f.FFlexTop >= 0.9F OrElse f.FFlexTop = 0) AndAlso (f.FFlexBot >= 0.9F OrElse f.FFlexBot = 0)
             ws.Cell(r, 12).Value = If(ok, "OK", "Revisar")
             FXL(ws.Cell(r, 8), f.FFlexTop) : FXL(ws.Cell(r, 11), f.FFlexBot)
             r += 1
@@ -649,7 +652,7 @@ Public Class Form_02_Reporte_Columnas
             ws.Cell(r, 14).Value = If(f.Vc3 > 0, CObj(CDbl(Math.Round(f.Vc3, 2))), "-")
             ws.Cell(r, 15).Value = If(f.Vn3 > 0, CObj(CDbl(Math.Round(f.Vn3, 2))), "-")
             ws.Cell(r, 16).Value = If(f.FV3 > 0, CObj(CDbl(Math.Round(f.FV3, 2))), "-")
-            Dim ok = (f.FV2 >= 1.0F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 1.0F OrElse f.FV3 = 0)
+            Dim ok = (f.FV2 >= 0.9F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 0.9F OrElse f.FV3 = 0)
             ws.Cell(r, 17).Value = If(ok, "OK", "Revisar")
             FXL(ws.Cell(r, 12), f.FV2) : FXL(ws.Cell(r, 16), f.FV3)
             r += 1
@@ -678,8 +681,8 @@ Public Class Form_02_Reporte_Columnas
             ws.Cell(r, 14).Value = If(f.L0Req > 0, CObj(CDbl(Math.Round(f.L0Req, 3))), "-")
             ws.Cell(r, 15).Value = If(f.L0Prov > 0, CObj(CDbl(Math.Round(f.L0Prov, 3))), "-")
             ws.Cell(r, 16).Value = If(f.FL0 > 0, CObj(CDbl(Math.Round(f.FL0, 2))), "-")
-            Dim ok = (f.FAshL >= 1.0F OrElse f.FAshL = 0) AndAlso (f.FAshC >= 1.0F OrElse f.FAshC = 0) AndAlso
-                     (f.FL0 >= 1.0F OrElse f.FL0 = 0)
+            Dim ok = (f.FAshL >= 0.9F OrElse f.FAshL = 0) AndAlso (f.FAshC >= 0.9F OrElse f.FAshC = 0) AndAlso
+                     (f.FL0 >= 0.9F OrElse f.FL0 = 0)
             ws.Cell(r, 17).Value = If(ok, "OK", "Revisar")
             FXL(ws.Cell(r, 9), f.FAshL) : FXL(ws.Cell(r, 13), f.FAshC)
             FXL(ws.Cell(r, 16), f.FL0)

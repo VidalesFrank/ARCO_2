@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Columnas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Columnas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Columnas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/04_columnas.html">Manual de Columnas</a>
+  <a href="01_vigas.html">← Vigas</a>
+  <a href="03_muros.html">Muros →</a>
+</div>
+
+<h2>1. Diagrama de Interacción P-M (2D)</h2>
+<h3>1.1 Metodología general</h3>
+<p>El diagrama de interacción se construye por <strong>compatibilidad de deformaciones</strong>, variando la profundidad del eje neutro c desde compresión pura (c → ∞) hasta tensión pura (c → 0). Para cada valor de c se calcula el par (φP, φM) correspondiente.</p>
+
+<h3>1.2 Deformaciones en el acero</h3>
+<div class="formula">ε_u = 0.003   (deformación unitaria máxima en la fibra extrema comprimida)
+
+Para cada barra i a distancia dᵢ desde la fibra comprimida extrema:
+  εᵢ = (c - dᵢ) / c × ε_u
+
+Esfuerzo en la barra:
+  fᵢ = Es · εᵢ   si |εᵢ| &lt; ε_y = fy/Es
+  fᵢ = +fy       si εᵢ ≥ ε_y   (barra comprimida y fluye)
+  fᵢ = -fy       si εᵢ ≤ -ε_y  (barra en tensión y fluye)</div>
+
+<h3>1.3 Bloque de compresión del concreto</h3>
+<div class="formula">a = β₁ · c
+β₁ = 0.85        si fc ≤ 28 MPa
+β₁ = 0.85 - 0.05·(fc - 28)/7   si fc &gt; 28 MPa  (mínimo 0.65)
+
+Fuerza del bloque:
+  Cc = 0.85 · fc · a · b   [kN]  (fc en MPa, a y b en m)
+
+Momento del bloque respecto al centroide:
+  Mc = Cc · (yc - a/2)   donde yc es la distancia al centroide de la sección</div>
+
+<h3>1.4 Fuerza y momento resultantes nominales</h3>
+<div class="formula">Pn = Cc + ΣAsi·fᵢ   [kN]   (positivo = compresión)
+Mn = |Mc + ΣAsi·fᵢ·(yc - dᵢ)|   [kN·m]</div>
+
+<h3>1.5 Factor de reducción φ variable</h3>
+<div class="norma"><strong>NSR-10 C.21.2.2</strong></div>
+<div class="formula">Deformación en la fibra más lejana en tensión:
+  ε_t = (d_max - c) / c × ε_u   donde d_max = distancia a la barra más alejada
+
+Si ε_t ≤ ε_y:
+  φ = 0.65   (sección controlada por compresión)
+
+Si ε_y &lt; ε_t &lt; 0.005:
+  φ = 0.65 + (ε_t - ε_y) / (0.005 - ε_y) × (0.90 - 0.65)   (transición lineal)
+
+Si ε_t ≥ 0.005:
+  φ = 0.90   (sección controlada por tensión)</div>
+
+<h3>1.6 Capacidades de diseño</h3>
+<div class="formula">φPn = φ · Pn   [kN]
+φMn = φ · Mn   [kN·m]</div>
+
+<h3>1.7 Límite de compresión pura</h3>
+<div class="norma"><strong>NSR-10 C.22.4.2</strong></div>
+<div class="formula">φPn_max = 0.80 · φ₀ · [0.85·fc·(Ag - Ast) + fy·Ast]   (para estribos)
+φPn_max = 0.85 · φ₀ · [0.85·fc·(Ag - Ast) + fy·Ast]   (para espiral)
+φ₀ = 0.65 (estribos), 0.75 (espiral)</div>
+
+<h3>1.8 Distribución de barras</h3>
+<p>ARCO usa la función <strong>DistribuirBarrasConEsquinas</strong> que garantiza 4 barras en las esquinas de la sección rectangular más barras intermedias distribuidas proporcionalmente en cada cara, según el número total ingresado por el usuario.</p>
+
+<h2>2. Flexo-compresión Biaxial — Criterio de Bresler</h2>
+<h3>2.1 Capacidades uniaxiales a nivel de Pu</h3>
+<p>Para cada combinación de diseño, ARCO interpola la capacidad en cada eje a nivel de la carga axial Pu:</p>
+<div class="formula">φMn3(Pu) = InterpolarMnEnPu(ListaDI_eje3, Pu)   [kN·m]
+φMn2(Pu) = InterpolarMnEnPu(ListaDI_eje2, Pu)   [kN·m]
+
+La interpolación es lineal entre los puntos adyacentes del DI que rodean a Pu.</div>
+
+<h3>2.2 Criterio de Bresler lineal</h3>
+<div class="formula">F_Interaccion = Mu3 / φMn3(Pu)  +  Mu2 / φMn2(Pu)  - 1.0
+
+Interpretación:
+  F_Interaccion &lt; 0  →  cumple también como uniaxial (raramente ocurre)
+  0 ≤ F_Interaccion &lt; 1  →  cumple (D/C &lt; 1)
+  F_Interaccion ≥ 1  →  no cumple (D/C ≥ 1)
+
+C/D = 1 / F_Interaccion   (lo que muestra ARCO al usuario)</div>
+<div class="nota">Internamente, ARCO almacena F_Interaccion como D/C (demanda sobre capacidad). Al mostrar resultados al usuario, siempre invierte: C/D = 1/F_Interaccion. Un C/D ≥ 1.0 significa que cumple.</div>
+
+<h2>3. Superficie Biaxial 3D</h2>
+<h3>3.1 Construcción de la superficie</h3>
+<p>Para el formulario DI 3D, se construye la superficie φMn(P, θ) variando el ángulo θ del eje neutro de 0° a 360° en incrementos de 5° o 10°. Para cada ángulo θ y nivel de P:</p>
+<ul>
+  <li>El eje neutro se orienta en la dirección θ respecto al eje de la sección.</li>
+  <li>Se calcula el DI en esa dirección por el mismo método de compatibilidad de deformaciones.</li>
+  <li>El par (φMn3, φMn2) a nivel de P forma un punto en la superficie.</li>
+</ul>
+
+<h3>3.2 Criterio elíptico de colorización</h3>
+<div class="formula">DC_e = √((Mu3/φMn3(Pu))² + (Mu2/φMn2(Pu))²)
+
+Interpretación geométrica: DC_e es la relación entre la distancia del punto
+de demanda al origen y la distancia de la superficie al origen, medida en la
+dirección del eje que une origen con el punto de demanda en el plano M3-M2.
+
+Colores:
+  DC_e ≤ 1.0   → Verde (cumple)
+  1.0 &lt; DC_e ≤ 1.1 → Naranja (10% de tolerancia)
+  DC_e &gt; 1.1   → Rojo (no cumple)</div>
+
+<h2>4. Criterio de Cumplimiento</h2>
+<div class="formula">C/D = 1 / F_Interaccion_Bresler
+Combo gobernante: combinación que produce el menor C/D (mayor D/C)</div>
+
+<div class="nota"><strong>ARCO considera adecuada una columna cuando C/D ≥ 0.9.</strong>
+Un C/D entre 0.9 y 1.0 significa que la columna con el refuerzo colocado es apta para soportar la demanda de flexo-compresión biaxial calculada. No requiere modificación.</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:220px;">Verde — C/D ≥ 1.0</th><td>Cumple. La columna tiene reserva de resistencia biaxial.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">Naranja — 0.9 ≤ C/D &lt; 1.0</th><td><strong>Cumple — Adecuado.</strong> La columna es apta para la demanda. No requiere modificación.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">Rojo — C/D &lt; 0.9</th><td>No cumple. Revisar refuerzo longitudinal o dimensiones de sección.</td></tr>
+</table>
+
+<h2>5. Cuantías de Refuerzo Longitudinal</h2>
+<div class="norma"><strong>NSR-10 C.10.6.1</strong></div>
+<div class="formula">ρ_min = 0.01   (1% del área bruta)
+ρ_max = 0.08   (8% del área bruta)
+
+As_min = 0.01 · Ag   [mm²]
+As_max = 0.08 · Ag   [mm²]</div>
+<p>ARCO alerta si el refuerzo ingresado está fuera de estos límites.</p>
+
+<h2>6. Áreas de Barras de Referencia</h2>
+<table>
+  <tr><th>Barra</th><th>#2</th><th>#3</th><th>#4</th><th>#5</th><th>#6</th><th>#7</th><th>#8</th><th>#10</th></tr>
+  <tr><td>Área (mm²)</td><td>32.3</td><td>71.0</td><td>129.4</td><td>199.7</td><td>284.3</td><td>387.1</td><td>509.7</td><td>817.4</td></tr>
+</table>
+</div>
+</body>
+</html>

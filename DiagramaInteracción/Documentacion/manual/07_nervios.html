@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Nervios</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Nervios</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Nervios</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="06_pilas.html">← Pilas</a>
+  <a href="08_losas.html">Siguiente: Losas →</a>
+  <a href="../criterios/05_nervios.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Nervios verifica nervios de losas nervadas bajo <strong>flexión</strong> y <strong>cortante</strong> según NSR-10 Título C, Capítulo C.8.10 (sistemas de nervios) y C.13 (losas con vigas). El módulo trabaja con los mismos frames de viga de ETABS pero aplica la geometría de sección T nervada.</p>
+<p>Cada nervio se verifica en cinco puntos críticos por vano:</p>
+<ul>
+  <li>Cara izquierda del apoyo (momento negativo + cortante)</li>
+  <li>Cuarto de vano izquierdo</li>
+  <li>Centro del vano (momento positivo máximo)</li>
+  <li>Cuarto de vano derecho</li>
+  <li>Cara derecha del apoyo (momento negativo + cortante)</li>
+</ul>
+
+<h2>Requisitos ETABS</h2>
+<p>El módulo de nervios usa las mismas hojas que el módulo de vigas:</p>
+<table>
+  <tr><th>Dato</th><th>Hoja E17</th><th>Hoja E23</th></tr>
+  <tr><td>Conectividad de frames</td><td>Connectivity - Frame</td><td>Objects and Elements - Frames</td></tr>
+  <tr><td>Nodos</td><td>Joint Coordinates</td><td>Objects and Elements - Joints</td></tr>
+  <tr><td>Secciones asignadas</td><td>Frame Assignments - Sections</td><td>Frame Assigns - Sect Prop</td></tr>
+  <tr><td>Fuerzas en vigas (nervios)</td><td>Beam Forces</td><td>Element Forces - Beams</td></tr>
+</table>
+
+<h2>Parámetros de Sección del Nervio</h2>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>bw (ancho del alma)</td><td>cm</td><td>Ancho del nervio (alma solamente, sin incluir la loseta)</td></tr>
+  <tr><td>h (altura total)</td><td>cm</td><td>Altura total de la sección, desde la cara inferior hasta la superficie de la losa</td></tr>
+  <tr><td>tf (espesor de la loseta)</td><td>cm</td><td>Espesor de la losa colaborante en la zona de momentos positivos</td></tr>
+  <tr><td>Paso (separación de nervios)</td><td>cm</td><td>Distancia entre ejes de nervios adyacentes</td></tr>
+  <tr><td>Recubrimiento</td><td>cm</td><td>Recubrimiento libre (hasta cara exterior del estribo)</td></tr>
+  <tr><td>fc</td><td>MPa</td><td>Resistencia del concreto</td></tr>
+  <tr><td>fy</td><td>MPa</td><td>Fluencia del acero</td></tr>
+</table>
+
+<h2>Concepto de Ancho Efectivo T (be)</h2>
+<p>Para momentos <strong>positivos</strong> (en el vano), el nervio trabaja como sección T con la loseta colaborando en compresión. ARCO calcula el ancho efectivo be según NSR-10 C.8.10.2:</p>
+<div class="formula">sw = paso - bw              (claro entre almas adyacentes)
+ln = L_total - b_apoyo_I - b_apoyo_D   (luz libre)
+vola = min(8·tf,  sw/2,  ln/8)
+be = bw + 2·vola</div>
+<p>Para momentos <strong>negativos</strong> (sobre apoyos), el eje neutro baja y la loseta queda en tensión, por lo que solo trabaja el alma de ancho bw.</p>
+
+<h2>Cara de Apoyo — Interpolación</h2>
+<p>Las fuerzas críticas no se toman en el eje del apoyo (donde están las reacciones) sino en la <strong>cara del apoyo</strong>. ARCO interpola linealmente entre las estaciones ETABS adyacentes a las posiciones:</p>
+<ul>
+  <li>x_cara_I = b_apoyo_I / 2 (distancia desde el eje del apoyo izquierdo hasta la cara)</li>
+  <li>x_cara_D = L_total - b_apoyo_D / 2 (desde el eje del apoyo derecho hasta la cara)</li>
+</ul>
+<div class="nota">El ancho del apoyo (b_apoyo) se toma de la sección asignada al frame de la columna o muro de apoyo, leído automáticamente desde las hojas de ETABS. Si no se encuentra, se usa un valor por defecto configurable.</div>
+
+<h2>Parámetros de Refuerzo</h2>
+<table>
+  <tr><th>Zona</th><th>Parámetros</th></tr>
+  <tr><td>Refuerzo superior izquierdo (Mu_neg_I)</td><td>Número de barras + calibre en cara izquierda del apoyo</td></tr>
+  <tr><td>Refuerzo inferior central (Mu_pos_C)</td><td>Número de barras + calibre en zona de momento positivo</td></tr>
+  <tr><td>Refuerzo superior derecho (Mu_neg_D)</td><td>Número de barras + calibre en cara derecha del apoyo</td></tr>
+  <tr><td>Estribo izquierdo (Vu_I)</td><td>Barra, ramas, separación en zona de cortante izquierda</td></tr>
+  <tr><td>Estribo derecho (Vu_D)</td><td>Barra, ramas, separación en zona de cortante derecha</td></tr>
+</table>
+
+<h2>Flujo de Trabajo en el Módulo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Importar desde ETABS</strong> — El módulo carga los frames que ETABS clasifica como vigas (beams). ARCO filtra solo los que tienen geometría de nervio según la sección asignada.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Definir la geometría de sección</strong> — Ingrese bw, h, tf, paso, recubrimiento, fc y fy. Estos parámetros se aplican a todos los nervios del mismo tipo.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Seleccionar combinaciones de diseño</strong> — Elija las combinaciones de carga que se usarán para obtener las envolventes de Mu y Vu.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Ingresar refuerzo por nervio</strong> — Seleccione cada nervio en la tabla e ingrese el refuerzo longitudinal y transversal.</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Calcular</strong> — ARCO calcula φMn_neg_I, φMn_pos_C, φMn_neg_D, φVn_I, φVn_D y los factores C/D correspondientes.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Revisar planta interactiva</strong> — El formulario de planta muestra todos los nervios coloreados por su factor C/D mínimo, permitiendo identificar visualmente los nervios críticos.</div></div>
+
+<h2>Resultados por Nervio</h2>
+<table>
+  <tr><th>Resultado</th><th>Descripción</th></tr>
+  <tr><td>Mu_neg_I</td><td>Momento negativo de diseño en cara izquierda [kN·m]</td></tr>
+  <tr><td>φMn_neg_I</td><td>Resistencia de diseño a flexión negativa izquierda [kN·m] (sección rectangular bw)</td></tr>
+  <tr><td>CD_neg_I</td><td>C/D flexión izquierda</td></tr>
+  <tr><td>Mu_pos_C</td><td>Momento positivo de diseño en centro [kN·m]</td></tr>
+  <tr><td>φMn_pos_C</td><td>Resistencia de diseño a flexión positiva [kN·m] (sección T con be)</td></tr>
+  <tr><td>CD_pos_C</td><td>C/D flexión centro</td></tr>
+  <tr><td>Mu_neg_D</td><td>Momento negativo de diseño en cara derecha [kN·m]</td></tr>
+  <tr><td>φMn_neg_D</td><td>Resistencia de diseño a flexión negativa derecha [kN·m]</td></tr>
+  <tr><td>CD_neg_D</td><td>C/D flexión derecha</td></tr>
+  <tr><td>Vu_I</td><td>Cortante de diseño en cara izquierda [kN]</td></tr>
+  <tr><td>φVn_I</td><td>Resistencia de diseño al cortante izquierdo [kN]</td></tr>
+  <tr><td>CD_cort_I</td><td>C/D cortante izquierdo</td></tr>
+  <tr><td>Vu_D</td><td>Cortante de diseño en cara derecha [kN]</td></tr>
+  <tr><td>φVn_D</td><td>Resistencia de diseño al cortante derecho [kN]</td></tr>
+  <tr><td>CD_cort_D</td><td>C/D cortante derecho</td></tr>
+</table>
+
+<h2>Factor de Nervio NSR-10 C.13.3.5</h2>
+<p>ARCO aplica automáticamente el factor de incremento de Vc para sistemas de nervios con paso reducido:</p>
+<ul>
+  <li>Si paso ≤ 750 mm: factor_nervio = 1.1 (incremento del 10% a Vc)</li>
+  <li>Si paso &gt; 750 mm: factor_nervio = 1.0 (sin incremento)</li>
+</ul>
+
+<h2>Planta Interactiva</h2>
+<p>El formulario Form_PlantaInteractivaNervios muestra una vista en planta de todos los nervios del proyecto. Funcionalidades disponibles:</p>
+<ul>
+  <li>Color de cada nervio según C/D mínimo (verde/naranja/rojo)</li>
+  <li>Clic sobre un nervio para seleccionarlo y ver sus resultados detallados</li>
+  <li>Zoom y desplazamiento para navegar proyectos con muchos nervios</li>
+  <li>Opción de mostrar etiquetas de C/D directamente sobre cada nervio</li>
+</ul>
+</div>
+</body>
+</html>

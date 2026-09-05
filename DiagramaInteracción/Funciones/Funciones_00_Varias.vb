@@ -1,5 +1,6 @@
 ﻿Imports System.Data.OleDb
 Imports System.IO
+Imports System.Drawing
 Imports ExcelDataReader
 
 Public Class Funciones_00_Varias
@@ -323,6 +324,16 @@ Public Class Funciones_00_Varias
                     ToList()
             End If
 
+            ' 🔁 Último recurso: tomar cualquier 2 joints distintos no vacíos.
+            ' Cubre frames con filas duplicadas o con todos los joints compartidos
+            ' (p.ej. pisos de transferencia o exportaciones E23 con mesh doble).
+            If extremos.Count < 2 Then
+                extremos = nodos.Where(Function(j) Not String.IsNullOrEmpty(j)) _
+                                .Distinct() _
+                                .Take(2) _
+                                .ToList()
+            End If
+
             If extremos.Count < 2 Then Continue For
 
             ' 🔹 Crear el frame real
@@ -472,21 +483,44 @@ Public Class Funciones_00_Varias
         Dim lista As New List(Of cGridLine)
         If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return lista
 
+        ' Detectar si la tabla tiene columnas de tipo General (X1,Y1,X2,Y2)
+        Dim tieneCoordGenerales As Boolean = dt.Columns.Contains("X1") AndAlso dt.Columns.Contains("Y1") AndAlso
+                                             dt.Columns.Contains("X2") AndAlso dt.Columns.Contains("Y2")
+
         For Each r As DataRow In dt.Rows
 
-            ' Las grillas diagonales de ETABS no tienen Ordinate — se omiten
-            If IsDBNull(r("Ordinate")) OrElse String.IsNullOrWhiteSpace(r("Ordinate").ToString()) Then Continue For
+            Dim tipoRaw As String = r("Grid Line Type").ToString().Trim()
+            Dim esGeneral As Boolean = tipoRaw.ToLower().StartsWith("general")
 
-            Dim g As New cGridLine With {
-            .GridSystem = r("Name").ToString(),
-            .Direction = r("Grid Line Type").ToString().Trim()(0).ToString(),
-            .GridID = r("ID").ToString().Trim(),
-            .Visible = r("Visible").ToString().Trim().ToLower() = "yes",
-            .BubbleLocation = r("Bubble Location").ToString().Trim(),
-            .Ordinate = CDbl(r("Ordinate"))
-        }
-
-            lista.Add(g)
+            If esGeneral Then
+                ' ── General (Cartesian): coordenadas X1,Y1 → X2,Y2 ──────────────────
+                If Not tieneCoordGenerales Then Continue For
+                Dim x1v, y1v, x2v, y2v As Double
+                Double.TryParse(r("X1").ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, x1v)
+                Double.TryParse(r("Y1").ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, y1v)
+                Double.TryParse(r("X2").ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, x2v)
+                Double.TryParse(r("Y2").ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, y2v)
+                If x1v = x2v AndAlso y1v = y2v Then Continue For ' segmento degenerado
+                lista.Add(New cGridLine With {
+                    .GridSystem = r("Name").ToString(),
+                    .Direction = "G",
+                    .GridID = r("ID").ToString().Trim(),
+                    .Visible = r("Visible").ToString().Trim().ToLower() = "yes",
+                    .BubbleLocation = r("Bubble Location").ToString().Trim(),
+                    .X1 = x1v, .Y1 = y1v, .X2 = x2v, .Y2 = y2v
+                })
+            Else
+                ' ── X (Cartesian) / Y (Cartesian): ordenada única ───────────────────
+                If IsDBNull(r("Ordinate")) OrElse String.IsNullOrWhiteSpace(r("Ordinate").ToString()) Then Continue For
+                lista.Add(New cGridLine With {
+                    .GridSystem = r("Name").ToString(),
+                    .Direction = tipoRaw(0).ToString().ToUpper(),
+                    .GridID = r("ID").ToString().Trim(),
+                    .Visible = r("Visible").ToString().Trim().ToLower() = "yes",
+                    .BubbleLocation = r("Bubble Location").ToString().Trim(),
+                    .Ordinate = CDbl(r("Ordinate"))
+                })
+            End If
         Next
 
         Return lista
@@ -1249,4 +1283,268 @@ Public Class Funciones_00_Varias
         Return lista
     End Function
 
+    ' ═══════════════════════════════════════════════════════════════════════
+    ' Detección de pilas desde Element Forces - Columns (fuerzas de elemento)
+    ' Lee la sección gobernante por máximo √(M2²+M3²) por cada combo.
+    ' Incluye geometría estructural (joints + frames) para vista en planta.
+    ' ═══════════════════════════════════════════════════════════════════════
+    Public Shared Function DetectarPilasDesdeElementForces(
+            rutaArchivo As String,
+            ByRef backdrop As GeometriaEstructural) As List(Of cCandidatoPila)
+
+        Dim resultado As New List(Of cCandidatoPila)
+        backdrop = New GeometriaEstructural()
+
+        Try
+            ' ── 0a. Secciones circulares: detectar cuáles son pilas ────────────
+            '  Lee Frame Sec Def - Conc Circle → diccionario {sectionName → diameter}
+            Dim pilaSecDiam As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
+            Dim dtCircle = LeerHojaExcel(rutaArchivo, "Frame Sec Def - Conc Circle")
+            If dtCircle Is Nothing Then
+                dtCircle = LeerHojaExcel(rutaArchivo, "Frame Section Property Data - Concrete Circle")
+            End If
+            If dtCircle IsNot Nothing Then
+                Dim colsC  = ETABSColDict(dtCircle)
+                Dim colCNm = GetColumnName(colsC, "Name")
+                Dim colCDi = GetColumnName(colsC, "Diameter")
+                For Each row As DataRow In dtCircle.Rows
+                    Dim sNm = SafeString(row, colCNm)
+                    If Not String.IsNullOrEmpty(sNm) Then
+                        pilaSecDiam(sNm) = SafeDouble(row, colCDi)
+                    End If
+                Next
+            End If
+
+            ' ── 0b. Asignación de sección por Label ────────────────────────────
+            '  Lee Frame Assigns - Sect Prop → {label → sectionName} solo para secciones circulares
+            Dim labelSection As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            Dim dtAssign = LeerHojaExcel(rutaArchivo, "Frame Assigns - Sect Prop")
+            If dtAssign Is Nothing Then
+                dtAssign = LeerHojaExcel(rutaArchivo, "Frame Section Assignments")
+            End If
+            If dtAssign IsNot Nothing Then
+                Dim colsA  = ETABSColDict(dtAssign)
+                Dim colALb = GetColumnName(colsA, "Label")
+                If String.IsNullOrEmpty(colALb) Then colALb = GetColumnName(colsA, "Object Label")
+                Dim colASc = GetColumnName(colsA, "Section Property")
+                For Each row As DataRow In dtAssign.Rows
+                    Dim lb  = SafeString(row, colALb)
+                    Dim sec = SafeString(row, colASc)
+                    If String.IsNullOrEmpty(lb) OrElse String.IsNullOrEmpty(sec) Then Continue For
+                    If pilaSecDiam.ContainsKey(sec) AndAlso Not labelSection.ContainsKey(lb) Then
+                        labelSection(lb) = sec
+                    End If
+                Next
+            End If
+            ' Si no se detectaron secciones circulares, incluir todos los elementos (fallback)
+            Dim filtrarPorSeccion As Boolean = (labelSection.Count > 0)
+
+            ' ── 1. Geometría de joints y frames para backdrop ──────────────────
+            Dim dtJoints = LeerHojaExcel(rutaArchivo, "Objects and Elements - Joints")
+            Dim dtObjFrm = LeerHojaExcel(rutaArchivo, "Objects and Elements - Frames")
+
+            Dim joints = DataTableToJoints(dtJoints)
+
+            Dim byElem As New Dictionary(Of String, cJoint)(StringComparer.OrdinalIgnoreCase)
+            For Each j As cJoint In joints
+                Dim ex As cJoint = Nothing
+                If Not byElem.TryGetValue(j.ElementLabel, ex) OrElse j.GlobalZ > ex.GlobalZ Then
+                    byElem(j.ElementLabel) = j
+                End If
+                backdrop.JointsXY.Add(New PointF(CSng(j.GlobalX), CSng(j.GlobalY)))
+            Next
+
+            ' Líneas de Frame para backdrop + mapa elementLabel → coords planta + Z range
+            Dim elemToXY  As New Dictionary(Of String, PointF)(StringComparer.OrdinalIgnoreCase)
+            Dim labelZMin As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
+            Dim labelZMax As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
+            Dim labelSeg  As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            If dtObjFrm IsNot Nothing Then
+                Dim colsF  = ETABSColDict(dtObjFrm)
+                Dim colFTp = GetColumnName(colsF, "Object Type")
+                Dim colFLb = GetColumnName(colsF, "Object Label")
+                Dim colJtI = GetColumnName(colsF, "Elm JtI")
+                Dim colJtJ = GetColumnName(colsF, "Elm JtJ")
+
+                For Each row As DataRow In dtObjFrm.Rows
+                    If Not String.Equals(SafeString(row, colFTp), "Frame", StringComparison.OrdinalIgnoreCase) Then Continue For
+                    Dim fLbl = SafeString(row, colFLb)
+                    Dim jtI  = SafeString(row, colJtI)
+                    Dim jtJ  = SafeString(row, colJtJ)
+                    If jtI.StartsWith("~") OrElse jtJ.StartsWith("~") Then Continue For
+
+                    Dim ptI As cJoint = Nothing, ptJ As cJoint = Nothing
+                    If Not byElem.TryGetValue(jtI, ptI) OrElse Not byElem.TryGetValue(jtJ, ptJ) Then Continue For
+
+                    backdrop.FramesXY.Add(Tuple.Create(
+                        New PointF(CSng(ptI.GlobalX), CSng(ptI.GlobalY)),
+                        New PointF(CSng(ptJ.GlobalX), CSng(ptJ.GlobalY))))
+
+                    If Not String.IsNullOrEmpty(fLbl) AndAlso Not elemToXY.ContainsKey(fLbl) Then
+                        Dim topPt = If(ptI.GlobalZ >= ptJ.GlobalZ,
+                                       New PointF(CSng(ptI.GlobalX), CSng(ptI.GlobalY)),
+                                       New PointF(CSng(ptJ.GlobalX), CSng(ptJ.GlobalY)))
+                        elemToXY(fLbl) = topPt
+                    End If
+
+                    ' Rango Z y número de segmentos por label (para calcular profundidad total)
+                    If Not String.IsNullOrEmpty(fLbl) Then
+                        Dim zI = ptI.GlobalZ, zJ = ptJ.GlobalZ
+                        Dim zLow = Math.Min(zI, zJ), zHigh = Math.Max(zI, zJ)
+                        labelZMin(fLbl) = Math.Min(zLow,  If(labelZMin.ContainsKey(fLbl), labelZMin(fLbl), Double.MaxValue))
+                        labelZMax(fLbl) = Math.Max(zHigh, If(labelZMax.ContainsKey(fLbl), labelZMax(fLbl), Double.MinValue))
+                        Dim nS As Integer = 0
+                        labelSeg(fLbl) = If(labelSeg.TryGetValue(fLbl, nS), nS + 1, 1)
+                    End If
+                Next
+            End If
+
+            ' ── 2. Leer hoja de fuerzas ────────────────────────────────────────
+            Dim dtForces = LeerHojaExcel(rutaArchivo, "Element Forces - Columns")
+            If dtForces Is Nothing OrElse dtForces.Rows.Count = 0 Then
+                dtForces = LeerHojaExcel(rutaArchivo, "Column Forces")
+            End If
+            If dtForces Is Nothing OrElse dtForces.Rows.Count = 0 Then
+                Logger.Warning("DetectarPilasDesdeElementForces",
+                               "No se encontró 'Element Forces - Columns' ni 'Column Forces'")
+                Return resultado
+            End If
+
+            ' ── 3. Nombres de columnas ─────────────────────────────────────────
+            Dim cols     = ETABSColDict(dtForces)
+            Dim colStory = GetColumnName(cols, "Story")
+            Dim colElem  = GetColumnName(cols, "Column")
+            If String.IsNullOrEmpty(colElem) Then colElem = GetColumnName(cols, "Frame")
+            Dim colUniq  = GetColumnName(cols, "Unique Name")
+            Dim colCase  = GetColumnName(cols, "Output Case")
+            If String.IsNullOrEmpty(colCase) Then colCase = GetColumnName(cols, "Load Case/Combo")
+            Dim colStep  = GetColumnName(cols, "Step Type")
+            Dim colP     = GetColumnName(cols, "P")
+            Dim colV2    = GetColumnName(cols, "V2")
+            Dim colV3    = GetColumnName(cols, "V3")
+            Dim colM2    = GetColumnName(cols, "M2")
+            Dim colM3    = GetColumnName(cols, "M3")
+
+            If String.IsNullOrEmpty(colElem) OrElse String.IsNullOrEmpty(colP) Then
+                Logger.Warning("DetectarPilasDesdeElementForces",
+                               "Columnas 'Column'/'P' no encontradas en la hoja de fuerzas")
+                Return resultado
+            End If
+
+            ' ── 4. Agrupar filas por Label de pila ─────────────────────────────
+            '   La columna "Column" (colElem) contiene el Label de la pila (p. ej. "C1")
+            '   que es CONSTANTE en todos los tramos/stories de la misma pila.
+            '   Si se detectaron secciones circulares, se filtran solo esos labels.
+            Dim byElement As New Dictionary(Of String, List(Of DataRow))(StringComparer.OrdinalIgnoreCase)
+            For Each row As DataRow In dtForces.Rows
+                Dim en = SafeString(row, colElem)
+                If String.IsNullOrEmpty(en) Then Continue For
+                If filtrarPorSeccion AndAlso Not labelSection.ContainsKey(en) Then Continue For
+                If Not byElement.ContainsKey(en) Then byElement(en) = New List(Of DataRow)
+                byElement(en).Add(row)
+            Next
+
+            ' ── 5. Construir cCandidatoPila por elemento ───────────────────────
+            For Each kvp In byElement
+                Dim elemName As String = kvp.Key
+                Dim rows     As List(Of DataRow) = kvp.Value
+
+                ' Por cada combinación: guardar la estación gobernante (max |M| resultante)
+                Dim byCaseName As New Dictionary(Of String, DataRow)(StringComparer.OrdinalIgnoreCase)
+                Dim storyName  As String = ""
+
+                For Each row In rows
+                    Dim caseName = SafeString(row, colCase)
+                    Dim stepType = SafeString(row, colStep)
+                    Dim fullCase = If(Not String.IsNullOrEmpty(stepType),
+                                     caseName & " (" & stepType & ")", caseName)
+                    If String.IsNullOrEmpty(storyName) Then storyName = SafeString(row, colStory)
+
+                    Dim m2Val = SafeDouble(row, colM2)
+                    Dim m3Val = SafeDouble(row, colM3)
+                    Dim mAbs  = Math.Sqrt(m2Val * m2Val + m3Val * m3Val)
+
+                    Dim existing As DataRow = Nothing
+                    If Not byCaseName.TryGetValue(fullCase, existing) Then
+                        byCaseName(fullCase) = row
+                    Else
+                        Dim m2E   = SafeDouble(existing, colM2)
+                        Dim m3E   = SafeDouble(existing, colM3)
+                        If mAbs > Math.Sqrt(m2E * m2E + m3E * m3E) Then
+                            byCaseName(fullCase) = row
+                        End If
+                    End If
+                Next
+
+                ' Construir lista de reacciones desde estaciones gobernantes
+                Dim reactions As New List(Of cCombinacionPila)
+                For Each kCase In byCaseName
+                    Dim row = kCase.Value
+                    Dim rxn As New cCombinacionPila()
+                    rxn.Story      = SafeString(row, colStory)
+                    rxn.JointLabel = elemName
+                    rxn.UniqueName = SafeString(row, colUniq)
+                    rxn.LoadCase   = kCase.Key
+                    rxn.SourceType = "Frame"
+                    rxn.SourceName = elemName
+                    ' ETABS P negativo=compresión → FZ positivo=compresión (mismo convenio que Joint Reactions)
+                    rxn.FZ = CSng(-SafeDouble(row, colP))
+                    rxn.FX = CSng(SafeDouble(row, colV2))
+                    rxn.FY = CSng(SafeDouble(row, colV3))
+                    rxn.MX = CSng(SafeDouble(row, colM2))
+                    rxn.MY = CSng(SafeDouble(row, colM3))
+                    rxn.MZ = 0
+                    reactions.Add(rxn)
+                Next
+
+                ' Coordenadas en planta y metadata de la pila
+                Dim coord As PointF = PointF.Empty
+                elemToXY.TryGetValue(elemName, coord)
+
+                Dim zTop As Double = 0, zBot As Double = 0
+                labelZMax.TryGetValue(elemName, zTop)
+                labelZMin.TryGetValue(elemName, zBot)
+                Dim nSeg As Integer = 1
+                labelSeg.TryGetValue(elemName, nSeg)
+                Dim secNom As String = ""
+                labelSection.TryGetValue(elemName, secNom)
+                Dim diam As Double = 0
+                If Not String.IsNullOrEmpty(secNom) Then pilaSecDiam.TryGetValue(secNom, diam)
+
+                Dim cand As New cCandidatoPila()
+                cand.Nombre        = elemName
+                cand.Tipo          = "Frame"
+                cand.SourceLabel   = elemName
+                cand.Story         = If(nSeg > 1, $"Z {zBot:F1}→{zTop:F1} m", storyName)
+                cand.X             = coord.X
+                cand.Y             = coord.Y
+                cand.Z             = zTop
+                cand.ZTop          = zTop
+                cand.ZBottom       = zBot
+                cand.NumSegmentos  = nSeg
+                cand.SeccionNombre = secNom
+                cand.Diametro      = diam
+                cand.Reactions     = reactions
+                cand.Seleccionado  = True
+                If reactions.Count = 0 Then cand.Estado = "Sin fuerzas"
+
+                resultado.Add(cand)
+            Next
+
+        Catch ex As Exception
+            Logger.Error(ex, "DetectarPilasDesdeElementForces", "Error leyendo fuerzas de elementos Frame")
+        End Try
+
+        Return resultado
+    End Function
+
+End Class
+
+''' <summary>
+''' Geometría de la estructura exportada desde ETABS (joints y frames),
+''' usada como backdrop visual en el formulario de importación de pilas.
+''' </summary>
+Public Class GeometriaEstructural
+    Public Property JointsXY As New List(Of PointF)
+    Public Property FramesXY As New List(Of Tuple(Of PointF, PointF))
 End Class

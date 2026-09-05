@@ -359,7 +359,10 @@ Public Class Form_PlantaInteractivaNervios
                 If Not gl.Visible Then Continue For
 
                 Dim p1 As PointF, p2 As PointF
-                If gl.Direction = "X" Then
+                If gl.EsTipoGeneral Then
+                    p1 = W2S(gl.X1, gl.Y1)
+                    p2 = W2S(gl.X2, gl.Y2)
+                ElseIf gl.Direction = "X" Then
                     p1 = W2S(gl.Ordinate, wyMin - ext)
                     p2 = W2S(gl.Ordinate, wyMax + ext)
                 Else
@@ -375,7 +378,10 @@ Public Class Form_PlantaInteractivaNervios
 
                 If Not String.IsNullOrEmpty(gl.GridID) AndAlso _zoom > 5 Then
                     Dim labelPt As PointF
-                    If gl.Direction = "X" Then
+                    If gl.EsTipoGeneral Then
+                        ' Burbuja en el extremo indicado por BubbleLocation
+                        labelPt = If(gl.BubbleLocation.ToLower() = "start", p1, p2)
+                    ElseIf gl.Direction = "X" Then
                         labelPt = New PointF(W2S(gl.Ordinate, 0).X - 8, 6)
                     Else
                         labelPt = New PointF(6, W2S(0, gl.Ordinate).Y - 10)

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Losas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Losas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Losas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/08_losas.html">Manual de Losas</a>
+  <a href="05_nervios.html">← Nervios</a>
+  <a href="07_escaleras.html">Escaleras →</a>
+</div>
+
+<h2>1. Método de Coeficientes para Losas en Dos Direcciones</h2>
+<p>El método de coeficientes (también llamado método de la tabla de coeficientes del ACI 318-63, adoptado por NSR-10) calcula los momentos en losas rectangulares soportadas en sus cuatro bordes mediante coeficientes tabulados que dependen del caso de continuidad y la relación de lados.</p>
+
+<h3>1.1 Relación de lados</h3>
+<div class="formula">La = lado corto del panel   [m]   (La ≤ Lb)
+Lb = lado largo del panel  [m]
+m  = La / Lb               (0.5 ≤ m ≤ 1.0)</div>
+
+<h3>1.2 Casos de continuidad</h3>
+<p>Hay 9 casos según la combinación de bordes continuos (C) y discontinuos (D):</p>
+<table>
+  <tr><th>Caso</th><th>Descripción</th></tr>
+  <tr><td>Caso 1</td><td>Cuatro bordes continuos</td></tr>
+  <tr><td>Caso 2</td><td>Cuatro bordes discontinuos (losa aislada)</td></tr>
+  <tr><td>Caso 3</td><td>Borde largo discontinuo, resto continuo</td></tr>
+  <tr><td>Caso 4</td><td>Borde corto discontinuo, resto continuo</td></tr>
+  <tr><td>Caso 5</td><td>Dos bordes adyacentes discontinuos</td></tr>
+  <tr><td>Caso 6</td><td>Dos bordes largos discontinuos</td></tr>
+  <tr><td>Caso 7</td><td>Dos bordes cortos discontinuos</td></tr>
+  <tr><td>Caso 8</td><td>Tres bordes discontinuos (un borde continuo largo)</td></tr>
+  <tr><td>Caso 9</td><td>Tres bordes discontinuos (un borde continuo corto)</td></tr>
+</table>
+<div class="nota">El caso se determina automáticamente a partir de los checkboxes de continuidad ingresados por el usuario en ARCO.</div>
+
+<h2>2. Combinación de Carga</h2>
+<div class="formula">Cu = 1.2 · CM_total + 1.6 · CV   [kN/m²]
+
+CM_total = CM_impuesta + CM_peso_propio
+CM_peso_propio = γ_concreto · e_loseta + γ_nervios · Volumen_nervios_por_m²
+γ_concreto = 24 kN/m³</div>
+
+<h3>2.1 Peso propio de la losa nervada</h3>
+<div class="formula">Volumen_nervios_por_m² = (tw_nervio · H_nervio) / (Separación_X · Separación_Y)
+
+CM_peso_propio = 24 · (e_loseta + H_nervio · tw²/(paso_X · paso_Y))   [kN/m²]
+
+(Simplificado para losa nervada rectangular con nervios en ambas direcciones)</div>
+
+<h2>3. Momentos por Franja</h2>
+<div class="norma"><strong>ACI 318-63 Tabla 13-1 (adoptada por NSR-10)</strong></div>
+<p>Los coeficientes Ca y Cb se interpolan linealmente para m entre los valores tabulados (m = 0.5, 0.6, 0.7, 0.8, 0.9, 1.0).</p>
+
+<h3>3.1 Franja Central (2/3 del panel)</h3>
+<div class="formula">Momentos negativos en bordes continuos:
+  Ma_neg = Ca_neg · Cu · La²   [kN·m/m]
+  Mb_neg = Cb_neg · Cu · Lb²   [kN·m/m]
+
+Momentos positivos (separados CM y CV):
+  Ma_pos = (Ca_D · CM_total + Ca_L · CV) · La²   [kN·m/m]
+  Mb_pos = (Cb_D · CM_total + Cb_L · CV) · Lb²   [kN·m/m]</div>
+
+<h3>3.2 Franja de Borde (1/3 del panel en cada extremo)</h3>
+<div class="formula">M_borde_a = Ma / 3   [kN·m/m en la franja de borde adyacente a La]
+M_borde_b = Mb / 3   [kN·m/m en la franja de borde adyacente a Lb]</div>
+
+<h3>3.3 Cortante unitario en bordes</h3>
+<div class="formula">Va = qa · Cu · La   [kN/m de longitud del borde La]
+Vb = qb · Cu · Lb   [kN/m de longitud del borde Lb]
+
+qa y qb son coeficientes de distribución de cortante de la tabla (función de m y del caso)</div>
+
+<h2>4. Diseño de Refuerzo</h2>
+<h3>4.1 Acero por metro</h3>
+<div class="formula">Para el momento de diseño M [kN·m/m], con b = 1 m, h_total:
+
+d = e_loseta - recubrimiento - Ø/2   [m]
+
+a_iter = M·10³ / (0.90 · fy · 0.9 · d)   (primera iteración)
+As_iter = 0.85·fc·a_iter / fy   [mm²/m]
+Repetir hasta convergencia de a y As
+
+ρ_min = max(1.4/fy,  0.25·√fc/fy)
+As_min = ρ_min · 1000 · d   [mm²/m]
+As_diseño = max(As_calculado, As_min)</div>
+
+<h3>4.2 Acero por nervio</h3>
+<div class="formula">As_nervio_La = As_diseño_La × Separación_Y / 1000   [mm²/nervio]
+As_nervio_Lb = As_diseño_Lb × Separación_X / 1000   [mm²/nervio]</div>
+
+<h3>4.3 Selección de barras</h3>
+<p>El usuario selecciona número de barras y calibre tal que:</p>
+<div class="formula">n_barras × Área_barra ≥ As_nervio_requerido   [mm²]</div>
+
+<h2>5. Verificación de Cuantías</h2>
+<div class="formula">ρ_prov = As_nervio_prov / (bw · d)
+
+Si ρ_prov &lt; ρ_min → ARCO alerta: refuerzo insuficiente
+Si ρ_prov &gt; ρ_max (=0.04) → ARCO alerta: sección sobrerreforzada</div>
+
+<h2>6. Criterio de Cumplimiento</h2>
+<p>El módulo de losas calcula el acero requerido por franja. La selección final de barras es del usuario. El criterio de aceptación sobre la selección es:</p>
+<div class="formula">As_prov ≥ 0.9 × As_req   →   Adecuado
+As_prov ≥ As_req          →   Cumple con margen</div>
+
+<div class="nota"><strong>ARCO considera adecuado el refuerzo seleccionado cuando el área provista cubre al menos el 90% del área requerida.</strong>
+Proveer exactamente As_req o más es siempre preferible, pero una diferencia de hasta 10% se acepta como adecuada dado que el método de coeficientes ya incorpora factores de seguridad sobre los momentos calculados.</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:240px;">As_prov ≥ As_req</th><td>Cumple. Hay reserva de acero sobre la demanda calculada.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">0.9·As_req ≤ As_prov &lt; As_req</th><td><strong>Adecuado.</strong> El refuerzo es apto para la demanda.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">As_prov &lt; 0.9·As_req</th><td>Insuficiente. Aumentar número o calibre de barras.</td></tr>
+</table>
+</div>
+</body>
+</html>

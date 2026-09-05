@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Vigas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Vigas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Vigas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="02_importacion_etabs.html">← Importación ETABS</a>
+  <a href="04_columnas.html">Siguiente: Columnas →</a>
+  <a href="../criterios/01_vigas.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Vigas verifica y diseña vigas de concreto reforzado bajo flexión y cortante, según NSR-10 Título C. Trabaja con frames de viga provenientes de ETABS y permite al usuario definir la sección transversal y el refuerzo colocado.</p>
+<p>ARCO agrupa los frames individuales de ETABS en <strong>vigas continuas</strong> (por piso y alineación) y presenta los resultados por vano. Cada vano tiene tres zonas críticas: cara izquierda (negativo), centro (positivo) y cara derecha (negativo).</p>
+
+<h2>Requisitos ETABS</h2>
+<p>El módulo de vigas necesita las siguientes hojas en el archivo Excel:</p>
+<table>
+  <tr><th>Dato</th><th>Hoja E17</th><th>Hoja E23</th></tr>
+  <tr><td>Conectividad de frames</td><td>Connectivity - Frame</td><td>Objects and Elements - Frames</td></tr>
+  <tr><td>Nodos</td><td>Joint Coordinates</td><td>Objects and Elements - Joints</td></tr>
+  <tr><td>Secciones asignadas</td><td>Frame Assignments - Sections</td><td>Frame Assigns - Sect Prop</td></tr>
+  <tr><td>Fuerzas en vigas</td><td>Beam Forces</td><td>Element Forces - Beams</td></tr>
+</table>
+<div class="nota">Las estaciones de fuerza en ETABS deben estar configuradas para generar al menos 5 puntos por frame. Si hay pocas estaciones, la interpolación en la cara del apoyo puede ser imprecisa.</div>
+
+<h2>Parámetros de Entrada del Usuario</h2>
+<p>Para cada viga o grupo de vigas, el usuario debe ingresar:</p>
+
+<h3>Sección Transversal</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>b (ancho)</td><td>cm</td><td>Ancho del alma de la viga</td></tr>
+  <tr><td>h (altura total)</td><td>cm</td><td>Altura total de la sección transversal</td></tr>
+  <tr><td>Recubrimiento</td><td>cm</td><td>Recubrimiento libre (hasta la cara exterior del estribo)</td></tr>
+  <tr><td>fc</td><td>MPa</td><td>Resistencia a compresión del concreto</td></tr>
+  <tr><td>fy</td><td>MPa</td><td>Esfuerzo de fluencia del acero longitudinal</td></tr>
+</table>
+
+<h3>Refuerzo Longitudinal</h3>
+<table>
+  <tr><th>Zona</th><th>Parámetros</th></tr>
+  <tr><td>Refuerzo Superior (momentos negativos)</td><td>Número de barras + calibre (#N) en cada zona: izquierda, centro, derecha</td></tr>
+  <tr><td>Refuerzo Inferior (momentos positivos)</td><td>Número de barras + calibre (#N) en cada zona: izquierda, centro, derecha</td></tr>
+</table>
+
+<h3>Refuerzo Transversal (Estribos)</h3>
+<table>
+  <tr><th>Zona</th><th>Parámetros</th></tr>
+  <tr><td>Zona izquierda (confinamiento)</td><td>Calibre de barra, número de ramas, separación (cm)</td></tr>
+  <tr><td>Zona central</td><td>Calibre de barra, número de ramas, separación (cm)</td></tr>
+  <tr><td>Zona derecha (confinamiento)</td><td>Calibre de barra, número de ramas, separación (cm)</td></tr>
+</table>
+
+<h3>Parámetros de Ductilidad</h3>
+<ul>
+  <li><strong>Tipo DMO</strong>: Ductilidad Moderada — factor fy_dis = 1.00 para cortante plástico.</li>
+  <li><strong>Tipo DES</strong>: Ductilidad Especial — factor fy_dis = 1.25 para cortante plástico.</li>
+</ul>
+
+<h2>Flujo de Trabajo en el Módulo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Importar desde ETABS</strong> — Haga clic en el botón "Importar ETABS" y seleccione el archivo Excel. ARCO cargará los frames y sus fuerzas por combinación.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Seleccionar combinaciones de diseño</strong> — Abra el diálogo de combinaciones (botón "Combos Diseño") y marque las combinaciones que se usarán. Es obligatorio hacer este paso antes de calcular.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Seleccionar la viga</strong> — En la tabla de vigas, haga clic en la viga que desea diseñar. Se mostrará la geometría y las demandas.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Ingresar la sección y refuerzo</strong> — Complete los datos de b, h, recubrimiento, fc, fy y el refuerzo longitudinal y transversal.</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Calcular</strong> — Haga clic en "Calcular". ARCO calculará φMn y φVn para cada zona y los comparará contra las demandas de diseño.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Revisar resultados</strong> — Verifique los factores C/D en las tablas de resultados. Los valores en rojo (C/D &lt; 0.9) requieren modificar el refuerzo.</div></div>
+<div class="paso"><div class="paso-num">7</div><div class="paso-texto"><strong>Exportar</strong> — Use el botón "Exportar a Excel" para generar el reporte de resultados.</div></div>
+
+<h2>Descripción de las Tablas de Resultados</h2>
+
+<h3>Tabla_Demandas</h3>
+<p>Muestra las envolventes de demanda por vano. Columnas principales:</p>
+<table>
+  <tr><th>Columna</th><th>Descripción</th></tr>
+  <tr><td>Viga</td><td>Identificador de la viga (piso + alineación)</td></tr>
+  <tr><td>Vano</td><td>Número de vano dentro de la viga continua</td></tr>
+  <tr><td>Mu_neg_I</td><td>Momento negativo de diseño en cara izquierda [kN·m]</td></tr>
+  <tr><td>Mu_pos_C</td><td>Momento positivo de diseño en centro [kN·m]</td></tr>
+  <tr><td>Mu_neg_D</td><td>Momento negativo de diseño en cara derecha [kN·m]</td></tr>
+  <tr><td>Vu_I</td><td>Cortante de diseño en cara izquierda [kN]</td></tr>
+  <tr><td>Vu_D</td><td>Cortante de diseño en cara derecha [kN]</td></tr>
+  <tr><td>Combo_gov</td><td>Combinación de carga gobernante</td></tr>
+</table>
+
+<h3>Ref_Superior y Ref_Inferior</h3>
+<p>Tablas del refuerzo colocado por el usuario. Cada fila corresponde a un vano y muestra el número de barras y calibre en las tres zonas (izquierda, centro, derecha), junto con el área de acero resultante en cm².</p>
+
+<h3>Ref_Transversal</h3>
+<p>Tabla del refuerzo transversal colocado. Muestra la barra, número de ramas, separación y área de acero Av por zona (izquierda, centro, derecha).</p>
+
+<h3>Tabla_Resultados_Flexion</h3>
+<p>Resultados de verificación por flexión. Columnas principales:</p>
+<table>
+  <tr><th>Columna</th><th>Descripción</th></tr>
+  <tr><td>As_prov_neg_I</td><td>Acero superior provisto en cara izquierda [cm²]</td></tr>
+  <tr><td>As_req_neg_I</td><td>Acero superior requerido por demanda en cara izquierda [cm²]</td></tr>
+  <tr><td>φMn_neg_I</td><td>Momento resistente de diseño en cara izquierda [kN·m]</td></tr>
+  <tr><td>Mu_neg_I</td><td>Momento demanda en cara izquierda [kN·m]</td></tr>
+  <tr><td>CD_neg_I</td><td>Factor C/D en cara izquierda</td></tr>
+  <tr><td>(idem para pos_C y neg_D)</td><td>Zona centro y cara derecha</td></tr>
+</table>
+
+<h3>Tabla_Resultados_Cortante</h3>
+<p>Resultados de verificación por cortante. Columnas principales:</p>
+<table>
+  <tr><th>Columna</th><th>Descripción</th></tr>
+  <tr><td>Vc</td><td>Resistencia del concreto al cortante [kN]</td></tr>
+  <tr><td>Vs</td><td>Resistencia del refuerzo al cortante [kN]</td></tr>
+  <tr><td>φVn</td><td>Resistencia de diseño al cortante [kN]</td></tr>
+  <tr><td>Vu</td><td>Cortante demanda [kN]</td></tr>
+  <tr><td>CD_cortante</td><td>Factor C/D por cortante (= φVn / Vu)</td></tr>
+  <tr><td>Ve_plastico</td><td>Cortante plástico calculado (NSR-10 C.21.5.4) [kN]</td></tr>
+  <tr><td>Vu_diseño</td><td>Cortante de diseño final = max(Vu, Ve) [kN]</td></tr>
+</table>
+
+<h2>Refuerzo Transversal Automático</h2>
+<p>El botón "Refuerzo Automático" propone estribos siguiendo los requisitos sísmicos de NSR-10 C.21.5.3:</p>
+<table>
+  <tr><th>Zona</th><th>Extensión</th><th>Barra</th><th>Ramas</th><th>Separación</th></tr>
+  <tr><td>Izquierda (confinamiento)</td><td>2H desde cara del apoyo izquierdo</td><td>#3</td><td>2</td><td>d/4</td></tr>
+  <tr><td>Derecha (confinamiento)</td><td>2H desde cara del apoyo derecho</td><td>#3</td><td>2</td><td>d/4</td></tr>
+  <tr><td>Centro</td><td>Tramo central restante</td><td>#3</td><td>2</td><td>d/2</td></tr>
+</table>
+<p>donde H es la altura total de la viga y d es el peralte efectivo. El número de estribos en cada zona se calcula como: n = techo(longitud_zona / separación).</p>
+<div class="nota">El refuerzo automático es una propuesta inicial. El usuario siempre debe verificar que el refuerzo transversal propuesto satisfaga las demandas de cortante, especialmente en zonas de cortante plástico elevado.</div>
+
+<h2>Cortante Plástico</h2>
+<p>En zonas sísmicas DMO y DES, ARCO calcula el cortante plástico según NSR-10 C.21.5.4 y lo usa como cortante mínimo de diseño cuando supera el cortante del análisis:</p>
+<ul>
+  <li>Ve = (Mn_neg_izq + Mn_pos_der) / Ln</li>
+  <li>Mn se calcula con fy_dis = fy × 1.25 para DES, y fy × 1.00 para DMO.</li>
+  <li>Ln es la luz libre entre caras de apoyos.</li>
+</ul>
+
+<h2>Exportación a Excel</h2>
+<p>El botón "Exportar Reporte" genera un archivo Excel (formato .xlsx) con las siguientes hojas:</p>
+<ul>
+  <li><strong>Demandas</strong>: tabla completa de momentos y cortantes de diseño por vano.</li>
+  <li><strong>Refuerzo Longitudinal</strong>: resumen del refuerzo colocado y factores C/D por flexión.</li>
+  <li><strong>Refuerzo Transversal</strong>: resumen del refuerzo colocado y factores C/D por cortante.</li>
+  <li><strong>Resumen</strong>: tabla ejecutiva con el elemento gobernante por viga y el factor C/D mínimo.</li>
+</ul>
+</div>
+</body>
+</html>

@@ -37,6 +37,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ModeloAgrietadoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ImportarToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Ayuda = New System.Windows.Forms.ToolStripMenuItem()
+        Me.MenuDocumentacion = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem3 = New System.Windows.Forms.ToolStripMenuItem()
@@ -225,12 +226,21 @@ Partial Class Form_00_PaginaPrincipal
         '
         'Ayuda
         '
-        Me.Ayuda.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem1, Me.ToolStripMenuItem2, Me.ToolStripMenuItem3})
+        Me.Ayuda.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.MenuDocumentacion, Me.ToolStripMenuItem1, Me.ToolStripMenuItem2, Me.ToolStripMenuItem3})
         Me.Ayuda.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Ayuda.ForeColor = System.Drawing.Color.White
         Me.Ayuda.Name = "Ayuda"
         Me.Ayuda.Size = New System.Drawing.Size(79, 39)
         Me.Ayuda.Text = "Ayuda"
+        '
+        'MenuDocumentacion
+        '
+        Me.MenuDocumentacion.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
+        Me.MenuDocumentacion.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.MenuDocumentacion.ForeColor = System.Drawing.Color.White
+        Me.MenuDocumentacion.Name = "MenuDocumentacion"
+        Me.MenuDocumentacion.Size = New System.Drawing.Size(220, 30)
+        Me.MenuDocumentacion.Text = "Documentacion ARCO"
         '
         'ToolStripMenuItem1
         '
@@ -238,7 +248,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem1.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
-        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(164, 30)
+        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(220, 30)
         Me.ToolStripMenuItem1.Text = "Ayuda"
         '
         'ToolStripMenuItem2
@@ -247,7 +257,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem2.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem2.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem2.Name = "ToolStripMenuItem2"
-        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(164, 30)
+        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(220, 30)
         Me.ToolStripMenuItem2.Text = "Soporte"
         '
         'ToolStripMenuItem3
@@ -256,7 +266,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem3.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem3.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem3.Name = "ToolStripMenuItem3"
-        Me.ToolStripMenuItem3.Size = New System.Drawing.Size(164, 30)
+        Me.ToolStripMenuItem3.Size = New System.Drawing.Size(220, 30)
         Me.ToolStripMenuItem3.Text = "Acerca"
         '
         'ArchivoToolStripMenuItem
@@ -471,6 +481,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.BtnNervios.Text = "         NERVIOS"
         Me.BtnNervios.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         Me.BtnNervios.UseVisualStyleBackColor = True
+        Me.BtnNervios.Visible = False
         '
         'Button2
         '
@@ -930,6 +941,7 @@ Partial Class Form_00_PaginaPrincipal
     Friend WithEvents Boton_MNE As Button
     Private WithEvents Boton_Muros As Button
     Friend WithEvents Ayuda As ToolStripMenuItem
+    Friend WithEvents MenuDocumentacion As ToolStripMenuItem
     Friend WithEvents ToolStripMenuItem1 As ToolStripMenuItem
     Friend WithEvents ToolStripMenuItem2 As ToolStripMenuItem
     Friend WithEvents ToolStripMenuItem3 As ToolStripMenuItem

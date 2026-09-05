@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Muros No Estructurales</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Muros No Estructurales</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Muros No Estructurales</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/10_muros_no_estructurales.html">Manual de Muros No Estructurales</a>
+  <a href="07_escaleras.html">← Escaleras</a>
+</div>
+
+<h2>1. Marco Normativo</h2>
+<div class="norma"><strong>NSR-10 Capítulo A.9</strong> — Componentes No Estructurales Arquitectónicos, Mecánicos y Eléctricos</div>
+<p>Los muros no estructurales (divisorios, antepechos, muros de fachada) deben diseñarse para resistir las fuerzas sísmicas de diseño aplicadas en su plano y perpendiculares a su plano, según NSR-10 A.9.4.</p>
+
+<h2>2. Parámetros Sísmicos de Diseño</h2>
+<div class="formula">Sa = Av · Fv   (aceleración espectral de diseño a período largo, en g)
+As = Aa · Fa   (aceleración de piso de referencia, en g)
+
+Parámetros del componente (muros inyectados biapoyados):
+  ap = 1.0   (factor de amplificación del componente — NSR-10 A.9.4.2.2)
+  Rp = 1.5   (factor de reducción del componente — NSR-10 A.9.4.9)
+
+Parámetros del componente (antepechos en voladizo):
+  ap = 1.0
+  Rp = 1.0   (NSR-10 A.9.4.9.2 — antepechos: Rp reducido)</div>
+
+<h2>3. Aceleración por Nivel (hx)</h2>
+<div class="formula">Heq = 0.75 · Hn   (altura de referencia para transición de aceleración)
+
+Para hx ≤ Heq:
+  ax = As + (Sa - As) · (hx / Heq)   [fracción de g]
+
+Para hx &gt; Heq:
+  ax = Sa · (hx / Heq)   [fracción de g]
+
+hx = cota del nivel sobre el nivel de referencia (base del edificio) [m]
+Hn = altura total del edificio [m]</div>
+
+<div class="nota">La aceleración ax varía linealmente desde As a nivel de la base hasta Sa a la altura de referencia Heq = 0.75Hn, luego crece por encima de Sa para pisos superiores. Los pisos más altos tienen mayor aceleración de piso (efecto de amplificación dinámica de la estructura).</div>
+
+<h2>4. Fuerza Sísmica de Diseño (Fp)</h2>
+<div class="formula">Peso del muro por metro de longitud:
+  Wm = B · γ · hw   [kN/m]
+  (B = espesor del muro [m], γ = peso específico [kN/m³], hw = altura libre [m])
+
+Fuerza sísmica amplificada:
+  Fp_calc = ax · ap · Wm / Rp   [kN/m]
+
+Fuerza sísmica mínima:
+  Fp_min = Aa · I · Wm / 2   [kN/m]   (NSR-10 A.9.4.3)
+
+Fuerza sísmica de diseño:
+  Fp = max(Fp_calc, Fp_min)   [kN/m]</div>
+
+<h2>5. Momentos y Cortantes de Diseño</h2>
+
+<h3>5.1 Muros Inyectados (biapoyados — viga simplemente apoyada)</h3>
+<div class="formula">Mu = Fp · hw² / 8   [kN·m/m]
+Vu = Fp · hw / 2   [kN/m]</div>
+
+<h3>5.2 Muros Sin Inyectar</h3>
+<div class="formula">Para muros sin inyectar se asume comportamiento de voladizo o placa libre:
+Mu = Fp · hw² / 2   [kN·m/m]
+Vu = Fp · hw        [kN/m]</div>
+
+<h3>5.3 Antepechos (voladizo — carga uniforme equivalente)</h3>
+<div class="formula">La fuerza de diseño para antepechos se convierte a carga distribuida equivalente:
+  Wm_ant = B · γ · 1.0   [kN/m² de área del muro]
+
+Momento de voladizo:
+  Mu = Fp · hw / 2   [kN·m/m de longitud del antepecho]
+Cortante:
+  Vu = Fp             [kN/m]
+
+Para la tabla de antepechos (hw de 0.6 a 1.7 m):
+  Fp varía con hw ya que Wm = B · γ · hw cambia con la altura</div>
+
+<h2>6. Resistencia al Cortante del Muro de Mampostería</h2>
+<div class="formula">Resistencia nominal de la mampostería al cortante:
+  Vn = 0.6 · B_efec · √fm · 1000 / 6   [kN/m]
+
+  B_efec = espesor efectivo del muro [m]
+  fm = resistencia a compresión de la mampostería [MPa]
+
+  El factor 1/6 proviene de que la resistencia al cortante de la mampostería
+  es aproximadamente 1/6 de su resistencia a compresión.
+
+Verificación:
+  Vu ≤ Vn   (el cortante de diseño no debe superar la resistencia)</div>
+
+<h2>7. Diseño de Refuerzo Flexural</h2>
+<div class="formula">Para el muro de mampostería con refuerzo (vertical):
+  b = 1 m   (ancho unitario)
+  d = B / 2   [m]   (asumiendo refuerzo centrado en el espesor)
+
+Acero requerido (igual que vigas, bloque Whitney):
+  a = Mu · 10³ / (0.90 · fy · 0.9 · d)   (primera iteración)
+  As = 0.85 · fc_mam · a / fy            (As en mm²/m)
+
+  fc_mam = fm (resistencia de la mampostería)
+
+Espaciamiento del refuerzo vertical:
+  s = As_barra / As_requerido × 1000   [mm]   (As_barra = área de la barra elegida)
+  s_max = min(1200 mm, 3·B)   (NSR-10 D.4.3 — mampostería reforzada)</div>
+
+<div class="nota">En muros de mampostería no estructural, el refuerzo vertical resiste los momentos sísmicos perpendiculares al plano del muro. El refuerzo horizontal (zunchos o refuerzo horizontal de mampostería) resiste el cortante en el plano.</div>
+
+<h2>8. Verificación de Cumplimiento</h2>
+<div class="formula">Flexión:
+  As_prov ≥ 0.9 × As_req   →   Adecuado
+  As_prov ≥ As_req          →   Cumple con margen
+
+Cortante:
+  Vu ≤ Vn                   →   Cumple</div>
+
+<div class="nota"><strong>ARCO considera adecuado un muro no estructural cuando el refuerzo provisto cubre al menos el 90% del requerido y cuando el cortante actuante no supera la resistencia del muro.</strong>
+El módulo verifica pisos independientemente, por lo que un muro puede cumplir en la mayoría de pisos y requerir revisión solo en los niveles donde las fuerzas sísmicas son mayores.</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:240px;">As_prov ≥ As_req y Vu ≤ Vn</th><td>Cumple completamente.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">0.9·As_req ≤ As_prov y Vu ≤ Vn</th><td><strong>Adecuado.</strong> El muro es apto para la demanda sísmica del nivel.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">As_prov &lt; 0.9·As_req o Vu &gt; Vn</th><td>No cumple. Aumentar espesor, refuerzo o revisar parámetros sísmicos.</td></tr>
+</table>
+</div>
+</body>
+</html>

@@ -1,0 +1,173 @@
+/* ARCO — Documentación */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  color: #2d2d2d;
+  background: #f4f4f4;
+  line-height: 1.6;
+}
+
+/* ── Header ── */
+.header {
+  background: #575756;
+  color: #fff;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 3px solid #3a7a3a;
+}
+.header img { height: 38px; }
+.header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.5px; }
+.header .modulo { font-size: 13px; opacity: 0.75; margin-top: 2px; }
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  background: #eaeaea;
+  padding: 7px 24px;
+  font-size: 12px;
+  color: #555;
+  border-bottom: 1px solid #d0d0d0;
+}
+.breadcrumb a { color: #3a7a3a; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* ── Layout ── */
+.container { max-width: 960px; margin: 0 auto; padding: 28px 32px 60px; }
+
+/* ── Secciones ── */
+h2 {
+  font-size: 18px;
+  color: #575756;
+  border-left: 4px solid #3a7a3a;
+  padding-left: 10px;
+  margin: 32px 0 14px;
+}
+h3 { font-size: 15px; color: #3d3d3d; margin: 22px 0 8px; }
+h4 { font-size: 13px; color: #555; margin: 14px 0 6px; font-weight: 600; }
+p { margin-bottom: 10px; }
+ul, ol { margin: 8px 0 12px 22px; }
+li { margin-bottom: 4px; }
+
+/* ── Cajas ── */
+.formula {
+  background: #eaf4fb;
+  border: 1px solid #b0d6ee;
+  border-left: 4px solid #2980b9;
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.norma {
+  background: #fef9e7;
+  border: 1px solid #f0d060;
+  border-left: 4px solid #e0a800;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.norma strong { color: #7a5800; }
+.nota {
+  background: #f0faf0;
+  border: 1px solid #9fd49f;
+  border-left: 4px solid #3a7a3a;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.advertencia {
+  background: #fff4f4;
+  border: 1px solid #f0a0a0;
+  border-left: 4px solid #c0392b;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+/* ── Tablas ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 13px;
+}
+th {
+  background: #575756;
+  color: #fff;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+}
+td { padding: 7px 12px; border-bottom: 1px solid #ddd; }
+tr:nth-child(even) td { background: #f9f9f9; }
+tr:hover td { background: #eef6ee; }
+
+/* ── Paso a paso ── */
+.paso {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 10px 0;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+.paso-num {
+  background: #575756;
+  color: #fff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.paso-texto { flex: 1; }
+
+/* ── Resultado card ── */
+.resultado-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin: 10px 0;
+}
+.resultado-card .titulo { font-weight: 700; color: #575756; margin-bottom: 6px; }
+
+/* ── Nav links ── */
+.nav-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 20px 0 10px;
+}
+.nav-links a {
+  background: #575756;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+.nav-links a:hover { background: #3a7a3a; }
+.nav-links a.activo { background: #3a7a3a; }
+
+/* ── Badge cumplimiento ── */
+.cumple { color: #1a7a1a; font-weight: 700; }
+.no-cumple { color: #c0392b; font-weight: 700; }
+.marginal { color: #d68910; font-weight: 700; }
+
+hr { border: none; border-top: 1px solid #ddd; margin: 28px 0; }

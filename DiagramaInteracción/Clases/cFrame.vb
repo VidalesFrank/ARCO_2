@@ -52,6 +52,13 @@ Public Class cFrame
     Private Sub OnDeserialized(ctx As StreamingContext)
         If _ejeApoyoI Is Nothing Then _ejeApoyoI = ""
         If _ejeApoyoJ Is Nothing Then _ejeApoyoJ = ""
+        If RefuerzoSuperior Is Nothing Then RefuerzoSuperior = New List(Of cRefuerzoTramo)
+        If RefuerzoInferior Is Nothing Then RefuerzoInferior = New List(Of cRefuerzoTramo)
+        If RevisionFlexion Is Nothing Then RevisionFlexion = New List(Of cRevisionFlexionZona)
+        If Redistribucion Is Nothing Then Redistribucion = New cRedistribucionFrame
+        If RefuerzoTransversal Is Nothing Then RefuerzoTransversal = New List(Of cRefuerzoTransversalZona)
+        If RevisionCortante Is Nothing Then RevisionCortante = New List(Of cRevisionCortanteZona)
+        ' CortantePlastico puede ser Nothing en proyectos viejos — se deja null, el código lo verifica antes de usar
     End Sub
 
     Public Overrides Function ToString() As String

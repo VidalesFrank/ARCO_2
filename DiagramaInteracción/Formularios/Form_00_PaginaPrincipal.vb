@@ -218,6 +218,11 @@ Public Class Form_00_PaginaPrincipal
 
     End Sub
 
+    Private Sub MenuDocumentacion_Click(sender As Object, e As EventArgs) Handles MenuDocumentacion.Click
+        Dim frm As New Form_Documentacion()
+        frm.Show()
+    End Sub
+
     Private Sub ToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem1.Click
         Try
             Dim Carpeta As String = My.Computer.FileSystem.CurrentDirectory
@@ -318,6 +323,11 @@ Public Class Form_00_PaginaPrincipal
             End If
 
             SincronizarModulos()
+
+            Dim nombreProyecto As String = If(Not String.IsNullOrWhiteSpace(proyecto.Info?.Nombre),
+                                              proyecto.Info.Nombre,
+                                              IO.Path.GetFileNameWithoutExtension(dlg.FileName))
+            Me.Text = "ARCO 2.0 — " & nombreProyecto
 
             If eraAntiguo Then
                 MessageBox.Show(

@@ -468,14 +468,14 @@ Public Class Form_02_00_PagInfoColumnas
 
                 '---- Verificación a Cortante -------
                 If Seccion.EsCircular Then
-                    Dim Rev_Cortante = FuncionCortanteCircular(Seccion.Diametro, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Math.Abs(Seccion.V2), Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V2))
+                    Dim Rev_Cortante = FuncionCortanteCircular(Seccion.Diametro, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Math.Abs(Seccion.V2), Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V2), Seccion.As_Sent_Largo)
                     Seccion.Vc_2 = Rev_Cortante(1) : Seccion.Vs_2 = Rev_Cortante(2)
                     Seccion.Vn_2 = Rev_Cortante(3) : Seccion.Vu_2 = Rev_Cortante(4) : Seccion.F_Cortante_2 = Rev_Cortante(5)
                     Seccion.Vc_3 = Rev_Cortante(1) : Seccion.Vs_3 = Rev_Cortante(2)
                     Seccion.Vn_3 = Rev_Cortante(3) : Seccion.Vu_3 = Rev_Cortante(4) : Seccion.F_Cortante_3 = Rev_Cortante(5)
                 Else
-                    Dim Rev_Cortante_L = FuncionCortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2))
-                    Dim Rev_Cortante_C = FuncionCortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3))
+                    Dim Rev_Cortante_L = FuncionCortante(Seccion.B_Plano, Seccion.H_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Largo, Math.Abs(Seccion.V2), Math.Abs(Seccion.Pu_V2), Seccion.As_Sent_Largo)
+                    Dim Rev_Cortante_C = FuncionCortante(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Numero_Barras_Estribo, Seccion.Num_Ramas_Corto, Math.Abs(Seccion.V3), Math.Abs(Seccion.Pu_V3), Seccion.As_Sent_Corto)
                     Seccion.Vc_2 = Rev_Cortante_L(1) : Seccion.Vs_2 = Rev_Cortante_L(2)
                     Seccion.Vn_2 = Rev_Cortante_L(3) : Seccion.Vu_2 = Rev_Cortante_L(4) : Seccion.F_Cortante_2 = Rev_Cortante_L(5)
                     Seccion.Vc_3 = Rev_Cortante_C(1) : Seccion.Vs_3 = Rev_Cortante_C(2)
@@ -484,10 +484,11 @@ Public Class Form_02_00_PagInfoColumnas
 
                 '------ Verificación al Confinamiento ------
                 If Seccion.EsCircular Then
-                    Dim Rev_Conf = FuncionConfinamientoCircular(Seccion.Diametro, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
+                    Dim Rev_Conf = FuncionConfinamientoCircular(Seccion.Diametro, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO", Proyecto.Elementos.Columnas.Trans_Circular)
                     Seccion.Ash_L = Rev_Conf(1) : Seccion.Ramas_Req_L = Rev_Conf(2) : Seccion.S0_L = Rev_Conf(3) : Seccion.L0_L = Rev_Conf(4)
                     Seccion.Ash_C = Rev_Conf(1) : Seccion.Ramas_Req_C = Rev_Conf(2) : Seccion.S0_C = Rev_Conf(3) : Seccion.L0_C = Rev_Conf(4)
-                    Dim aspReal As Single = Seccion.Ash_Col_Largo   ' = 1 * As_espiral
+                    ' Ash total = estribo circular principal + ganchos adicionales (Ramas Sentido Corto)
+                    Dim aspReal As Single = Seccion.Ash_Col_Largo + Seccion.Ash_Col_Corto
                     Seccion.F_Ash_Largo = Math.Round(If(Seccion.Ash_L > 0, aspReal / Seccion.Ash_L, 100), 2)
                     Seccion.F_Ash_Corto = Seccion.F_Ash_Largo
                 Else

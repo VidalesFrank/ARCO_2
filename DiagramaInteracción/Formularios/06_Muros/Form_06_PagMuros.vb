@@ -540,21 +540,18 @@ Public Class Form_06_PagMuros
         proyecto = Form_00_PaginaPrincipal.proyecto
         If proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then Return
         Combo_Elementos.Items.Clear()
-        Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Clear()
+        Form_06_01_ResultadosMuros.Combo_Elementos.Items.Clear()
         Rellenar_Columnas()
     End Sub
 
     Public Sub Rellenar_Columnas()
-        If proyecto.Elementos.Muros.Info_Diseño = True Then
-
-            For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
-                Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
-                Form_02_01_ResultadosColumnas.Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
-            Next
-
+        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
+            Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
+            Form_06_01_ResultadosMuros.Combo_Elementos.Items.Add(proyecto.Elementos.Muros.Lista_Muros(i).Name)
+        Next
+        If Combo_Elementos.Items.Count > 0 Then
             Combo_Elementos.Text = proyecto.Elementos.Muros.Lista_Muros(0).Name
         End If
-
     End Sub
 
     Private Sub ToolStripMenuItem6_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem6.Click
@@ -740,6 +737,7 @@ Public Class Form_06_PagMuros
 
         AddHandler _timerAutoSaveMuros.Tick, AddressOf AutoSaveMuros_Tick
         _timerAutoSaveMuros.Start()
+        RefrescarDesdeProyecto()
     End Sub
 
     Private Sub AutoSaveMuros_Tick(sender As Object, e As EventArgs)

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Pilas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Pilas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Pilas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="05_muros.html">← Muros</a>
+  <a href="07_nervios.html">Siguiente: Nervios →</a>
+  <a href="../criterios/04_pilas.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Pilas verifica pilotes de cimentación de concreto reforzado de sección circular bajo:</p>
+<ul>
+  <li><strong>Esfuerzos admisibles en el concreto</strong>: verificación de cargas axiales contra la capacidad de la sección circular de concreto.</li>
+  <li><strong>Capacidad de carga del suelo</strong>: carga de punta más fricción lateral.</li>
+  <li><strong>Diagrama de interacción</strong>: flexo-compresión biaxial para cargas de diseño con momentos.</li>
+  <li><strong>Cortante</strong>: verificación de la resistencia al cortante combinando concreto y refuerzo espiral.</li>
+</ul>
+<p>Las pilas pueden importarse como apoyos tipo Frame (columna de soporte) o tipo Pier (apoyo de muro), ambos existentes en ETABS.</p>
+
+<h2>Tipos de Pilas</h2>
+<table>
+  <tr><th>Tipo</th><th>Fuente en ETABS</th><th>Hoja</th></tr>
+  <tr><td>Frame</td><td>Apoyos en joints (reacciones de columnas de soporte)</td><td>Column Forces / Element Forces - Columns</td></tr>
+  <tr><td>Pier</td><td>Apoyos de muros Pier (reacciones en base del Pier)</td><td>Pier Forces</td></tr>
+</table>
+<p>ARCO detecta automáticamente si las reacciones provienen de un frame o un Pier y las importa en la lista unificada de pilas.</p>
+
+<h2>Parámetros Geométricos</h2>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>Df (diámetro del fuste)</td><td>m</td><td>Diámetro del cuerpo principal del pilote</td></tr>
+  <tr><td>Dc (diámetro del capitel)</td><td>m</td><td>Diámetro del ensanchamiento en la cabeza del pilote (0 = sin capitel)</td></tr>
+  <tr><td>L (longitud)</td><td>m</td><td>Longitud total del pilote desde la base de la viga de fundación hasta la punta</td></tr>
+  <tr><td>Sección hueca</td><td>Sí/No</td><td>Indica si el pilote es hueco. Si es hueco, se requiere el espesor del anillo.</td></tr>
+  <tr><td>Esp_Anillo</td><td>m</td><td>Espesor del anillo (solo para pilas huecas)</td></tr>
+</table>
+
+<h2>Parámetros de Refuerzo</h2>
+<table>
+  <tr><th>Parámetro</th><th>Descripción</th></tr>
+  <tr><td>Barra longitudinal (#N)</td><td>Calibre de las barras longitudinales</td></tr>
+  <tr><td>Cantidad de barras</td><td>Número total de barras longitudinales en la sección circular</td></tr>
+  <tr><td>Barra transversal (#N)</td><td>Calibre de la espiral o estribos helicoidales</td></tr>
+  <tr><td>Separación transversal</td><td>Paso de la espiral o separación de estribos [cm]</td></tr>
+  <tr><td>Recubrimiento</td><td>Recubrimiento libre hasta cara exterior del estribo [cm]</td></tr>
+</table>
+
+<h2>Parámetros de Suelo</h2>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>σ_adm (esfuerzo admisible)</td><td>kN/m²</td><td>Esfuerzo admisible en la punta del pilote (resistencia del suelo en la punta)</td></tr>
+  <tr><td>τ_fricción</td><td>kN/m²</td><td>Resistencia por fricción lateral unitaria del suelo sobre el pilote</td></tr>
+</table>
+
+<h2>Clasificación de Combinaciones</h2>
+<p>El módulo de pilas clasifica las combinaciones de carga en cinco categorías, cada una con su propio criterio de verificación:</p>
+<table>
+  <tr><th>Categoría</th><th>Descripción</th><th>Verificación</th></tr>
+  <tr><td>Gravitacionales servicio</td><td>Combinaciones de carga de servicio sin sismo (D+L)</td><td>Esfuerzo ≤ 0.25·fc·Ag</td></tr>
+  <tr><td>Gravitacionales diseño</td><td>Combinaciones amplificadas sin sismo (1.2D+1.6L)</td><td>Esfuerzo ≤ 0.35·fc·Ag</td></tr>
+  <tr><td>Sísmicas servicio</td><td>Combinaciones de servicio con sismo</td><td>Esfuerzo ≤ 0.33·fc·Ag</td></tr>
+  <tr><td>Sísmicas diseño</td><td>Combinaciones amplificadas con sismo</td><td>Esfuerzo ≤ 0.35·fc·Ag</td></tr>
+  <tr><td>Tracción</td><td>Combinaciones que producen tracción en la pila</td><td>Tracción ≤ 0.9·fy·As·N</td></tr>
+</table>
+
+<h2>Flujo de Trabajo en el Módulo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Importar desde ETABS</strong> — ARCO carga las reacciones en los apoyos (nodos de soporte) clasificadas como Frame o Pier.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Clasificar combinaciones</strong> — En el diálogo de combinaciones, asigne cada una a su categoría (gravitacional/sísmica, servicio/diseño, tracción).</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Ingresar geometría y refuerzo</strong> — Complete los parámetros de la pila: diámetros, longitud, barras longitudinales y transversales.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Ingresar parámetros de suelo</strong> — Defina el esfuerzo admisible en punta y la fricción lateral.</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Calcular</strong> — ARCO ejecuta los cinco tipos de verificación.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Revisar resultados en los tres tabs</strong> — Resumen, Capacidad de Carga y Cortante e Interacción.</div></div>
+
+<h2>Tres Tabs de Resultados</h2>
+
+<h3>Tab 1: Resumen</h3>
+<p>Tabla con todos los factores C/D agrupados por pila. Muestra en una sola fila:</p>
+<ul>
+  <li>C/D por esfuerzo gravitacional servicio (Check1)</li>
+  <li>C/D por esfuerzo sísmico servicio (Check2)</li>
+  <li>C/D por esfuerzo gravitacional diseño (Check3)</li>
+  <li>C/D por esfuerzo sísmico diseño (Check4)</li>
+  <li>C/D por tracción (Check5, si aplica)</li>
+  <li>C/D capacidad de suelo</li>
+  <li>C/D diagrama de interacción</li>
+  <li>C/D cortante</li>
+</ul>
+
+<h3>Tab 2: Capacidad de Carga</h3>
+<p>Detalle del cálculo de capacidad de carga del suelo:</p>
+<ul>
+  <li>Área de la punta: Ag_C = π·Dc²/4 (o π·Df²/4 si no hay capitel)</li>
+  <li>Q_punta = σ_adm × Ag_C [kN]</li>
+  <li>Perímetro del fuste: π × Df × L</li>
+  <li>Q_fricción = τ_fricción × Perímetro [kN]</li>
+  <li>Q_total = Q_punta + Q_fricción [kN]</li>
+  <li>C/D suelo = Q_total / P_servicio_máx</li>
+</ul>
+
+<h3>Tab 3: Cortante e Interacción</h3>
+<p>Diagrama de interacción circular P-M y verificación por cortante:</p>
+<ul>
+  <li>Vista del diagrama de interacción con los puntos de demanda de las combinaciones de diseño.</li>
+  <li>Vc calculado según NSR-10 fórmulas C.11-3 y C.11-4 (el menor de los dos).</li>
+  <li>Vs calculado con el refuerzo transversal espiral.</li>
+  <li>Factor C/D por cortante para la combinación gobernante.</li>
+</ul>
+
+<h2>Vista en Planta</h2>
+<p>El módulo de pilas incluye una vista en planta GDI+ que muestra la posición de cada pila en el modelo según sus coordenadas X-Y importadas de ETABS. Las pilas se colorean según su factor C/D mínimo (verde/naranja/rojo), lo que permite identificar visualmente las pilas críticas en planta.</p>
+</div>
+</body>
+</html>

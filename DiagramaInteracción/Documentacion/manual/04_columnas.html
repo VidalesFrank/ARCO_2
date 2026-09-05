@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Columnas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Columnas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Columnas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="03_vigas.html">← Vigas</a>
+  <a href="05_muros.html">Siguiente: Muros →</a>
+  <a href="../criterios/02_columnas.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Columnas verifica elementos bajo <strong>flexo-compresión biaxial</strong> mediante el diagrama de interacción P-M. ARCO construye el diagrama por compatibilidad de deformaciones y verifica cada combinación de diseño mediante el criterio de Bresler lineal.</p>
+<p>El módulo maneja dos tipos de columnas que pueden coexistir en un mismo proyecto:</p>
+<ul>
+  <li><strong>Frame</strong>: columnas modeladas como elementos Frame en ETABS (con fuerzas en "Column Forces" o "Element Forces - Columns").</li>
+  <li><strong>Pier</strong>: pilares de muros o columnas robustas modeladas como Pier en ETABS (con fuerzas en "Pier Forces").</li>
+</ul>
+
+<h2>Requisitos ETABS</h2>
+<table>
+  <tr><th>Dato</th><th>Hoja E17</th><th>Hoja E23</th><th>Tipo</th></tr>
+  <tr><td>Fuerzas en columnas</td><td>Column Forces</td><td>Element Forces - Columns</td><td>Frame</td></tr>
+  <tr><td>Fuerzas en Pier</td><td>Pier Forces</td><td>Pier Forces</td><td>Pier</td></tr>
+  <tr><td>Secciones asignadas</td><td>Frame Assignments - Sections</td><td>Frame Assigns - Sect Prop</td><td>Frame</td></tr>
+</table>
+
+<h2>Parámetros de Entrada del Usuario</h2>
+
+<h3>Sección Transversal</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>B (ancho en plano)</td><td>cm</td><td>Dimensión de la sección en la dirección del eje 2 (M2)</td></tr>
+  <tr><td>H (altura en plano)</td><td>cm</td><td>Dimensión de la sección en la dirección del eje 3 (M3)</td></tr>
+  <tr><td>Recubrimiento</td><td>cm</td><td>Recubrimiento libre hasta cara exterior del estribo</td></tr>
+  <tr><td>fc</td><td>MPa</td><td>Resistencia a compresión del concreto</td></tr>
+  <tr><td>fy</td><td>MPa</td><td>Esfuerzo de fluencia del acero longitudinal</td></tr>
+</table>
+
+<h3>Refuerzo Longitudinal</h3>
+<table>
+  <tr><th>Parámetro</th><th>Descripción</th></tr>
+  <tr><td>Número total de barras</td><td>Cantidad total de barras longitudinales en la sección. ARCO las distribuye automáticamente con 4 en esquinas + intermedias proporcionales por cara.</td></tr>
+  <tr><td>Calibre de barra (#N)</td><td>Calibre único de las barras longitudinales. Se aplica a todas las barras de la sección.</td></tr>
+</table>
+<div class="nota">ARCO usa la función DistribuirBarrasConEsquinas que garantiza siempre 4 barras en las esquinas de la sección. Las barras intermedias se distribuyen proporcionalmente por cada cara.</div>
+
+<h2>Flujo de Trabajo en el Módulo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Importar desde ETABS</strong> — Botón "Importar ETABS". ARCO detecta automáticamente qué columnas son Frame y cuáles son Pier, y carga sus fuerzas por combinación.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Seleccionar combinaciones de diseño</strong> — Abra el diálogo de combinaciones antes de calcular. Las combinaciones de columnas son independientes de las de vigas y muros.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Ingresar datos de la sección</strong> — Seleccione la columna en la tabla e ingrese B, H, recubrimiento, fc, fy, número y calibre de barras.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Calcular diagrama de interacción</strong> — ARCO construye el DI 2D (en el eje 3 y en el eje 2) y calcula el factor Bresler para cada combinación.</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Revisar resultados</strong> — El formulario muestra la combinación gobernante, el C/D mínimo y el diagrama de interacción con los puntos de demanda graficados.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Ver DI 3D (opcional)</strong> — Abra el formulario de diagrama biaxial 3D para visualizar la superficie P-M3-M2 completa y la posición de todas las combinaciones.</div></div>
+
+<h2>Formulario DI 2D — Form_02_02_DiagramaColumna</h2>
+<p>Muestra el diagrama de interacción en dos planos:</p>
+<ul>
+  <li><strong>Eje 3 (fuerte)</strong>: diagrama P (kN) vs φMn3 (kN·m). En este plano se grafica Pu vs Mu3 de cada combinación.</li>
+  <li><strong>Eje 2 (débil)</strong>: diagrama P (kN) vs φMn2 (kN·m). En este plano se grafica Pu vs Mu2.</li>
+</ul>
+<p>La tabla inferior lista todas las combinaciones de diseño con:</p>
+<table>
+  <tr><th>Columna</th><th>Descripción</th></tr>
+  <tr><td>Combinación</td><td>Nombre de la combinación de carga</td></tr>
+  <tr><td>Pu</td><td>Carga axial de diseño [kN] (positivo = compresión)</td></tr>
+  <tr><td>Mu3</td><td>Momento flector en eje 3 [kN·m]</td></tr>
+  <tr><td>Mu2</td><td>Momento flector en eje 2 [kN·m]</td></tr>
+  <tr><td>φMn3(Pu)</td><td>Capacidad interpolada en eje 3 a nivel de Pu [kN·m]</td></tr>
+  <tr><td>φMn2(Pu)</td><td>Capacidad interpolada en eje 2 a nivel de Pu [kN·m]</td></tr>
+  <tr><td>F_Bresler</td><td>D/C según criterio Bresler lineal</td></tr>
+  <tr><td>C/D</td><td>Capacidad sobre demanda = 1 / F_Bresler</td></tr>
+</table>
+
+<h2>Formulario DI 3D — Form_02_03_DI_3D</h2>
+<p>Visualiza la superficie de interacción biaxial P-M3-M2 en tres dimensiones:</p>
+<ul>
+  <li>La superficie se construye variando el ángulo θ del eje neutro desde 0° hasta 360° para múltiples niveles de P.</li>
+  <li>Cada combinación de diseño se representa como un punto (Pu, Mu3, Mu2) en el espacio.</li>
+  <li>El color del punto indica el estado de verificación según el criterio elíptico:</li>
+</ul>
+<table>
+  <tr><th>Color</th><th>Criterio elíptico DC_e</th><th>Significado</th></tr>
+  <tr><td style="background:#c6efce">Verde</td><td>DC_e ≤ 1.0</td><td>Cumple</td></tr>
+  <tr><td style="background:#ffeb9c">Naranja</td><td>1.0 &lt; DC_e ≤ 1.1</td><td>Marginal (10% de tolerancia)</td></tr>
+  <tr><td style="background:#ffc7ce">Rojo</td><td>DC_e &gt; 1.1</td><td>No cumple</td></tr>
+</table>
+<p>El formulario permite rotar la superficie interactivamente para analizar la posición de los puntos desde cualquier ángulo.</p>
+
+<h2>Resultados Principales</h2>
+<p>Los resultados clave que ARCO reporta para cada columna son:</p>
+<table>
+  <tr><th>Resultado</th><th>Descripción</th></tr>
+  <tr><td>F_Interaccion</td><td>D/C según criterio Bresler. Un valor &lt; 1.0 indica cumplimiento como uniaxial; sin embargo, ARCO reporta C/D = 1/F_Interaccion.</td></tr>
+  <tr><td>C/D = 1/F_Interaccion</td><td>Factor de cumplimiento mostrado al usuario. Valor ≥ 1.0 cumple; ≥ 0.9 tolerable.</td></tr>
+  <tr><td>Combo_Gobernante</td><td>Combinación de carga que produce el mayor D/C (menor C/D), es decir, la condición más crítica.</td></tr>
+</table>
+
+<h2>Formulario de Resultados — Form_02_01_ResultadosColumnas</h2>
+<p>Tabla resumen con todos los tramos de columna y sus factores C/D. Las celdas se colorean automáticamente:</p>
+<ul>
+  <li>Verde: C/D ≥ 1.0</li>
+  <li>Naranja: 0.9 ≤ C/D &lt; 1.0</li>
+  <li>Rojo: C/D &lt; 0.9</li>
+</ul>
+<p>Desde este formulario se puede exportar el reporte completo a Excel, incluyendo la tabla de combinaciones y los diagramas de interacción.</p>
+
+<h2>Exportación a Excel</h2>
+<p>El reporte de columnas exportado incluye:</p>
+<ul>
+  <li>Información geométrica de cada columna (B, H, fc, fy, refuerzo).</li>
+  <li>Tabla de combinaciones con Pu, Mu3, Mu2 y C/D por Bresler.</li>
+  <li>Factor C/D mínimo y combinación gobernante.</li>
+  <li>Imagen del diagrama de interacción 2D (opcional).</li>
+</ul>
+</div>
+</body>
+</html>

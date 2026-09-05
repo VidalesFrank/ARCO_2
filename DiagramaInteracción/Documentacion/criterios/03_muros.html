@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Muros</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Muros</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Muros</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/05_muros.html">Manual de Muros</a>
+  <a href="02_columnas.html">← Columnas</a>
+  <a href="04_pilas.html">Pilas →</a>
+</div>
+
+<h2>1. Flexo-compresión</h2>
+<p>El análisis de flexo-compresión en muros sigue la misma metodología de compatibilidad de deformaciones que las columnas, aplicado a la sección transversal del muro (incluyendo alma y elementos de borde).</p>
+
+<h3>1.1 Diagrama de Interacción del Muro</h3>
+<div class="formula">Para cada posición del eje neutro c (varía de 0 a Lw):
+
+  ε_u = 0.003   en la fibra comprimida extrema
+
+  Para cada barra i del refuerzo vertical distribuido y EB:
+    εᵢ = (c - xᵢ) / c × ε_u   (xᵢ = posición desde fibra comprimida)
+    fᵢ = max(-fy, min(fy, Es·εᵢ))
+
+  Cc = 0.85 · fc · tw · min(a, Lw)   con a = β₁·c   [kN]
+
+  Pn = Cc + Σ(Asi·fᵢ)   [kN]
+  Mn = Cc·(Lw/2 - a/2) + Σ(Asi·fᵢ·(Lw/2 - xᵢ))   [kN·m]</div>
+
+<h3>1.2 Factor de reducción φ</h3>
+<p>Igual que columnas: φ = 0.65 para compresión controlada, transición lineal hasta φ = 0.90 para tensión controlada (ε_t ≥ 0.005).</p>
+
+<h3>1.3 Verificación de demanda</h3>
+<div class="formula">Para cada combinación de diseño:
+  Pu, Mu (del análisis ETABS, Pier Forces)
+
+Factor_Demanda_Flexo = DI_Bresler (similar a columnas)
+C/D = 1 / Factor_Demanda_Flexo   ≥ 0.9 para cumplir</div>
+
+<h2>2. Cortante</h2>
+<div class="norma"><strong>NSR-10 C.11.9 y C.21.9.4</strong></div>
+
+<h3>2.1 Límite de esfuerzo para cuantías mínimas</h3>
+<div class="formula">V_lim = 0.083 · tw · Lw · √fc · 1000   [kN]
+(tw y Lw en m, fc en MPa)
+
+Si Vu ≤ V_lim:
+  ρh_min = 0.0012   (0.12%)
+  ρv_min = 0.0020   (0.20%)
+
+Si Vu &gt; V_lim:
+  ρh_min = 0.0025   (0.25%)
+  ρv_min = 0.0025   (0.25%)</div>
+
+<h3>2.2 Resistencia al cortante</h3>
+<div class="formula">Vc = 0.75 · 0.17 · tw · Lw · √fc · 1000   [kN]
+Vs = 0.75 · tw · Lw · ρh · fy · 1000      [kN]
+φVn = Vc + Vs   [kN]
+
+C/D_cortante = φVn / Vu   ≥ 0.9 para cumplir</div>
+<div class="nota">En la fórmula de Vc, el factor 0.75 es el φ de cortante y ya está incluido. En ARCO, Vc y Vs se calculan directamente como φ×capacidad nominal para simplificar la presentación.</div>
+
+<h3>2.3 Vu de diseño</h3>
+<p>El cortante de diseño Vu se toma como el máximo valor absoluto entre todas las combinaciones de diseño seleccionadas:</p>
+<div class="formula">sec.Vu = combsD.Max(Function(c) Math.Abs(c.V2))
+
+Este cálculo se realiza en Obtencion_Macroparametros(), después de seleccionar las combinaciones de diseño.</div>
+
+<h2>3. Elementos de Borde</h2>
+<div class="norma"><strong>NSR-10 C.21.9.6</strong></div>
+
+<h3>3.1 Criterio de esfuerzo máximo</h3>
+<div class="formula">Esfuerzo máximo en la fibra comprimida:
+  σ_max = Pu/(Ag) + Mu·(Lw/2) / Ig   [MPa]
+
+Límite según nivel de ductilidad:
+  Para DUO:  σ_adm = 0.2·fc
+  Para DMO:  σ_adm = 0.3·fc
+
+Si σ_max > σ_adm / 0.9 → Requiere elemento de borde especial</div>
+
+<h3>3.2 Longitud requerida del elemento de borde</h3>
+<div class="formula">c = profundidad del eje neutro bajo las cargas máximas de compresión
+
+L_EB_req = max(c - 0.1·Lw,  c/2)   [m]
+
+Verificación de longitud provista:
+  L_EB_prov ≥ L_EB_req × 0.9   (factor de tolerancia)</div>
+
+<h3>3.3 Criterio de deformación (eje neutro)</h3>
+<div class="formula">Límite de profundidad del eje neutro:
+  C_lim = Lw / (600 · (Du/Hw))
+
+Derivas mínimas consideradas:
+  DUO: du_hw_min = 0.0075
+  DMO: du_hw_min = 0.0035
+  (Se toma el mayor de du/hw_real y du_hw_min)
+
+Si C ≤ C_lim / 0.9 → No requiere EB por deformación (cumple)
+Si C &gt; C_lim / 0.9 → Requiere EB especial por deformación</div>
+
+<h2>4. Criterio de Cumplimiento General</h2>
+<div class="formula">Para que el muro sea adecuado, todos los factores deben ser ≥ 0.9:
+
+  C/D_flexión       = (C/D Bresler)              ≥ 0.9
+  C/D_cortante      = φVn / Vu                   ≥ 0.9
+  L_EB_prov / L_EB_req                           ≥ 0.9   (si requiere EB especial)</div>
+
+<div class="nota"><strong>ARCO considera adecuado un muro cuando C/D ≥ 0.9 en todos sus estados de verificación.</strong>
+Un C/D entre 0.9 y 1.0 indica que el muro con el refuerzo colocado es apto para las demandas de flexo-compresión, cortante y elementos de borde. No requiere modificación.</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:220px;">Verde — C/D ≥ 1.0</th><td>Cumple. El muro tiene reserva de resistencia.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">Naranja — 0.9 ≤ C/D &lt; 1.0</th><td><strong>Cumple — Adecuado.</strong> El muro es apto para la demanda. No requiere modificación.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">Rojo — C/D &lt; 0.9</th><td>No cumple. Revisar refuerzo distribuido, elementos de borde o espesor del muro.</td></tr>
+</table>
+
+<h2>5. Cuantías Mínimas de Refuerzo</h2>
+<div class="norma"><strong>NSR-10 C.11.9.2</strong></div>
+<table>
+  <tr><th>Caso</th><th>ρh mínimo</th><th>ρv mínimo</th></tr>
+  <tr><td>Vu ≤ 0.083·tw·Lw·√fc·1000</td><td>0.0012 (0.12%)</td><td>0.0020 (0.20%)</td></tr>
+  <tr><td>Vu &gt; 0.083·tw·Lw·√fc·1000</td><td>0.0025 (0.25%)</td><td>0.0025 (0.25%)</td></tr>
+</table>
+<div class="nota">ARCO alerta cuando las cuantías ingresadas son menores a los mínimos requeridos según el nivel de cortante del muro.</div>
+
+<h2>6. Refuerzo del Elemento de Borde</h2>
+<div class="norma"><strong>NSR-10 C.21.9.6.4</strong></div>
+<p>El elemento de borde especial requiere:</p>
+<ul>
+  <li>Cuantía mínima de refuerzo longitudinal: ρ_EB ≥ 0.005 (0.5%)</li>
+  <li>Refuerzo transversal de confinamiento (igual que columnas en zona de articulación plástica): estribos cerrados o espiral</li>
+  <li>Separación de estribos en EB: s ≤ min(b_EB/4, 150 mm, 6·Ø_barra_long)</li>
+  <li>Extensión vertical del EB: al menos hw/6, Lw, o lu/16 por encima y debajo del nivel donde se requiere</li>
+</ul>
+</div>
+</body>
+</html>

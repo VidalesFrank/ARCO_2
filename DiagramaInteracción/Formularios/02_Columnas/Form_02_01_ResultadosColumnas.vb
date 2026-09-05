@@ -43,8 +43,14 @@ Public Class Form_02_01_ResultadosColumnas
             Tabla_Resultados.Rows(i + 1).Cells(9).Value = Seccion(i / 2).Vu_3
             Tabla_Resultados.Rows(i).Cells(10).Value = Seccion(i / 2).F_Cortante_2
             Tabla_Resultados.Rows(i + 1).Cells(10).Value = Seccion(i / 2).F_Cortante_3
-            Tabla_Resultados.Rows(i).Cells(11).Value = Seccion(i / 2).Ash_Col_Largo
-            Tabla_Resultados.Rows(i + 1).Cells(11).Value = Seccion(i / 2).Ash_Col_Corto
+            Dim ashProvDGV As Single = If(Seccion(i / 2).EsCircular,
+                                          Seccion(i / 2).Ash_Col_Largo + Seccion(i / 2).Ash_Col_Corto,
+                                          Seccion(i / 2).Ash_Col_Largo)
+            Dim ashProvDGVC As Single = If(Seccion(i / 2).EsCircular,
+                                           Seccion(i / 2).Ash_Col_Largo + Seccion(i / 2).Ash_Col_Corto,
+                                           Seccion(i / 2).Ash_Col_Corto)
+            Tabla_Resultados.Rows(i).Cells(11).Value = ashProvDGV
+            Tabla_Resultados.Rows(i + 1).Cells(11).Value = ashProvDGVC
             Tabla_Resultados.Rows(i).Cells(12).Value = Math.Round(Seccion(i / 2).Ash_L, 0)
             Tabla_Resultados.Rows(i + 1).Cells(12).Value = Math.Round(Seccion(i / 2).Ash_C, 0)
             Tabla_Resultados.Rows(i).Cells(13).Value = Seccion(i / 2).F_Ash_Largo
@@ -86,7 +92,7 @@ Public Class Form_02_01_ResultadosColumnas
                 Dim cdValObj As Object = Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value
                 If cdValObj IsNot Nothing Then
                     Dim cdVal As Single = CSng(cdValObj)
-                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, If(cdVal >= 1.0F, "Cumple", "No cumple"))
+                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, If(cdVal >= 0.9F, "Cumple", "No cumple"))
                 End If
             End If
         Next
@@ -257,8 +263,10 @@ Public Class Form_02_01_ResultadosColumnas
                     Hoja_Resultados.Cells(g, 12) = Math.Round(Math.Max(Tramo.L0_C, Tramo.L0_L), 2)
                     Hoja_Resultados.Cells(g, 13) = "Largo"
                     Hoja_Resultados.Cells(g + 1, 13) = "Corto"
-                    Hoja_Resultados.Cells(g, 14) = Tramo.Ash_Col_Largo
-                    Hoja_Resultados.Cells(g + 1, 14) = Tramo.Ash_Col_Corto
+                    Dim ashProvXL As Single = If(Tramo.EsCircular, Tramo.Ash_Col_Largo + Tramo.Ash_Col_Corto, Tramo.Ash_Col_Largo)
+                    Dim ashProvXLC As Single = If(Tramo.EsCircular, Tramo.Ash_Col_Largo + Tramo.Ash_Col_Corto, Tramo.Ash_Col_Corto)
+                    Hoja_Resultados.Cells(g, 14) = ashProvXL
+                    Hoja_Resultados.Cells(g + 1, 14) = ashProvXLC
                     Hoja_Resultados.Cells(g, 15) = Math.Round(Tramo.Ash_L, 0)
                     Hoja_Resultados.Cells(g + 1, 15) = Math.Round(Tramo.Ash_C, 0)
                     Hoja_Resultados.Cells(g, 16) = Math.Round(Tramo.F_Ash_Largo, 2)

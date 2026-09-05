@@ -49,18 +49,59 @@ Public Class Form_09_Vigas
 
             _cargando = True
 
-            Dim Joints = Proyecto.Elementos.Joints
-            Dim Frames = Proyecto.Elementos.Frames
+            ' Si el DataTable original está almacenado, re-procesar con el algoritmo
+            ' corregido (incluye el tercer fallback para joints complejos) para recuperar
+            ' frames de pisos como P1, P10-P13 que versiones anteriores descartaban.
+            If Proyecto.TablasEtabs?.TablaOEFrames?.Rows.Count > 0 Then
+                Dim framesRefrescados = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
+                If framesRefrescados.Count <> Proyecto.Elementos.Vigas.Frames.Count Then
+                    ' Índice por Story+Label (coincidencia exacta)
+                    Dim dicSec As New Dictionary(Of String, cSeccion)(StringComparer.OrdinalIgnoreCase)
+                    ' Índice por Label sólo (herencia entre pisos con el mismo nombre de barra)
+                    Dim dicSecLabel As New Dictionary(Of String, cSeccion)(StringComparer.OrdinalIgnoreCase)
+                    For Each f In Proyecto.Elementos.Vigas.Frames
+                        If f.Section Is Nothing Then Continue For
+                        Dim k = $"{f.Story}|{f.ObjectLabel}".ToUpperInvariant()
+                        If Not dicSec.ContainsKey(k) Then dicSec(k) = f.Section
+                        Dim lbl = f.ObjectLabel.Trim().ToUpperInvariant()
+                        If Not dicSecLabel.ContainsKey(lbl) Then dicSecLabel(lbl) = f.Section
+                    Next
+                    For Each f In framesRefrescados
+                        Dim k = $"{f.Story}|{f.ObjectLabel}".ToUpperInvariant()
+                        Dim sec As cSeccion = Nothing
+                        If dicSec.TryGetValue(k, sec) Then
+                            f.Section = sec
+                        ElseIf dicSecLabel.TryGetValue(f.ObjectLabel.Trim().ToUpperInvariant(), sec) Then
+                            f.Section = sec   ' mismo label en otro piso → misma sección
+                        End If
+                    Next
+                    Proyecto.Elementos.Vigas.Frames = framesRefrescados
+                End If
+            End If
 
-            ' Filtrar frames tipo beam y aplicar filtro de secciones del usuario
+            Dim Joints = Proyecto.Elementos.Vigas.Joints
+            Dim Frames = Proyecto.Elementos.Vigas.Frames
+
+            ' Filtrar frames tipo beam y aplicar filtro de secciones del usuario.
+            ' Los frames que pertenecen a grupos de réplica se incluyen siempre para que
+            ' la agrupación funcione aunque el filtro de secciones los excluya.
             Dim seccFiltro = Proyecto.Elementos.Vigas.SeccionesSeleccionadas
+            Dim grupoLabels As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            If Proyecto.Elementos.Vigas.GruposReplica IsNot Nothing Then
+                For Each gr In Proyecto.Elementos.Vigas.GruposReplica
+                    For Each lbl In gr.Labels_Patron
+                        grupoLabels.Add(lbl.Trim())
+                    Next
+                Next
+            End If
             Dim beams As List(Of cFrame) = Frames _
                 .Where(Function(f) f.ObjectLabel.StartsWith("B", StringComparison.OrdinalIgnoreCase)) _
                 .Where(Function(f) seccFiltro.Count = 0 OrElse
+                                   grupoLabels.Contains(f.ObjectLabel.Trim()) OrElse
                                    (f.Section IsNot Nothing AndAlso seccFiltro.Contains(f.Section.Nombre))) _
                 .ToList()
 
-            Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
+            Dim jointsDict As Dictionary(Of String, cJoint) = Proyecto.Elementos.Vigas.Joints.ToDictionary(Function(j) j.ElementLabel)
 
             ' 2. Generar vigas a partir de joints y frames
             Dim vigas As List(Of cViga) = _vigaService.GenerarVigas(beams, jointsDict)
@@ -80,6 +121,21 @@ Public Class Form_09_Vigas
                 _vigaService.AplicarGruposManual(vigas, Proyecto.Elementos.Vigas.GruposManual, jointsDict)
             End If
 
+            ' Reaplicar grupos de réplica patrón/similar
+            If Proyecto.Elementos.Vigas.GruposReplica IsNot Nothing AndAlso
+               Proyecto.Elementos.Vigas.GruposReplica.Count > 0 Then
+                _vigaService.AplicarGruposReplicaEnVigas(vigas, Proyecto.Elementos.Vigas.GruposReplica, jointsDict)
+            End If
+
+            ' Eje paralelo (eje que la viga "sigue") y nombres significativos
+            If gridsEjes IsNot Nothing AndAlso gridsEjes.Count > 0 Then
+                _geo.AsignarEjesParalelosAVigas(vigas, gridsEjes, jointsDict)
+            End If
+            _vigaService.GenerarNombresPlano(vigas, Proyecto.Elementos.Vigas.PrefijoNombreViga)
+
+            ' Propagar NombrePlano del patrón a sus similares (después de GenerarNombresPlano)
+            PropagateNombresGrupo(vigas, Proyecto.Elementos.Vigas.GruposReplica)
+
             Proyecto.Elementos.Vigas.Vigas = vigas
 
             _vigas = vigas
@@ -98,7 +154,7 @@ Public Class Form_09_Vigas
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End If
 
-            _vigaService.designVigas(vigas, Proyecto.Elementos.Joints)
+            _vigaService.designVigas(vigas, Proyecto.Elementos.Vigas.Joints)
 
             _vigaService.AsignarRefuerzoTransversalAutomatico(vigas)
 
@@ -113,48 +169,39 @@ Public Class Form_09_Vigas
 
             TriggerCortantePlastico(vigas)
 
-            Lista_Vigas.DataSource = Nothing
-            Lista_Vigas.DataSource = vigas
-            Lista_Vigas.DisplayMember = "Nombre"
-
             Dim stories As List(Of String) = Frames.Select(Function(f) f.Story).Distinct().OrderBy(Function(s) s).ToList()
 
             Lista_Pisos.DataSource = Nothing
             Lista_Pisos.DataSource = stories
 
-            ' 🔥 FORZAR SELECCIÓN
-            If vigas.Count > 0 Then
-                Lista_Vigas.SelectedIndex = 0
-            End If
+            ' Mostrar solo las vigas del primer piso en la lista
+            Dim pisoInicial As String = If(stories.Count > 0, stories(0), "")
+            Dim vigasPisoI = If(pisoInicial <> "",
+                                vigas.Where(Function(v) v.Piso = pisoInicial).ToList(),
+                                vigas)
+
+            Lista_Vigas.DataSource = Nothing
+            Lista_Vigas.DataSource = vigasPisoI
+            Lista_Vigas.DisplayMember = "NombreDisplay"
+
+            If vigasPisoI.Count > 0 Then Lista_Vigas.SelectedIndex = 0
 
             _cargando = False
 
-            ' 🔥 LLAMADA MANUAL (CLAVE)
+            ' Carga manual inicial (el evento SelectedIndexChanged está bloqueado por _cargando)
             Dim vigaSel As cViga = TryCast(Lista_Vigas.SelectedItem, cViga)
-
             If vigaSel IsNot Nothing Then
-
                 _vigaActual = vigaSel
-
-                Dim piso = vigaSel.Piso
-                Dim index = Lista_Pisos.Items.IndexOf(piso)
-
-                If index >= 0 Then
-                    Lista_Pisos.SelectedIndex = index
-                End If
+                _cargando = True
+                Nombre_Viga.Text = If(String.IsNullOrWhiteSpace(vigaSel.NombrePlano), vigaSel.Nombre, vigaSel.NombrePlano)
+                _cargando = False
 
                 Dim grids = Proyecto?.Elementos?.Grids?.GridLines
-                If grids Is Nothing Then Exit Sub
-
-                _DiagramaService.DibujarPlanta(PictureBox1,
-                                       _vigas,
-                                       _joints,
-                                       grids,
-                                       Lista_Pisos.SelectedItem.ToString(),
-                                       vigaSel)
-
+                If grids IsNot Nothing Then
+                    _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids,
+                                                   Lista_Pisos.SelectedItem?.ToString(), vigaSel)
+                End If
                 CargarVigaCompleta(vigaSel)
-
             End If
 
             MessageBox.Show("Proceso finalizado correctamente", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
@@ -169,34 +216,36 @@ Public Class Form_09_Vigas
 
     Private Sub Lista_Pisos_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Lista_Pisos.SelectedIndexChanged
 
+        If _cargando Then Exit Sub
         If Me.DesignMode Then Return
-
-        ' 🔹 validar piso
         If Lista_Pisos.SelectedItem Is Nothing Then Exit Sub
-
-        ' 🔹 validar viga (MUY IMPORTANTE)
-        Dim vigaSel As cViga = TryCast(Lista_Vigas.SelectedItem, cViga)
-
-        ' puede ser Nothing si el evento se dispara antes
-        If vigaSel Is Nothing Then Exit Sub
-
-        ' 🔹 validar datos base
         If _vigas Is Nothing OrElse _vigas.Count = 0 Then Exit Sub
         If _joints Is Nothing OrElse _joints.Count = 0 Then Exit Sub
 
-        ' 🔹 validar grids
-        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
-        If grids Is Nothing Then Exit Sub
+        Dim pisoSel = Lista_Pisos.SelectedItem.ToString()
 
-        ' 🔹 dibujar
-        _DiagramaService.DibujarPlanta(
-                                    PictureBox1,
-                                    _vigas,
-                                    _joints,
-                                    grids,
-                                    Lista_Pisos.SelectedItem.ToString(),
-                                    vigaSel
-                                )
+        ' Filtrar lista de vigas al piso seleccionado
+        Dim vigasPiso = _vigas.Where(Function(v) v.Piso = pisoSel).ToList()
+        _cargando = True
+        Lista_Vigas.DataSource = Nothing
+        Lista_Vigas.DataSource = vigasPiso
+        Lista_Vigas.DisplayMember = "NombreDisplay"
+        If vigasPiso.Count > 0 Then Lista_Vigas.SelectedIndex = 0
+        _cargando = False
+
+        Dim vigaSel = TryCast(Lista_Vigas.SelectedItem, cViga)
+        If vigaSel Is Nothing Then Exit Sub
+
+        _vigaActual = vigaSel
+        _cargando = True
+        Nombre_Viga.Text = If(String.IsNullOrWhiteSpace(vigaSel.NombrePlano), vigaSel.Nombre, vigaSel.NombrePlano)
+        _cargando = False
+
+        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+        If grids IsNot Nothing Then
+            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel)
+        End If
+        CargarVigaCompleta(vigaSel)
 
     End Sub
 
@@ -216,26 +265,24 @@ Public Class Form_09_Vigas
                     ' Detectar hojas disponibles (E23 vs E17)
                     Dim hojas = ObtenerHojasExcel(path)
 
-                    If Proyecto.Elementos.Frames.Count = 0 Then
-                        Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
-                        Dim hFrames = ResolverNombreHoja(hojas, "Objects and Elements - Frames", "Connectivity - Frame")
-                        Proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(path, hJoints)
-                        Proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(path, hFrames)
+                    ' Vigas siempre reimporta su propia geometría — independiente de otros módulos
+                    Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
+                    Dim hFrames = ResolverNombreHoja(hojas, "Objects and Elements - Frames", "Connectivity - Frame")
+                    Proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(path, hJoints)
+                    Proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(path, hFrames)
 
-                        Proyecto.Elementos.Joints = DataTableToJoints(Proyecto.TablasEtabs.TablaOEJoints)
-                        Proyecto.Elementos.Frames = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
+                    Proyecto.Elementos.Vigas.Joints = DataTableToJoints(Proyecto.TablasEtabs.TablaOEJoints)
+                    Proyecto.Elementos.Vigas.Frames = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
 
-                        Dim hAsigFrame = ResolverNombreHoja(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
-                        Dim hSecDef = ResolverNombreHoja(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
-                        Dim hMaterial = ResolverNombreHoja(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
+                    Dim hAsigFrame = ResolverNombreHoja(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
+                    Dim hSecDef = ResolverNombreHoja(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
+                    Dim hMaterial = ResolverNombreHoja(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
 
-                        Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, hAsigFrame)
-                        Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, hSecDef)
-                        Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, hMaterial)
+                    Dim Data_Asig_Frame As DataTable = LeerHojaExcel(path, hAsigFrame)
+                    Dim Data_Frame_Section As DataTable = LeerHojaExcel(path, hSecDef)
+                    Dim Data_Material_Concrete As DataTable = LeerHojaExcel(path, hMaterial)
 
-                        DataTableToAsignFrame(Proyecto.Elementos.Frames, Data_Asig_Frame, Data_Frame_Section, Data_Material_Concrete)
-
-                    End If
+                    DataTableToAsignFrame(Proyecto.Elementos.Vigas.Frames, Data_Asig_Frame, Data_Frame_Section, Data_Material_Concrete)
 
                     Dim hBeamForces = ResolverNombreHoja(hojas, "Element Forces - Beams", "Beam Forces")
                     Dim posibleTruncamiento As Boolean = False
@@ -312,7 +359,7 @@ Public Class Form_09_Vigas
                     ' Filtro de tipos de sección
                     Dim seccionesActuales = Proyecto.Elementos.Vigas.SeccionesSeleccionadas
                     Dim seccionesNuevas As List(Of String) = Nothing
-                    Form_FiltroSecciones.Mostrar(Proyecto.Elementos.Frames,
+                    Form_FiltroSecciones.Mostrar(Proyecto.Elementos.Vigas.Frames,
                                                  seccionesActuales,
                                                  seccionesNuevas)
                     If seccionesNuevas IsNot Nothing Then
@@ -330,6 +377,90 @@ Public Class Form_09_Vigas
             End If
         End With
 
+
+    End Sub
+
+    ''' Actualiza solo las fuerzas de vigas (BeamForces) desde un nuevo Excel de ETABS,
+    ''' sin modificar Joints, Frames, secciones, agrupaciones ni refuerzo asignado.
+    Private Sub ActualizarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ActualizarDemandasToolStripMenuItem.Click
+
+        If Proyecto.Elementos.Vigas.Frames Is Nothing OrElse Proyecto.Elementos.Vigas.Frames.Count = 0 Then
+            MessageBox.Show("Primero debe importar el modelo (Importar → Importar Demandas) para contar con la geometría de frames.",
+                            "Sin geometría", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim openFD As New OpenFileDialog() With {
+            .Title = "Seleccionar Excel ETABS con fuerzas actualizadas",
+            .Filter = "Archivos Excel (*.xls;*.xlsx)|*.xls;*.xlsx|Todos los archivos (*.*)|*.*"
+        }
+        If openFD.ShowDialog() <> DialogResult.OK Then Return
+
+        Dim path As String = openFD.FileName
+        Me.Cursor = Cursors.WaitCursor
+
+        Try
+            Dim hojas = ObtenerHojasExcel(path)
+            Dim hBeamForces = ResolverNombreHoja(hojas, "Element Forces - Beams", "Beam Forces")
+
+            Dim posibleTruncamiento As Boolean = False
+            Dim nuevasForces = CargarBeamForcesDesdeExcel(path, hBeamForces, posibleTruncamiento)
+
+            ' Actualizar solo BeamForces — Joints/Frames/Grupos/Refuerzo intactos
+            Proyecto.Elementos.Vigas.BeamForces = nuevasForces
+            Proyecto.Elementos.Vigas.Tabla_BeamForces = Nothing
+
+            ' Reconstruir lista de combinaciones desde los nuevos datos
+            Dim nuevasCombos = nuevasForces.Select(Function(r) r.LoadCaseKey) _
+                                           .Where(Function(x) Not String.IsNullOrWhiteSpace(x)) _
+                                           .Distinct() _
+                                           .OrderBy(Function(x) x) _
+                                           .ToList()
+            Proyecto.Elementos.Vigas.Lista_Combinaciones = nuevasCombos
+
+            ' Advertir si alguna combinación seleccionada ya no está en los nuevos datos
+            Dim combsSet As New HashSet(Of String)(nuevasCombos, StringComparer.OrdinalIgnoreCase)
+            Dim perdidas As New List(Of String)()
+            For Each c In Proyecto.Elementos.Vigas.Lista_Combinaciones_Design
+                If Not combsSet.Contains(c) Then perdidas.Add("Flexión: " & c)
+            Next
+            For Each c In Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante
+                If Not combsSet.Contains(c) Then perdidas.Add("Cortante: " & c)
+            Next
+            For Each c In Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico
+                If Not combsSet.Contains(c) Then perdidas.Add("C.Plástico: " & c)
+            Next
+
+            If posibleTruncamiento Then
+                MessageBox.Show("Advertencia: la hoja de fuerzas está cerca del límite de Excel (1.048.576 filas). " &
+                                "Los resultados MAX/MIN pueden estar cortados. Filtre las combinaciones en ETABS antes de exportar.",
+                                "Datos posiblemente incompletos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End If
+
+            If perdidas.Count > 0 Then
+                MessageBox.Show("Las siguientes combinaciones seleccionadas no están en el nuevo archivo:" & vbCrLf &
+                                String.Join(vbCrLf, perdidas) & vbCrLf & vbCrLf &
+                                "Vaya a Combinaciones para actualizar la selección.",
+                                "Combinaciones no encontradas", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End If
+
+            HayCambios = True
+
+            Dim resp = MessageBox.Show(
+                "Fuerzas actualizadas correctamente." & vbCrLf & vbCrLf &
+                "¿Desea recalcular ahora con las demandas actualizadas?" & vbCrLf &
+                "(Equivale a presionar 'Procesar'. El refuerzo asignado y los grupos se conservan.)",
+                "Actualizar Demandas", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+
+            If resp = DialogResult.Yes Then
+                Button1_Click(Nothing, EventArgs.Empty)
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show("Error al actualizar demandas: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
 
     End Sub
 
@@ -392,6 +523,11 @@ Public Class Form_09_Vigas
         End If
 
         If ExisteRefuerzo(viga) Then
+            ' Limpiar primero para evitar acumulación de tramos duplicados en cada navegación
+            For Each f In viga.Frames
+                f.RefuerzoSuperior.Clear()
+                f.RefuerzoInferior.Clear()
+            Next
             Dim datosSup = ExtraerRefuerzoDesdeGrid(Ref_Superior)
             Dim datosInf = ExtraerRefuerzoDesdeGrid(Ref_Inferior)
             _vigaService.GuardarRefuerzo(viga, datosSup, eTipoRefuerzo.Superior)
@@ -400,6 +536,45 @@ Public Class Form_09_Vigas
             MostrarResultadosFlexion(viga)
         End If
 
+        ActualizarBotonReplica(viga)
+
+    End Sub
+
+    ''' Actualiza texto y visibilidad de los botones de grupo según el rol de la viga.
+    Private Sub ActualizarBotonReplica(viga As cViga)
+        If viga Is Nothing Then
+            Boton_Replicar.Text = "Crear Grupo de Réplica"
+            Boton_VerGrupo.Visible = False
+            CentrarBotonesRefuerzo()
+            Return
+        End If
+        If viga.EsPatronGrupo Then
+            Dim grupo = Proyecto?.Elementos?.Vigas?.GruposReplica?.FirstOrDefault(
+                Function(g) g.ID = viga.GrupoReplicaID)
+            Dim nSim = If(grupo IsNot Nothing, grupo.Similares.Count, 0)
+            Boton_Replicar.Text = $"Propagar Refuerzo → {nSim} Similar{If(nSim = 1, "", "es")}"
+            Boton_VerGrupo.Visible = True
+        ElseIf Not String.IsNullOrEmpty(viga.GrupoReplicaID) Then
+            Boton_Replicar.Text = "Ver Patrón del Grupo"
+            Boton_VerGrupo.Visible = True
+        Else
+            Boton_Replicar.Text = "Crear Grupo de Réplica"
+            Boton_VerGrupo.Visible = False
+        End If
+        CentrarBotonesRefuerzo()
+    End Sub
+
+    ''' Cuando el usuario edita refuerzo en el patrón, marca todos los similares como desincronizados.
+    Private Sub MarcarSimilaresDesincronizados()
+        If _vigaActual Is Nothing OrElse Not _vigaActual.EsPatronGrupo Then Return
+        If _vigas Is Nothing Then Return
+        Dim similares = _vigas.Where(
+            Function(v) v.GrupoReplicaID = _vigaActual.GrupoReplicaID AndAlso Not v.EsPatronGrupo).ToList()
+        If similares.Count = 0 Then Return
+        For Each sim In similares
+            sim.RefuerzoDesincronizado = True
+        Next
+        ActualizarBotonReplica(_vigaActual)
     End Sub
 
     Private Function ExisteRefuerzo(viga As cViga) As Boolean
@@ -506,6 +681,8 @@ Public Class Form_09_Vigas
 
         End If
 
+        MarcarSimilaresDesincronizados()
+
     End Sub
 
     Private Sub Ref_Superior_CurrentCellDirtyStateChanged(sender As Object, e As EventArgs) Handles Ref_Superior.CurrentCellDirtyStateChanged
@@ -544,6 +721,8 @@ Public Class Form_09_Vigas
             End If
 
         End If
+
+        MarcarSimilaresDesincronizados()
 
     End Sub
 
@@ -626,6 +805,26 @@ Public Class Form_09_Vigas
         menuAgrupacion.BackColor = Color.FromArgb(87, 87, 87)
         AddHandler menuAgrupacion.Click, AddressOf AbrirEditorAgrupacion
         OpcionesToolStripMenuItem.DropDownItems.Add(menuAgrupacion)
+
+        OpcionesToolStripMenuItem.DropDownItems.Add(New ToolStripSeparator())
+
+        Dim menuPrefijo As New ToolStripMenuItem("Prefijo de Nombre de Viga...")
+        menuPrefijo.ForeColor = Color.White
+        menuPrefijo.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuPrefijo.Click, AddressOf ConfigurarPrefijoViga
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuPrefijo)
+
+        Dim menuEjes As New ToolStripMenuItem("Definir Ejes Estructurales...")
+        menuEjes.ForeColor = Color.White
+        menuEjes.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuEjes.Click, AddressOf AbrirEditorEjesManual
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuEjes)
+
+        Dim menuActualizar As New ToolStripMenuItem("Actualizar Nombres por Eje")
+        menuActualizar.ForeColor = Color.White
+        menuActualizar.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuActualizar.Click, AddressOf ActualizarNombresPorEje_Click
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuActualizar)
 
         Dim menuReportes As New ToolStripMenuItem("Reportes")
         menuReportes.ForeColor = Color.White
@@ -931,13 +1130,13 @@ Public Class Form_09_Vigas
     End Sub
 
     Private Sub AbrirFiltroSecciones(sender As Object, e As EventArgs)
-        If Proyecto.Elementos.Frames.Count = 0 Then
+        If Proyecto.Elementos.Vigas.Frames.Count = 0 Then
             MessageBox.Show("Primero importe los datos de ETABS.", "Sin datos",
                             MessageBoxButtons.OK, MessageBoxIcon.Information)
             Exit Sub
         End If
         Dim seccionesNuevas As List(Of String) = Nothing
-        If Form_FiltroSecciones.Mostrar(Proyecto.Elementos.Frames,
+        If Form_FiltroSecciones.Mostrar(Proyecto.Elementos.Vigas.Frames,
                                         Proyecto.Elementos.Vigas.SeccionesSeleccionadas,
                                         seccionesNuevas) Then
             Proyecto.Elementos.Vigas.SeccionesSeleccionadas = seccionesNuevas
@@ -976,7 +1175,144 @@ Public Class Form_09_Vigas
         form.VigaSeleccionada = _vigaActual
         form.PisoActual = If(Lista_Pisos.SelectedItem IsNot Nothing,
                               Lista_Pisos.SelectedItem.ToString(), "")
+        AddHandler form.VigaSeleccionadaPorDobleClick, AddressOf SeleccionarVigaDesdePlanta
         form.Show(Me)
+    End Sub
+
+    Private Sub SeleccionarVigaDesdePlanta(viga As cViga)
+        If viga Is Nothing Then Return
+        Me.BringToFront()
+        Me.Activate()
+
+        ' Seleccionar el piso en Lista_Pisos (dispara el filtro de Lista_Vigas)
+        For i As Integer = 0 To Lista_Pisos.Items.Count - 1
+            If Lista_Pisos.Items(i).ToString().Equals(viga.Piso, StringComparison.OrdinalIgnoreCase) Then
+                Lista_Pisos.SelectedIndex = i
+                Exit For
+            End If
+        Next
+
+        ' Seleccionar la viga en Lista_Vigas (ya filtrada por piso)
+        For i As Integer = 0 To Lista_Vigas.Items.Count - 1
+            Dim v = TryCast(Lista_Vigas.Items(i), cViga)
+            If v IsNot Nothing AndAlso v.Name_Beam = viga.Name_Beam Then
+                Lista_Vigas.SelectedIndex = i
+                Exit For
+            End If
+        Next
+    End Sub
+
+    ' =========================================================================
+    ' EJES ESTRUCTURALES — EDITOR MANUAL Y ACTUALIZACIÓN DE NOMBRES
+    ' =========================================================================
+
+    Private Sub ConfigurarPrefijoViga(sender As Object, e As EventArgs)
+        If Proyecto Is Nothing Then Return
+        Dim actual = If(String.IsNullOrWhiteSpace(Proyecto.Elementos.Vigas.PrefijoNombreViga),
+                        "V", Proyecto.Elementos.Vigas.PrefijoNombreViga)
+        Dim nuevo = InputBox(
+            "Prefijo para nombres de viga." & vbCrLf & vbCrLf &
+            "Ejemplos:  V  →  V-B, V-3" & vbCrLf &
+            "           Viga  →  Viga-B, Viga-3" & vbCrLf &
+            "           VIGA  →  VIGA-B, VIGA-3",
+            "Prefijo de nombre", actual)
+        If String.IsNullOrWhiteSpace(nuevo) Then Return
+        Proyecto.Elementos.Vigas.PrefijoNombreViga = nuevo.Trim()
+        HayCambios = True
+
+        If _vigas IsNot Nothing AndAlso _vigas.Count > 0 Then
+            Dim res = MessageBox.Show("¿Actualizar nombres de vigas con el nuevo prefijo ahora?",
+                                      "Prefijo actualizado", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+            If res = DialogResult.Yes Then ActualizarNombresPorEje()
+        End If
+    End Sub
+
+    Private Sub AbrirEditorEjesManual(sender As Object, e As EventArgs)
+        If Proyecto Is Nothing Then
+            MessageBox.Show("Abra o importe un proyecto primero.", "Sin proyecto",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim gridsActuales = If(Proyecto.Elementos?.Grids?.GridLines, New List(Of cGridLine)())
+        Dim resultado As List(Of cGridLine) = Nothing
+        If Not Form_DefinirEjesManual.Mostrar(gridsActuales, resultado) Then Return
+
+        Proyecto.Elementos.Grids.GridLines = resultado
+        HayCambios = True
+
+        Dim res = MessageBox.Show(
+            "Ejes guardados correctamente." & vbCrLf & vbCrLf &
+            "¿Desea actualizar los nombres de las vigas con los nuevos ejes ahora?",
+            "Ejes definidos", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+
+        If res = DialogResult.Yes Then ActualizarNombresPorEje()
+    End Sub
+
+    Private Sub ActualizarNombresPorEje_Click(sender As Object, e As EventArgs)
+        ActualizarNombresPorEje()
+    End Sub
+
+    ''' Reasigna EjeApoyo_I/J, EjeParalelo y NombrePlano a todas las vigas cargadas.
+    ''' Útil después de definir ejes manualmente o al abrir proyectos viejos.
+    Private Sub ActualizarNombresPorEje()
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("No hay vigas cargadas. Use 'Calcular' primero.", "Sin vigas",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+        If grids Is Nothing OrElse grids.Count = 0 Then
+            MessageBox.Show(
+                "No hay ejes definidos." & vbCrLf & vbCrLf &
+                "Use 'Opciones → Definir Ejes Estructurales...' para ingresarlos manualmente," & vbCrLf &
+                "o reimporte desde ETABS incluyendo la hoja 'Grid Definitions - Grid Lines'.",
+                "Sin ejes", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        If _joints Is Nothing OrElse _joints.Count = 0 Then
+            MessageBox.Show("No hay geometría cargada. Recalcule las vigas primero.",
+                            "Sin geometría", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            _geo.AsignarEjesAVigas(_vigas, grids, _joints)
+            _geo.AsignarEjesParalelosAVigas(_vigas, grids, _joints)
+            _vigaService.GenerarNombresPlano(_vigas, Proyecto.Elementos.Vigas.PrefijoNombreViga)
+
+            Dim pisoSel = Lista_Pisos.SelectedItem?.ToString()
+            Dim vigasPiso = If(Not String.IsNullOrEmpty(pisoSel),
+                _vigas.Where(Function(v) v.Piso = pisoSel).ToList(), _vigas)
+
+            _cargando = True
+            Lista_Vigas.DataSource = Nothing
+            Lista_Vigas.DataSource = vigasPiso
+            Lista_Vigas.DisplayMember = "NombreDisplay"
+            _cargando = False
+
+            If _vigaActual IsNot Nothing Then
+                Dim idx = vigasPiso.IndexOf(_vigaActual)
+                If idx >= 0 Then Lista_Vigas.SelectedIndex = idx
+                _cargando = True
+                Nombre_Viga.Text = If(String.IsNullOrWhiteSpace(_vigaActual.NombrePlano),
+                                      _vigaActual.Nombre, _vigaActual.NombrePlano)
+                _cargando = False
+            End If
+
+            Proyecto.Elementos.Vigas.Vigas = _vigas
+            HayCambios = True
+            MessageBox.Show("Nombres actualizados correctamente.", "Listo",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Catch ex As Exception
+            MessageBox.Show("Error al actualizar: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
     End Sub
 
     ' =========================================================================
@@ -1071,18 +1407,28 @@ Public Class Form_09_Vigas
         ' Recalcular todas las vigas afectadas
         RecalcularListaVigas(_vigas)
 
-        ' Actualizar lista en UI
+        ' Re-asignar eje paralelo y regenerar nombres tras la reagrupación
+        Dim gridsEjesM = Proyecto?.Elementos?.Grids?.GridLines
+        If gridsEjesM IsNot Nothing AndAlso gridsEjesM.Count > 0 Then
+            _geo.AsignarEjesParalelosAVigas(_vigas, gridsEjesM, _joints)
+        End If
+        _vigaService.GenerarNombresPlano(_vigas, Proyecto.Elementos.Vigas.PrefijoNombreViga)
+
+        ' Actualizar lista en UI (solo vigas del piso activo)
+        Dim pisoActivo = Lista_Pisos.SelectedItem?.ToString()
+        Dim vigasActivas = If(Not String.IsNullOrEmpty(pisoActivo),
+            _vigas.Where(Function(v) v.Piso = pisoActivo).ToList(), _vigas)
         _cargando = True
         Lista_Vigas.DataSource = Nothing
-        Lista_Vigas.DataSource = _vigas
-        Lista_Vigas.DisplayMember = "Nombre"
+        Lista_Vigas.DataSource = vigasActivas
+        Lista_Vigas.DisplayMember = "NombreDisplay"
         _cargando = False
 
         Proyecto.Elementos.Vigas.Vigas = _vigas
         HayCambios = True
 
         ' Reseleccionar la viga editada
-        Dim idx = _vigas.IndexOf(_vigaActual)
+        Dim idx = vigasActivas.IndexOf(_vigaActual)
         If idx >= 0 Then Lista_Vigas.SelectedIndex = idx
 
     End Sub
@@ -1098,7 +1444,7 @@ Public Class Form_09_Vigas
             StringComparer.OrdinalIgnoreCase)
 
         _vigaService.CalcularEnvolventesVigas(vigas, Proyecto.Elementos.Vigas.BeamForces, combsDesign)
-        _vigaService.designVigas(vigas, Proyecto.Elementos.Joints)
+        _vigaService.designVigas(vigas, Proyecto.Elementos.Vigas.Joints)
         _vigaService.AsignarRefuerzoTransversalAutomatico(vigas)
 
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
@@ -1115,23 +1461,28 @@ Public Class Form_09_Vigas
 
     Private Sub CentrarBotonesRefuerzo()
 
-        Dim espacio As Integer = 15 ' espacio entre botones
+        Dim espacio As Integer = 15
 
-        Dim anchoTotal As Integer =
-        Boton_Aplicar.Width +
-        Boton_Copiar.Width +
-        Boton_Replicar.Width +
-        espacio * 2
-
-        Dim xInicio As Integer = (TabPage2.ClientSize.Width - anchoTotal) \ 2
-
-        Boton_Aplicar.Left = xInicio
-
-        Boton_Copiar.Left =
-        Boton_Aplicar.Right + espacio
-
-        Boton_Replicar.Left =
-        Boton_Copiar.Right + espacio
+        If Boton_VerGrupo.Visible Then
+            Dim anchoTotal As Integer =
+                Boton_Aplicar.Width + Boton_Copiar.Width +
+                Boton_Replicar.Width + Boton_VerGrupo.Width +
+                espacio * 3
+            Dim xInicio As Integer = (TabPage2.ClientSize.Width - anchoTotal) \ 2
+            Boton_Aplicar.Left = xInicio
+            Boton_Copiar.Left = Boton_Aplicar.Right + espacio
+            Boton_Replicar.Left = Boton_Copiar.Right + espacio
+            Boton_VerGrupo.Left = Boton_Replicar.Right + espacio
+            Boton_VerGrupo.Top = Boton_Replicar.Top
+        Else
+            Dim anchoTotal As Integer =
+                Boton_Aplicar.Width + Boton_Copiar.Width +
+                Boton_Replicar.Width + espacio * 2
+            Dim xInicio As Integer = (TabPage2.ClientSize.Width - anchoTotal) \ 2
+            Boton_Aplicar.Left = xInicio
+            Boton_Copiar.Left = Boton_Aplicar.Right + espacio
+            Boton_Replicar.Left = Boton_Copiar.Right + espacio
+        End If
 
     End Sub
 
@@ -1819,41 +2170,25 @@ Public Class Form_09_Vigas
     Private Sub Lista_Vigas_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Lista_Vigas.SelectedIndexChanged
 
         If _cargando Then Exit Sub
-
         If Me.DesignMode Then Return
         If Lista_Vigas.SelectedItem Is Nothing Then Exit Sub
 
         Dim vigaSel As cViga = CType(Lista_Vigas.SelectedItem, cViga)
-        _vigaActual = TryCast(Lista_Vigas.SelectedItem, cViga)
-
-        Dim piso As String = vigaSel.Piso
-
-        If String.IsNullOrEmpty(piso) Then Exit Sub
-
-        Dim index = Lista_Pisos.Items.IndexOf(piso)
-        If index >= 0 Then
-            Lista_Pisos.SelectedIndex = index
-        Else
-            Exit Sub
-        End If
+        _vigaActual = vigaSel
 
         _cargando = True
         Nombre_Viga.Text = If(String.IsNullOrWhiteSpace(vigaSel.NombrePlano), vigaSel.Nombre, vigaSel.NombrePlano)
         _cargando = False
 
-        ' 🔹 Validaciones antes de dibujar
-        If Lista_Pisos.SelectedItem Is Nothing Then Exit Sub
         If _vigas Is Nothing OrElse _joints Is Nothing Then Exit Sub
 
-        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
-        If grids Is Nothing Then Exit Sub
+        Dim pisoSel = Lista_Pisos.SelectedItem?.ToString()
+        If String.IsNullOrEmpty(pisoSel) Then Exit Sub
 
-        _DiagramaService.DibujarPlanta(PictureBox1,
-                                       _vigas,
-                                       _joints,
-                                       grids,
-                                       Lista_Pisos.SelectedItem.ToString(),
-                                       vigaSel)
+        Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+        If grids IsNot Nothing Then
+            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel)
+        End If
 
         CargarVigaCompleta(vigaSel)
 
@@ -2103,34 +2438,319 @@ Public Class Form_09_Vigas
 
     Private Sub Boton_Replicar_Click(sender As Object, e As EventArgs) Handles Boton_Replicar.Click
 
-        If Lista_Vigas.SelectedItem Is Nothing Then Exit Sub
+        If _vigaActual Is Nothing Then Exit Sub
+        If _vigas Is Nothing OrElse _joints Is Nothing Then
+            MessageBox.Show("Primero calcula las vigas.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Exit Sub
+        End If
 
-        Dim vigaOrigen As cViga = CType(Lista_Vigas.SelectedItem, cViga)
+        ' --- Caso 1: viga es PATRÓN → propagar refuerzo ---
+        If _vigaActual.EsPatronGrupo Then
+            PropagateGrupoActual()
+            Exit Sub
+        End If
 
-        Dim form As New Form_Opciones_Combinaciones
-
-        ' 🔹 Llenar vigas
-        form.Lista_Combinaciones.Items.Clear()
-
-        For Each viga As cViga In Proyecto.Elementos.Vigas.Vigas
-            If viga IsNot vigaOrigen Then ' evitar copiarse a sí misma
-                form.Lista_Combinaciones.Items.Add(viga)
+        ' --- Caso 2: viga es SIMILAR → navegar al patrón ---
+        If Not String.IsNullOrEmpty(_vigaActual.GrupoReplicaID) Then
+            Dim grupo = Proyecto.Elementos.Vigas.GruposReplica.FirstOrDefault(
+                Function(g) g.ID = _vigaActual.GrupoReplicaID)
+            Dim patron = _vigas.FirstOrDefault(
+                Function(v) v.EsPatronGrupo AndAlso v.GrupoReplicaID = _vigaActual.GrupoReplicaID)
+            If patron IsNot Nothing Then
+                Dim msg = $"Esta viga es un SIMILAR del grupo ""{grupo?.NombreGrupo}"".{vbCrLf}" &
+                          $"Patrón: {patron.NombreDisplay} — Piso {patron.Piso}{vbCrLf}{vbCrLf}" &
+                          "¿Deseas navegar al patrón?"
+                If MessageBox.Show(msg, "Grupo de Réplica", MessageBoxButtons.YesNo, MessageBoxIcon.Information) = DialogResult.Yes Then
+                    ' Cambiar al piso del patrón y seleccionar la viga
+                    Lista_Pisos.SelectedItem = patron.Piso
+                    Lista_Vigas.SelectedItem = patron
+                End If
             End If
-        Next
+            Exit Sub
+        End If
 
-        form.Lista_Combinaciones.DisplayMember = "Name_Beam"
-        form.OpcionLlamado = "ReplicarRefuerzo"
-
-        ' 🔥 pasar viga origen
-        form.Tag = vigaOrigen
-
-        form.ShowDialog()
-
-
+        ' --- Caso 3: sin grupo → crear grupo de réplica ---
+        CrearGrupoReplicaDesdeActual()
 
     End Sub
 
+    Private Sub Boton_VerGrupo_Click(sender As Object, e As EventArgs) Handles Boton_VerGrupo.Click
+        If _vigaActual Is Nothing OrElse _vigas Is Nothing Then Exit Sub
+        GestionarGrupoActual()
+    End Sub
 
+    Private Sub GestionarGrupoActual()
+        Dim grupoID = _vigaActual.GrupoReplicaID
+        If String.IsNullOrEmpty(grupoID) Then Exit Sub
+
+        Dim grupo = Proyecto?.Elementos?.Vigas?.GruposReplica?.FirstOrDefault(
+            Function(g) g.ID = grupoID)
+        If grupo Is Nothing Then Exit Sub
+
+        Dim patron = _vigas.FirstOrDefault(
+            Function(v) v.EsPatronGrupo AndAlso v.GrupoReplicaID = grupoID)
+        Dim similares = _vigas.Where(
+            Function(v) v.GrupoReplicaID = grupoID AndAlso Not v.EsPatronGrupo).ToList()
+
+        Using dlg As New Form_09_GestionGrupo(grupo, patron, similares)
+            If dlg.ShowDialog() <> DialogResult.OK Then Return
+
+            ' Desvincula los similares desmarcados
+            For Each piso In dlg.PisosAEliminar
+                Dim sim = _vigas.FirstOrDefault(
+                    Function(v) v.GrupoReplicaID = grupoID AndAlso
+                                Not v.EsPatronGrupo AndAlso
+                                v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase))
+                If sim IsNot Nothing Then
+                    sim.GrupoReplicaID = ""
+                    sim.RefuerzoDesincronizado = False
+                End If
+                grupo.Similares.RemoveAll(
+                    Function(m) m.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase))
+            Next
+
+            ' Si no quedan similares, disuelve el grupo
+            If grupo.Similares.Count = 0 Then
+                If patron IsNot Nothing Then
+                    patron.GrupoReplicaID = ""
+                    patron.EsPatronGrupo = False
+                End If
+                Proyecto.Elementos.Vigas.GruposReplica.Remove(grupo)
+            End If
+
+            HayCambios = True
+            ActualizarBotonReplica(_vigaActual)
+
+            ' Refrescar lista del piso actual
+            Dim pisoActual = Lista_Pisos.SelectedItem?.ToString()
+            Dim vigasPiso = _vigas.Where(Function(v) v.Piso = pisoActual).ToList()
+            _cargando = True
+            Lista_Vigas.DataSource = Nothing
+            Lista_Vigas.DataSource = vigasPiso
+            Lista_Vigas.DisplayMember = "NombreDisplay"
+            Lista_Vigas.SelectedItem = _vigaActual
+            _cargando = False
+            CargarVigaCompleta(_vigaActual)
+        End Using
+    End Sub
+
+    Private Sub CrearGrupoReplicaDesdeActual()
+
+        Dim patron = _vigaActual
+        If patron.Frames.Count = 0 Then
+            MessageBox.Show("La viga no tiene frames asignados.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ' Detectar pisos compatibles.
+        ' rawLabelsPorPiso se construye directamente del DataTable de ETABS (sin pasar por
+        ' DataTableToFrames) para capturar pisos cuyos frames son descartados por la
+        ' detección de joints (ej. P1, P10-P13 en ciertos modelos de ETABS).
+        Dim todosFramesProyecto = Proyecto?.Elementos?.Vigas?.Frames
+        If todosFramesProyecto Is Nothing Then todosFramesProyecto = New List(Of cFrame)()
+        Dim rawLabels = BuildRawLabelsPorPiso(Proyecto?.TablasEtabs?.TablaOEFrames)
+        Dim compatibilidades = _vigaService.DetectarPisosCompatibles(patron, _vigas, todosFramesProyecto, rawLabels)
+
+        If compatibilidades.Count = 0 Then
+            MessageBox.Show("No se encontraron otros pisos en este modelo.", "Aviso",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Using dlg As New Form_09_GrupoReplica(patron, _vigas, compatibilidades)
+            If dlg.ShowDialog() <> DialogResult.OK Then Return
+
+            Dim grupo = dlg.GrupoCreado
+            Dim pisosDestino = dlg.PisosSeleccionados
+
+            ' Marcar el patrón
+            patron.GrupoReplicaID = grupo.ID
+            patron.EsPatronGrupo = True
+            patron.RefuerzoDesincronizado = False
+
+            ' Construir combos cortante para recalcular similares
+            Dim combosCortante As New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
+
+            ' Aplicar agrupación en cada piso y copiar refuerzo
+            Dim similares As New List(Of cViga)()
+            Dim pisosFallidos As New List(Of String)()
+            Dim labelsGrupo As New HashSet(Of String)(grupo.Labels_Patron.Select(Function(l) l.Trim().ToUpperInvariant()))
+            For Each piso In pisosDestino
+                _vigaService._AplicarUnGrupoEnPiso(grupo.Labels_Patron, piso, _vigas, _joints)
+
+                Dim sim = _vigas.FirstOrDefault(
+                    Function(v) v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase) AndAlso
+                                labelsGrupo.SetEquals(v.Frames.Select(Function(f) f.ObjectLabel.Trim().ToUpperInvariant())))
+                If sim Is Nothing Then
+                    pisosFallidos.Add(piso)
+                    Continue For
+                End If
+
+                sim.GrupoReplicaID = grupo.ID
+                sim.EsPatronGrupo = False
+                ' Heredar nombre del patrón para que el similar se llame igual
+                sim.NombrePlano = patron.NombrePlano
+                sim.EjeParalelo = patron.EjeParalelo
+                similares.Add(sim)
+
+                ' Actualizar nombre en el miembro del grupo
+                Dim miembro = grupo.Similares.FirstOrDefault(Function(m) m.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase))
+                If miembro IsNot Nothing Then miembro.NombreViga = sim.Name_Beam
+            Next
+
+            ' Propagar refuerzo inmediatamente
+            _vigaService.PropagateRefuerzoGrupo(patron, similares, combosCortante)
+
+            ' Guardar grupo en el proyecto
+            If Proyecto.Elementos.Vigas.GruposReplica Is Nothing Then
+                Proyecto.Elementos.Vigas.GruposReplica = New List(Of GrupoReplicaViga)()
+            End If
+            Proyecto.Elementos.Vigas.GruposReplica.Add(grupo)
+
+            HayCambios = True
+
+            ' Refrescar lista del piso actual
+            Dim pisoActual = Lista_Pisos.SelectedItem?.ToString()
+            Dim vigasPiso = _vigas.Where(Function(v) v.Piso = pisoActual).ToList()
+            _cargando = True
+            Lista_Vigas.DataSource = Nothing
+            Lista_Vigas.DataSource = vigasPiso
+            Lista_Vigas.DisplayMember = "NombreDisplay"
+            Lista_Vigas.SelectedItem = patron
+            _cargando = False
+            CargarVigaCompleta(patron)
+
+            Dim msg = $"Grupo ""{grupo.NombreGrupo}"" creado.{vbCrLf}" &
+                      $"Patrón: {patron.NombreDisplay} (Piso {patron.Piso}){vbCrLf}" &
+                      $"Similares: {similares.Count} piso{If(similares.Count = 1, "", "s")} — refuerzo propagado y C/D recalculado."
+            If pisosFallidos.Count > 0 Then
+                msg &= $"{vbCrLf}{vbCrLf}Nota: {pisosFallidos.Count} piso{If(pisosFallidos.Count = 1, "", "s")} no se pudo agrupar en esta sesión " &
+                       $"({String.Join(", ", pisosFallidos)}). Haz clic en ""Calcular"" para aplicar el grupo completo."
+            End If
+            MessageBox.Show(msg, "Grupo de Réplica creado", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End Using
+
+    End Sub
+
+    Private Sub PropagateGrupoActual()
+
+        Dim patron = _vigaActual
+        Dim grupo = Proyecto?.Elementos?.Vigas?.GruposReplica?.FirstOrDefault(
+            Function(g) g.ID = patron.GrupoReplicaID)
+        If grupo Is Nothing Then
+            MessageBox.Show("No se encontró el grupo de réplica en el proyecto.", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
+
+        Dim similares = _vigas.Where(
+            Function(v) v.GrupoReplicaID = patron.GrupoReplicaID AndAlso Not v.EsPatronGrupo).ToList()
+
+        If similares.Count = 0 Then
+            MessageBox.Show("No se encontraron similares vinculados. ¿Recalculaste las vigas?",
+                            "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim msg = $"¿Propagar el refuerzo de ""{patron.NombreDisplay}"" a {similares.Count} similar{If(similares.Count = 1, "", "es")}?{vbCrLf}{vbCrLf}" &
+                  String.Join(vbCrLf, similares.Select(Function(s) $"  • {s.NombreDisplay} — {s.Piso}"))
+        If MessageBox.Show(msg, "Propagar Refuerzo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes Then Return
+
+        Dim combosCortante As New HashSet(Of String)(
+            Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+            StringComparer.OrdinalIgnoreCase)
+
+        _vigaService.PropagateRefuerzoGrupo(patron, similares, combosCortante)
+
+        HayCambios = True
+
+        ' Refrescar la lista para actualizar [S!] → [S]
+        Dim pisoActual = Lista_Pisos.SelectedItem?.ToString()
+        Dim vigasPiso = _vigas.Where(Function(v) v.Piso = pisoActual).ToList()
+        _cargando = True
+        Lista_Vigas.DataSource = Nothing
+        Lista_Vigas.DataSource = vigasPiso
+        Lista_Vigas.DisplayMember = "NombreDisplay"
+        Lista_Vigas.SelectedItem = patron
+        _cargando = False
+        ActualizarBotonReplica(patron)
+
+        MessageBox.Show($"Refuerzo propagado a {similares.Count} similar{If(similares.Count = 1, "", "es")}. C/D recalculado.",
+                        "OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+    End Sub
+
+    ''' Extrae un inventario Story → Set(ObjectLabel) directamente del DataTable de ETABS,
+    ''' sin depender de DataTableToFrames. Garantiza que aparezcan pisos cuyos frames
+    ''' tienen geometría de joints problemática (meshes complejos, pisos de transferencia).
+    Private Function BuildRawLabelsPorPiso(dt As DataTable) As Dictionary(Of String, HashSet(Of String))
+        Dim result As New Dictionary(Of String, HashSet(Of String))(StringComparer.OrdinalIgnoreCase)
+        If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return result
+
+        Dim cols = dt.Columns.Cast(Of DataColumn) _
+                     .ToDictionary(Function(c) c.ColumnName.Trim().ToLower().Replace(" ", "").Replace(vbTab, ""),
+                                   Function(c) c.ColumnName)
+
+        ' Buscar la columna Story
+        Dim colStory As String = Nothing
+        For Each kv In cols
+            If kv.Key = "story" Then colStory = kv.Value : Exit For
+        Next
+
+        ' Buscar la columna de label: preferir "Object Label" (E23) sobre "Label"
+        Dim colLabel As String = Nothing
+        For Each kv In cols
+            If kv.Key = "objectlabel" Then colLabel = kv.Value : Exit For
+        Next
+        If colLabel Is Nothing Then
+            For Each kv In cols
+                If kv.Key = "label" Then colLabel = kv.Value : Exit For
+            Next
+        End If
+        ' Fallback: columna "Frame" (E17 "Connectivity - Frame")
+        If colLabel Is Nothing Then
+            For Each kv In cols
+                If kv.Key = "frame" Then colLabel = kv.Value : Exit For
+            Next
+        End If
+
+        If colStory Is Nothing OrElse colLabel Is Nothing Then Return result
+
+        For Each r As DataRow In dt.Rows
+            If r.IsNull(colStory) OrElse r.IsNull(colLabel) Then Continue For
+            Dim story As String = r(colStory).ToString().Trim()
+            Dim label As String = r(colLabel).ToString().Trim().ToUpperInvariant()
+            If String.IsNullOrEmpty(story) OrElse String.IsNullOrEmpty(label) Then Continue For
+            If Not result.ContainsKey(story) Then
+                result(story) = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            End If
+            result(story).Add(label)
+        Next
+        Return result
+    End Function
+
+    ''' Copia NombrePlano y EjeParalelo del patrón a todos sus similares.
+    ''' Se llama en Button1_Click (después de GenerarNombresPlano) y al crear el grupo.
+    Private Sub PropagateNombresGrupo(vigas As List(Of cViga),
+                                       gruposReplica As List(Of GrupoReplicaViga))
+
+        If gruposReplica Is Nothing OrElse gruposReplica.Count = 0 Then Return
+
+        For Each grupo In gruposReplica
+            Dim patron = vigas.FirstOrDefault(
+                Function(v) v.EsPatronGrupo AndAlso v.GrupoReplicaID = grupo.ID)
+            If patron Is Nothing Then Continue For
+
+            For Each sim In vigas.Where(
+                Function(v) Not v.EsPatronGrupo AndAlso v.GrupoReplicaID = grupo.ID)
+                sim.NombrePlano = patron.NombrePlano
+                sim.EjeParalelo = patron.EjeParalelo
+            Next
+        Next
+
+    End Sub
 
 
 
@@ -2363,16 +2983,21 @@ Public Class Form_09_Vigas
         Dim vigas As List(Of cViga) = Proyecto.Elementos.Vigas.Vigas
         _vigas = vigas
         _vigaActual = vigas.FirstOrDefault()
+        _joints = Proyecto.Elementos.Vigas.Joints.ToDictionary(Function(j) j.ElementLabel)
 
-        _joints = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
+        ' Compatibilidad: proyectos guardados antes de la versión con EjeParalelo.
+        ' Si TODAS las vigas tienen EjeParalelo vacío y hay grids disponibles,
+        ' se asignan automáticamente los ejes y se generan nombres significativos.
+        Dim gridsAutoUpdate = Proyecto?.Elementos?.Grids?.GridLines
+        If gridsAutoUpdate IsNot Nothing AndAlso gridsAutoUpdate.Count > 0 AndAlso
+           _joints.Count > 0 AndAlso vigas.Count > 0 AndAlso
+           vigas.All(Function(v) String.IsNullOrEmpty(v.EjeParalelo)) Then
+            _geo.AsignarEjesAVigas(vigas, gridsAutoUpdate, _joints)
+            _geo.AsignarEjesParalelosAVigas(vigas, gridsAutoUpdate, _joints)
+            _vigaService.GenerarNombresPlano(vigas, Proyecto.Elementos.Vigas.PrefijoNombreViga)
+        End If
 
-        Lista_Vigas.BeginUpdate()
-        Lista_Vigas.DataSource = Nothing
-        Lista_Vigas.DataSource = vigas
-        Lista_Vigas.DisplayMember = "Nombre"
-        Lista_Vigas.EndUpdate()
-
-        Dim stories As List(Of String) = Proyecto.Elementos.Frames _
+        Dim stories As List(Of String) = Proyecto.Elementos.Vigas.Frames _
             .Select(Function(f) f.Story) _
             .Distinct() _
             .OrderBy(Function(s) s) _
@@ -2383,21 +3008,35 @@ Public Class Form_09_Vigas
         Lista_Pisos.DataSource = stories
         Lista_Pisos.EndUpdate()
 
-        If vigas.Count > 0 Then Lista_Vigas.SelectedIndex = 0
+        ' Filtrar vigas por el piso de la primera viga (o primer piso si no hay vigaActual)
+        Dim pisoInicial As String = If(_vigaActual IsNot Nothing, _vigaActual.Piso, stories.FirstOrDefault())
+        Dim vigasPisoI = If(Not String.IsNullOrEmpty(pisoInicial),
+                            vigas.Where(Function(v) v.Piso = pisoInicial).ToList(),
+                            vigas)
+
+        Lista_Vigas.BeginUpdate()
+        Lista_Vigas.DataSource = Nothing
+        Lista_Vigas.DataSource = vigasPisoI
+        Lista_Vigas.DisplayMember = "NombreDisplay"
+        Lista_Vigas.EndUpdate()
+
+        ' Sincronizar piso seleccionado en Lista_Pisos
+        If Not String.IsNullOrEmpty(pisoInicial) Then
+            Dim idx = Lista_Pisos.Items.IndexOf(pisoInicial)
+            If idx >= 0 Then Lista_Pisos.SelectedIndex = idx
+        End If
+
+        If vigasPisoI.Count > 0 Then Lista_Vigas.SelectedIndex = 0
 
         _cargando = False
         Me.ResumeLayout(False)
 
         If _vigaActual IsNot Nothing Then
             Dim piso = _vigaActual.Piso
-            Dim idx = Lista_Pisos.Items.IndexOf(piso)
-            If idx >= 0 Then Lista_Pisos.SelectedIndex = idx
-
             Dim grids = Proyecto.Elementos?.Grids?.GridLines
             If grids IsNot Nothing Then
                 _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, piso, _vigaActual)
             End If
-
             CargarVigaCompleta(_vigaActual)
         End If
 
@@ -2525,11 +3164,76 @@ Public Class Form_09_Vigas
     Public Sub RefrescarDesdeProyecto()
         Proyecto = Form_00_PaginaPrincipal.proyecto
         If Proyecto.Elementos.Vigas.Vigas Is Nothing OrElse Proyecto.Elementos.Vigas.Vigas.Count = 0 Then Return
+
+        ' Migración: archivos guardados antes de que Vigas tuviera geometría propia.
+        ' Si Vigas.Frames está vacío pero Elementos.Frames tiene datos, los copiamos.
+        If Proyecto.Elementos.Vigas.Frames.Count = 0 AndAlso Proyecto.Elementos.Frames.Count > 0 Then
+            Proyecto.Elementos.Vigas.Frames = Proyecto.Elementos.Frames
+            Proyecto.Elementos.Vigas.Joints = Proyecto.Elementos.Joints
+        End If
+
+        If _vigaService Is Nothing Then _vigaService = New VigaService(_geo)
+        If _DiagramaService Is Nothing Then _DiagramaService = New DiagramaService(_geo)
         CargarCombos(Proyecto)
     End Sub
 
     Private Sub Save_Pilas_Click(sender As Object, e As EventArgs) Handles Save_Pilas.Click
         Guardar()
+    End Sub
+
+    Private Sub New_Pilas_Click(sender As Object, e As EventArgs) Handles New_Pilas.Click
+
+        Dim res = MessageBox.Show(
+            "Esta acción eliminará TODA la información de vigas del proyecto actual:" & vbCrLf & vbCrLf &
+            "  • Vigas y tramos generados" & vbCrLf &
+            "  • Fuerzas importadas desde ETABS" & vbCrLf &
+            "  • Combinaciones de diseño seleccionadas" & vbCrLf &
+            "  • Secciones y agrupaciones configuradas" & vbCrLf & vbCrLf &
+            "La información de columnas, muros y pilas NO se verá afectada." & vbCrLf & vbCrLf &
+            "¿Desea continuar?",
+            "Reemplazar datos de vigas",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning)
+
+        If res <> DialogResult.Yes Then Return
+
+        ' Resetear solo el módulo de vigas
+        Proyecto.Elementos.Vigas = New cVigas()
+
+        ' Limpiar estado local del formulario
+        _vigas = Nothing
+        _joints = Nothing
+        _vigaActual = Nothing
+
+        ' Limpiar controles visuales
+        _cargando = True
+
+        Lista_Vigas.DataSource = Nothing
+        Lista_Pisos.DataSource = Nothing
+
+        Tabla_Demandas.Rows.Clear()
+        Tabla_Demandas.Columns.Clear()
+        Ref_Superior.Rows.Clear()
+        Ref_Superior.Columns.Clear()
+        Ref_Inferior.Rows.Clear()
+        Ref_Inferior.Columns.Clear()
+        Ref_Transversal.Rows.Clear()
+        Ref_Transversal.Columns.Clear()
+        Tabla_Resultados_Flexion.Rows.Clear()
+        Tabla_Resultados_Flexion.Columns.Clear()
+        Tabla_Resultados_Cortante.Rows.Clear()
+        Tabla_Resultados_Cortante.Columns.Clear()
+
+        PictureBox1.Image = Nothing
+        Diagrama_Momento.Image = Nothing
+        Diagrama_Cortante.Image = Nothing
+
+        _cargando = False
+
+        HayCambios = True
+        MessageBox.Show("Los datos de vigas han sido eliminados. Puede importar una nueva exportación de ETABS.",
+                        "Datos limpiados", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
     End Sub
 
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
@@ -2591,7 +3295,12 @@ Public Class Form_09_Vigas
             If dgv.Rows(0).Cells(col).Value IsNot Nothing Then Integer.TryParse(dgv.Rows(0).Cells(col).Value.ToString(), numEstribos)
             If dgv.Rows(1).Cells(col).Value IsNot Nothing Then Integer.TryParse(dgv.Rows(1).Cells(col).Value.ToString(), numBarra)
             If dgv.Rows(2).Cells(col).Value IsNot Nothing Then Integer.TryParse(dgv.Rows(2).Cells(col).Value.ToString(), cantEstribos)
-            If dgv.Rows(3).Cells(col).Value IsNot Nothing Then Double.TryParse(dgv.Rows(3).Cells(col).Value.ToString(), separacion)
+            If dgv.Rows(3).Cells(col).Value IsNot Nothing Then
+                ' Normaliza punto/coma para que funcione independiente de la cultura del sistema
+                Dim strSep = dgv.Rows(3).Cells(col).Value.ToString().Replace(",", ".")
+                Double.TryParse(strSep, Globalization.NumberStyles.Any,
+                                Globalization.CultureInfo.InvariantCulture, separacion)
+            End If
 
             lista.Add((frameLabel, posicion, numEstribos, numBarra, cantEstribos, separacion))
 

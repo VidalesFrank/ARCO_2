@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Escaleras</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Escaleras</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Escaleras</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="08_losas.html">← Losas</a>
+  <a href="10_muros_no_estructurales.html">Siguiente: Muros No Estructurales →</a>
+  <a href="../criterios/07_escaleras.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Escaleras calcula y verifica las <strong>deflexiones de escaleras de concreto reforzado</strong> modeladas como losas inclinadas de un tramo o de dos tramos (peldaños + descanso). El cálculo sigue el método de inercia efectiva de Branson (NSR-10 C.9.5.2) para determinar la deflexión inmediata y el efecto de largo plazo.</p>
+<p>El módulo no requiere importación de ETABS. Todos los datos se ingresan directamente por el usuario.</p>
+
+<h2>Modelo Estructural</h2>
+<p>La escalera se modela como una viga simplemente apoyada (o con continuidad) con dos segmentos de carga uniforme:</p>
+<ul>
+  <li><strong>Tramo de peldaños (L1)</strong>: carga uniforme wu1 correspondiente al peso de los peldaños, acabados y carga viva.</li>
+  <li><strong>Tramo de descanso (L2)</strong>: carga uniforme wu2 correspondiente al peso de la losa plana de descanso, acabados y carga viva.</li>
+</ul>
+<p>Para la deflexión, ARCO calcula una carga equivalente ponderada por longitud para simplificar el cálculo al de una viga con carga uniforme equivalente sobre la longitud total L = L1 + L2.</p>
+
+<h2>Datos de Entrada — Tab 1</h2>
+
+<h3>Geometría</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>b (ancho)</td><td>m</td><td>Ancho de la escalera (generalmente 1.0 m para cálculo por metro de ancho, o el ancho real)</td></tr>
+  <tr><td>h (espesor de la losa)</td><td>m</td><td>Espesor de la losa de la escalera. Si h ≥ 0.20 m se requiere doble capa de refuerzo.</td></tr>
+  <tr><td>Recubrimiento</td><td>m</td><td>Recubrimiento libre hasta la cara exterior del refuerzo principal</td></tr>
+</table>
+
+<h3>Cargas por Tramo</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>L1</td><td>m</td><td>Longitud horizontal del tramo de peldaños</td></tr>
+  <tr><td>wu1</td><td>kN/m</td><td>Carga de servicio total por metro lineal en el tramo de peldaños (CM + CV)</td></tr>
+  <tr><td>L2</td><td>m</td><td>Longitud del tramo de descanso</td></tr>
+  <tr><td>wu2</td><td>kN/m</td><td>Carga de servicio total por metro lineal en el tramo de descanso (CM + CV)</td></tr>
+</table>
+
+<h3>Materiales</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>fc</td><td>MPa</td><td>Resistencia a compresión del concreto</td></tr>
+  <tr><td>fy</td><td>MPa</td><td>Esfuerzo de fluencia del acero</td></tr>
+</table>
+
+<h3>Refuerzo</h3>
+<table>
+  <tr><th>Parámetro</th><th>Descripción</th></tr>
+  <tr><td>Barra inferior + cantidad</td><td>Refuerzo principal de flexión en la capa inferior (tracción en losa simplemente apoyada)</td></tr>
+  <tr><td>Barra superior + cantidad</td><td>Refuerzo de compresión o de retracción en la capa superior (requerido si h ≥ 20 cm)</td></tr>
+  <tr><td>Separación</td><td>Separación de las barras en cada capa [cm]</td></tr>
+</table>
+
+<h2>Cuándo se Requiere Doble Capa</h2>
+<p>Si el espesor de la losa h ≥ 20 cm, ARCO activa automáticamente la opción de doble capa de refuerzo. En este caso:</p>
+<ul>
+  <li><strong>Capa inferior</strong>: As_flex (refuerzo de flexión calculado) + As_retracción/2</li>
+  <li><strong>Capa superior</strong>: As_retracción/2 (para control de fisuración en la cara comprimida)</li>
+</ul>
+<p>La cuantía de retracción es ρ_ret = 0.0018 para fy ≥ 420 MPa, o ρ_ret = 0.0020 para fy &lt; 420 MPa.</p>
+
+<h2>Resultados — Tab 2</h2>
+<p>La segunda pestaña muestra todos los resultados del cálculo de deflexiones según Branson:</p>
+
+<table>
+  <tr><th>Resultado</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>d (peralte efectivo)</td><td>m</td><td>h - recubrimiento - Ø_barra/2</td></tr>
+  <tr><td>Ec</td><td>MPa</td><td>Módulo de elasticidad del concreto = 4700√fc</td></tr>
+  <tr><td>n = Es/Ec</td><td>-</td><td>Relación modular (adimensional)</td></tr>
+  <tr><td>Ig</td><td>m⁴</td><td>Inercia bruta de la sección = b·h³/12</td></tr>
+  <tr><td>Mcr</td><td>kN·m</td><td>Momento de fisuramiento = fr·Ig/yt</td></tr>
+  <tr><td>c (eje neutro agrietado)</td><td>m</td><td>Profundidad del eje neutro en sección fisurada</td></tr>
+  <tr><td>Icr</td><td>m⁴</td><td>Inercia de la sección fisurada = b·c³/3 + n·As·(d-c)²</td></tr>
+  <tr><td>Ma</td><td>kN·m</td><td>Momento actuante (para carga de servicio equivalente)</td></tr>
+  <tr><td>Ie</td><td>m⁴</td><td>Inercia efectiva de Branson = (Mcr/Ma)³·Ig + [1-(Mcr/Ma)³]·Icr</td></tr>
+  <tr><td>δ_inm</td><td>mm</td><td>Deflexión inmediata = (5/384)·w_eq·L⁴/(Ec·Ie)</td></tr>
+  <tr><td>δ_LP</td><td>mm</td><td>Deflexión de largo plazo = λ·δ_inm, con λ = 2.0</td></tr>
+  <tr><td>L/360</td><td>mm</td><td>Límite de deflexión inmediata</td></tr>
+  <tr><td>L/480</td><td>mm</td><td>Límite de deflexión de largo plazo (con elementos susceptibles al daño)</td></tr>
+  <tr><td>¿Cumple inmediata?</td><td>Sí/No</td><td>δ_inm ≤ L/360</td></tr>
+  <tr><td>¿Cumple largo plazo?</td><td>Sí/No</td><td>δ_LP ≤ L/480</td></tr>
+</table>
+
+<h2>Criterio de Cumplimiento</h2>
+<p>La escalera cumple cuando:</p>
+<ul>
+  <li><strong>Deflexión inmediata</strong>: δ_inm ≤ L/360 (NSR-10 Tabla C.9.5(b), para elementos no estructurales susceptibles al daño)</li>
+  <li><strong>Deflexión de largo plazo</strong>: δ_LP ≤ L/480 (con elementos no estructurales apoyados en la escalera)</li>
+</ul>
+<div class="nota">Si la escalera no tiene elementos no estructurales susceptibles al daño (tabiques, rellenos, etc.) sobre ella, se puede usar el límite más permisivo L/240 para la deflexión de largo plazo. Sin embargo, ARCO verifica por defecto contra L/480 por ser el criterio más conservador.</div>
+
+<h2>Corrección por Inclinación</h2>
+<p>La carga uniforme wu1 en el tramo de peldaños debe ser ingresada en proyección horizontal (kN/m de proyección). El usuario debe haber convertido previamente el peso de la losa inclinada a su componente horizontal multiplicando por:</p>
+<ul>
+  <li>Factor = 1/cos(α), donde α es el ángulo de inclinación de la escalera</li>
+</ul>
+<p>ARCO no realiza esta conversión automáticamente, ya que el usuario puede tener diferentes criterios para la inclinación de cada tramo.</p>
+
+<h2>Uso Típico</h2>
+<p>Parámetros típicos para escaleras de vivienda en Colombia:</p>
+<table>
+  <tr><th>Parámetro</th><th>Valor típico</th></tr>
+  <tr><td>h (espesor)</td><td>0.12 a 0.18 m</td></tr>
+  <tr><td>fc</td><td>21 MPa (f'c = 3000 psi)</td></tr>
+  <tr><td>fy</td><td>420 MPa</td></tr>
+  <tr><td>CV escaleras interiores</td><td>4.8 kN/m² (NSR-10 Tabla A.5-1)</td></tr>
+  <tr><td>CM acabados</td><td>0.5 a 1.0 kN/m²</td></tr>
+  <tr><td>Refuerzo típico</td><td>#4 @ 20 cm (As = 6.47 cm²/m)</td></tr>
+</table>
+</div>
+</body>
+</html>

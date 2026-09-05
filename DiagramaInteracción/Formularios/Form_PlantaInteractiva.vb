@@ -42,6 +42,9 @@ Public Class Form_PlantaInteractiva
     Public Property VigaEditada As cViga = Nothing
     Public Property FramesResultantes As New List(Of String)
 
+    ' Notifica al padre cuando el usuario hace doble clic sobre una viga
+    Public Event VigaSeleccionadaPorDobleClick As Action(Of cViga)
+
     Public Property ModoAgrupacion As Boolean
         Get
             Return _modoAgrupacion
@@ -291,6 +294,15 @@ Public Class Form_PlantaInteractiva
     End Sub
 
     Private Sub Panel_MouseDown(sender As Object, e As MouseEventArgs)
+        ' Doble clic en modo normal → marcar seleccionada y notificar al padre
+        If e.Button = MouseButtons.Left AndAlso e.Clicks = 2 AndAlso
+           Not _modoAgrupacion AndAlso _hoveredViga IsNot Nothing Then
+            VigaSeleccionada = _hoveredViga
+            _panel.Invalidate()
+            RaiseEvent VigaSeleccionadaPorDobleClick(_hoveredViga)
+            Return
+        End If
+
         If _modoAgrupacion Then
             If e.Button = MouseButtons.Left Then
                 _clickPos = e.Location   ' registrar punto de inicio para detectar clic vs arrastre
@@ -619,7 +631,10 @@ Public Class Form_PlantaInteractiva
 
                 Dim p1 As PointF, p2 As PointF
 
-                If gl.Direction = "X" Then
+                If gl.EsTipoGeneral Then
+                    p1 = W2S(gl.X1, gl.Y1)
+                    p2 = W2S(gl.X2, gl.Y2)
+                ElseIf gl.Direction = "X" Then
                     p1 = W2S(gl.Ordinate, wyMin - ext)
                     p2 = W2S(gl.Ordinate, wyMax + ext)
                 Else
@@ -636,7 +651,9 @@ Public Class Form_PlantaInteractiva
                 ' Burbuja con el ID
                 If Not String.IsNullOrEmpty(gl.GridID) AndAlso _zoom > 5 Then
                     Dim labelPt As PointF
-                    If gl.Direction = "X" Then
+                    If gl.EsTipoGeneral Then
+                        labelPt = If(gl.BubbleLocation.ToLower() = "start", p1, p2)
+                    ElseIf gl.Direction = "X" Then
                         labelPt = New PointF(W2S(gl.Ordinate, 0).X - 8, 6)
                     Else
                         labelPt = New PointF(6, W2S(0, gl.Ordinate).Y - 10)

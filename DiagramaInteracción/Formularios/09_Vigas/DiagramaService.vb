@@ -92,13 +92,8 @@ Public Class DiagramaService
 
                 g.DrawLine(penGrid, p1, p2)
 
-                ' 🔹 Posición del ID (arriba o abajo)
-                Dim yTexto As Single =
-                If(gl.BubbleLocation.ToLower() = "start", p2.Y + 15, p1.Y - 15)
-
-                Dim pTexto As New PointF(p1.X, yTexto)
-
-                DibujarBurbujaGrid(g, pTexto, gl.GridID, fontGrid, penBubble, brushBubble, brushText, gl.Direction)
+                Dim yTexto As Single = If(gl.BubbleLocation.ToLower() = "start", p2.Y + 15, p1.Y - 15)
+                DibujarBurbujaGrid(g, New PointF(p1.X, yTexto), gl.GridID, fontGrid, penBubble, brushBubble, brushText, gl.Direction)
 
             ElseIf gl.Direction = "Y" Then
                 ' ============================================
@@ -109,13 +104,25 @@ Public Class DiagramaService
 
                 g.DrawLine(penGrid, p1, p2)
 
-                ' 🔹 Posición del ID (izq o der)
-                Dim xTexto As Single =
-                If(gl.BubbleLocation.ToLower() = "start", p1.X - 15, p2.X + 15)
+                Dim xTexto As Single = If(gl.BubbleLocation.ToLower() = "start", p1.X - 15, p2.X + 15)
+                DibujarBurbujaGrid(g, New PointF(xTexto, p1.Y), gl.GridID, fontGrid, penBubble, brushBubble, brushText, gl.Direction)
 
-                Dim pTexto As New PointF(xTexto, p1.Y)
+            ElseIf gl.Direction = "G" Then
+                ' ============================================
+                ' 🔹 GRID GENERAL → segmento libre X1,Y1 → X2,Y2
+                ' ============================================
+                Dim p1 = Transformar(New Vector3(gl.X1, gl.Y1, 0), bbox, pictureBox.Width, pictureBox.Height)
+                Dim p2 = Transformar(New Vector3(gl.X2, gl.Y2, 0), bbox, pictureBox.Width, pictureBox.Height)
 
-                DibujarBurbujaGrid(g, pTexto, gl.GridID, fontGrid, penBubble, brushBubble, brushText, gl.Direction)
+                g.DrawLine(penGrid, p1, p2)
+
+                ' Burbuja en el extremo indicado por BubbleLocation
+                Dim pBurbuja As PointF = If(gl.BubbleLocation.ToLower() = "start", p1, p2)
+                ' Determinar orientación predominante para la burbuja (X = más horizontal, Y = más vertical)
+                Dim dx = Math.Abs(gl.X2 - gl.X1)
+                Dim dy = Math.Abs(gl.Y2 - gl.Y1)
+                Dim dirBurbuja As String = If(dx >= dy, "Y", "X")
+                DibujarBurbujaGrid(g, pBurbuja, gl.GridID, fontGrid, penBubble, brushBubble, brushText, dirBurbuja)
             End If
         Next
     End Sub

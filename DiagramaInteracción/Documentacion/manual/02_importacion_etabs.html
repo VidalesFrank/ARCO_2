@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Importación ETABS</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Importación desde ETABS</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Importación desde ETABS</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="01_introduccion.html">← Introducción</a>
+  <a href="03_vigas.html">Siguiente: Vigas →</a>
+</div>
+
+<h2>Exportación desde ETABS</h2>
+<p>ARCO lee los resultados de ETABS desde un archivo Excel. El proceso de exportación en ETABS varía según la versión, pero en general sigue estos pasos:</p>
+
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Ejecutar el análisis</strong> — Verifique que el análisis esté completo y sin errores en ETABS antes de exportar.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Ir a File → Export → Save Tables to Excel</strong> — En ETABS, acceda al menú File (o Display en versiones antiguas) y seleccione la opción de exportar tablas a Excel.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Seleccionar las tablas requeridas</strong> — Marque todas las hojas que necesita ARCO según los módulos que va a usar. Consulte la tabla de hojas requeridas más adelante.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Guardar el archivo Excel</strong> — Asegúrese de guardarlo en formato .xlsx compatible con Excel 2010 o superior.</div></div>
+
+<div class="nota">ARCO soporta tanto el formato E17 (ETABS versiones anteriores a 2016) como E23 (ETABS 2016 y posteriores). La detección es automática — no necesita indicarle al programa qué versión está usando.</div>
+
+<h2>Hojas Requeridas por Módulo</h2>
+<table>
+  <tr><th>Datos</th><th>Hoja E17</th><th>Hoja E23</th><th>Usado por</th></tr>
+  <tr><td>Nodos / Joints</td><td>Joint Coordinates</td><td>Objects and Elements - Joints</td><td>Todos los módulos</td></tr>
+  <tr><td>Frames (conectividad)</td><td>Connectivity - Frame</td><td>Objects and Elements - Frames</td><td>Vigas, Columnas, Nervios</td></tr>
+  <tr><td>Secciones asignadas</td><td>Frame Assignments - Sections</td><td>Frame Assigns - Sect Prop</td><td>Vigas, Columnas, Nervios</td></tr>
+  <tr><td>Fuerzas en vigas</td><td>Beam Forces</td><td>Element Forces - Beams</td><td>Vigas, Nervios</td></tr>
+  <tr><td>Fuerzas en columnas</td><td>Column Forces</td><td>Element Forces - Columns</td><td>Columnas</td></tr>
+  <tr><td>Fuerzas en muros Pier</td><td>Pier Forces</td><td>Pier Forces (misma hoja)</td><td>Muros, Columnas tipo Pier, Pilas tipo Pier</td></tr>
+  <tr><td>Diseño de muros Pier</td><td>Shear Wall Pier Summary</td><td>Pier Dgn Sum</td><td>Muros</td></tr>
+</table>
+
+<h2>Índices de Columnas en Hojas Clave (E23)</h2>
+<p>Para usuarios avanzados que deseen verificar la lectura de datos, los índices de columnas en las hojas E23 son:</p>
+
+<h3>Element Forces - Columns (E23)</h3>
+<table>
+  <tr><th>Índice</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th></tr>
+  <tr><td>Campo</td><td>Story</td><td>Column</td><td>UniqueName</td><td>OutputCase</td><td>CaseType</td><td>StepType</td><td>StepNum</td><td>Station</td><td>P</td><td>V2</td><td>V3</td><td>T</td><td>M2</td><td>M3</td></tr>
+</table>
+
+<h3>Pier Forces</h3>
+<table>
+  <tr><th>Índice</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th></tr>
+  <tr><td>Campo</td><td>Story</td><td>Pier</td><td>OutputCase</td><td>CaseType</td><td>StepType</td><td>Location</td><td>P</td><td>V2</td><td>V3</td><td>T</td><td>M2</td><td>M3</td></tr>
+</table>
+
+<h2>Cómo Importar en ARCO</h2>
+<p>Cada módulo de ARCO tiene su propio proceso de importación. El flujo general es:</p>
+
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Abrir el módulo</strong> — Haga clic en el botón del módulo en la pantalla principal (Pilas, Columnas, Muros, Vigas, etc.).</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Hacer clic en "Importar" o "Cargar ETABS"</strong> — Cada módulo tiene un botón dedicado para la importación. En algunos módulos está en la pestaña de Importación.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Seleccionar el archivo Excel</strong> — Se abre un diálogo para seleccionar el archivo .xls o .xlsx exportado de ETABS.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Esperar la carga</strong> — ARCO lee todas las hojas necesarias. Para proyectos grandes (muchos pisos y elementos) esto puede tomar unos segundos.</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Confirmar la importación</strong> — ARCO mostrará un mensaje confirmando cuántos elementos fueron importados. En caso de error, se mostrará el detalle del problema.</div></div>
+
+<h2>Troubleshooting: Problemas Comunes al Importar</h2>
+
+<h3>ARCO no encuentra las hojas requeridas</h3>
+<div class="advertencia">Si ARCO no puede leer el archivo, verifique que el archivo Excel tenga las hojas con los nombres exactos indicados en la tabla anterior. Los nombres distinguen entre mayúsculas y minúsculas en algunas versiones de ETABS.</div>
+<ul>
+  <li>Abra el archivo Excel manualmente y verifique los nombres de las pestañas.</li>
+  <li>Compare contra la tabla de hojas requeridas. Un espacio o guion diferente puede causar el error.</li>
+  <li>Si usa ETABS E23 pero el archivo tiene nombres E17 (o viceversa), ARCO fallará en la detección. En este caso, exporte nuevamente desde ETABS.</li>
+</ul>
+
+<h3>El archivo Excel tiene datos vacíos o incompletos</h3>
+<ul>
+  <li>Asegúrese de que ETABS haya ejecutado el análisis exitosamente antes de exportar.</li>
+  <li>Verifique que las combinaciones de carga sean de tipo "Combination" y no solo casos de carga individuales.</li>
+  <li>Para fuerzas en vigas, asegúrese de que la opción "Output Stations" esté configurada para generar estaciones intermedias (mínimo 5 por frame).</li>
+</ul>
+
+<h3>Error de conexión OLE DB al leer el Excel</h3>
+<ul>
+  <li>El driver de Microsoft Access Database Engine debe estar instalado. Descárguelo desde Microsoft si no está disponible.</li>
+  <li>Asegúrese de que el archivo no esté abierto en Excel mientras ARCO intenta leerlo.</li>
+  <li>Si el archivo es .xlsx y hay problemas, intente guardarlo como .xls desde Excel.</li>
+</ul>
+
+<h2>Combinaciones de Diseño</h2>
+<p>Después de importar, cada módulo requiere que el usuario seleccione qué combinaciones se usarán para el diseño. Este paso es <strong>obligatorio antes de calcular</strong>.</p>
+<div class="nota">Las combinaciones de diseño para vigas, columnas y muros se seleccionan de forma independiente en cada módulo. Un cambio en las combinaciones de columnas no afecta las de muros.</div>
+
+<p>Las combinaciones típicas de diseño para concreto reforzado según NSR-10 son:</p>
+<ul>
+  <li>1.4D (carga muerta amplificada)</li>
+  <li>1.2D + 1.6L (gravitacional dominante)</li>
+  <li>1.2D + 1.0L ± 1.0Ex (sismo en X)</li>
+  <li>1.2D + 1.0L ± 1.0Ey (sismo en Y)</li>
+  <li>0.9D ± 1.0Ex (sismo con mínima carga muerta)</li>
+  <li>0.9D ± 1.0Ey</li>
+</ul>
+</div>
+</body>
+</html>

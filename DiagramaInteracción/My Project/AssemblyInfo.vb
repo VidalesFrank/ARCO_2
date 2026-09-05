@@ -30,5 +30,10 @@ Imports System.Runtime.InteropServices
 ' utilizando el carácter "*", como se muestra a continuación:
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("1.0.0.0")>
-<Assembly: AssemblyFileVersion("1.0.0.0")>
+' AssemblyVersion: NO cambiar entre builds menores — cambiarlo rompe referencias COM/interop.
+' AssemblyFileVersion: incrementar el 4.° número con cada release que se distribuya.
+'   Ejemplo: 2.0.0.1 → 2.0.0.2 → 2.0.0.3 ...
+'   Inno Setup lee este valor con GetFileVersion() para nombrar el Setup y mostrarlo
+'   en "Programas y características" de Windows.
+<Assembly: AssemblyVersion("2.0.0.0")>
+<Assembly: AssemblyFileVersion("2.0.0.1")>

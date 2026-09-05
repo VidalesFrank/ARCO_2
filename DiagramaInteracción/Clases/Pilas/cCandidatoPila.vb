@@ -48,4 +48,26 @@ Public Class cCandidatoPila
         End Get
     End Property
 
+    ''' <summary>Nombre de la sección asignada en ETABS (p. ej. "02_P1_1.20x1.20_(21MPa)").</summary>
+    Public Property SeccionNombre As String = ""
+
+    ''' <summary>Diámetro de la sección circular en metros (0 si no es circular o no se detectó).</summary>
+    Public Property Diametro As Double = 0.0
+
+    ''' <summary>Número de tramos (frames) que forman esta pila (≥1).</summary>
+    Public Property NumSegmentos As Integer = 1
+
+    ''' <summary>Coordenada Z global del extremo superior de la pila (m).</summary>
+    Public Property ZTop As Double = 0.0
+
+    ''' <summary>Coordenada Z global del extremo inferior de la pila (m).</summary>
+    Public Property ZBottom As Double = 0.0
+
+    ''' <summary>Longitud total de la pila = |ZTop - ZBottom| en metros.</summary>
+    Public ReadOnly Property ProfundidadM As Double
+        Get
+            Return Math.Abs(ZTop - ZBottom)
+        End Get
+    End Property
+
 End Class

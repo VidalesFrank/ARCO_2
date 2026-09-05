@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Losas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Losas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Losas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="07_nervios.html">← Nervios</a>
+  <a href="09_escaleras.html">Siguiente: Escaleras →</a>
+  <a href="../criterios/06_losas.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Losas diseña <strong>losas nervadas en dos direcciones</strong> por el método de coeficientes de la tabla 13-1 del ACI 318 (adoptado por NSR-10). Este método es aplicable a paneles rectangulares con bordes apoyados en vigas rígidas o muros, con la relación de lados m = La/Lb ≥ 0.5.</p>
+<p>El módulo no requiere importación desde ETABS. Las cargas se ingresan directamente por el usuario.</p>
+
+<h2>Ámbito de Aplicación</h2>
+<ul>
+  <li>Losas rectangulares con dos vanos en cada dirección como mínimo (losas continuas)</li>
+  <li>Relación de lados: 0.5 ≤ m = La/Lb ≤ 1.0 (La es el lado corto)</li>
+  <li>Bordes soportados en vigas de rigidez adecuada o muros de concreto</li>
+  <li>La carga viva no debe exceder tres veces la carga muerta</li>
+</ul>
+<div class="advertencia">El método de coeficientes no es aplicable a losas de una dirección, losas fungiformes (sin vigas), ni losas con bordes en voladizo. Para estos casos se deben usar métodos de elementos finitos o marcos equivalentes.</div>
+
+<h2>Datos de Entrada</h2>
+
+<h3>Geometría de la Sección</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>e_losa (espesor de loseta)</td><td>cm</td><td>Espesor de la losa superior (loseta entre nervios)</td></tr>
+  <tr><td>H_nervio (altura del nervio)</td><td>cm</td><td>Altura de los nervios medida desde la cara inferior hasta la intrados de la loseta</td></tr>
+  <tr><td>tw_nervio (ancho del nervio)</td><td>cm</td><td>Ancho del alma de cada nervio</td></tr>
+  <tr><td>Separación X</td><td>cm</td><td>Separación entre ejes de nervios en dirección X</td></tr>
+  <tr><td>Separación Y</td><td>cm</td><td>Separación entre ejes de nervios en dirección Y</td></tr>
+</table>
+
+<h3>Geometría del Panel</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>Longitud La (corto)</td><td>m</td><td>Dimensión del panel en el lado corto</td></tr>
+  <tr><td>Longitud Lb (largo)</td><td>m</td><td>Dimensión del panel en el lado largo</td></tr>
+</table>
+
+<h3>Cargas</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>CM (carga muerta adicional)</td><td>kN/m²</td><td>Carga muerta impuesta (acabados, tabiques, instalaciones). No incluye el peso propio de la losa.</td></tr>
+  <tr><td>CV (carga viva)</td><td>kN/m²</td><td>Carga viva según el uso del espacio</td></tr>
+</table>
+<div class="nota">El peso propio de la losa nervada se calcula automáticamente como: γ_concreto × volumen por m² de losa. El volumen incluye la loseta más el volumen de los nervios, descontando los casetones. γ_concreto = 24 kN/m³.</div>
+
+<h3>Continuidad de Bordes</h3>
+<p>La condición de apoyo en cada uno de los cuatro bordes del panel determina el caso de la tabla a usar. Para cada borde se indica:</p>
+<table>
+  <tr><th>Condición</th><th>Descripción</th><th>Efecto en coeficientes</th></tr>
+  <tr><td>Continuo (C)</td><td>Borde apoyado en viga o muro rígido con panel adyacente</td><td>Momento negativo en el borde (coeficiente de empotramiento)</td></tr>
+  <tr><td>Discontinuo (D)</td><td>Borde libre, en voladizo, o sin panel adyacente</td><td>Sin momento negativo en el borde (coeficiente de borde libre)</td></tr>
+</table>
+<p>La combinación de los cuatro bordes (C/D en cada extremo de La y Lb) determina el caso de la tabla, del 1 al 9.</p>
+
+<h2>Flujo de Trabajo en el Módulo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Ingresar geometría de sección</strong> — Complete el espesor de la loseta, altura y ancho de nervios, y separaciones en X e Y.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Ingresar dimensiones del panel</strong> — Defina La (lado corto) y Lb (lado largo). ARCO calcula m = La/Lb automáticamente.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Ingresar cargas</strong> — Ingrese CM y CV. El peso propio se calcula automáticamente.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Definir continuidad</strong> — Marque los checkboxes de continuidad para cada uno de los cuatro bordes (Borde La_izq, La_der, Lb_inf, Lb_sup).</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Calcular</strong> — ARCO interpolará los coeficientes de la tabla según el caso y m, y calculará los momentos de diseño por franja.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Revisar momentos por franja</strong> — Los resultados se presentan separados para la franja central (2/3 del ancho del panel) y la franja de borde (1/3 en cada extremo).</div></div>
+<div class="paso"><div class="paso-num">7</div><div class="paso-texto"><strong>Seleccionar refuerzo</strong> — ARCO calcula el As requerido por metro y lo convierte en As por nervio (As_nervio = As_franja × separación). El usuario selecciona el calibre de barra y número de barras por nervio.</div></div>
+
+<h2>Resultados</h2>
+
+<h3>Coeficientes Interpolados</h3>
+<table>
+  <tr><th>Coeficiente</th><th>Descripción</th></tr>
+  <tr><td>Ca_neg, Cb_neg</td><td>Coeficientes de momento negativo en bordes continuos (La y Lb respectivamente)</td></tr>
+  <tr><td>Ca_D, Cb_D</td><td>Coeficientes de momento positivo por carga muerta (CM + peso propio)</td></tr>
+  <tr><td>Ca_L, Cb_L</td><td>Coeficientes de momento positivo por carga viva</td></tr>
+  <tr><td>qa, qb</td><td>Coeficientes de cortante unitario en bordes</td></tr>
+</table>
+
+<h3>Momentos de Diseño por Franja</h3>
+<table>
+  <tr><th>Momento</th><th>Fórmula</th><th>Descripción</th></tr>
+  <tr><td>Ma_neg</td><td>Ca_neg · Cu · La²</td><td>Momento negativo en borde continuo de La [kN·m/m]</td></tr>
+  <tr><td>Mb_neg</td><td>Cb_neg · Cu · Lb²</td><td>Momento negativo en borde continuo de Lb [kN·m/m]</td></tr>
+  <tr><td>Ma_pos</td><td>(Ca_D·CM + Ca_L·CV)·La²</td><td>Momento positivo en franja central de La [kN·m/m]</td></tr>
+  <tr><td>Mb_pos</td><td>(Cb_D·CM + Cb_L·CV)·Lb²</td><td>Momento positivo en franja central de Lb [kN·m/m]</td></tr>
+  <tr><td>M_borde</td><td>M_central / 3</td><td>Momento en franja de borde (reduce a 1/3)</td></tr>
+</table>
+
+<h3>Acero Requerido</h3>
+<p>ARCO calcula el As requerido [cm²/m] para cada momento usando el método de bloque Whitney (igual que vigas). Luego convierte a As por nervio multiplicando por la separación del nervio:</p>
+<ul>
+  <li>As_nervio_La = As_por_metro × Separación_Y [cm²]</li>
+  <li>As_nervio_Lb = As_por_metro × Separación_X [cm²]</li>
+</ul>
+<p>El usuario selecciona la combinación de barras (número × calibre) cuya área supere el As_nervio requerido.</p>
+</div>
+</body>
+</html>

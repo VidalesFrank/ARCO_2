@@ -65,12 +65,12 @@ Public Class Funciones_Muros
 
     End Function
 
-    Public Shared Function EB_C(ByVal Dis As String, ByVal Du As Single, ByVal Hw As Single, ByVal Lw As Single)
+    Public Shared Function EB_C(ByVal Dis As eDisipasion, ByVal Du As Single, ByVal Hw As Single, ByVal Lw As Single)
 
         Dim du_hw_Lim As Single = 0.0075
         Dim du_hw As Single = Math.Max(Du / Hw, du_hw_Lim)
 
-        If Dis = "DMO" Then
+        If Dis = eDisipasion.DMO Then
             du_hw_Lim = 0.0035
             du_hw = Math.Max(Du / Hw, du_hw_Lim)
         End If
@@ -81,12 +81,12 @@ Public Class Funciones_Muros
 
     End Function
 
-    Public Shared Function EB_Esf(ByVal Dis As String, ByVal Hw As Single, ByVal Lw As Single, ByVal fc As Single, ByVal Esf_ As Single)
+    Public Shared Function EB_Esf(ByVal Dis As eDisipasion, ByVal Hw As Single, ByVal Lw As Single, ByVal fc As Single, ByVal Esf_ As Single)
 
         Dim esf_max As Single = 0.2 * fc
         Dim esf_lim As Single = 0.15 * fc
 
-        If Dis = "DMO" Then
+        If Dis = eDisipasion.DMO Then
             esf_max = 0.3 * fc
             esf_lim = 0.22 * fc
         End If
@@ -165,7 +165,7 @@ Public Class Funciones_Muros
         End Select
     End Function
 
-    Public Shared Function AceroH_EB(ByVal Dis As String, ByVal E_Borde As SeccionMuro.ElementoBorde, ByVal tw As Single, ByVal fc As Single, ByVal fy As Single)
+    Public Shared Function AceroH_EB(ByVal Dis As eDisipasion, ByVal E_Borde As SeccionMuro.ElementoBorde, ByVal tw As Single, ByVal fc As Single, ByVal fy As Single)
 
         Dim Resultados(2)
 
@@ -206,7 +206,7 @@ Public Class Funciones_Muros
 
         'Dim Ash1 As Single = 0.3 * s * bc * fc * ((Ag / Ach) - 1) / fy
         Dim Ash2 As Single = 0.09 * s * hc * fc / fy
-        If Dis = "DMO" Then
+        If Dis = eDisipasion.DMO Then
             Ash2 = 0.06 * s * hc * fc / fy
         End If
 

@@ -74,6 +74,7 @@ Partial Class Form_09_Vigas
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
         Me.Boton_Replicar = New System.Windows.Forms.Button()
+        Me.Boton_VerGrupo = New System.Windows.Forms.Button()
         Me.Boton_Copiar = New System.Windows.Forms.Button()
         Me.Boton_Aplicar = New System.Windows.Forms.Button()
         Me.GroupBox6 = New System.Windows.Forms.GroupBox()
@@ -347,8 +348,8 @@ Partial Class Form_09_Vigas
         Me.New_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.New_Pilas.ForeColor = System.Drawing.Color.White
         Me.New_Pilas.Name = "New_Pilas"
-        Me.New_Pilas.Size = New System.Drawing.Size(207, 28)
-        Me.New_Pilas.Text = "Nuevo"
+        Me.New_Pilas.Size = New System.Drawing.Size(245, 28)
+        Me.New_Pilas.Text = "Limpiar datos de vigas"
         '
         'Open_Pilas
         '
@@ -571,6 +572,7 @@ Partial Class Form_09_Vigas
         Me.TabPage2.BackColor = System.Drawing.SystemColors.Control
         Me.TabPage2.Controls.Add(Me.GroupBox8)
         Me.TabPage2.Controls.Add(Me.Boton_Replicar)
+        Me.TabPage2.Controls.Add(Me.Boton_VerGrupo)
         Me.TabPage2.Controls.Add(Me.Boton_Copiar)
         Me.TabPage2.Controls.Add(Me.Boton_Aplicar)
         Me.TabPage2.Controls.Add(Me.GroupBox6)
@@ -595,6 +597,21 @@ Partial Class Form_09_Vigas
         Me.Boton_Replicar.TabIndex = 40
         Me.Boton_Replicar.Text = "Replicar Refuerzo en Otras Vigas"
         Me.Boton_Replicar.UseVisualStyleBackColor = False
+        '
+        'Boton_VerGrupo
+        '
+        Me.Boton_VerGrupo.BackColor = System.Drawing.Color.FromArgb(CType(CType(0, Byte), Integer), CType(CType(100, Byte), Integer), CType(CType(160, Byte), Integer))
+        Me.Boton_VerGrupo.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.Boton_VerGrupo.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_VerGrupo.ForeColor = System.Drawing.Color.White
+        Me.Boton_VerGrupo.Location = New System.Drawing.Point(0, 825)
+        Me.Boton_VerGrupo.Margin = New System.Windows.Forms.Padding(4)
+        Me.Boton_VerGrupo.Name = "Boton_VerGrupo"
+        Me.Boton_VerGrupo.Size = New System.Drawing.Size(223, 50)
+        Me.Boton_VerGrupo.TabIndex = 41
+        Me.Boton_VerGrupo.Text = "Ver / Editar Grupo"
+        Me.Boton_VerGrupo.UseVisualStyleBackColor = False
+        Me.Boton_VerGrupo.Visible = False
         '
         'Boton_Copiar
         '
@@ -1167,6 +1184,7 @@ Partial Class Form_09_Vigas
     Friend WithEvents DataGridViewTextBoxColumn9 As DataGridViewTextBoxColumn
     Friend WithEvents DataGridViewTextBoxColumn10 As DataGridViewTextBoxColumn
     Friend WithEvents Boton_Replicar As Button
+    Friend WithEvents Boton_VerGrupo As Button
     Friend WithEvents Boton_Copiar As Button
     Friend WithEvents Boton_Aplicar As Button
     Friend WithEvents TabPage3 As TabPage

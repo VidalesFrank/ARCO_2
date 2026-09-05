@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Pilas</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Pilas</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Pilas</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/06_pilas.html">Manual de Pilas</a>
+  <a href="03_muros.html">← Muros</a>
+  <a href="05_nervios.html">Nervios →</a>
+</div>
+
+<h2>1. Esfuerzos Admisibles en el Concreto</h2>
+<p>ARCO verifica la pila bajo cinco categorías de combinaciones de carga, cada una con su propio límite de esfuerzo admisible en la sección de concreto:</p>
+
+<div class="formula">Ag = área bruta de la sección (π·Df²/4 para maciza, o π·(Df²-Di²)/4 para hueca)
+
+Check1 — Gravitacionales servicio (D+L):
+  C/D₁ = 0.25·fc·Ag·1000 / Ps_est_max   ≥ 0.9
+
+Check2 — Sísmicas servicio (D+L+E servicio):
+  C/D₂ = 0.33·fc·Ag·1000 / Ps_din_max   ≥ 0.9
+
+Check3 — Gravitacionales diseño (amplificadas):
+  C/D₃ = 0.35·fc·Ag·1000 / Pu_est_max   ≥ 0.9
+
+Check4 — Sísmicas diseño (amplificadas con sismo):
+  C/D₄ = 0.35·fc·Ag·1000 / Pu_din_max   ≥ 0.9
+
+Check5 — Tracción:
+  C/D₅ = 0.9·fy·As·N / P_traccion_max   ≥ 0.9
+  (N = número de barras longitudinales, As = área de cada barra)</div>
+
+<div class="nota">Los factores 0.25, 0.33 y 0.35 reflejan el uso de pilotes como elementos de cimentación sujetos a confinamiento lateral del suelo, lo que permite esfuerzos mayores que para columnas aisladas (NSR-10 C.15).</div>
+
+<h2>2. Capacidad de Carga del Suelo</h2>
+<div class="formula">Área de la punta:
+  Ag_C = π·Dc²/4   si hay capitel (Dc &gt; Df)
+  Ag_C = π·Df²/4   si no hay capitel
+
+Q_punta    = σ_adm · Ag_C              [kN]
+Q_fricción = τ_fricción · π · Df · L   [kN]
+Q_total    = Q_punta + Q_fricción       [kN]
+
+C/D_suelo = Q_total / Ps_max   ≥ 0.9
+(Ps_max = carga axial máxima de servicio)</div>
+
+<h2>3. Diagrama de Interacción Circular</h2>
+<h3>3.1 Construcción del DI</h3>
+<p>El diagrama de interacción para sección circular se construye variando la posición del eje neutro c desde D (compresión pura) hasta ~0.04·D (cerca de tensión pura):</p>
+
+<div class="formula">Para cada posición c:
+
+  Área comprimida de la sección circular:
+    Acc = A_segmento_circular(c, D)   [m²]
+    (integral geométrica del segmento circular de profundidad c)
+
+  Para cada barra i (distribuidas uniformemente en circunferencia):
+    dᵢ = posición desde fibra comprimida
+    εᵢ = (c - dᵢ) / c × 0.003
+    fᵢ = max(-fy, min(fy, Es·εᵢ))
+
+  Pn = 0.85·fc·Acc·1000 + Σ(Asi·fᵢ)  [kN]
+  Mn = 0.85·fc·Acc·1000·e_cc + Σ(Asi·fᵢ·(D/2 - dᵢ))  [kN·m]
+  (e_cc = excentricidad del centroide del área comprimida desde el centroide de la sección)</div>
+
+<h3>3.2 Factor de reducción φ</h3>
+<div class="formula">Para columnas con espiral: φ₀ = 0.75
+Para columnas con estribos: φ₀ = 0.65
+
+Transición igual que columnas rectangulares:
+  φ = φ₀                    si ε_t ≤ ε_y
+  φ = interpolación lineal   si ε_y &lt; ε_t &lt; 0.005
+  φ = 0.90                  si ε_t ≥ 0.005</div>
+
+<h3>3.3 Verificación de demanda</h3>
+<div class="formula">Método 1 — Diagonal (distancia en plano P-M):
+  Desde el origen, se traza una línea hacia el punto de demanda (Pu, Mu).
+  La línea intersecta la envolvente φP-φM en el punto (Pc, Mc).
+  Factor_DI = distancia(Pu,Mu) / distancia(Pc,Mc)
+  C/D = 1 / Factor_DI
+
+Método 2 — Corte horizontal (φMn a nivel de Pu):
+  φMn_Pu = InterpolarMnEnPu(DiagramaCircular, Pu)
+  C/D = φMn_Pu / Mu   ≥ 0.9</div>
+
+<h2>4. Cortante</h2>
+<div class="norma"><strong>NSR-10 C.11.3 y C.11.4</strong></div>
+
+<h3>4.1 Área efectiva de cortante</h3>
+<div class="formula">Ae = 0.8 · D²   [m²]   (área efectiva de la sección circular para cortante)</div>
+
+<h3>4.2 Resistencia del concreto al cortante</h3>
+<div class="formula">Fórmula C.11-3 (sin carga axial):
+  Vc0 = 0.17 · 0.75 · √fc · Ag · 1000   [kN]
+
+Fórmula C.11-4 (con carga axial Nu):
+  Vc1 = 0.17 · 0.75 · (1 + Nu/(14000·Ag)) · √fc · Ae · 1000   [kN]
+  (Nu en kN, Ag en m², fc en MPa; Nu positivo en compresión)
+
+Vc = min(Vc0, Vc1)   [kN]</div>
+
+<h3>4.3 Resistencia del refuerzo transversal</h3>
+<div class="formula">Para espiral continua con paso p:
+  Vs = 0.75 · 2 · Ass · fy · (0.8·D) / (s · 1000)   [kN]
+  Ass = área de la barra de la espiral   [mm²]
+  s   = paso de la espiral   [m]
+  0.8·D = brazo de momento de cortante (aprox.)
+
+Para estribos discretos:
+  Vs = 0.75 · n · Ass · fy · (0.8·D) / (s · 1000)   [kN]
+  n = número de ramas eficaces</div>
+
+<h3>4.4 Resistencia total y verificación</h3>
+<div class="formula">φVn = Vc + Vs   [kN]   (el φ ya está incluido en Vc y Vs)
+Factor_V = φVn / Vu_max   ≥ 0.9</div>
+
+<h2>5. Criterio de Cumplimiento Global</h2>
+<div class="formula">La pila se considera adecuada cuando TODOS los factores son ≥ 0.9:
+
+  C/D₁ = 0.25·fc·Ag / Ps_est          ≥ 0.9   (gravitacional servicio)
+  C/D₂ = 0.33·fc·Ag / Ps_din          ≥ 0.9   (sísmico servicio)
+  C/D₃ = 0.35·fc·Ag / Pu_est          ≥ 0.9   (gravitacional diseño)
+  C/D₄ = 0.35·fc·Ag / Pu_din          ≥ 0.9   (sísmico diseño)
+  C/D₅ = 0.9·fy·As·N / P_tracción     ≥ 0.9   (tracción)
+  C/D_suelo = Q_total / P_servicio     ≥ 0.9
+  C/D_DI    = dist_cap / dist_demanda  ≥ 0.9   (diagrama interacción)
+  C/D_V     = φVn / Vu                 ≥ 0.9   (cortante)</div>
+
+<div class="nota"><strong>ARCO considera adecuada una pila cuando C/D ≥ 0.9 en todas sus verificaciones.</strong>
+Un C/D entre 0.9 y 1.0 indica que la pila es apta para las demandas calculadas. No es necesario modificar dimensiones ni refuerzo.</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:220px;">Verde — C/D ≥ 1.0</th><td>Cumple. La pila tiene reserva en todos los estados de verificación.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">Naranja — 0.9 ≤ C/D &lt; 1.0</th><td><strong>Cumple — Adecuado.</strong> La pila es apta. No requiere modificación.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">Rojo — C/D &lt; 0.9</th><td>No cumple. Revisar diámetro, longitud, refuerzo o parámetros del suelo.</td></tr>
+</table>
+</div>
+</body>
+</html>

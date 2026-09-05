@@ -18,7 +18,9 @@ Public Class Form_01_ImportarETABS
     Public Property ImportacionConfirmada As Boolean = False
 
     ' ─── Controles ──────────────────────────────────────────────────────────────
-    Private WithEvents SplitContainer1 As New SplitContainer()
+    Private TableMain As New TableLayoutPanel()
+    Private PanelLeft As New Panel()
+    Private PanelRight As New Panel()
     Private WithEvents PicPlanta As New PictureBox()
     Private LabelTituloPlanta As New Label()
     Private LabelInfo As New Label()
@@ -35,6 +37,26 @@ Public Class Form_01_ImportarETABS
     Private Const LADO_PIER As Integer = 16        ' px, cuadrado Pier
     Private Const MARGEN_PORCENTAJE As Double = 0.15
 
+    Private _jointsXY As List(Of PointF)
+    Private _framesXY As List(Of Tuple(Of PointF, PointF))
+    Private _descripcionImport As String
+    Private LabelDescripcion As New Label()
+    Private PanelInfo As New Panel()
+
+    ' ─── Zoom y pan ─────────────────────────────────────────────────────────────
+    Private _zoom As Double = 1.0
+    Private _panX As Double = 0.0
+    Private _panY As Double = 0.0
+    Private _isDragging As Boolean = False
+    Private _dragStart As Point
+
+    ' ─── Controles barra de zoom ────────────────────────────────────────────────
+    Private PanelZoom As New Panel()
+    Private WithEvents BtnZoomIn As New Button()
+    Private WithEvents BtnZoomOut As New Button()
+    Private WithEvents BtnResetView As New Button()
+    Private LabelZoomPct As New Label()
+
     ' ─── Índices columnas DGV ───────────────────────────────────────────────────
     Private Const COL_SEL As Integer = 0
     Private Const COL_NOMBRE As Integer = 1
@@ -46,8 +68,14 @@ Public Class Form_01_ImportarETABS
     Private Const COL_ESTADO As Integer = 7
 
     ' ─── Constructor ────────────────────────────────────────────────────────────
-    Public Sub New(candidatos As List(Of cCandidatoPila))
+    Public Sub New(candidatos As List(Of cCandidatoPila),
+                   Optional jointsXY As List(Of PointF) = Nothing,
+                   Optional framesXY As List(Of Tuple(Of PointF, PointF)) = Nothing,
+                   Optional descripcion As String = "")
         _candidatos = If(candidatos, New List(Of cCandidatoPila)())
+        _jointsXY = If(jointsXY, New List(Of PointF)())
+        _framesXY = If(framesXY, New List(Of Tuple(Of PointF, PointF))())
+        _descripcionImport = descripcion
         InitializeComponent()
     End Sub
 
@@ -63,11 +91,41 @@ Public Class Form_01_ImportarETABS
         Me.FormBorderStyle = FormBorderStyle.Sizable
         Me.BackColor = Color.White
 
-        ' ── SplitContainer ────────────────────────────────────────────────────
-        SplitContainer1.Dock = DockStyle.Fill
-        SplitContainer1.Orientation = Orientation.Vertical
-        SplitContainer1.SplitterWidth = 4
-        Me.Controls.Add(SplitContainer1)
+        ' ── TableLayoutPanel 50% / 50% (columnas proporcionales, sin dependencia de timing) ──
+        TableMain.Dock = DockStyle.Fill
+        TableMain.ColumnCount = 2
+        TableMain.RowCount = 1
+        TableMain.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
+        TableMain.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
+        TableMain.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
+        TableMain.Padding = New Padding(0)
+        TableMain.Margin = New Padding(0)
+        TableMain.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
+
+        PanelLeft.Dock = DockStyle.Fill
+        PanelLeft.Margin = New Padding(0)
+
+        PanelRight.Dock = DockStyle.Fill
+        PanelRight.Margin = New Padding(0)
+
+        ' ── Panel de descripción (visible solo si hay texto) ──────────────────
+        If Not String.IsNullOrEmpty(_descripcionImport) Then
+            PanelInfo.Dock = DockStyle.Top
+            PanelInfo.Height = 38
+            PanelInfo.BackColor = Color.FromArgb(224, 234, 246)
+            PanelInfo.Padding = New Padding(8, 0, 8, 0)
+
+            LabelDescripcion.Dock = DockStyle.Fill
+            LabelDescripcion.Text = _descripcionImport
+            LabelDescripcion.Font = New Font("Segoe UI", 8.5F)
+            LabelDescripcion.ForeColor = Color.FromArgb(30, 60, 100)
+            LabelDescripcion.TextAlign = ContentAlignment.MiddleLeft
+            PanelInfo.Controls.Add(LabelDescripcion)
+            Me.Controls.Add(TableMain)
+            Me.Controls.Add(PanelInfo)
+        Else
+            Me.Controls.Add(TableMain)
+        End If
 
         ' ── Panel izquierdo: Vista en planta ──────────────────────────────────
         LabelTituloPlanta.Text = "Vista en Planta"
@@ -93,9 +151,38 @@ Public Class Form_01_ImportarETABS
         LabelInfo.BorderStyle = BorderStyle.FixedSingle
         LabelInfo.Text = "Seleccione una fila para ver el detalle del candidato."
 
-        SplitContainer1.Panel1.Controls.Add(PicPlanta)
-        SplitContainer1.Panel1.Controls.Add(LabelInfo)
-        SplitContainer1.Panel1.Controls.Add(LabelTituloPlanta)
+        ' ── Barra de herramientas de zoom ─────────────────────────────────────
+        PanelZoom.Dock = DockStyle.Top
+        PanelZoom.Height = 30
+        PanelZoom.BackColor = Color.FromArgb(220, 228, 242)
+
+        ConfigurarBotonZoom(BtnZoomIn, "+")
+        ConfigurarBotonZoom(BtnZoomOut, "−")
+        ConfigurarBotonZoom(BtnResetView, "↺")
+        BtnZoomIn.Location = New Point(4, 3)
+        BtnZoomOut.Location = New Point(34, 3)
+        BtnResetView.Location = New Point(64, 3)
+
+        LabelZoomPct.AutoSize = True
+        LabelZoomPct.Font = New Font("Segoe UI", 8.5F)
+        LabelZoomPct.ForeColor = Color.FromArgb(50, 70, 110)
+        LabelZoomPct.Text = "100%"
+        LabelZoomPct.Location = New Point(98, 8)
+
+        PanelZoom.Controls.Add(BtnZoomIn)
+        PanelZoom.Controls.Add(BtnZoomOut)
+        PanelZoom.Controls.Add(BtnResetView)
+        PanelZoom.Controls.Add(LabelZoomPct)
+
+        ' Orden de adición determina el apilado Dock:
+        '   Fill → PicPlanta (espacio restante)
+        '   Bottom → LabelInfo
+        '   Top (primero en adición) → PanelZoom (bajo el título)
+        '   Top (último en adición) → LabelTituloPlanta (borde superior)
+        PanelLeft.Controls.Add(PicPlanta)
+        PanelLeft.Controls.Add(LabelInfo)
+        PanelLeft.Controls.Add(PanelZoom)
+        PanelLeft.Controls.Add(LabelTituloPlanta)
 
         ' ── Panel derecho: Tabla + botones ────────────────────────────────────
         LabelEstadisticas.Dock = DockStyle.Top
@@ -127,9 +214,13 @@ Public Class Form_01_ImportarETABS
         PanelBotones.Controls.Add(BtnConfirmar)
         PanelBotones.Controls.Add(BtnCancelar)
 
-        SplitContainer1.Panel2.Controls.Add(DGV_Candidatos)
-        SplitContainer1.Panel2.Controls.Add(PanelBotones)
-        SplitContainer1.Panel2.Controls.Add(LabelEstadisticas)
+        PanelRight.Controls.Add(DGV_Candidatos)
+        PanelRight.Controls.Add(PanelBotones)
+        PanelRight.Controls.Add(LabelEstadisticas)
+
+        ' ── Insertar paneles en el TableLayoutPanel ───────────────────────
+        TableMain.Controls.Add(PanelLeft, 0, 0)
+        TableMain.Controls.Add(PanelRight, 1, 0)
 
         Me.ResumeLayout(False)
 
@@ -185,11 +276,11 @@ Public Class Form_01_ImportarETABS
         colTipo.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         DGV_Candidatos.Columns.Add(colTipo)
 
-        ' COL 3 – Story
+        ' COL 3 – Profundidad / Story
         Dim colStory As New DataGridViewTextBoxColumn()
-        colStory.HeaderText = "Story"
+        colStory.HeaderText = "Prof. (m)"
         colStory.Name = "colStory"
-        colStory.Width = 70
+        colStory.Width = 110
         colStory.ReadOnly = True
         colStory.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         DGV_Candidatos.Columns.Add(colStory)
@@ -248,11 +339,27 @@ Public Class Form_01_ImportarETABS
         btn.Cursor = Cursors.Hand
     End Sub
 
+    Private Sub ConfigurarBotonZoom(btn As Button, texto As String)
+        btn.Text = texto
+        btn.BackColor = Color.FromArgb(65, 90, 130)
+        btn.ForeColor = Color.White
+        btn.FlatStyle = FlatStyle.Flat
+        btn.FlatAppearance.BorderSize = 0
+        btn.Font = New Font("Segoe UI", 11, FontStyle.Bold)
+        btn.Height = 24
+        btn.Width = 26
+        btn.Cursor = Cursors.Hand
+    End Sub
+
     ' ─── Carga del formulario ───────────────────────────────────────────────────
     Private Sub Form_01_ImportarETABS_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         CargarDGV()
         ActualizarEstadisticas()
         PosicionarBotones()
+    End Sub
+
+    Protected Overrides Sub OnShown(e As EventArgs)
+        MyBase.OnShown(e)
         DibujarPlanta()
     End Sub
 
@@ -264,7 +371,9 @@ Public Class Form_01_ImportarETABS
             row.Cells(COL_SEL).Value = c.Seleccionado
             row.Cells(COL_NOMBRE).Value = c.Nombre
             row.Cells(COL_TIPO).Value = c.Tipo
-            row.Cells(COL_STORY).Value = c.Story
+            row.Cells(COL_STORY).Value = If(c.ProfundidadM > 0.01,
+                                            $"{c.ProfundidadM:F1} m ({c.NumSegmentos} seg.)",
+                                            c.Story)
             row.Cells(COL_X).Value = c.X
             row.Cells(COL_Y).Value = c.Y
             row.Cells(COL_NCOMBOS).Value = c.NumeroCombinaciones
@@ -344,42 +453,66 @@ Public Class Form_01_ImportarETABS
     End Sub
 
     Private Sub DibujarCandidatosEnPlanta(g As Graphics, w As Integer, h As Integer)
-        ' ── Calcular rango de coordenadas ────────────────────────────────────
-        Dim xs = _candidatos.Select(Function(c) c.X).ToList()
-        Dim ys = _candidatos.Select(Function(c) c.Y).ToList()
+        ' ── Rango unificado: candidatos + joints del backdrop ─────────────
+        Dim allX As New List(Of Double)
+        Dim allY As New List(Of Double)
 
-        Dim xMin As Double = xs.Min()
-        Dim xMax As Double = xs.Max()
-        Dim yMin As Double = ys.Min()
-        Dim yMax As Double = ys.Max()
+        For Each c As cCandidatoPila In _candidatos
+            allX.Add(c.X) : allY.Add(c.Y)
+        Next
+        For Each pt As PointF In _jointsXY
+            allX.Add(pt.X) : allY.Add(pt.Y)
+        Next
 
-        Dim dx As Double = xMax - xMin
-        Dim dy As Double = yMax - yMin
-        If dx < 0.001 Then dx = 1.0
-        If dy < 0.001 Then dy = 1.0
+        If allX.Count = 0 Then Return
 
-        ' Margen del 15%
+        Dim xMin As Double = allX.Min() : Dim xMax As Double = allX.Max()
+        Dim yMin As Double = allY.Min() : Dim yMax As Double = allY.Max()
+
+        Dim dx As Double = xMax - xMin : If dx < 0.001 Then dx = 1.0
+        Dim dy As Double = yMax - yMin : If dy < 0.001 Then dy = 1.0
+
         Dim mX As Integer = CInt(w * MARGEN_PORCENTAJE)
         Dim mY As Integer = CInt(h * MARGEN_PORCENTAJE)
         Dim drawW As Integer = w - 2 * mX
-        Dim drawH As Integer = h - 2 * mY - 20  ' 20 px para barra de escala
+        Dim drawH As Integer = h - 2 * mY - 20
 
-        ' Escala uniforme (preservar aspecto)
-        Dim escX As Double = drawW / dx
-        Dim escY As Double = drawH / dy
-        Dim esc As Double = Math.Min(escX, escY)
+        Dim escBase As Double = Math.Min(drawW / dx, drawH / dy)
+        Dim esc As Double = escBase * _zoom
 
-        ' Funciones de transformación: X ETABS → pantalla derecha; Y ETABS → pantalla arriba
-        Dim Tx As Func(Of Double, Single) = Function(x) CSng(mX + (x - xMin) * esc)
-        Dim Ty As Func(Of Double, Single) = Function(y) CSng(mY + drawH - (y - yMin) * esc)
+        ' Centro del modelo → centro del área de dibujo, luego se aplica el pan
+        Dim cxModel As Double = (xMin + xMax) / 2.0
+        Dim cyModel As Double = (yMin + yMax) / 2.0
+        Dim cxPx As Double = mX + drawW / 2.0
+        Dim cyPx As Double = mY + drawH / 2.0
 
-        ' ── Obtener fila seleccionada en DGV ─────────────────────────────────
-        Dim idxSel As Integer = -1
-        If DGV_Candidatos.CurrentRow IsNot Nothing Then
-            idxSel = DGV_Candidatos.CurrentRow.Index
+        Dim Tx As Func(Of Double, Single) = Function(x) CSng(cxPx + (x - cxModel) * esc + _panX)
+        Dim Ty As Func(Of Double, Single) = Function(y) CSng(cyPx - (y - cyModel) * esc + _panY)
+
+        Dim idxSel As Integer = If(DGV_Candidatos.CurrentRow IsNot Nothing, DGV_Candidatos.CurrentRow.Index, -1)
+
+        ' ── 1. Backdrop: líneas de frames (gris claro semitransparente) ──
+        If _framesXY IsNot Nothing AndAlso _framesXY.Count > 0 Then
+            Using penFrame As New Pen(Color.FromArgb(80, 160, 160, 160), 1)
+                For Each f As Tuple(Of PointF, PointF) In _framesXY
+                    g.DrawLine(penFrame,
+                               Tx(f.Item1.X), Ty(f.Item1.Y),
+                               Tx(f.Item2.X), Ty(f.Item2.Y))
+                Next
+            End Using
         End If
 
-        ' ── Dibujar cada candidato ───────────────────────────────────────────
+        ' ── 2. Backdrop: joints (puntos grises pequeños) ──────────────────
+        If _jointsXY IsNot Nothing AndAlso _jointsXY.Count > 0 Then
+            Using brJoint As New SolidBrush(Color.FromArgb(100, 150, 150, 150))
+                For Each pt As PointF In _jointsXY
+                    Dim px As Single = Tx(pt.X) : Dim py As Single = Ty(pt.Y)
+                    g.FillEllipse(brJoint, px - 2, py - 2, 4, 4)
+                Next
+            End Using
+        End If
+
+        ' ── 3. Candidatos (mismo estilo que antes) ────────────────────────
         Dim fontLabel As New Font("Segoe UI", 7)
         Dim brushLabel As New SolidBrush(Color.FromArgb(50, 50, 50))
 
@@ -389,7 +522,6 @@ Public Class Form_01_ImportarETABS
             Dim py As Single = Ty(c.Y)
             Dim esSel As Boolean = (i = idxSel)
 
-            ' Color base según tipo y estado seleccionado
             Dim colorRelleno As Color
             Dim colorBorde As Color
 
@@ -399,12 +531,11 @@ Public Class Form_01_ImportarETABS
             ElseIf c.Tipo = "Frame" Then
                 colorRelleno = Color.FromArgb(200, 30, 100, 200)
                 colorBorde = Color.FromArgb(0, 55, 150)
-            Else ' Pier
+            Else
                 colorRelleno = Color.FromArgb(200, 220, 110, 10)
                 colorBorde = Color.FromArgb(180, 80, 0)
             End If
 
-            ' Resaltado de selección en DGV (anillo rojo)
             If esSel Then
                 Using penHalo As New Pen(Color.Red, 3)
                     If c.Tipo = "Frame" Then
@@ -419,30 +550,18 @@ Public Class Form_01_ImportarETABS
                 End Using
             End If
 
-            ' Dibujar forma
             Using brRelleno As New SolidBrush(colorRelleno)
             Using penBorde As New Pen(colorBorde, If(esSel, 2.0F, 1.0F))
                 If c.Tipo = "Frame" Then
-                    ' Círculo azul
-                    g.FillEllipse(brRelleno,
-                                  px - RADIO_FRAME, py - RADIO_FRAME,
-                                  RADIO_FRAME * 2, RADIO_FRAME * 2)
-                    g.DrawEllipse(penBorde,
-                                  px - RADIO_FRAME, py - RADIO_FRAME,
-                                  RADIO_FRAME * 2, RADIO_FRAME * 2)
+                    g.FillEllipse(brRelleno, px - RADIO_FRAME, py - RADIO_FRAME, RADIO_FRAME * 2, RADIO_FRAME * 2)
+                    g.DrawEllipse(penBorde, px - RADIO_FRAME, py - RADIO_FRAME, RADIO_FRAME * 2, RADIO_FRAME * 2)
                 Else
-                    ' Cuadrado naranja
-                    g.FillRectangle(brRelleno,
-                                    px - LADO_PIER \ 2, py - LADO_PIER \ 2,
-                                    LADO_PIER, LADO_PIER)
-                    g.DrawRectangle(penBorde,
-                                    px - LADO_PIER \ 2, py - LADO_PIER \ 2,
-                                    LADO_PIER, LADO_PIER)
+                    g.FillRectangle(brRelleno, px - LADO_PIER \ 2, py - LADO_PIER \ 2, LADO_PIER, LADO_PIER)
+                    g.DrawRectangle(penBorde, px - LADO_PIER \ 2, py - LADO_PIER \ 2, LADO_PIER, LADO_PIER)
                 End If
             End Using
             End Using
 
-            ' Nombre (pequeño, desplazado arriba y a la derecha del símbolo)
             Dim offset As Integer = If(c.Tipo = "Frame", RADIO_FRAME + 2, LADO_PIER \ 2 + 2)
             g.DrawString(c.Nombre, fontLabel, brushLabel, px + offset, py - 9)
         Next
@@ -450,7 +569,6 @@ Public Class Form_01_ImportarETABS
         fontLabel.Dispose()
         brushLabel.Dispose()
 
-        ' ── Barra de escala ──────────────────────────────────────────────────
         DibujarBarraEscala(g, w, h, esc)
     End Sub
 
@@ -535,9 +653,16 @@ Public Class Form_01_ImportarETABS
             Dim idx As Integer = DGV_Candidatos.CurrentRow.Index
             If idx < 0 OrElse idx >= _candidatos.Count Then Return
             Dim c As cCandidatoPila = _candidatos(idx)
+            Dim infoSec As String = If(Not String.IsNullOrEmpty(c.SeccionNombre),
+                                       $"  |  Sección: {c.SeccionNombre}  |  Ø {c.Diametro:F2} m",
+                                       "")
+            Dim infoPrf As String = If(c.ProfundidadM > 0.01,
+                                       $"  |  Prof: {c.ProfundidadM:F1} m  |  Segmentos: {c.NumSegmentos}",
+                                       $"  |  Story: {c.Story}")
             LabelInfo.Text =
-                $"Tipo: {c.Tipo}  |  Fuente: {c.SourceLabel}  |  " &
-                $"X: {c.X:F2} m  |  Y: {c.Y:F2} m  |  N° combos: {c.NumeroCombinaciones}  |  Story: {c.Story}"
+                $"Tipo: {c.Tipo}  |  Label: {c.SourceLabel}  |  " &
+                $"X: {c.X:F2} m  |  Y: {c.Y:F2} m  |  N° combos: {c.NumeroCombinaciones}" &
+                infoSec & infoPrf
         Catch ex As Exception
             LabelInfo.Text = "Error al obtener información del candidato."
         End Try
@@ -621,6 +746,78 @@ Public Class Form_01_ImportarETABS
         ImportacionConfirmada = False
         Me.DialogResult = DialogResult.Cancel
         Me.Close()
+    End Sub
+
+    ' ─── Botones de zoom ────────────────────────────────────────────────────────
+    Private Sub BtnZoomIn_Click(sender As Object, e As EventArgs) Handles BtnZoomIn.Click
+        _zoom = Math.Min(_zoom * 1.25, 20.0)
+        ActualizarLabelZoom()
+        DibujarPlanta()
+    End Sub
+
+    Private Sub BtnZoomOut_Click(sender As Object, e As EventArgs) Handles BtnZoomOut.Click
+        _zoom = Math.Max(_zoom / 1.25, 0.05)
+        ActualizarLabelZoom()
+        DibujarPlanta()
+    End Sub
+
+    Private Sub BtnResetView_Click(sender As Object, e As EventArgs) Handles BtnResetView.Click
+        _zoom = 1.0
+        _panX = 0.0
+        _panY = 0.0
+        ActualizarLabelZoom()
+        DibujarPlanta()
+    End Sub
+
+    Private Sub ActualizarLabelZoom()
+        LabelZoomPct.Text = $"{CInt(_zoom * 100)}%"
+    End Sub
+
+    ' ─── Pan con arrastre del ratón en PicPlanta ────────────────────────────────
+    Private Sub PicPlanta_MouseDown(sender As Object, e As MouseEventArgs) Handles PicPlanta.MouseDown
+        If e.Button = MouseButtons.Left Then
+            _isDragging = True
+            _dragStart = e.Location
+            PicPlanta.Cursor = Cursors.SizeAll
+        End If
+    End Sub
+
+    Private Sub PicPlanta_MouseMove(sender As Object, e As MouseEventArgs) Handles PicPlanta.MouseMove
+        If _isDragging Then
+            _panX += e.X - _dragStart.X
+            _panY += e.Y - _dragStart.Y
+            _dragStart = e.Location
+            DibujarPlanta()
+        End If
+    End Sub
+
+    Private Sub PicPlanta_MouseUp(sender As Object, e As MouseEventArgs) Handles PicPlanta.MouseUp
+        _isDragging = False
+        PicPlanta.Cursor = Cursors.Default
+    End Sub
+
+    ' ─── Zoom con rueda del ratón (interceptado a nivel de Form) ────────────────
+    ' PictureBox no es focusable → WndProc captura WM_MOUSEWHEEL cuando el cursor
+    ' está sobre PicPlanta sin importar qué control tiene el foco.
+    Private Const WM_MOUSEWHEEL As Integer = &H20A
+
+    Protected Overrides Sub WndProc(ByRef m As Message)
+        If m.Msg = WM_MOUSEWHEEL Then
+            Dim ptOnPic As Point = PicPlanta.PointToClient(Cursor.Position)
+            If PicPlanta.ClientRectangle.Contains(ptOnPic) Then
+                Dim delta As Short = CShort((m.WParam.ToInt64() >> 16) And &HFFFF)
+                If delta > 0 Then
+                    _zoom = Math.Min(_zoom * 1.15, 20.0)
+                Else
+                    _zoom = Math.Max(_zoom / 1.15, 0.05)
+                End If
+                ActualizarLabelZoom()
+                DibujarPlanta()
+                m.Result = IntPtr.Zero
+                Return
+            End If
+        End If
+        MyBase.WndProc(m)
     End Sub
 
     ' ─── Limpieza de recursos GDI+ ──────────────────────────────────────────────

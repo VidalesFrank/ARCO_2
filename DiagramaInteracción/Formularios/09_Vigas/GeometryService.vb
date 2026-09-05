@@ -143,8 +143,7 @@ Public Class GeometryService
 
     ''' Asigna EjeApoyo_I / EjeApoyo_J a cada frame de la viga buscando el grid
     ''' perpendicular más cercano al joint correspondiente dentro de la tolerancia.
-    ''' Beams en X → busca grids Direction="X" (líneas verticales, Ordinate=X).
-    ''' Beams en Y → busca grids Direction="Y" (líneas horizontales, Ordinate=Y).
+    ''' Soporta X Cartesian, Y Cartesian y General Cartesian (X1,Y1→X2,Y2).
     Public Sub AsignarEjesAViga(viga As cViga,
                                 grids As List(Of cGridLine),
                                 joints As Dictionary(Of String, cJoint),
@@ -156,8 +155,9 @@ Public Class GeometryService
         Dim esX As Boolean = Math.Abs(viga.Direccion.X) >= Math.Abs(viga.Direccion.Y)
         Dim dirBuscar As String = If(esX, "X", "Y")
 
-        Dim gridsPerp = grids.Where(Function(g) g.Direction = dirBuscar AndAlso
-                                                Not String.IsNullOrWhiteSpace(g.GridID)).ToList()
+        ' Incluir grids X/Y perpendiculares al beam + todos los General (se filtran por distancia)
+        Dim gridsPerp = grids.Where(Function(g) Not String.IsNullOrWhiteSpace(g.GridID) AndAlso
+                                                (g.Direction = dirBuscar OrElse g.EsTipoGeneral)).ToList()
         If gridsPerp.Count = 0 Then Exit Sub
 
         For Each frame In viga.Frames
@@ -166,6 +166,17 @@ Public Class GeometryService
         Next
 
     End Sub
+
+    ''' Distancia perpendicular de un punto (px,py) a la línea infinita que pasa por (x1,y1)-(x2,y2).
+    Private Shared Function DistanciaPuntoALinea(px As Double, py As Double,
+                                                  x1 As Double, y1 As Double,
+                                                  x2 As Double, y2 As Double) As Double
+        Dim dx = x2 - x1
+        Dim dy = y2 - y1
+        Dim len2 = dx * dx + dy * dy
+        If len2 = 0.0 Then Return Math.Sqrt((px - x1) ^ 2 + (py - y1) ^ 2)
+        Return Math.Abs(dy * (px - x1) - dx * (py - y1)) / Math.Sqrt(len2)
+    End Function
 
     Private Function BuscarEjeMasCercano(jointId As String,
                                          grids As List(Of cGridLine),
@@ -176,13 +187,19 @@ Public Class GeometryService
         Dim j As cJoint = Nothing
         If Not joints.TryGetValue(jointId, j) Then Return ""
 
-        Dim coord As Double = If(esX, j.GlobalX, j.GlobalY)
-
         Dim mejor As String = ""
         Dim menorDist As Double = Double.MaxValue
 
         For Each gl In grids
-            Dim dist = Math.Abs(coord - gl.Ordinate)
+            Dim dist As Double
+            If gl.EsTipoGeneral Then
+                ' Distancia perpendicular del joint a la línea General
+                dist = DistanciaPuntoALinea(j.GlobalX, j.GlobalY, gl.X1, gl.Y1, gl.X2, gl.Y2)
+            Else
+                ' Distancia a la ordenada del eje X o Y Cartesian
+                Dim coord As Double = If(esX, j.GlobalX, j.GlobalY)
+                dist = Math.Abs(coord - gl.Ordinate)
+            End If
             If dist < menorDist Then
                 menorDist = dist
                 mejor = gl.GridID
@@ -206,10 +223,89 @@ Public Class GeometryService
 
     End Sub
 
+    ''' Asigna EjeParalelo a una viga: el eje estructural que la viga "sigue" (paralelo a ella).
+    ''' Para viga en X busca el grid tipo "Y" (coordenada Y constante) más cercano al centroide Y de la viga.
+    ''' Para viga en Y busca el grid tipo "X" (coordenada X constante) más cercano al centroide X.
+    ''' Soporta también grids General cuya dirección sea casi paralela a la viga.
+    Public Sub AsignarEjeParaleloAViga(viga As cViga,
+                                        grids As List(Of cGridLine),
+                                        joints As Dictionary(Of String, cJoint),
+                                        Optional tolMax As Double = 1.0)
+
+        If grids Is Nothing OrElse grids.Count = 0 Then Exit Sub
+        If viga.Frames Is Nothing OrElse viga.Frames.Count = 0 Then Exit Sub
+
+        Dim esX As Boolean = Math.Abs(viga.Direccion.X) >= Math.Abs(viga.Direccion.Y)
+        ' Eje paralelo: si la viga va en X, sigue un grid de tipo Y (ordinate Y constante)
+        Dim dirParalelo As String = If(esX, "Y", "X")
+
+        ' Recolectar todos los joints de la viga
+        Dim allJoints As New List(Of cJoint)
+        For Each frame In viga.Frames
+            Dim ji, jj As cJoint
+            If joints.TryGetValue(frame.JointI, ji) Then allJoints.Add(ji)
+            If joints.TryGetValue(frame.JointJ, jj) Then allJoints.Add(jj)
+        Next
+        If allJoints.Count = 0 Then Exit Sub
+
+        ' Coordenada transversal promedio de la viga (perpendicular a su dirección de viaje)
+        Dim coordProm As Double = If(esX,
+            allJoints.Average(Function(j) j.GlobalY),
+            allJoints.Average(Function(j) j.GlobalX))
+
+        ' Centro geométrico de la viga (para medir distancia a grids General)
+        Dim cx As Double = allJoints.Average(Function(j) j.GlobalX)
+        Dim cy As Double = allJoints.Average(Function(j) j.GlobalY)
+
+        Dim mejor As String = ""
+        Dim menorDist As Double = Double.MaxValue
+
+        For Each gl In grids
+            If String.IsNullOrWhiteSpace(gl.GridID) Then Continue For
+
+            Dim dist As Double
+            If gl.EsTipoGeneral Then
+                ' Grid General: solo considerar si su dirección es casi paralela a la viga
+                Dim gdx = gl.X2 - gl.X1
+                Dim gdy = gl.Y2 - gl.Y1
+                Dim glen = Math.Sqrt(gdx * gdx + gdy * gdy)
+                If glen < 0.001 Then Continue For
+                gdx /= glen : gdy /= glen
+                ' Producto punto con dirección viga (cos del ángulo)
+                Dim dot = Math.Abs(gdx * viga.Direccion.X + gdy * viga.Direccion.Y)
+                If dot < 0.866 Then Continue For  ' > 30° de diferencia → ignorar
+                dist = DistanciaPuntoALinea(cx, cy, gl.X1, gl.Y1, gl.X2, gl.Y2)
+            ElseIf gl.Direction = dirParalelo Then
+                dist = Math.Abs(coordProm - gl.Ordinate)
+            Else
+                Continue For
+            End If
+
+            If dist < menorDist Then
+                menorDist = dist
+                mejor = gl.GridID
+            End If
+        Next
+
+        viga.EjeParalelo = If(menorDist <= tolMax, mejor, "")
+    End Sub
+
+    ''' Asigna EjeParalelo a todas las vigas de la lista.
+    Public Sub AsignarEjesParalelosAVigas(vigas As List(Of cViga),
+                                           grids As List(Of cGridLine),
+                                           joints As Dictionary(Of String, cJoint),
+                                           Optional tolMax As Double = 1.0)
+
+        If vigas Is Nothing OrElse grids Is Nothing Then Exit Sub
+        For Each v In vigas
+            AsignarEjeParaleloAViga(v, grids, joints, tolMax)
+        Next
+
+    End Sub
+
     ''' Asigna EjeApoyo_I / EjeApoyo_D a cada tramo de un nervio buscando el grid
     ''' perpendicular más cercano al joint correspondiente dentro de la tolerancia.
-    ''' Mismo criterio que AsignarEjesAViga, pero cNervio no trae una Direccion
-    ''' precalculada: se obtiene del primer tramo del nervio.
+    ''' Soporta X Cartesian, Y Cartesian y General Cartesian.
     Public Sub AsignarEjesANervio(nervio As cNervio,
                                   grids As List(Of cGridLine),
                                   joints As Dictionary(Of String, cJoint),
@@ -224,8 +320,8 @@ Public Class GeometryService
         Dim esX As Boolean = Math.Abs(dir.X) >= Math.Abs(dir.Y)
         Dim dirBuscar As String = If(esX, "X", "Y")
 
-        Dim gridsPerp = grids.Where(Function(g) g.Direction = dirBuscar AndAlso
-                                                Not String.IsNullOrWhiteSpace(g.GridID)).ToList()
+        Dim gridsPerp = grids.Where(Function(g) Not String.IsNullOrWhiteSpace(g.GridID) AndAlso
+                                                (g.Direction = dirBuscar OrElse g.EsTipoGeneral)).ToList()
         If gridsPerp.Count = 0 Then Exit Sub
 
         For Each fn In nervio.Frames

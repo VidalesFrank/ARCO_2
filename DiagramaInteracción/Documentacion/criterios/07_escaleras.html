@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Escaleras</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Escaleras — Deflexiones Branson</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Escaleras</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/09_escaleras.html">Manual de Escaleras</a>
+  <a href="06_losas.html">← Losas</a>
+  <a href="08_muros_no_estructurales.html">Muros No Estructurales →</a>
+</div>
+
+<h2>1. Peralte Efectivo y Parámetros del Material</h2>
+<div class="formula">d = h - recubrimiento - Ø_barra/2   [m]
+
+Módulo de elasticidad del concreto:
+  Ec = 4700 · √fc   [MPa]   →   Ec_kN = Ec · 1000   [kN/m²]
+
+Módulo de rotura (resistencia a tracción):
+  fr = 0.62 · √fc   [MPa]   →   fr_kN = fr · 1000   [kN/m²]
+
+(fc en MPa)</div>
+
+<h2>2. Inercia Bruta</h2>
+<div class="formula">Ig = b · h³ / 12   [m⁴]
+yt = h / 2         [m]   (distancia del centroide a la fibra más traccionada)</div>
+
+<h2>3. Momento de Fisuramiento</h2>
+<div class="norma"><strong>NSR-10 C.9.5.2.3</strong></div>
+<div class="formula">Mcr = fr_kN · Ig / yt   [kN·m]</div>
+
+<h2>4. Inercia Agrietada (Sección Fisurada)</h2>
+<h3>4.1 Posición del eje neutro en sección fisurada</h3>
+<div class="formula">Relación modular:
+  n = Es / Ec = 200000 / Ec   (adimensional, Es en MPa, Ec en MPa)
+
+Ecuación de equilibrio de momentos estáticos sobre el eje neutro:
+  b·c²/2 = n·As·(d - c)
+
+Resolviendo la cuadrática:
+  c = [-n·As + √((n·As)² + 2·b·n·As·d)] / b   [m]</div>
+
+<h3>4.2 Inercia de la sección fisurada</h3>
+<div class="formula">Icr = b·c³/3 + n·As·(d - c)²   [m⁴]</div>
+
+<h2>5. Inercia Efectiva de Branson</h2>
+<div class="norma"><strong>NSR-10 C.9.5.2.3</strong></div>
+<div class="formula">Ma = momento actuante de servicio   [kN·m]
+
+Si Ma ≤ 0 o Ma = 0 → Ie = Ig   (sección no fisurada)
+
+Si Ma &gt; 0:
+  ratio = Mcr / Ma
+
+  Ie = ratio³ · Ig + (1 - ratio³) · Icr   [m⁴]
+
+  Restricción: Ie = min(Ie, Ig)   (la inercia efectiva nunca supera la bruta)</div>
+
+<h2>6. Deflexión Inmediata</h2>
+<h3>6.1 Carga equivalente de servicio</h3>
+<div class="formula">La carga de servicio total se pondera por longitud de tramo:
+  w_eq = (w_serv1·L1 + w_serv2·L2) / (L1 + L2)   [kN/m]
+
+Donde:
+  w_serv1 = wu1 / factor_amplificación   (carga de servicio del tramo 1)
+  w_serv2 = wu2 / factor_amplificación   (carga de servicio del tramo 2)
+  L = L1 + L2   (longitud total)</div>
+
+<h3>6.2 Deflexión inmediata por carga distribuida</h3>
+<div class="formula">δ_inm = (5/384) · w_eq · L⁴ / (Ec_kN · Ie)   [m]   →   × 1000 = [mm]
+
+(w_eq en kN/m, L en m, Ec_kN en kN/m², Ie en m⁴)</div>
+
+<div class="nota">Este cálculo asume un vano simplemente apoyado. Si la escalera tiene continuidad en los extremos, la deflexión real será menor. ARCO usa apoyo simple como hipótesis conservadora.</div>
+
+<h2>7. Deflexión de Largo Plazo</h2>
+<div class="norma"><strong>NSR-10 C.9.5.2.5</strong></div>
+<div class="formula">λ = 2.0   (factor de fluencia para elemento sin refuerzo de compresión significativo)
+
+Si As_sup &gt; 0:
+  ρ' = As_sup / (b · d)
+  λ = 2.0 / (1 + 50·ρ')   (reducción por refuerzo de compresión)
+
+δ_LP = δ_inm · λ   [mm]
+
+La deflexión de largo plazo representa los efectos de fluencia y retracción del concreto a lo largo de la vida útil del elemento.</div>
+
+<h2>8. Límites de Deflexión</h2>
+<div class="norma"><strong>NSR-10 Tabla C.9.5(b)</strong></div>
+<div class="formula">Deflexión inmediata:
+  δ_inm ≤ L/360   [mm]
+  (Elementos que soportan o están unidas a elementos no estructurales
+   susceptibles de dañarse por deflexiones grandes)
+
+Deflexión de largo plazo (diferida + inmediata de cargas sostenidas):
+  Si hay elementos susceptibles al daño:
+    δ_LP ≤ L/480   [mm]
+  Si no hay elementos susceptibles:
+    δ_LP ≤ L/240   [mm]</div>
+
+<h2>9. Refuerzo de Retracción y Doble Capa</h2>
+<div class="norma"><strong>NSR-10 C.7.12.2</strong></div>
+<div class="formula">Cuantía de retracción y temperatura:
+  ρ_ret = 0.0018   si fy ≥ 420 MPa
+  ρ_ret = 0.0020   si fy &lt; 420 MPa
+
+As_retracción = ρ_ret · b · h   [mm²] (por metro de ancho, h en mm)
+
+Aplicación de doble capa cuando h ≥ 0.20 m:
+  Capa inferior (principal): As_flex + As_retracción/2
+  Capa superior (retracción): As_retracción/2
+
+Separación máxima entre barras:
+  s_max = min(3·h, 450 mm)   (NSR-10 C.7.6.5)</div>
+
+<h2>10. Momento de Diseño (para verificación de resistencia)</h2>
+<div class="formula">Carga última amplificada equivalente:
+  wu_eq = (wu1·L1 + wu2·L2) / (L1 + L2)   [kN/m]
+
+Momento de diseño (viga simplemente apoyada):
+  Mu = wu_eq · L² / 8   [kN·m]
+
+Capacidad de diseño (sección rectangular, igual que vigas):
+  a = As_inf · fy / (0.85·fc·b)
+  φMn = 0.90 · As_inf · fy · (d - a/2) · 10⁻⁶   [kN·m]
+  C/D_flexión = φMn / Mu</div>
+
+<h2>11. Criterio de Cumplimiento</h2>
+<div class="formula">Flexión:           C/D = φMn / Mu                ≥ 0.9
+Deflexión inmediata: δ_inm ≤ L/360
+Deflexión LP:        δ_LP  ≤ L/480 (con elem. susceptibles)
+                     δ_LP  ≤ L/240 (sin elem. susceptibles)
+Refuerzo superior:   As_sup_prov ≥ 0.9 × As_sup_req</div>
+
+<div class="nota"><strong>ARCO considera adecuada una escalera cuando C/D ≥ 0.9 en flexión y cuando las deflexiones están dentro de los límites de servicio.</strong>
+Un C/D entre 0.9 y 1.0 indica que el refuerzo colocado es apto para la demanda de flexión calculada. Las deflexiones se verifican bajo cargas de servicio (sin factores de amplificación).</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:220px;">Verde — C/D ≥ 1.0 y δ ≤ límite</th><td>Cumple. La escalera tiene reserva de resistencia y deflexiones aceptables.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">Naranja — C/D ≥ 0.9 o δ cerca del límite</th><td><strong>Cumple — Adecuado.</strong> La escalera es apta. No requiere modificación.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">Rojo — C/D &lt; 0.9 o δ &gt; límite</th><td>No cumple. Revisar espesor, refuerzo o configuración de tramos.</td></tr>
+</table>
+</div>
+</body>
+</html>

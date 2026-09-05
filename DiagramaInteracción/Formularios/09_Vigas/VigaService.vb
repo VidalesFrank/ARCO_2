@@ -1,4 +1,5 @@
-﻿Imports ARCO.eNumeradores
+﻿Imports System.Linq
+Imports ARCO.eNumeradores
 Imports ARCO.Funciones_00_Varias
 
 Public Class VigaService
@@ -1270,6 +1271,40 @@ Public Class VigaService
 
     End Sub
 
+    ''' Genera NombrePlano para cada viga usando su EjeParalelo y el prefijo del proyecto.
+    ''' Formato: "{prefijo}-{EjeParalelo}"  →  "V-B", "VIGA-3", "Viga-A", etc.
+    ''' Si hay múltiples vigas en el mismo eje/piso se añade sufijo: "V-B-1", "V-B-2".
+    ''' Vigas sin EjeParalelo dejan NombrePlano vacío (Lista muestra Nombre = "VIGA-N").
+    Public Sub GenerarNombresPlano(vigas As List(Of cViga), Optional prefijo As String = "V")
+
+        If vigas Is Nothing OrElse vigas.Count = 0 Then Exit Sub
+        If String.IsNullOrWhiteSpace(prefijo) Then prefijo = "V"
+
+        For Each grupo In vigas.GroupBy(Function(v) v.Piso)
+
+            Dim contadores = grupo _
+                .Where(Function(v) Not String.IsNullOrEmpty(v.EjeParalelo)) _
+                .GroupBy(Function(v) v.EjeParalelo) _
+                .ToDictionary(Function(g) g.Key, Function(g) g.Count())
+
+            Dim asignados As New Dictionary(Of String, Integer)()
+
+            For Each viga In grupo
+                viga.NombrePlano = ""
+                If String.IsNullOrEmpty(viga.EjeParalelo) Then Continue For
+
+                Dim eje = viga.EjeParalelo
+                If Not asignados.ContainsKey(eje) Then asignados(eje) = 0
+                asignados(eje) += 1
+
+                viga.NombrePlano = If(contadores(eje) = 1,
+                                      prefijo & "-" & eje,
+                                      prefijo & "-" & eje & "-" & asignados(eje))
+            Next
+        Next
+
+    End Sub
+
     ''' <summary>
     ''' Valida cuántos frames quedaron sin fuerzas asignadas tras CalcularEnvolventesVigas.
     ''' Retorna un resumen de diagnóstico. Retorna Nothing si todo está correcto.
@@ -1299,6 +1334,303 @@ Public Class VigaService
                $"({vigasSinFuerzas} vigas completamente vacías). " &
                "Verifique que los nombres de los frames y los pisos coincidan entre la geometría y los resultados."
 
+    End Function
+
+    ' =========================================================================
+    ' SISTEMA DE GRUPOS DE RÉPLICA
+    ' =========================================================================
+
+    ''' Resultado de detección de compatibilidad para un piso candidato.
+    Public Class CompatibilidadPiso
+        Public Property Piso As String
+        Public Property EsCompatible As Boolean       ' True = todos los frames del patrón existen
+        Public Property LabelsEncontrados As List(Of String)
+        Public Property LabelsFaltantes As List(Of String)
+        ''' Viga que ya tiene exactamente los mismos labels agrupados (puede ser Nothing).
+        Public Property VigaCoincidente As cViga
+        Public ReadOnly Property Resumen As String
+            Get
+                If EsCompatible Then
+                    Return If(VigaCoincidente IsNot Nothing,
+                              $"Agrupado ({LabelsEncontrados.Count} frames)",
+                              $"Compatible ({LabelsEncontrados.Count} frames)")
+                Else
+                    Return $"Faltan: {String.Join(", ", LabelsFaltantes)}"
+                End If
+            End Get
+        End Property
+    End Class
+
+    ''' <summary>
+    ''' Para cada piso (excepto el del patrón) detecta si existen los mismos frame labels.
+    ''' rawLabelsPorPiso: inventario Story→Labels extraído directamente del DataTable de ETABS
+    ''' (sin el filtro de detección de extremos). Si se provee, se usa en lugar de todosFrames
+    ''' para la lista de pisos y el índice de labels — garantiza que aparezcan pisos que
+    ''' DataTableToFrames descarta por fallo en la detección de joints (e.g. pisos de transferencia).
+    ''' </summary>
+    Public Function DetectarPisosCompatibles(patron As cViga,
+                                              todasVigas As List(Of cViga),
+                                              todosFrames As List(Of cFrame),
+                                              Optional rawLabelsPorPiso As Dictionary(Of String, HashSet(Of String)) = Nothing) As List(Of CompatibilidadPiso)
+
+        Dim resultado As New List(Of CompatibilidadPiso)()
+        Dim labelsP = patron.Frames _
+                           .Select(Function(f) f.ObjectLabel.Trim().ToUpperInvariant()) _
+                           .ToList()
+        Dim setP = New HashSet(Of String)(labelsP, StringComparer.OrdinalIgnoreCase)
+
+        Dim pisoPatron = patron.Piso
+
+        ' Construir inventario label→piso desde TODAS las fuentes (unión).
+        ' Garantiza que pisos como P1, P10-P13 aparezcan aunque alguna fuente
+        ' los haya perdido por problemas de joints o versiones previas del algoritmo.
+        Dim labelsPorPiso As New Dictionary(Of String, HashSet(Of String))(StringComparer.OrdinalIgnoreCase)
+
+        ' Fuente 1: vigas ya procesadas (_vigas) — siempre disponible
+        For Each v In todasVigas
+            If String.IsNullOrEmpty(v.Piso) Then Continue For
+            For Each f In v.Frames
+                Dim lbl = f.ObjectLabel.Trim().ToUpperInvariant()
+                If String.IsNullOrEmpty(lbl) Then Continue For
+                If Not labelsPorPiso.ContainsKey(v.Piso) Then
+                    labelsPorPiso(v.Piso) = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                End If
+                labelsPorPiso(v.Piso).Add(lbl)
+            Next
+        Next
+
+        ' Fuente 2: todos los frames procesados (Proyecto.Elementos.Vigas.Frames)
+        For Each f In todosFrames
+            If String.IsNullOrEmpty(f.Story) Then Continue For
+            Dim lbl = f.ObjectLabel.Trim().ToUpperInvariant()
+            If String.IsNullOrEmpty(lbl) Then Continue For
+            If Not labelsPorPiso.ContainsKey(f.Story) Then
+                labelsPorPiso(f.Story) = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            End If
+            labelsPorPiso(f.Story).Add(lbl)
+        Next
+
+        ' Fuente 3: DataTable crudo (cubre frames descartados por joints problemáticos)
+        If rawLabelsPorPiso IsNot Nothing Then
+            For Each kv In rawLabelsPorPiso
+                If String.IsNullOrEmpty(kv.Key) Then Continue For
+                If Not labelsPorPiso.ContainsKey(kv.Key) Then
+                    labelsPorPiso(kv.Key) = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                End If
+                For Each lbl In kv.Value
+                    labelsPorPiso(kv.Key).Add(lbl)
+                Next
+            Next
+        End If
+
+        Dim pisos = labelsPorPiso.Keys _
+                        .Where(Function(s) Not String.IsNullOrEmpty(s) AndAlso
+                                           Not s.Equals(pisoPatron, StringComparison.OrdinalIgnoreCase)) _
+                        .OrderBy(Function(p) p) _
+                        .ToList()
+
+        For Each piso In pisos
+            Dim labelsEnPiso As HashSet(Of String) = Nothing
+            If Not labelsPorPiso.TryGetValue(piso, labelsEnPiso) Then
+                labelsEnPiso = New HashSet(Of String)()
+            End If
+
+            Dim encontrados = labelsP.Where(Function(l) labelsEnPiso.Contains(l)).ToList()
+            Dim faltantes = labelsP.Where(Function(l) Not labelsEnPiso.Contains(l)).ToList()
+
+            ' Verificar si ya existe una viga agrupada con exactamente esos labels en _vigas
+            Dim vigasPiso = todasVigas _
+                                .Where(Function(v) v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase)) _
+                                .ToList()
+            Dim vigaCoinc = vigasPiso.FirstOrDefault(
+                Function(v) setP.SetEquals(v.Frames.Select(Function(f) f.ObjectLabel.Trim().ToUpperInvariant())))
+
+            resultado.Add(New CompatibilidadPiso With {
+                .Piso = piso,
+                .EsCompatible = (faltantes.Count = 0),
+                .LabelsEncontrados = encontrados,
+                .LabelsFaltantes = faltantes,
+                .VigaCoincidente = vigaCoinc
+            })
+        Next
+
+        Return resultado
+
+    End Function
+
+    ''' <summary>
+    ''' Tras un recalcular (Button1_Click), restaura los vínculos patrón/similar en la nueva
+    ''' lista de vigas y aplica las agrupaciones de réplica para los pisos similares.
+    ''' No copia refuerzo — el usuario lo propaga explícitamente.
+    ''' </summary>
+    Public Sub AplicarGruposReplicaEnVigas(vigas As List(Of cViga),
+                                            gruposReplica As List(Of GrupoReplicaViga),
+                                            jointsDict As Dictionary(Of String, cJoint))
+
+        If gruposReplica Is Nothing OrElse gruposReplica.Count = 0 Then Return
+
+        For Each grupo In gruposReplica
+
+            ' --- Aplicar agrupación en cada piso similar ---
+            For Each miembro In grupo.Similares
+                _AplicarUnGrupoEnPiso(grupo.Labels_Patron, miembro.Piso, vigas, jointsDict)
+            Next
+
+            ' --- Reasignar vínculos ---
+            Dim pisoPatron = grupo.Piso_Patron
+            For Each v In vigas
+                Dim labelsV As New HashSet(Of String)(v.Frames.Select(Function(f) f.ObjectLabel.Trim().ToUpperInvariant()))
+                Dim labelsG As New HashSet(Of String)(grupo.Labels_Patron.Select(Function(l) l.Trim().ToUpperInvariant()))
+                If Not labelsG.SetEquals(labelsV) Then Continue For
+
+                If v.Piso.Equals(pisoPatron, StringComparison.OrdinalIgnoreCase) Then
+                    v.GrupoReplicaID = grupo.ID
+                    v.EsPatronGrupo = True
+                    v.RefuerzoDesincronizado = False
+                ElseIf grupo.Similares.Any(Function(m) m.Piso.Equals(v.Piso, StringComparison.OrdinalIgnoreCase)) Then
+                    v.GrupoReplicaID = grupo.ID
+                    v.EsPatronGrupo = False
+                    v.RefuerzoDesincronizado = True  ' requiere nueva propagación tras recalcular
+                End If
+            Next
+
+        Next
+
+        ' Renombrar para que VIGA-N sea consistente
+        For i = 0 To vigas.Count - 1
+            vigas(i).Nombre = "VIGA-" & (i + 1)
+            vigas(i).Name_Beam = vigas(i).Nombre
+        Next
+
+    End Sub
+
+    ''' Aplica la agrupación de un conjunto de labels a un piso específico.
+    ''' Si los frames ya están juntos en una viga, no hace nada.
+    Public Sub _AplicarUnGrupoEnPiso(labels As List(Of String),
+                                       piso As String,
+                                       vigas As List(Of cViga),
+                                       jointsDict As Dictionary(Of String, cJoint))
+
+        Dim setL = New HashSet(Of String)(labels.Select(Function(l) l.Trim().ToUpperInvariant()), StringComparer.OrdinalIgnoreCase)
+
+        ' ¿Ya existe una viga con exactamente esos labels en ese piso?
+        Dim existente = vigas.FirstOrDefault(
+            Function(v) v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase) AndAlso
+                        setL.SetEquals(v.Frames.Select(Function(f) f.ObjectLabel.Trim().ToUpperInvariant())))
+        If existente IsNot Nothing Then Return
+
+        ' Extraer frames del piso por label
+        Dim framesGrupo As New List(Of cFrame)()
+        For Each label In labels
+            Dim labelUp = label.Trim().ToUpperInvariant()
+            Dim contenedora = vigas.FirstOrDefault(
+                Function(v) v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase) AndAlso
+                            v.Frames.Any(Function(f) f.ObjectLabel.Trim().ToUpperInvariant() = labelUp))
+            If contenedora Is Nothing Then Continue For
+            Dim frame = contenedora.Frames.First(Function(f) f.ObjectLabel.Trim().ToUpperInvariant() = labelUp)
+            contenedora.Frames.Remove(frame)
+            framesGrupo.Add(frame)
+        Next
+
+        If framesGrupo.Count = 0 Then Return
+
+        Dim nueva As New cViga With {.Piso = piso}
+        nueva.Frames.AddRange(framesGrupo)
+        Dim dir = _geo.VectorFrame(framesGrupo.First(), jointsDict)
+        dir.Normalize()
+        nueva.Direccion = dir
+        OrdenarFramesViga(nueva, jointsDict)
+        vigas.Add(nueva)
+        vigas.RemoveAll(Function(v) v.Frames.Count = 0)
+
+    End Sub
+
+    ''' <summary>
+    ''' Propaga el refuerzo del patrón a todos sus similares y recalcula C/D para cada uno.
+    ''' </summary>
+    Public Sub PropagateRefuerzoGrupo(patron As cViga,
+                                       similares As List(Of cViga),
+                                       combosCortante As HashSet(Of String))
+
+        For Each sim In similares
+            _CopiarRefuerzoViga(patron, sim)
+            CalcularFlexionViga(sim)
+            If combosCortante IsNot Nothing AndAlso combosCortante.Count > 0 Then
+                CalcularCapacidadCortante(New List(Of cViga) From {sim})
+            End If
+            sim.RefuerzoDesincronizado = False
+        Next
+
+    End Sub
+
+    ''' Copia el refuerzo frame a frame del origen al destino (empareja por ObjectLabel).
+    ''' También actualiza RevisionFlexion.AsProvSup/AsProvInf para que los ratios sean correctos.
+    Public Sub _CopiarRefuerzoViga(origen As cViga, destino As cViga)
+
+        For Each fO In origen.Frames
+            ' Emparejar por ObjectLabel, no por índice — más robusto si el orden difiere
+            Dim fD = destino.Frames.Find(Function(f) f.ObjectLabel.Equals(fO.ObjectLabel, StringComparison.OrdinalIgnoreCase))
+            If fD Is Nothing Then Continue For
+
+            fD.RefuerzoSuperior.Clear()
+            fD.RefuerzoInferior.Clear()
+            fD.RefuerzoTransversal.Clear()
+
+            For Each tramo In fO.RefuerzoSuperior
+                fD.RefuerzoSuperior.Add(_ClonarTramoRef(tramo))
+            Next
+            For Each tramo In fO.RefuerzoInferior
+                fD.RefuerzoInferior.Add(_ClonarTramoRef(tramo))
+            Next
+            For Each zona In fO.RefuerzoTransversal
+                fD.RefuerzoTransversal.Add(New cRefuerzoTransversalZona With {
+                    .Posicion = zona.Posicion,
+                    .NumEstribos = zona.NumEstribos,
+                    .NumeroBarra = zona.NumeroBarra,
+                    .CantEstribos = zona.CantEstribos,
+                    .Separacion = zona.Separacion
+                })
+            Next
+
+            ' Actualizar AsProvSup/AsProvInf en RevisionFlexion para que los ratios C/D sean correctos
+            _ActualizarRevisionAsProvEnFrame(fD)
+        Next
+
+    End Sub
+
+    ''' Recalcula AsProvSup/AsProvInf en cada RevisionFlexion del frame a partir de los tramos copiados.
+    Private Sub _ActualizarRevisionAsProvEnFrame(frame As cFrame)
+
+        Dim posiciones = {PosicionTramoViga.Izquierda, PosicionTramoViga.Centro, PosicionTramoViga.Derecha}
+
+        For Each pos In posiciones
+            Dim revision = frame.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = pos)
+            If revision Is Nothing Then Continue For
+
+            Dim tramoSup = frame.RefuerzoSuperior.FirstOrDefault(Function(t) t.Posicion = pos)
+            If tramoSup IsNot Nothing Then
+                Dim asS = tramoSup.Barras.Sum(Function(kvp) CDbl(kvp.Value) * AreaRefuerzo(kvp.Key))
+                revision.ResultadoBase.AsProvSup = asS
+                revision.ResultadoActual.AsProvSup = asS
+            End If
+
+            Dim tramoInf = frame.RefuerzoInferior.FirstOrDefault(Function(t) t.Posicion = pos)
+            If tramoInf IsNot Nothing Then
+                Dim asI = tramoInf.Barras.Sum(Function(kvp) CDbl(kvp.Value) * AreaRefuerzo(kvp.Key))
+                revision.ResultadoBase.AsProvInf = asI
+                revision.ResultadoActual.AsProvInf = asI
+            End If
+        Next
+
+    End Sub
+
+    Private Function _ClonarTramoRef(origen As cRefuerzoTramo) As cRefuerzoTramo
+        Dim nuevo As New cRefuerzoTramo
+        nuevo.Posicion = origen.Posicion
+        For Each kvp In origen.Barras
+            nuevo.Barras(kvp.Key) = kvp.Value
+        Next
+        Return nuevo
     End Function
 
 End Class

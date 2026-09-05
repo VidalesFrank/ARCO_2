@@ -1,11 +1,13 @@
 ﻿Imports ARCO.Funciones_00_Varias
 Public Class Funciones_02_Columnas
     Public Shared Function FuncionCortante(ByVal B As Single, ByVal H As Single, ByVal fc As Single, ByVal Fy As Single, ByVal s As Single,
-                        ByVal Ref_Trans As String, ByVal Num_Ramas As Integer, ByVal Vu As Single, ByVal Pu As Single)
+                        ByVal Ref_Trans As String, ByVal Num_Ramas As Integer, ByVal Vu As Single, ByVal Pu As Single,
+                        Optional ByVal AreaUser As Single = 0)
 
         Dim Revision(5)
 
-        Dim Ass As Single = AreaRefuerzo(Ref_Trans)
+        ' AreaUser > 0 cuando el usuario definió el área manualmente ("User")
+        Dim Ass As Single = If(AreaUser > 0, AreaUser, AreaRefuerzo(Ref_Trans))
         Dim Ae As Single = B * (H - 0.04)
         Dim Vs As Single = 0.75 * Num_Ramas * Ass * Fy * (H - 0.04) / (s * 1000)
         Dim Vc0 As Single = 0.17 * 0.75 * Math.Sqrt(fc) * Ae * 1000                                                   'C.11-3
@@ -521,9 +523,11 @@ Public Class Funciones_02_Columnas
     ' Devuelve Revision(5): (1)=φVc, (2)=φVs, (3)=φVn, (4)=Vu_max, (5)=φVn/Vu.
     Public Shared Function FuncionCortanteCircular(ByVal D As Single, ByVal fc As Single, ByVal Fy As Single,
                                                    ByVal s As Single, ByVal Ref_Trans As String,
-                                                   ByVal Vu2 As Single, ByVal Vu3 As Single, ByVal Pu As Single)
+                                                   ByVal Vu2 As Single, ByVal Vu3 As Single, ByVal Pu As Single,
+                                                   Optional ByVal AreaUser As Single = 0)
         Dim Revision(5)
-        Dim Asp As Single = AreaRefuerzo(Ref_Trans)
+        ' AreaUser > 0 cuando el usuario definió el área manualmente ("User")
+        Dim Asp As Single = If(AreaUser > 0, AreaUser, AreaRefuerzo(Ref_Trans))
         Dim d_ef As Single = 0.8F * D
         Dim Ag As Single = CSng(Math.PI * D ^ 2 / 4)
         Dim Ae As Single = D * d_ef
@@ -544,11 +548,14 @@ Public Class Funciones_02_Columnas
         FuncionCortanteCircular = Revision
     End Function
 
-    ' Confinamiento para columna circular con espiral (NSR-10 C.21.6.4.1).
+    ' Confinamiento para columna circular (NSR-10 C.7.10.4.3 / C.21.4.4 / C.21.6.4.1).
+    ' TipoTransversal = "Espiral"       → ρs_req = max(ρs_a, ρs_b)  con ρs_a=0.45(Ag/Ach-1)fc/fy
+    ' TipoTransversal = "Estribo cerrado" → ρs_req = ρs_b solo  (sin término Ag/Ach)
     ' Devuelve Revision(4): (1)=Asp_req (mm²), (2)=1, (3)=s0_max (m), (4)=L0 (m).
     Public Shared Function FuncionConfinamientoCircular(ByVal D As Single, ByVal fc As Single, ByVal fy As Single,
                                                         ByVal s As Single, ByVal Numero_Barra_Min_Long As String,
-                                                        ByVal Numero_Barra_Estribo As String, ByVal Disipacion As String)
+                                                        ByVal Numero_Barra_Estribo As String, ByVal Disipacion As String,
+                                                        Optional ByVal TipoTransversal As String = "Espiral")
         Dim recub As Single = 0.04F
         Dim Dc As Single = D - 2 * recub
         Dim Ag As Single = CSng(Math.PI * D ^ 2 / 4)
@@ -556,8 +563,10 @@ Public Class Funciones_02_Columnas
 
         Dim Db_Long As Single = DiametroRefuerzo(Numero_Barra_Min_Long)
 
-        Dim rhoS_a As Single = 0.45F * (Ag / Ach - 1) * fc / fy
-        Dim rhoS_b As Single = 0.12F * fc / fy
+        ' ρs_a: solo aplica para espiral (NSR-10 C.7.10.4.3)
+        Dim rhoS_a As Single = If(TipoTransversal = "Espiral", 0.45F * (Ag / Ach - 1) * fc / fy, 0.0F)
+        ' NSR-10: DMO C.21.4.4 → ρs_min = 0.08·f'c/fy; DES C.21.6.4 → 0.12·f'c/fy
+        Dim rhoS_b As Single = If(Disipacion = "DES", 0.12F, 0.08F) * fc / fy
         Dim rhoS_req As Single = Math.Max(rhoS_a, rhoS_b)
 
         ' Asp_req = ρs_req · Dc · s / 4   [m²] → mm²

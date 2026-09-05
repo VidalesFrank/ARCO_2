@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Criterios Nervios</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Criterios de Diseño · Nervios</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Criterios de Diseño › Nervios</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="../manual/07_nervios.html">Manual de Nervios</a>
+  <a href="04_pilas.html">← Pilas</a>
+  <a href="06_losas.html">Losas →</a>
+</div>
+
+<h2>1. Ancho Efectivo de la Sección T</h2>
+<div class="norma"><strong>NSR-10 C.8.10.2</strong></div>
+<div class="formula">ln = L_total - b_apoyo_I/2 - b_apoyo_D/2   (luz libre entre caras de apoyos)
+sw = paso - bw                              (claro libre entre almas adyacentes)
+
+Vuelo de ala a cada lado del alma:
+  vola = min(8·tf,   sw/2,   ln/8)
+
+Ancho efectivo T:
+  be = bw + 2·vola   [mm o m]</div>
+<div class="nota">El ancho efectivo be solo aplica para momentos positivos (zona de vano, eje neutro en la loseta). Para momentos negativos (sobre apoyos), se usa solo el alma bw.</div>
+
+<h2>2. Cara de Apoyo — Interpolación de Fuerzas</h2>
+<p>Las fuerzas de diseño se toman en la cara del apoyo, no en el eje. ARCO interpola linealmente:</p>
+<div class="formula">Posición de cara del apoyo izquierdo: x_cara_I = b_apoyo_I / 2
+Posición de cara del apoyo derecho:   x_cara_D = L_total - b_apoyo_D / 2
+
+Interpolación lineal entre las dos estaciones ETABS más cercanas a x_cara:
+  M_cara = M_est1 + (M_est2 - M_est1) × (x_cara - x_est1) / (x_est2 - x_est1)
+  V_cara = V_est1 + (V_est2 - V_est1) × (x_cara - x_est1) / (x_est2 - x_est1)</div>
+
+<h2>3. Peralte Efectivo</h2>
+<div class="formula">d = h - recubrimiento - Ø_estribo - Ø_barra_long/2   [mm]
+h = altura total del nervio (loseta + nervio)</div>
+
+<h2>4. Flexión Negativa — Sección Rectangular bw</h2>
+<p>Para momentos negativos (cara de apoyo), el eje neutro está en el alma:</p>
+
+<h3>4.1 Cuantía mínima</h3>
+<div class="norma"><strong>NSR-10 C.9.6.1.2</strong></div>
+<div class="formula">ρ_min = max(1.4/fy,   0.25·√fc/fy)
+As_min_neg = ρ_min · bw · d   [mm²]</div>
+
+<h3>4.2 Capacidad de diseño</h3>
+<div class="formula">a = As_prov · fy / (0.85·fc·bw)   [mm]
+φMn_neg = 0.90 · As_prov · fy · (d - a/2) · 10⁻⁶   [kN·m]
+C/D_neg = φMn_neg / Mu_neg   ≥ 0.9</div>
+
+<h2>5. Flexión Positiva — Sección T con be</h2>
+<p>Para momentos positivos (zona de vano), el eje neutro puede estar en la loseta o en el alma:</p>
+
+<h3>5.1 Verificar posición del eje neutro</h3>
+<div class="formula">Paso 1: Suponer eje neutro en la loseta (a ≤ tf):
+  a_ala = As_prov · fy / (0.85·fc·be)   [mm]
+
+Paso 2: Verificar:
+  Si a_ala ≤ tf → eje neutro en loseta → usar sección rectangular con b = be
+  Si a_ala &gt; tf → eje neutro en alma → usar método de dos bloques</div>
+
+<h3>5.2 Eje neutro en la loseta (caso frecuente)</h3>
+<div class="formula">φMn_pos = 0.90 · As_prov · fy · (d - a_ala/2) · 10⁻⁶   [kN·m]
+C/D_pos = φMn_pos / Mu_pos   ≥ 0.9</div>
+
+<h3>5.3 Eje neutro en el alma (caso T real)</h3>
+<div class="formula">Fuerza del ala comprimida (parte fuera del alma):
+  Cf = 0.85·fc·(be - bw)·tf   [kN]
+
+Fuerza del alma comprimida:
+  Cw = As·fy - Cf   [kN]  (asumiendo As a plena fluencia en tensión)
+
+Profundidad del bloque en el alma:
+  a_alma = Cw / (0.85·fc·bw)   [mm]
+
+Momento:
+  φMn_T = 0.90 · [Cf·(d - tf/2) + Cw·(d - tf - a_alma/2)] · 10⁻⁶   [kN·m]</div>
+
+<h2>6. Cortante</h2>
+<div class="norma"><strong>NSR-10 C.22.5.5.1 y C.13.3.5</strong></div>
+
+<h3>6.1 Factor de incremento para nervios</h3>
+<div class="formula">factor_nervio = 1.1   si paso ≤ 750 mm   (NSR-10 C.13.3.5)
+factor_nervio = 1.0   si paso &gt; 750 mm</div>
+
+<h3>6.2 Resistencia del concreto</h3>
+<div class="formula">Vc = factor_nervio · 0.17 · √fc · bw · d · 1000   [kN]
+(fc en MPa, bw y d en m)</div>
+
+<h3>6.3 Resistencia del refuerzo transversal</h3>
+<div class="formula">Vs = Av · fy · d / (s · 1000)   [kN]
+Av = n_ramas · área_barra_estribo   [mm²]
+s  = separación de estribos   [m]</div>
+
+<h3>6.4 Resistencia total</h3>
+<div class="formula">φVn = 0.75 · (Vc + Vs)   [kN]
+C/D_cort = φVn / Vu   ≥ 0.9</div>
+
+<h2>7. Criterio de Cumplimiento</h2>
+<div class="formula">El nervio se considera adecuado cuando:
+  C/D_neg_I  = φMn_sup_I / Mu_neg_I   ≥ 0.9
+  C/D_pos_C  = φMn_inf_C / Mu_pos_C   ≥ 0.9
+  C/D_neg_D  = φMn_sup_D / Mu_neg_D   ≥ 0.9
+  C/D_cort_I = φVn_I / Vu_I           ≥ 0.9
+  C/D_cort_D = φVn_D / Vu_D           ≥ 0.9
+
+Penalización si As_prov &lt; As_min:
+  C/D se penaliza proporcionalmente, puede ser &lt; 0.9 aunque φMn &gt; Mu</div>
+
+<div class="nota"><strong>ARCO considera adecuado un nervio cuando C/D ≥ 0.9 en todas sus zonas de verificación.</strong>
+Un C/D entre 0.9 y 1.0 significa que el nervio con el refuerzo colocado es apto para las demandas de flexión y cortante. No requiere modificación del refuerzo.</div>
+
+<table>
+  <tr><th style="background:#1a7a1a;width:220px;">Verde — C/D ≥ 1.0</th><td>Cumple. El nervio tiene reserva de resistencia.</td></tr>
+  <tr><th style="background:#c68000;color:#fff;">Naranja — 0.9 ≤ C/D &lt; 1.0</th><td><strong>Cumple — Adecuado.</strong> El nervio es apto. No requiere modificación.</td></tr>
+  <tr><th style="background:#c0392b;color:#fff;">Rojo — C/D &lt; 0.9</th><td>No cumple. Revisar refuerzo o geometría de la sección nervada.</td></tr>
+</table>
+
+<h2>8. Áreas de Barras de Referencia</h2>
+<table>
+  <tr><th>Barra</th><th>#2</th><th>#3</th><th>#4</th><th>#5</th><th>#6</th><th>#7</th><th>#8</th><th>#10</th></tr>
+  <tr><td>Área (mm²)</td><td>32.3</td><td>71.0</td><td>129.4</td><td>199.7</td><td>284.3</td><td>387.1</td><td>509.7</td><td>817.4</td></tr>
+</table>
+</div>
+</body>
+</html>

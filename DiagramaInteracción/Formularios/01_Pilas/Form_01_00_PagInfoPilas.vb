@@ -2,6 +2,33 @@
 Imports ARCO.Funciones_01_Pilas
 Public Class Form_01_00_PagInfoPilas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
+
+    Private Sub Form_01_00_PagInfoPilas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        PoblarTablaElementos()
+    End Sub
+
+    ''' <summary>Rellena Tabla_Elementos desde ListaElementos. Se llama al cargar el form (también en reaperturas tras cierre).</summary>
+    Public Sub PoblarTablaElementos()
+        Dim lista = Form_00_PaginaPrincipal.proyecto.Elementos.Pilas.ListaElementos
+        If lista.Count = 0 Then Return
+        Tabla_Elementos.Rows.Clear()
+        For i = 0 To lista.Count - 1
+            Dim p As Elemento_Pila = lista(i)
+            Tabla_Elementos.Rows.Add()
+            Tabla_Elementos.Rows(i).Cells(0).Value = p.Name_Label
+            Tabla_Elementos.Rows(i).Cells(1).Value = p.Name_Elemento
+            Tabla_Elementos.Rows(i).Cells(2).Value = p.Df
+            Tabla_Elementos.Rows(i).Cells(3).Value = p.Dc
+            Tabla_Elementos.Rows(i).Cells(4).Value = p.L_Pila
+            Tabla_Elementos.Rows(i).Cells(5).Value = p.Opcion_Hueca
+            Tabla_Elementos.Rows(i).Cells(6).Value = p.Esp_Anillo
+            Tabla_Elementos.Rows(i).Cells(7).Value = p.N_Barra_Long
+            Tabla_Elementos.Rows(i).Cells(8).Value = p.Acero_Long
+            Tabla_Elementos.Rows(i).Cells(9).Value = p.Cant_Barras_Long
+            Tabla_Elementos.Rows(i).Cells(10).Value = p.fc
+        Next
+    End Sub
+
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
 
         Proyecto = Form_01_PagPilas.Proyecto
@@ -94,13 +121,21 @@ Public Class Form_01_00_PagInfoPilas
             Elemento.Check5_PuT = 0.9 * Proyecto.Elementos.Pilas.Fy * Elemento.Acero_Long * Elemento.Cant_Barras_Long / (Elemento.P_Traccion * 1000)
 
             '------------------------ VERIFICACIÓN DE ESFUERZOS TRANSMITIDOS AL SUELO ------------------------
-            Proyecto.Elementos.Pilas.Esf_Adm_Est = Convert.ToSingle(Form_01_PagPilas.EadmEst.Text)
-            Proyecto.Elementos.Pilas.Esf_Adm_Din = Convert.ToSingle(Form_01_PagPilas.EadmDin.Text)
+            Proyecto.Elementos.Pilas.Esf_Adm_Est = If(String.IsNullOrWhiteSpace(Form_01_PagPilas.EadmEst.Text), 0.0F, CSng(Form_01_PagPilas.EadmEst.Text))
+            Proyecto.Elementos.Pilas.Esf_Adm_Din = If(String.IsNullOrWhiteSpace(Form_01_PagPilas.EadmDin.Text), 0.0F, CSng(Form_01_PagPilas.EadmDin.Text))
+            Proyecto.Elementos.Pilas.Esf_Frccion = If(String.IsNullOrWhiteSpace(Form_01_PagPilas.Esf_Friccion.Text), 0.0F, CSng(Form_01_PagPilas.Esf_Friccion.Text))
 
             Elemento.EsfE_Trans = Elemento.Ps_Estatica / Elemento.Ag_C
             Elemento.EsfD_Trans = Elemento.Ps_Dinamica / Elemento.Ag_C
-            Elemento.Relacion_EsfE = Proyecto.Elementos.Pilas.Esf_Adm_Est / Elemento.EsfE_Trans
-            Elemento.Relacion_EsfD = Proyecto.Elementos.Pilas.Esf_Adm_Din / Elemento.EsfD_Trans
+
+            ' Capacidad total = punta + fricción lateral
+            ' Q_punta  = σ_adm × Ag_C  [kN/m² × m² = kN]
+            ' Q_fric   = τ_fric × π × Df × L_Pila  [kN/m² × m × m = kN]
+            Dim Qpunta_E As Double = Proyecto.Elementos.Pilas.Esf_Adm_Est * Elemento.Ag_C
+            Dim Qpunta_D As Double = Proyecto.Elementos.Pilas.Esf_Adm_Din * Elemento.Ag_C
+            Dim Qfric As Double = Proyecto.Elementos.Pilas.Esf_Frccion * Math.PI * Elemento.Df * Elemento.L_Pila
+            Elemento.Relacion_EsfE = If(Elemento.Ps_Estatica > 0, (Qpunta_E + Qfric) / Elemento.Ps_Estatica, 0)
+            Elemento.Relacion_EsfD = If(Elemento.Ps_Dinamica > 0, (Qpunta_D + Qfric) / Elemento.Ps_Dinamica, 0)
 
             '------------------------ ANÁLISIS DE ESFUERZOS CORTANTES ----------------------------- 
             Dim RevisionV = ShearCheck(Elemento.Df, Elemento.fc, Proyecto.Elementos.Pilas.Fy, Elemento.Separacion_Trans, Elemento.N_Barra_Trans,
@@ -182,8 +217,11 @@ SiguienteElemento:
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(18).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check_V2
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(19).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check_V3
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(20).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Cuantia
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(21).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Factor_CortesH, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(22).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Diagonal, 2)
+            Dim fManual_i As Single = Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Manual_DI
+            Dim fEfecCortes As Single = If(fManual_i > 0, fManual_i, Proyecto.Elementos.Pilas.ListaElementos(i).Factor_CortesH)
+            Dim fEfecDiag As Single = If(fManual_i > 0, fManual_i, Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Diagonal)
+            Form_01_PagPilas.TablaRevi.Rows(i).Cells(21).Value = Math.Round(fEfecCortes, 2)
+            Form_01_PagPilas.TablaRevi.Rows(i).Cells(22).Value = Math.Round(fEfecDiag, 2)
 
             Form_01_PagPilas.ComboElementos.Items.Add(Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento)
 
@@ -227,7 +265,7 @@ SiguienteElemento:
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(3).Style.ForeColor = Color.FromArgb(156, 0, 6)
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(3).Value = "Revisar"
             End If
-            If Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Factor_CortesH, 2) >= 0.9 And Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Diagonal, 2) >= 0.9 Then
+            If Math.Round(fEfecCortes, 2) >= 0.9 And Math.Round(fEfecDiag, 2) >= 0.9 Then
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(4).Value = "Ok"
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(4).Style.BackColor = Color.FromArgb(198, 239, 206)
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(4).Style.ForeColor = Color.FromArgb(0, 97, 0)

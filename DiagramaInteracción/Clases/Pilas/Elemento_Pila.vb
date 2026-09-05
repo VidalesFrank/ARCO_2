@@ -1,4 +1,6 @@
-﻿<Serializable>
+﻿Imports System.Runtime.Serialization
+
+<Serializable>
 Public Class Elemento_Pila
 
     Public Name_Elemento As String
@@ -34,6 +36,14 @@ Public Class Elemento_Pila
     Public Combinacion_Factor_Diagonal As String
     Public Factor_CortesH As Single
     Public combinacion_Factor_CortesH As String
+
+    ''' <summary>Factor manual ingresado por el usuario (0 = usar calculado).</summary>
+    <OptionalField> Public Factor_Manual_DI As Single = 0
+
+    <OnDeserialized>
+    Private Sub InicializarDefaults(ctx As StreamingContext)
+        ' Factor_Manual_DI = 0 → sin override (proyectos guardados antes de esta versión)
+    End Sub
 
     Public Matriz_PS As List(Of Single)
     Public Matriz_MS As List(Of Single)

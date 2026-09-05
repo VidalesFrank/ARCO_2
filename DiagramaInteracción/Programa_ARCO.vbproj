@@ -282,6 +282,7 @@
     <Compile Include="Clases\Muros\cMuros.vb" />
     <Compile Include="Clases\Muros\Muros.vb" />
     <Compile Include="Clases\Muros\SeccionMuro.vb" />
+    <Compile Include="Clases\Columnas\cCandidatoColumna.vb" />
     <Compile Include="Clases\Pilas\cCandidatoPila.vb" />
     <Compile Include="Clases\Pilas\cCombinacionPila.vb" />
     <Compile Include="Clases\Pilas\cPilas.vb" />
@@ -362,6 +363,12 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\09_Vigas\DiagramaService.vb" />
+    <Compile Include="Formularios\09_Vigas\Form_09_GrupoReplica.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\09_Vigas\Form_09_GestionGrupo.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\09_Vigas\Form_AgrupacionManualVigas.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -409,6 +416,13 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_AyudaImportacion.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Documentacion.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Documentacion.Designer.vb">
+      <DependentUpon>Form_Documentacion.vb</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_FiltroSecciones.vb">
@@ -506,6 +520,9 @@
     <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\02_Columnas\Form_02_SeleccionColumnas.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\02_Columnas\Form_02_02_DiagramaColumna.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -544,6 +561,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\01_Pilas\Form_Reporte_Pilas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_01_FactorManualPilas.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_11_PagMateriales.Designer.vb">

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Introducción</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Introducción</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Introducción</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="02_importacion_etabs.html">Siguiente: Importación ETABS →</a>
+</div>
+
+<h2>¿Qué es ARCO?</h2>
+<p>ARCO es una aplicación de escritorio para el <strong>diseño y verificación de elementos de concreto reforzado</strong> bajo la norma NSR-10. Está orientada a ingenieros estructurales que trabajan con modelos de ETABS y necesitan verificar y diseñar los elementos del sistema resistente.</p>
+
+<h2>Flujo General de Trabajo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Crear o abrir un proyecto</strong> — El archivo de proyecto tiene extensión <code>.esm</code> y guarda toda la información del modelo, refuerzos y resultados. Se accede desde el menú <em>Archivo</em>.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Importar desde ETABS</strong> — Cada módulo tiene su propio botón de importación. Se selecciona el archivo Excel exportado de ETABS (formato E17 o E23). ARCO detecta automáticamente la versión.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Seleccionar combinaciones de diseño</strong> — Antes de calcular, el usuario elige qué combinaciones de carga se usarán para el diseño de cada elemento.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Ingresar refuerzo</strong> — En cada módulo se ingresan las dimensiones de la sección y el refuerzo colocado (longitudinal y transversal).</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Calcular</strong> — ARCO verifica el refuerzo colocado contra las demandas de ETABS. Los resultados muestran el factor C/D por elemento.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Exportar reportes</strong> — Los resultados se exportan a Excel (ClosedXML). Algunos módulos generan reportes ejecutivos adicionales.</div></div>
+
+<h2>Módulos Disponibles</h2>
+<table>
+  <tr><th>Módulo</th><th>Elementos que diseña/verifica</th><th>Fuente de fuerzas</th></tr>
+  <tr><td>Vigas</td><td>Vigas de concreto reforzado</td><td>Beam Forces / Element Forces-Beams (ETABS)</td></tr>
+  <tr><td>Columnas</td><td>Columnas (Frame y Pier)</td><td>Column Forces / Element Forces-Columns (ETABS)</td></tr>
+  <tr><td>Muros</td><td>Muros estructurales</td><td>Pier Forces (ETABS)</td></tr>
+  <tr><td>Pilas</td><td>Pilotes de cimentación</td><td>Reacciones de apoyos (ETABS)</td></tr>
+  <tr><td>Nervios</td><td>Nervios de losas nervadas</td><td>Beam Forces (ETABS)</td></tr>
+  <tr><td>Losas</td><td>Losas en dos direcciones</td><td>Cargas ingresadas por el usuario</td></tr>
+  <tr><td>Escaleras</td><td>Escaleras de concreto</td><td>Cargas ingresadas por el usuario</td></tr>
+  <tr><td>Muros No Estructurales</td><td>Muros divisorios y antepechos</td><td>Parámetros sísmicos NSR-10</td></tr>
+</table>
+
+<h2>Versiones de ETABS Soportadas</h2>
+<p>ARCO soporta dos formatos de exportación de ETABS, detectados automáticamente al importar:</p>
+<ul>
+  <li><strong>E17</strong>: ETABS versiones anteriores a 2016. Nombres de hojas como "Beam Forces", "Column Forces", "Joint Coordinates".</li>
+  <li><strong>E23</strong>: ETABS 2016 en adelante. Nombres de hojas como "Element Forces - Beams", "Element Forces - Columns", "Objects and Elements - Joints".</li>
+</ul>
+<div class="nota">ARCO no requiere que el usuario indique la versión de ETABS. La detección es automática basada en los nombres de las hojas del Excel.</div>
+
+<h2>Criterio de Cumplimiento</h2>
+<p>ARCO usa la relación <strong>C/D (Capacidad sobre Demanda)</strong>. Un valor ≥ 1.0 significa que el elemento cumple. La codificación de colores en los resultados es:</p>
+<table>
+  <tr><th>Color</th><th>Rango</th><th>Significado</th></tr>
+  <tr><td style="background:#c6efce">Verde</td><td>C/D ≥ 1.0</td><td>Cumple con margen</td></tr>
+  <tr><td style="background:#ffeb9c">Naranja/Amarillo</td><td>0.9 ≤ C/D &lt; 1.0</td><td>Cumple con tolerancia de ingeniería (10%)</td></tr>
+  <tr><td style="background:#ffc7ce">Rojo</td><td>C/D &lt; 0.9</td><td>No cumple — requiere revisión</td></tr>
+</table>
+
+<h2>Interfaz Principal</h2>
+<p>La pantalla principal de ARCO muestra los módulos disponibles. El menú superior contiene:</p>
+<ul>
+  <li><strong>Archivo</strong>: Nuevo, Abrir, Guardar, Guardar Como, Salir.</li>
+  <li><strong>Opciones</strong>: Información del proyecto, ingresar derivas de ETABS, cargar datos globales, reporte completo del proyecto, análisis de sección y visualizador ETABS.</li>
+  <li><strong>Ayuda</strong>: Manual de ayuda, soporte y acerca del programa.</li>
+</ul>
+<p>Cada botón de la pantalla principal abre el módulo correspondiente. Los módulos pueden abrirse en cualquier orden; sin embargo, se recomienda siempre ingresar primero la información del proyecto.</p>
+
+<h2>Archivos del Proyecto</h2>
+<p>ARCO guarda toda la información en un archivo binario con extensión <code>.esm</code>. Este archivo incluye:</p>
+<ul>
+  <li>Información general del proyecto (nombre, dirección, diseñador, parámetros sísmicos).</li>
+  <li>Datos importados de ETABS (fuerzas por combinación y elemento).</li>
+  <li>Refuerzos colocados por el usuario en cada módulo.</li>
+  <li>Resultados de verificación por elemento.</li>
+</ul>
+<div class="advertencia">Los archivos <code>.esm</code> guardados con versiones anteriores de ARCO pueden abrirse en la versión actual. ARCO detecta el formato antiguo y migra los datos automáticamente. Se recomienda guardar el archivo nuevamente para actualizar su formato.</div>
+</div>
+</body>
+</html>

@@ -35,9 +35,9 @@ Public Class Form_01_PagPilas
         ResumenDI.Visible = True
 
         Try
-        Proyecto.Elementos.Pilas.Esf_Adm_Est = Convert.ToSingle(EadmEst.Text)
-        Proyecto.Elementos.Pilas.Esf_Adm_Din = Convert.ToSingle(EadmDin.Text)
-        Proyecto.Elementos.Pilas.Esf_Frccion = Convert.ToSingle(Esf_Friccion.Text)
+        Proyecto.Elementos.Pilas.Esf_Adm_Est = If(String.IsNullOrWhiteSpace(EadmEst.Text), 0.0F, CSng(EadmEst.Text))
+        Proyecto.Elementos.Pilas.Esf_Adm_Din = If(String.IsNullOrWhiteSpace(EadmDin.Text), 0.0F, CSng(EadmDin.Text))
+        Proyecto.Elementos.Pilas.Esf_Frccion = If(String.IsNullOrWhiteSpace(Esf_Friccion.Text), 0.0F, CSng(Esf_Friccion.Text))
 
         Proyecto.Elementos.Pilas.Def_Uni_ConcAs = Convert.ToSingle(PagMateriales.ecu.Text)
         Proyecto.Elementos.Pilas.Fy = Convert.ToSingle(PagMateriales.Fy.Text)
@@ -226,8 +226,8 @@ Public Class Form_01_PagPilas
             TablaRevi.Columns(10).HeaderText = "Chequeo 5 (Pu T)"
             TablaRevi.Columns(11).HeaderText = "σ Transmitido Estático [kN/m2]"
             TablaRevi.Columns(12).HeaderText = "σ Transmitido Dinámico [kN/m2]"
-            TablaRevi.Columns(13).HeaderText = "σAdm/σTrans Estático"
-            TablaRevi.Columns(14).HeaderText = "σAdm/σTrans Dinámico"
+            TablaRevi.Columns(13).HeaderText = "Q Total / Ps Est. (C/D)"
+            TablaRevi.Columns(14).HeaderText = "Q Total / Ps Din. (C/D)"
             TablaRevi.Columns(15).HeaderText = "φVn [kN]"
             TablaRevi.Columns(16).HeaderText = "Vu [kN]"
             TablaRevi.Columns(17).HeaderText = "φVn/Vu"
@@ -850,28 +850,28 @@ Public Class Form_01_PagPilas
 
             ' ── TablaRevi ───────────────────────────────────────────────────
             TablaRevi.Rows(i).Cells(0).Value = p.Name_Elemento
-            TablaRevi.Rows(i).Cells(1).Value = p.Ps_Estatica
-            TablaRevi.Rows(i).Cells(2).Value = p.Ps_Dinamica
-            TablaRevi.Rows(i).Cells(3).Value = p.Pu_Estatica
-            TablaRevi.Rows(i).Cells(4).Value = p.Pu_Dinamica
-            TablaRevi.Rows(i).Cells(5).Value = p.P_Traccion
-            TablaRevi.Rows(i).Cells(6).Value = p.Check1_PsE
-            TablaRevi.Rows(i).Cells(7).Value = p.Check2_PsD
-            TablaRevi.Rows(i).Cells(8).Value = p.Check3_PuE
-            TablaRevi.Rows(i).Cells(9).Value = p.Check4_PuD
-            TablaRevi.Rows(i).Cells(10).Value = p.Check5_PuT
-            TablaRevi.Rows(i).Cells(11).Value = p.EsfE_Trans
-            TablaRevi.Rows(i).Cells(12).Value = p.EsfD_Trans
-            TablaRevi.Rows(i).Cells(13).Value = p.Relacion_EsfE
-            TablaRevi.Rows(i).Cells(14).Value = p.Relacion_EsfD
-            TablaRevi.Rows(i).Cells(15).Value = p.Vn
-            TablaRevi.Rows(i).Cells(16).Value = p.Vu
-            TablaRevi.Rows(i).Cells(17).Value = p.FactorShear
+            TablaRevi.Rows(i).Cells(1).Value = Math.Round(p.Ps_Estatica, 2)
+            TablaRevi.Rows(i).Cells(2).Value = Math.Round(p.Ps_Dinamica, 2)
+            TablaRevi.Rows(i).Cells(3).Value = Math.Round(p.Pu_Estatica, 2)
+            TablaRevi.Rows(i).Cells(4).Value = Math.Round(p.Pu_Dinamica, 2)
+            TablaRevi.Rows(i).Cells(5).Value = Math.Round(p.P_Traccion, 2)
+            TablaRevi.Rows(i).Cells(6).Value = Math.Round(p.Check1_PsE, 2)
+            TablaRevi.Rows(i).Cells(7).Value = Math.Round(p.Check2_PsD, 2)
+            TablaRevi.Rows(i).Cells(8).Value = Math.Round(p.Check3_PuE, 2)
+            TablaRevi.Rows(i).Cells(9).Value = Math.Round(p.Check4_PuD, 2)
+            TablaRevi.Rows(i).Cells(10).Value = Math.Round(p.Check5_PuT, 2)
+            TablaRevi.Rows(i).Cells(11).Value = Math.Round(p.EsfE_Trans, 2)
+            TablaRevi.Rows(i).Cells(12).Value = Math.Round(p.EsfD_Trans, 2)
+            TablaRevi.Rows(i).Cells(13).Value = Math.Round(p.Relacion_EsfE, 2)
+            TablaRevi.Rows(i).Cells(14).Value = Math.Round(p.Relacion_EsfD, 2)
+            TablaRevi.Rows(i).Cells(15).Value = Math.Round(p.Vn, 2)
+            TablaRevi.Rows(i).Cells(16).Value = Math.Round(p.Vu, 2)
+            TablaRevi.Rows(i).Cells(17).Value = Math.Round(p.FactorShear, 2)
             TablaRevi.Rows(i).Cells(18).Value = p.Check_V2
             TablaRevi.Rows(i).Cells(19).Value = p.Check_V3
             TablaRevi.Rows(i).Cells(20).Value = p.Cuantia
-            TablaRevi.Rows(i).Cells(21).Value = p.Factor_CortesH
-            TablaRevi.Rows(i).Cells(22).Value = p.Factor_Diagonal
+            TablaRevi.Rows(i).Cells(21).Value = Math.Round(p.Factor_CortesH, 2)
+            TablaRevi.Rows(i).Cells(22).Value = Math.Round(p.Factor_Diagonal, 2)
 
             ' ── Tabla_Elementos (Form_01_00_PagInfoPilas) ───────────────────
             ' Col 0: Name_Label | 1: Nombre | 2: Df | 3: Dc | 4: L_Pila
@@ -1188,11 +1188,81 @@ Public Class Form_01_PagPilas
         Dim itemETABSFP As New ToolStripMenuItem("Importar ETABS (Frame + Pier)...")
         itemETABSFP.ForeColor = Color.White
         itemETABSFP.BackColor = Color.FromArgb(87, 87, 87)
+        itemETABSFP.ToolTipText = "Detecta pilas Frame y Pier desde Joint Reactions y Pier Forces"
         AddHandler itemETABSFP.Click, AddressOf ImportarETABSFramePier_Click
         Importar_Pilas.DropDownItems.Add(itemETABSFP)
 
+        Dim itemElemForces As New ToolStripMenuItem("Importar Frame como Pilas (Element Forces)...")
+        itemElemForces.ForeColor = Color.White
+        itemElemForces.BackColor = Color.FromArgb(87, 87, 87)
+        itemElemForces.ToolTipText = "Lee 'Element Forces - Columns': P, V2, V3, M2, M3 en sección gobernante por combinación"
+        AddHandler itemElemForces.Click, AddressOf ImportarFrameElementForces_Click
+        Importar_Pilas.DropDownItems.Add(itemElemForces)
+
+        Dim itemInfoPilas As New ToolStripMenuItem("Info Pilas")
+        itemInfoPilas.ForeColor = Color.White
+        itemInfoPilas.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler itemInfoPilas.Click, Sub(s, ev)
+                                            Form_01_00_PagInfoPilas.Show()
+                                            Form_01_00_PagInfoPilas.BringToFront()
+                                        End Sub
+        VerToolStripMenuItem.DropDownItems.Add(itemInfoPilas)
+
+        Dim sepOpc As New ToolStripSeparator() With {.BackColor = Color.FromArgb(87, 87, 87)}
+        OpcionesToolStripMenuItem.DropDownItems.Add(sepOpc)
+        Dim itemFactorManual As New ToolStripMenuItem("Factor Manual Flexo-Compresión...")
+        itemFactorManual.ForeColor = Color.White
+        itemFactorManual.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler itemFactorManual.Click, AddressOf FactorManualDI_Click
+        OpcionesToolStripMenuItem.DropDownItems.Add(itemFactorManual)
+
         AddHandler _timerAutoSavePilas.Tick, AddressOf AutoSavePilas_Tick
         _timerAutoSavePilas.Start()
+        RefrescarDesdeProyecto()
+    End Sub
+
+    Private Sub FactorManualDI_Click(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Pilas.ListaElementos Is Nothing OrElse Proyecto.Elementos.Pilas.ListaElementos.Count = 0 Then
+            MessageBox.Show("No hay pilas calculadas. Ejecute el análisis primero.", "Factor Manual", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim frm As New Form_01_FactorManualPilas()
+        If frm.ShowDialog() = DialogResult.OK Then
+            ActualizarFactoresInteraccionTabla()
+        End If
+    End Sub
+
+    Public Sub ActualizarFactoresInteraccionTabla()
+        Dim pilas = Proyecto.Elementos.Pilas.ListaElementos
+        Dim colorOKB As Color = Color.FromArgb(198, 239, 206)
+        Dim colorOKT As Color = Color.FromArgb(0, 97, 0)
+        Dim colorMalB As Color = Color.FromArgb(255, 199, 206)
+        Dim colorMalT As Color = Color.FromArgb(156, 0, 6)
+
+        For i = 0 To pilas.Count - 1
+            Dim p = pilas(i)
+            Dim fManual As Single = p.Factor_Manual_DI
+            Dim fEfecDiag As Single = If(fManual > 0, fManual, p.Factor_Diagonal)
+            Dim fEfecCortes As Single = If(fManual > 0, fManual, p.Factor_CortesH)
+
+            If TablaRevi.Rows.Count > i Then
+                TablaRevi.Rows(i).Cells(21).Value = Math.Round(fEfecCortes, 2)
+                TablaRevi.Rows(i).Cells(22).Value = Math.Round(fEfecDiag, 2)
+                For Each ci As Integer In {21, 22}
+                    Dim v = CDbl(TablaRevi.Rows(i).Cells(ci).Value)
+                    TablaRevi.Rows(i).Cells(ci).Style.BackColor = If(v >= 0.9, colorOKB, colorMalB)
+                    TablaRevi.Rows(i).Cells(ci).Style.ForeColor = If(v >= 0.9, colorOKT, colorMalT)
+                    TablaRevi.Rows(i).Cells(ci).Style.Font = If(fManual > 0, New Font(TablaRevi.Font, FontStyle.Bold Or FontStyle.Italic), Nothing)
+                Next
+            End If
+
+            If Tabla_ResumenVisual.Rows.Count > i Then
+                Dim okInterac = fEfecDiag >= 0.9 AndAlso fEfecCortes >= 0.9
+                Tabla_ResumenVisual.Rows(i).Cells(4).Value = If(okInterac, "Ok", "Revisar")
+                Tabla_ResumenVisual.Rows(i).Cells(4).Style.BackColor = If(okInterac, colorOKB, colorMalB)
+                Tabla_ResumenVisual.Rows(i).Cells(4).Style.ForeColor = If(okInterac, colorOKT, colorMalT)
+            End If
+        Next
     End Sub
 
     Private Sub AutoSavePilas_Tick(sender As Object, e As EventArgs)
@@ -1209,13 +1279,22 @@ Public Class Form_01_PagPilas
 
     ''' <summary>
     ''' Llamado por la página principal al abrir un proyecto.
-    ''' Re-sincroniza la referencia y recalcula si hay datos de pilas.
+    ''' Sigue el mismo flujo que Open() pero sin deserializar ni sincronizar.
     ''' </summary>
     Public Sub RefrescarDesdeProyecto()
         Proyecto = Form_00_PaginaPrincipal.proyecto
         If Proyecto.Elementos.Pilas.ListaElementos.Count = 0 Then Return
-        If Proyecto.Elementos.Pilas.Reactions.Count = 0 Then Return
-        Button1_Click(Nothing, EventArgs.Empty)
+        BorrarDatos()
+        Rellenar()
+        Tabla_ResumenVisual.Visible = True
+        Label20.Visible = True
+        ResumenDI.Visible = True
+        VerToolStripMenuItem.Enabled = True
+        ExportarToolStripMenuItem.Enabled = True
+    End Sub
+
+    Private Sub VerToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles VerToolStripMenuItem.Click
+        ' Abre el dropdown — la acción real está en el subitem "Info Pilas"
     End Sub
 
     Private Sub Form_01_PagPilas_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
@@ -1224,6 +1303,64 @@ Dim r = MessageBox.Show("Hay cambios sin guardar. ¿Guardar antes de cerrar?",
                                 "Cerrar", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning)
         If r = DialogResult.Yes Then GuardarToolStripMenuItem_Click(sender, e)
         If r = DialogResult.Cancel Then e.Cancel = True
+    End Sub
+
+    ' ─── Importación desde Element Forces - Columns (fuerzas de elemento, sección gobernante) ───
+    Private Sub ImportarFrameElementForces_Click(sender As Object, e As EventArgs)
+        Dim ofd As New OpenFileDialog()
+        ofd.Title = "Seleccionar archivo ETABS — Element Forces Columns"
+        ofd.Filter = "Archivos Excel (*.xls;*.xlsx)|*.xls;*.xlsx|Todos los archivos (*.*)|*.*"
+        ofd.Multiselect = False
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Me.Cursor = Cursors.WaitCursor
+        Dim candidatos As List(Of cCandidatoPila)
+        Dim backdrop As GeometriaEstructural = Nothing
+        Try
+            candidatos = DetectarPilasDesdeElementForces(ofd.FileName, backdrop)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_01_PagPilas.ImportarFrameElementForces_Click", "Error durante detección")
+            MessageBox.Show("Error al procesar el archivo ETABS:" & vbCrLf & ex.Message,
+                            "Error de lectura", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
+
+        If candidatos Is Nothing OrElse candidatos.Count = 0 Then
+            MessageBox.Show(
+                "No se encontraron columnas Frame en 'Element Forces - Columns'." & vbCrLf & vbCrLf &
+                "Verifique que el Excel de ETABS contenga las hojas:" & vbCrLf &
+                "  - 'Element Forces - Columns'  (E23)  o  'Column Forces'  (E17)" & vbCrLf &
+                "  - 'Objects and Elements - Joints'  (para ubicación en planta)" & vbCrLf &
+                "  - 'Objects and Elements - Frames'  (para geometría estructural)",
+                "Sin elementos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim desc As String =
+            "Fuerzas de elemento Frame leídas desde 'Element Forces - Columns'.  " &
+            "Sección gobernante: mayor momento resultante √(M²₂ + M²₃) por combinación."
+
+        Dim frmValidar As New Form_01_ImportarETABS(
+            candidatos,
+            If(backdrop IsNot Nothing, backdrop.JointsXY, Nothing),
+            If(backdrop IsNot Nothing, backdrop.FramesXY, Nothing),
+            desc)
+        frmValidar.ShowDialog()
+
+        If Not frmValidar.ImportacionConfirmada Then Return
+
+        _hayCambiosPilas = True
+        MostrarSelectorCombinacionesPilas()
+
+        Dim nSel As Integer = Proyecto.Elementos.Pilas.Reactions _
+            .Select(Function(r) r.JointLabel).Distinct().Count()
+        MessageBox.Show(
+            "Importación completada exitosamente:" & vbCrLf &
+            "  - Elementos Frame importados: " & nSel & vbCrLf &
+            "  - Combinaciones disponibles:  " & Proyecto.Elementos.Pilas.Lista_Combinaciones.Count,
+            "Importación completada", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
     ' ─── Importación automática ETABS E23: detecta Frame y Pier en un solo paso ───

@@ -143,6 +143,9 @@ Partial Class Form_01_PagPilas
         Me.Exportar_Excel = New System.Windows.Forms.ToolStripMenuItem()
         Me.OpcionesToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ActualizarDemandasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.VerToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ReporteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.DiagramaDiametroToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ArchivoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.NuevoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.AbrirToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
@@ -155,9 +158,6 @@ Partial Class Form_01_PagPilas
         Me.TipoPierToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ExportarToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.DatosAExcelToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.VerToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.ReporteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.DiagramaDiametroToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Grafica1 = New System.Windows.Forms.DataVisualization.Charting.Chart()
         Me.TabControl2 = New System.Windows.Forms.TabControl()
         Me.Seccion = New System.Windows.Forms.TabPage()
@@ -252,9 +252,10 @@ Partial Class Form_01_PagPilas
         Me.Panel1.Controls.Add(Me.GroupBox2)
         Me.Panel1.Controls.Add(Me.GroupBox1)
         Me.Panel1.Dock = System.Windows.Forms.DockStyle.Left
-        Me.Panel1.Location = New System.Drawing.Point(0, 30)
+        Me.Panel1.Location = New System.Drawing.Point(0, 37)
+        Me.Panel1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Panel1.Name = "Panel1"
-        Me.Panel1.Size = New System.Drawing.Size(305, 832)
+        Me.Panel1.Size = New System.Drawing.Size(407, 1024)
         Me.Panel1.TabIndex = 0
         '
         'GroupBox8
@@ -264,9 +265,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox8.Controls.Add(Me.Label23)
         Me.GroupBox8.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox8.ForeColor = System.Drawing.Color.White
-        Me.GroupBox8.Location = New System.Drawing.Point(10, 269)
+        Me.GroupBox8.Location = New System.Drawing.Point(13, 331)
+        Me.GroupBox8.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox8.Name = "GroupBox8"
-        Me.GroupBox8.Size = New System.Drawing.Size(285, 60)
+        Me.GroupBox8.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox8.Size = New System.Drawing.Size(380, 74)
         Me.GroupBox8.TabIndex = 13
         Me.GroupBox8.TabStop = False
         Me.GroupBox8.Text = "Materiales"
@@ -275,18 +278,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label22.AutoSize = True
         Me.Label22.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label22.Location = New System.Drawing.Point(229, 25)
+        Me.Label22.Location = New System.Drawing.Point(305, 31)
+        Me.Label22.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label22.Name = "Label22"
-        Me.Label22.Size = New System.Drawing.Size(39, 18)
+        Me.Label22.Size = New System.Drawing.Size(48, 24)
         Me.Label22.TabIndex = 14
         Me.Label22.Text = "MPa"
         '
         'T_fc
         '
         Me.T_fc.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.T_fc.Location = New System.Drawing.Point(115, 22)
+        Me.T_fc.Location = New System.Drawing.Point(153, 27)
+        Me.T_fc.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.T_fc.Name = "T_fc"
-        Me.T_fc.Size = New System.Drawing.Size(84, 24)
+        Me.T_fc.Size = New System.Drawing.Size(111, 29)
         Me.T_fc.TabIndex = 13
         Me.T_fc.Text = "21"
         Me.T_fc.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -295,9 +300,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label23.AutoSize = True
         Me.Label23.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label23.Location = New System.Drawing.Point(9, 25)
+        Me.Label23.Location = New System.Drawing.Point(12, 31)
+        Me.Label23.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label23.Name = "Label23"
-        Me.Label23.Size = New System.Drawing.Size(23, 18)
+        Me.Label23.Size = New System.Drawing.Size(28, 24)
         Me.Label23.TabIndex = 12
         Me.Label23.Text = "f'c"
         '
@@ -314,9 +320,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox6.Controls.Add(Me.Label18)
         Me.GroupBox6.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox6.ForeColor = System.Drawing.Color.White
-        Me.GroupBox6.Location = New System.Drawing.Point(10, 541)
+        Me.GroupBox6.Location = New System.Drawing.Point(13, 666)
+        Me.GroupBox6.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox6.Name = "GroupBox6"
-        Me.GroupBox6.Size = New System.Drawing.Size(285, 129)
+        Me.GroupBox6.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox6.Size = New System.Drawing.Size(380, 159)
         Me.GroupBox6.TabIndex = 12
         Me.GroupBox6.TabStop = False
         Me.GroupBox6.Text = "Esfuerso Admisible del Suelo"
@@ -325,18 +333,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label13.AutoSize = True
         Me.Label13.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label13.Location = New System.Drawing.Point(246, 99)
+        Me.Label13.Location = New System.Drawing.Point(328, 122)
+        Me.Label13.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label13.Name = "Label13"
-        Me.Label13.Size = New System.Drawing.Size(34, 18)
+        Me.Label13.Size = New System.Drawing.Size(41, 24)
         Me.Label13.TabIndex = 17
         Me.Label13.Text = "kPa"
         '
         'Esf_Friccion
         '
         Me.Esf_Friccion.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Esf_Friccion.Location = New System.Drawing.Point(149, 95)
+        Me.Esf_Friccion.Location = New System.Drawing.Point(199, 117)
+        Me.Esf_Friccion.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Esf_Friccion.Name = "Esf_Friccion"
-        Me.Esf_Friccion.Size = New System.Drawing.Size(87, 24)
+        Me.Esf_Friccion.Size = New System.Drawing.Size(115, 29)
         Me.Esf_Friccion.TabIndex = 16
         Me.Esf_Friccion.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
         '
@@ -344,19 +354,21 @@ Partial Class Form_01_PagPilas
         '
         Me.Label14.AutoSize = True
         Me.Label14.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label14.Location = New System.Drawing.Point(7, 99)
+        Me.Label14.Location = New System.Drawing.Point(9, 122)
+        Me.Label14.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label14.Name = "Label14"
-        Me.Label14.Size = New System.Drawing.Size(96, 18)
+        Me.Label14.Size = New System.Drawing.Size(114, 24)
         Me.Label14.TabIndex = 15
-        Me.Label14.Text = "Esf. Tracción"
+        Me.Label14.Text = "Esf. Fricción"
         '
         'Label7
         '
         Me.Label7.AutoSize = True
         Me.Label7.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label7.Location = New System.Drawing.Point(246, 65)
+        Me.Label7.Location = New System.Drawing.Point(328, 80)
+        Me.Label7.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label7.Name = "Label7"
-        Me.Label7.Size = New System.Drawing.Size(34, 18)
+        Me.Label7.Size = New System.Drawing.Size(41, 24)
         Me.Label7.TabIndex = 14
         Me.Label7.Text = "kPa"
         '
@@ -364,18 +376,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label6.AutoSize = True
         Me.Label6.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label6.Location = New System.Drawing.Point(246, 34)
+        Me.Label6.Location = New System.Drawing.Point(328, 42)
+        Me.Label6.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label6.Name = "Label6"
-        Me.Label6.Size = New System.Drawing.Size(34, 18)
+        Me.Label6.Size = New System.Drawing.Size(41, 24)
         Me.Label6.TabIndex = 13
         Me.Label6.Text = "kPa"
         '
         'EadmDin
         '
         Me.EadmDin.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.EadmDin.Location = New System.Drawing.Point(149, 61)
+        Me.EadmDin.Location = New System.Drawing.Point(199, 75)
+        Me.EadmDin.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.EadmDin.Name = "EadmDin"
-        Me.EadmDin.Size = New System.Drawing.Size(87, 24)
+        Me.EadmDin.Size = New System.Drawing.Size(115, 29)
         Me.EadmDin.TabIndex = 11
         Me.EadmDin.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
         '
@@ -383,18 +397,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label19.AutoSize = True
         Me.Label19.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label19.Location = New System.Drawing.Point(7, 65)
+        Me.Label19.Location = New System.Drawing.Point(9, 80)
+        Me.Label19.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label19.Name = "Label19"
-        Me.Label19.Size = New System.Drawing.Size(141, 18)
+        Me.Label19.Size = New System.Drawing.Size(179, 24)
         Me.Label19.TabIndex = 10
         Me.Label19.Text = "Condición Dinámica"
         '
         'EadmEst
         '
         Me.EadmEst.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.EadmEst.Location = New System.Drawing.Point(149, 27)
+        Me.EadmEst.Location = New System.Drawing.Point(199, 33)
+        Me.EadmEst.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.EadmEst.Name = "EadmEst"
-        Me.EadmEst.Size = New System.Drawing.Size(88, 24)
+        Me.EadmEst.Size = New System.Drawing.Size(116, 29)
         Me.EadmEst.TabIndex = 2
         Me.EadmEst.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
         '
@@ -402,9 +418,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label18.AutoSize = True
         Me.Label18.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label18.Location = New System.Drawing.Point(7, 30)
+        Me.Label18.Location = New System.Drawing.Point(9, 37)
+        Me.Label18.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label18.Name = "Label18"
-        Me.Label18.Size = New System.Drawing.Size(132, 18)
+        Me.Label18.Size = New System.Drawing.Size(165, 24)
         Me.Label18.TabIndex = 0
         Me.Label18.Text = "Condición Estática"
         '
@@ -414,9 +431,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox4.Controls.Add(Me.OpcionPila)
         Me.GroupBox4.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox4.ForeColor = System.Drawing.Color.White
-        Me.GroupBox4.Location = New System.Drawing.Point(10, 16)
+        Me.GroupBox4.Location = New System.Drawing.Point(13, 20)
+        Me.GroupBox4.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox4.Name = "GroupBox4"
-        Me.GroupBox4.Size = New System.Drawing.Size(285, 60)
+        Me.GroupBox4.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox4.Size = New System.Drawing.Size(380, 74)
         Me.GroupBox4.TabIndex = 6
         Me.GroupBox4.TabStop = False
         Me.GroupBox4.Text = "Tipo de elemento"
@@ -427,9 +446,10 @@ Partial Class Form_01_PagPilas
         Me.Op_Seccion.Font = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Op_Seccion.FormattingEnabled = True
         Me.Op_Seccion.Items.AddRange(New Object() {"Maciza", "Hueca"})
-        Me.Op_Seccion.Location = New System.Drawing.Point(157, 24)
+        Me.Op_Seccion.Location = New System.Drawing.Point(209, 30)
+        Me.Op_Seccion.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Op_Seccion.Name = "Op_Seccion"
-        Me.Op_Seccion.Size = New System.Drawing.Size(83, 24)
+        Me.Op_Seccion.Size = New System.Drawing.Size(109, 27)
         Me.Op_Seccion.TabIndex = 8
         Me.Op_Seccion.Visible = False
         '
@@ -437,9 +457,10 @@ Partial Class Form_01_PagPilas
         '
         Me.OpcionPila.AutoSize = True
         Me.OpcionPila.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.OpcionPila.Location = New System.Drawing.Point(47, 25)
+        Me.OpcionPila.Location = New System.Drawing.Point(63, 31)
+        Me.OpcionPila.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.OpcionPila.Name = "OpcionPila"
-        Me.OpcionPila.Size = New System.Drawing.Size(50, 22)
+        Me.OpcionPila.Size = New System.Drawing.Size(61, 28)
         Me.OpcionPila.TabIndex = 7
         Me.OpcionPila.Text = "Pila"
         Me.OpcionPila.UseVisualStyleBackColor = True
@@ -449,9 +470,10 @@ Partial Class Form_01_PagPilas
         Me.Button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.Button1.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Button1.ForeColor = System.Drawing.Color.White
-        Me.Button1.Location = New System.Drawing.Point(90, 694)
+        Me.Button1.Location = New System.Drawing.Point(120, 854)
+        Me.Button1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Button1.Name = "Button1"
-        Me.Button1.Size = New System.Drawing.Size(125, 45)
+        Me.Button1.Size = New System.Drawing.Size(167, 55)
         Me.Button1.TabIndex = 4
         Me.Button1.Text = "Ejecutar"
         Me.Button1.UseVisualStyleBackColor = True
@@ -462,9 +484,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox2.Controls.Add(Me.GroupBox5)
         Me.GroupBox2.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox2.ForeColor = System.Drawing.Color.White
-        Me.GroupBox2.Location = New System.Drawing.Point(10, 339)
+        Me.GroupBox2.Location = New System.Drawing.Point(13, 417)
+        Me.GroupBox2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox2.Name = "GroupBox2"
-        Me.GroupBox2.Size = New System.Drawing.Size(285, 189)
+        Me.GroupBox2.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox2.Size = New System.Drawing.Size(380, 233)
         Me.GroupBox2.TabIndex = 3
         Me.GroupBox2.TabStop = False
         Me.GroupBox2.Text = "Detalles de Refuerzo Base"
@@ -476,9 +500,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox7.Controls.Add(Me.Separacion)
         Me.GroupBox7.Controls.Add(Me.RefuerzoTransv)
         Me.GroupBox7.ForeColor = System.Drawing.Color.White
-        Me.GroupBox7.Location = New System.Drawing.Point(10, 116)
+        Me.GroupBox7.Location = New System.Drawing.Point(13, 143)
+        Me.GroupBox7.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox7.Name = "GroupBox7"
-        Me.GroupBox7.Size = New System.Drawing.Size(265, 63)
+        Me.GroupBox7.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox7.Size = New System.Drawing.Size(353, 78)
         Me.GroupBox7.TabIndex = 11
         Me.GroupBox7.TabStop = False
         Me.GroupBox7.Text = "Tranversal"
@@ -487,9 +513,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label1.AutoSize = True
         Me.Label1.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label1.Location = New System.Drawing.Point(212, 26)
+        Me.Label1.Location = New System.Drawing.Point(283, 32)
+        Me.Label1.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label1.Name = "Label1"
-        Me.Label1.Size = New System.Drawing.Size(21, 18)
+        Me.Label1.Size = New System.Drawing.Size(26, 24)
         Me.Label1.TabIndex = 12
         Me.Label1.Text = "m"
         '
@@ -497,18 +524,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label10.AutoSize = True
         Me.Label10.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label10.Location = New System.Drawing.Point(84, 26)
+        Me.Label10.Location = New System.Drawing.Point(112, 32)
+        Me.Label10.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label10.Name = "Label10"
-        Me.Label10.Size = New System.Drawing.Size(23, 18)
+        Me.Label10.Size = New System.Drawing.Size(29, 24)
         Me.Label10.TabIndex = 6
         Me.Label10.Text = "@"
         '
         'Separacion
         '
         Me.Separacion.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Separacion.Location = New System.Drawing.Point(109, 23)
+        Me.Separacion.Location = New System.Drawing.Point(145, 28)
+        Me.Separacion.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Separacion.Name = "Separacion"
-        Me.Separacion.Size = New System.Drawing.Size(75, 24)
+        Me.Separacion.Size = New System.Drawing.Size(99, 29)
         Me.Separacion.TabIndex = 7
         Me.Separacion.Text = "0.075"
         Me.Separacion.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -519,9 +548,10 @@ Partial Class Form_01_PagPilas
         Me.RefuerzoTransv.Font = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.RefuerzoTransv.FormattingEnabled = True
         Me.RefuerzoTransv.Items.AddRange(New Object() {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10"})
-        Me.RefuerzoTransv.Location = New System.Drawing.Point(18, 24)
+        Me.RefuerzoTransv.Location = New System.Drawing.Point(24, 30)
+        Me.RefuerzoTransv.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.RefuerzoTransv.Name = "RefuerzoTransv"
-        Me.RefuerzoTransv.Size = New System.Drawing.Size(60, 24)
+        Me.RefuerzoTransv.Size = New System.Drawing.Size(79, 27)
         Me.RefuerzoTransv.TabIndex = 1
         '
         'GroupBox5
@@ -532,9 +562,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox5.Controls.Add(Me.Label8)
         Me.GroupBox5.Controls.Add(Me.AreaLongitudinal)
         Me.GroupBox5.ForeColor = System.Drawing.Color.White
-        Me.GroupBox5.Location = New System.Drawing.Point(10, 18)
+        Me.GroupBox5.Location = New System.Drawing.Point(13, 22)
+        Me.GroupBox5.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox5.Name = "GroupBox5"
-        Me.GroupBox5.Size = New System.Drawing.Size(265, 95)
+        Me.GroupBox5.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox5.Size = New System.Drawing.Size(353, 117)
         Me.GroupBox5.TabIndex = 10
         Me.GroupBox5.TabStop = False
         Me.GroupBox5.Text = "Longitudinal"
@@ -545,17 +577,19 @@ Partial Class Form_01_PagPilas
         Me.RefuerzoLong.Font = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.RefuerzoLong.FormattingEnabled = True
         Me.RefuerzoLong.Items.AddRange(New Object() {"#2", "#3", "#4", "#5", "#6", "#7", "#8", "#10", "Usuario"})
-        Me.RefuerzoLong.Location = New System.Drawing.Point(18, 25)
+        Me.RefuerzoLong.Location = New System.Drawing.Point(24, 31)
+        Me.RefuerzoLong.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.RefuerzoLong.Name = "RefuerzoLong"
-        Me.RefuerzoLong.Size = New System.Drawing.Size(60, 24)
+        Me.RefuerzoLong.Size = New System.Drawing.Size(79, 27)
         Me.RefuerzoLong.TabIndex = 1
         '
         'NumRLong
         '
         Me.NumRLong.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.NumRLong.Location = New System.Drawing.Point(108, 57)
+        Me.NumRLong.Location = New System.Drawing.Point(144, 70)
+        Me.NumRLong.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.NumRLong.Name = "NumRLong"
-        Me.NumRLong.Size = New System.Drawing.Size(75, 24)
+        Me.NumRLong.Size = New System.Drawing.Size(99, 29)
         Me.NumRLong.TabIndex = 2
         Me.NumRLong.Text = "20"
         Me.NumRLong.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -564,9 +598,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label9.AutoSize = True
         Me.Label9.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label9.Location = New System.Drawing.Point(201, 27)
+        Me.Label9.Location = New System.Drawing.Point(268, 33)
+        Me.Label9.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label9.Name = "Label9"
-        Me.Label9.Size = New System.Drawing.Size(42, 18)
+        Me.Label9.Size = New System.Drawing.Size(52, 24)
         Me.Label9.TabIndex = 9
         Me.Label9.Text = "mm2"
         '
@@ -574,18 +609,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label8.AutoSize = True
         Me.Label8.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label8.Location = New System.Drawing.Point(15, 61)
+        Me.Label8.Location = New System.Drawing.Point(20, 75)
+        Me.Label8.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label8.Name = "Label8"
-        Me.Label8.Size = New System.Drawing.Size(66, 18)
+        Me.Label8.Size = New System.Drawing.Size(84, 24)
         Me.Label8.TabIndex = 4
         Me.Label8.Text = "Cantidad"
         '
         'AreaLongitudinal
         '
         Me.AreaLongitudinal.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.AreaLongitudinal.Location = New System.Drawing.Point(109, 24)
+        Me.AreaLongitudinal.Location = New System.Drawing.Point(145, 30)
+        Me.AreaLongitudinal.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.AreaLongitudinal.Name = "AreaLongitudinal"
-        Me.AreaLongitudinal.Size = New System.Drawing.Size(75, 24)
+        Me.AreaLongitudinal.Size = New System.Drawing.Size(99, 29)
         Me.AreaLongitudinal.TabIndex = 8
         Me.AreaLongitudinal.Text = "199"
         Me.AreaLongitudinal.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -609,9 +646,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox1.Controls.Add(Me.Label2)
         Me.GroupBox1.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.GroupBox1.ForeColor = System.Drawing.Color.White
-        Me.GroupBox1.Location = New System.Drawing.Point(10, 86)
+        Me.GroupBox1.Location = New System.Drawing.Point(13, 106)
+        Me.GroupBox1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox1.Name = "GroupBox1"
-        Me.GroupBox1.Size = New System.Drawing.Size(285, 176)
+        Me.GroupBox1.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox1.Size = New System.Drawing.Size(380, 217)
         Me.GroupBox1.TabIndex = 2
         Me.GroupBox1.TabStop = False
         Me.GroupBox1.Text = "Dimensiones"
@@ -620,18 +659,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label17.AutoSize = True
         Me.Label17.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label17.Location = New System.Drawing.Point(252, 111)
+        Me.Label17.Location = New System.Drawing.Point(336, 137)
+        Me.Label17.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label17.Name = "Label17"
-        Me.Label17.Size = New System.Drawing.Size(21, 18)
+        Me.Label17.Size = New System.Drawing.Size(26, 24)
         Me.Label17.TabIndex = 14
         Me.Label17.Text = "m"
         '
         'Long_Pila
         '
         Me.Long_Pila.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Long_Pila.Location = New System.Drawing.Point(149, 108)
+        Me.Long_Pila.Location = New System.Drawing.Point(199, 133)
+        Me.Long_Pila.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Long_Pila.Name = "Long_Pila"
-        Me.Long_Pila.Size = New System.Drawing.Size(84, 24)
+        Me.Long_Pila.Size = New System.Drawing.Size(111, 29)
         Me.Long_Pila.TabIndex = 13
         Me.Long_Pila.Text = "8.0"
         Me.Long_Pila.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -640,9 +681,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label21.AutoSize = True
         Me.Label21.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label21.Location = New System.Drawing.Point(7, 111)
+        Me.Label21.Location = New System.Drawing.Point(9, 137)
+        Me.Label21.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label21.Name = "Label21"
-        Me.Label21.Size = New System.Drawing.Size(64, 18)
+        Me.Label21.Size = New System.Drawing.Size(83, 24)
         Me.Label21.TabIndex = 12
         Me.Label21.Text = "Longitud"
         '
@@ -650,19 +692,21 @@ Partial Class Form_01_PagPilas
         '
         Me.Label15.AutoSize = True
         Me.Label15.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label15.Location = New System.Drawing.Point(252, 142)
+        Me.Label15.Location = New System.Drawing.Point(336, 175)
+        Me.Label15.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label15.Name = "Label15"
-        Me.Label15.Size = New System.Drawing.Size(21, 18)
+        Me.Label15.Size = New System.Drawing.Size(26, 24)
         Me.Label15.TabIndex = 11
         Me.Label15.Text = "m"
         '
         'T_Espesor
         '
         Me.T_Espesor.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.T_Espesor.Location = New System.Drawing.Point(149, 139)
+        Me.T_Espesor.Location = New System.Drawing.Point(199, 171)
+        Me.T_Espesor.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.T_Espesor.Name = "T_Espesor"
         Me.T_Espesor.ReadOnly = True
-        Me.T_Espesor.Size = New System.Drawing.Size(84, 24)
+        Me.T_Espesor.Size = New System.Drawing.Size(111, 29)
         Me.T_Espesor.TabIndex = 10
         Me.T_Espesor.Text = "0.2"
         Me.T_Espesor.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -671,9 +715,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label16.AutoSize = True
         Me.Label16.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label16.Location = New System.Drawing.Point(7, 142)
+        Me.Label16.Location = New System.Drawing.Point(9, 175)
+        Me.Label16.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label16.Name = "Label16"
-        Me.Label16.Size = New System.Drawing.Size(64, 18)
+        Me.Label16.Size = New System.Drawing.Size(80, 24)
         Me.Label16.TabIndex = 9
         Me.Label16.Text = "Espesor"
         '
@@ -681,18 +726,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label11.AutoSize = True
         Me.Label11.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label11.Location = New System.Drawing.Point(252, 81)
+        Me.Label11.Location = New System.Drawing.Point(336, 100)
+        Me.Label11.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label11.Name = "Label11"
-        Me.Label11.Size = New System.Drawing.Size(21, 18)
+        Me.Label11.Size = New System.Drawing.Size(26, 24)
         Me.Label11.TabIndex = 8
         Me.Label11.Text = "m"
         '
         'Dc
         '
         Me.Dc.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Dc.Location = New System.Drawing.Point(149, 78)
+        Me.Dc.Location = New System.Drawing.Point(199, 96)
+        Me.Dc.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Dc.Name = "Dc"
-        Me.Dc.Size = New System.Drawing.Size(84, 24)
+        Me.Dc.Size = New System.Drawing.Size(111, 29)
         Me.Dc.TabIndex = 7
         Me.Dc.Text = "1.2"
         Me.Dc.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -701,9 +748,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label12.AutoSize = True
         Me.Label12.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label12.Location = New System.Drawing.Point(7, 81)
+        Me.Label12.Location = New System.Drawing.Point(9, 100)
+        Me.Label12.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label12.Name = "Label12"
-        Me.Label12.Size = New System.Drawing.Size(134, 18)
+        Me.Label12.Size = New System.Drawing.Size(168, 24)
         Me.Label12.TabIndex = 6
         Me.Label12.Text = "Diametro campana"
         '
@@ -711,9 +759,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label5.AutoSize = True
         Me.Label5.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label5.Location = New System.Drawing.Point(252, 53)
+        Me.Label5.Location = New System.Drawing.Point(336, 65)
+        Me.Label5.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label5.Name = "Label5"
-        Me.Label5.Size = New System.Drawing.Size(21, 18)
+        Me.Label5.Size = New System.Drawing.Size(26, 24)
         Me.Label5.TabIndex = 5
         Me.Label5.Text = "m"
         '
@@ -721,18 +770,20 @@ Partial Class Form_01_PagPilas
         '
         Me.Label4.AutoSize = True
         Me.Label4.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label4.Location = New System.Drawing.Point(252, 25)
+        Me.Label4.Location = New System.Drawing.Point(336, 31)
+        Me.Label4.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label4.Name = "Label4"
-        Me.Label4.Size = New System.Drawing.Size(21, 18)
+        Me.Label4.Size = New System.Drawing.Size(26, 24)
         Me.Label4.TabIndex = 4
         Me.Label4.Text = "m"
         '
         'Recubrimiento
         '
         Me.Recubrimiento.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Recubrimiento.Location = New System.Drawing.Point(149, 50)
+        Me.Recubrimiento.Location = New System.Drawing.Point(199, 62)
+        Me.Recubrimiento.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Recubrimiento.Name = "Recubrimiento"
-        Me.Recubrimiento.Size = New System.Drawing.Size(84, 24)
+        Me.Recubrimiento.Size = New System.Drawing.Size(111, 29)
         Me.Recubrimiento.TabIndex = 3
         Me.Recubrimiento.Text = "0.075"
         Me.Recubrimiento.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -740,9 +791,10 @@ Partial Class Form_01_PagPilas
         'Diametro
         '
         Me.Diametro.Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Diametro.Location = New System.Drawing.Point(149, 22)
+        Me.Diametro.Location = New System.Drawing.Point(199, 27)
+        Me.Diametro.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Diametro.Name = "Diametro"
-        Me.Diametro.Size = New System.Drawing.Size(84, 24)
+        Me.Diametro.Size = New System.Drawing.Size(111, 29)
         Me.Diametro.TabIndex = 2
         Me.Diametro.Text = "0.5"
         Me.Diametro.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
@@ -751,9 +803,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label3.AutoSize = True
         Me.Label3.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label3.Location = New System.Drawing.Point(7, 53)
+        Me.Label3.Location = New System.Drawing.Point(9, 65)
+        Me.Label3.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label3.Name = "Label3"
-        Me.Label3.Size = New System.Drawing.Size(104, 18)
+        Me.Label3.Size = New System.Drawing.Size(133, 24)
         Me.Label3.TabIndex = 1
         Me.Label3.Text = "Recubrimiento"
         '
@@ -761,9 +814,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label2.AutoSize = True
         Me.Label2.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label2.Location = New System.Drawing.Point(7, 25)
+        Me.Label2.Location = New System.Drawing.Point(9, 31)
+        Me.Label2.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label2.Name = "Label2"
-        Me.Label2.Size = New System.Drawing.Size(69, 18)
+        Me.Label2.Size = New System.Drawing.Size(85, 24)
         Me.Label2.TabIndex = 0
         Me.Label2.Text = "Diametro"
         '
@@ -776,8 +830,8 @@ Partial Class Form_01_PagPilas
         Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Archivo_Pilas, Me.Importar_Pilas, Me.Exportar_Pilas, Me.OpcionesToolStripMenuItem, Me.VerToolStripMenuItem})
         Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
         Me.MenuStrip1.Name = "MenuStrip1"
-        Me.MenuStrip1.Padding = New System.Windows.Forms.Padding(4, 2, 0, 2)
-        Me.MenuStrip1.Size = New System.Drawing.Size(1797, 30)
+        Me.MenuStrip1.Padding = New System.Windows.Forms.Padding(5, 2, 0, 2)
+        Me.MenuStrip1.Size = New System.Drawing.Size(2396, 37)
         Me.MenuStrip1.TabIndex = 5
         Me.MenuStrip1.Text = "MenuStrip1"
         '
@@ -786,7 +840,7 @@ Partial Class Form_01_PagPilas
         Me.Archivo_Pilas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.New_Pilas, Me.Open_Pilas, Me.Save_Pilas, Me.SaveAs_Pilas})
         Me.Archivo_Pilas.ForeColor = System.Drawing.Color.White
         Me.Archivo_Pilas.Name = "Archivo_Pilas"
-        Me.Archivo_Pilas.Size = New System.Drawing.Size(63, 26)
+        Me.Archivo_Pilas.Size = New System.Drawing.Size(81, 33)
         Me.Archivo_Pilas.Text = "Archivo"
         '
         'New_Pilas
@@ -794,7 +848,7 @@ Partial Class Form_01_PagPilas
         Me.New_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.New_Pilas.ForeColor = System.Drawing.Color.White
         Me.New_Pilas.Name = "New_Pilas"
-        Me.New_Pilas.Size = New System.Drawing.Size(163, 22)
+        Me.New_Pilas.Size = New System.Drawing.Size(207, 28)
         Me.New_Pilas.Text = "Nuevo"
         '
         'Open_Pilas
@@ -802,7 +856,7 @@ Partial Class Form_01_PagPilas
         Me.Open_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Open_Pilas.ForeColor = System.Drawing.Color.White
         Me.Open_Pilas.Name = "Open_Pilas"
-        Me.Open_Pilas.Size = New System.Drawing.Size(163, 22)
+        Me.Open_Pilas.Size = New System.Drawing.Size(207, 28)
         Me.Open_Pilas.Text = "Abrir"
         '
         'Save_Pilas
@@ -810,7 +864,7 @@ Partial Class Form_01_PagPilas
         Me.Save_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Save_Pilas.ForeColor = System.Drawing.Color.White
         Me.Save_Pilas.Name = "Save_Pilas"
-        Me.Save_Pilas.Size = New System.Drawing.Size(163, 22)
+        Me.Save_Pilas.Size = New System.Drawing.Size(207, 28)
         Me.Save_Pilas.Text = "Guardar"
         '
         'SaveAs_Pilas
@@ -818,7 +872,7 @@ Partial Class Form_01_PagPilas
         Me.SaveAs_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.SaveAs_Pilas.ForeColor = System.Drawing.Color.White
         Me.SaveAs_Pilas.Name = "SaveAs_Pilas"
-        Me.SaveAs_Pilas.Size = New System.Drawing.Size(163, 22)
+        Me.SaveAs_Pilas.Size = New System.Drawing.Size(207, 28)
         Me.SaveAs_Pilas.Text = "Guardar Como"
         '
         'Importar_Pilas
@@ -826,7 +880,7 @@ Partial Class Form_01_PagPilas
         Me.Importar_Pilas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem1, Me.ImportarDemandasToolStripMenuItem})
         Me.Importar_Pilas.ForeColor = System.Drawing.Color.White
         Me.Importar_Pilas.Name = "Importar_Pilas"
-        Me.Importar_Pilas.Size = New System.Drawing.Size(71, 26)
+        Me.Importar_Pilas.Size = New System.Drawing.Size(91, 33)
         Me.Importar_Pilas.Text = "Importar"
         '
         'ToolStripMenuItem1
@@ -835,7 +889,7 @@ Partial Class Form_01_PagPilas
         Me.ToolStripMenuItem1.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Importar_Frame, Me.Importar_Pier, Me.Importar_Puntos})
         Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
-        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(193, 22)
+        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(247, 28)
         Me.ToolStripMenuItem1.Text = "Demandas de Excel"
         '
         'Importar_Frame
@@ -843,7 +897,7 @@ Partial Class Form_01_PagPilas
         Me.Importar_Frame.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Importar_Frame.ForeColor = System.Drawing.Color.White
         Me.Importar_Frame.Name = "Importar_Frame"
-        Me.Importar_Frame.Size = New System.Drawing.Size(151, 22)
+        Me.Importar_Frame.Size = New System.Drawing.Size(192, 28)
         Me.Importar_Frame.Text = "Como Frame"
         '
         'Importar_Pier
@@ -851,7 +905,7 @@ Partial Class Form_01_PagPilas
         Me.Importar_Pier.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Importar_Pier.ForeColor = System.Drawing.Color.White
         Me.Importar_Pier.Name = "Importar_Pier"
-        Me.Importar_Pier.Size = New System.Drawing.Size(151, 22)
+        Me.Importar_Pier.Size = New System.Drawing.Size(192, 28)
         Me.Importar_Pier.Text = "Como Pier"
         '
         'Importar_Puntos
@@ -859,13 +913,13 @@ Partial Class Form_01_PagPilas
         Me.Importar_Puntos.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Importar_Puntos.ForeColor = System.Drawing.Color.White
         Me.Importar_Puntos.Name = "Importar_Puntos"
-        Me.Importar_Puntos.Size = New System.Drawing.Size(151, 22)
+        Me.Importar_Puntos.Size = New System.Drawing.Size(192, 28)
         Me.Importar_Puntos.Text = "Como Punto"
         '
         'ImportarDemandasToolStripMenuItem
         '
         Me.ImportarDemandasToolStripMenuItem.Name = "ImportarDemandasToolStripMenuItem"
-        Me.ImportarDemandasToolStripMenuItem.Size = New System.Drawing.Size(193, 22)
+        Me.ImportarDemandasToolStripMenuItem.Size = New System.Drawing.Size(247, 28)
         Me.ImportarDemandasToolStripMenuItem.Text = "Importar Demandas"
         '
         'Exportar_Pilas
@@ -873,7 +927,7 @@ Partial Class Form_01_PagPilas
         Me.Exportar_Pilas.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Exportar_Excel})
         Me.Exportar_Pilas.ForeColor = System.Drawing.Color.White
         Me.Exportar_Pilas.Name = "Exportar_Pilas"
-        Me.Exportar_Pilas.Size = New System.Drawing.Size(70, 26)
+        Me.Exportar_Pilas.Size = New System.Drawing.Size(88, 33)
         Me.Exportar_Pilas.Text = "Exportar"
         '
         'Exportar_Excel
@@ -881,7 +935,7 @@ Partial Class Form_01_PagPilas
         Me.Exportar_Excel.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Exportar_Excel.ForeColor = System.Drawing.Color.White
         Me.Exportar_Excel.Name = "Exportar_Excel"
-        Me.Exportar_Excel.Size = New System.Drawing.Size(170, 22)
+        Me.Exportar_Excel.Size = New System.Drawing.Size(215, 28)
         Me.Exportar_Excel.Text = "Exportar a Excel"
         '
         'OpcionesToolStripMenuItem
@@ -889,7 +943,7 @@ Partial Class Form_01_PagPilas
         Me.OpcionesToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ActualizarDemandasToolStripMenuItem})
         Me.OpcionesToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.OpcionesToolStripMenuItem.Name = "OpcionesToolStripMenuItem"
-        Me.OpcionesToolStripMenuItem.Size = New System.Drawing.Size(75, 26)
+        Me.OpcionesToolStripMenuItem.Size = New System.Drawing.Size(95, 33)
         Me.OpcionesToolStripMenuItem.Text = "Opciones"
         '
         'ActualizarDemandasToolStripMenuItem
@@ -897,8 +951,33 @@ Partial Class Form_01_PagPilas
         Me.ActualizarDemandasToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.ActualizarDemandasToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ActualizarDemandasToolStripMenuItem.Name = "ActualizarDemandasToolStripMenuItem"
-        Me.ActualizarDemandasToolStripMenuItem.Size = New System.Drawing.Size(198, 22)
+        Me.ActualizarDemandasToolStripMenuItem.Size = New System.Drawing.Size(255, 28)
         Me.ActualizarDemandasToolStripMenuItem.Text = "Actualizar Demandas"
+        '
+        'VerToolStripMenuItem
+        '
+        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteToolStripMenuItem, Me.DiagramaDiametroToolStripMenuItem})
+        Me.VerToolStripMenuItem.Enabled = False
+        Me.VerToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.VerToolStripMenuItem.Name = "VerToolStripMenuItem"
+        Me.VerToolStripMenuItem.Size = New System.Drawing.Size(49, 33)
+        Me.VerToolStripMenuItem.Text = "Ver"
+        '
+        'ReporteToolStripMenuItem
+        '
+        Me.ReporteToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.ReporteToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.ReporteToolStripMenuItem.Name = "ReporteToolStripMenuItem"
+        Me.ReporteToolStripMenuItem.Size = New System.Drawing.Size(389, 28)
+        Me.ReporteToolStripMenuItem.Text = "Reporte"
+        '
+        'DiagramaDiametroToolStripMenuItem
+        '
+        Me.DiagramaDiametroToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.DiagramaDiametroToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.DiagramaDiametroToolStripMenuItem.Name = "DiagramaDiametroToolStripMenuItem"
+        Me.DiagramaDiametroToolStripMenuItem.Size = New System.Drawing.Size(389, 28)
+        Me.DiagramaDiametroToolStripMenuItem.Text = "Diagrama de Interacción por Diámetro"
         '
         'ArchivoToolStripMenuItem
         '
@@ -913,7 +992,7 @@ Partial Class Form_01_PagPilas
         Me.NuevoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.NuevoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.NuevoToolStripMenuItem.Name = "NuevoToolStripMenuItem"
-        Me.NuevoToolStripMenuItem.Size = New System.Drawing.Size(152, 22)
+        Me.NuevoToolStripMenuItem.Size = New System.Drawing.Size(189, 26)
         Me.NuevoToolStripMenuItem.Text = "Nuevo"
         '
         'AbrirToolStripMenuItem
@@ -921,7 +1000,7 @@ Partial Class Form_01_PagPilas
         Me.AbrirToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.AbrirToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.AbrirToolStripMenuItem.Name = "AbrirToolStripMenuItem"
-        Me.AbrirToolStripMenuItem.Size = New System.Drawing.Size(152, 22)
+        Me.AbrirToolStripMenuItem.Size = New System.Drawing.Size(189, 26)
         Me.AbrirToolStripMenuItem.Text = "Abrir"
         '
         'GuardarToolStripMenuItem
@@ -929,7 +1008,7 @@ Partial Class Form_01_PagPilas
         Me.GuardarToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.GuardarToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.GuardarToolStripMenuItem.Name = "GuardarToolStripMenuItem"
-        Me.GuardarToolStripMenuItem.Size = New System.Drawing.Size(152, 22)
+        Me.GuardarToolStripMenuItem.Size = New System.Drawing.Size(189, 26)
         Me.GuardarToolStripMenuItem.Text = "Guardar"
         '
         'GuardarComoToolStripMenuItem
@@ -937,7 +1016,7 @@ Partial Class Form_01_PagPilas
         Me.GuardarComoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.GuardarComoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.GuardarComoToolStripMenuItem.Name = "GuardarComoToolStripMenuItem"
-        Me.GuardarComoToolStripMenuItem.Size = New System.Drawing.Size(152, 22)
+        Me.GuardarComoToolStripMenuItem.Size = New System.Drawing.Size(189, 26)
         Me.GuardarComoToolStripMenuItem.Text = "Guardar Como"
         '
         'ImportarToolStripMenuItem
@@ -954,7 +1033,7 @@ Partial Class Form_01_PagPilas
         Me.DemandasExcelToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.TipoFrameToolStripMenuItem, Me.TipoPuntoToolStripMenuItem, Me.TipoPierToolStripMenuItem})
         Me.DemandasExcelToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.DemandasExcelToolStripMenuItem.Name = "DemandasExcelToolStripMenuItem"
-        Me.DemandasExcelToolStripMenuItem.Size = New System.Drawing.Size(175, 22)
+        Me.DemandasExcelToolStripMenuItem.Size = New System.Drawing.Size(222, 26)
         Me.DemandasExcelToolStripMenuItem.Text = "Demandas de Excel"
         '
         'TipoFrameToolStripMenuItem
@@ -962,7 +1041,7 @@ Partial Class Form_01_PagPilas
         Me.TipoFrameToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.TipoFrameToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.TipoFrameToolStripMenuItem.Name = "TipoFrameToolStripMenuItem"
-        Me.TipoFrameToolStripMenuItem.Size = New System.Drawing.Size(143, 22)
+        Me.TipoFrameToolStripMenuItem.Size = New System.Drawing.Size(177, 26)
         Me.TipoFrameToolStripMenuItem.Text = "Como Frame"
         '
         'TipoPuntoToolStripMenuItem
@@ -970,7 +1049,7 @@ Partial Class Form_01_PagPilas
         Me.TipoPuntoToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.TipoPuntoToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.TipoPuntoToolStripMenuItem.Name = "TipoPuntoToolStripMenuItem"
-        Me.TipoPuntoToolStripMenuItem.Size = New System.Drawing.Size(143, 22)
+        Me.TipoPuntoToolStripMenuItem.Size = New System.Drawing.Size(177, 26)
         Me.TipoPuntoToolStripMenuItem.Text = "Como Punto"
         '
         'TipoPierToolStripMenuItem
@@ -978,7 +1057,7 @@ Partial Class Form_01_PagPilas
         Me.TipoPierToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.TipoPierToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.TipoPierToolStripMenuItem.Name = "TipoPierToolStripMenuItem"
-        Me.TipoPierToolStripMenuItem.Size = New System.Drawing.Size(143, 22)
+        Me.TipoPierToolStripMenuItem.Size = New System.Drawing.Size(177, 26)
         Me.TipoPierToolStripMenuItem.Text = "Como Pier"
         '
         'ExportarToolStripMenuItem
@@ -995,33 +1074,8 @@ Partial Class Form_01_PagPilas
         Me.DatosAExcelToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.DatosAExcelToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.DatosAExcelToolStripMenuItem.Name = "DatosAExcelToolStripMenuItem"
-        Me.DatosAExcelToolStripMenuItem.Size = New System.Drawing.Size(142, 22)
+        Me.DatosAExcelToolStripMenuItem.Size = New System.Drawing.Size(181, 26)
         Me.DatosAExcelToolStripMenuItem.Text = "Datos a Excel"
-        '
-        'VerToolStripMenuItem
-        '
-        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteToolStripMenuItem, Me.DiagramaDiametroToolStripMenuItem})
-        Me.VerToolStripMenuItem.Enabled = False
-        Me.VerToolStripMenuItem.ForeColor = System.Drawing.Color.White
-        Me.VerToolStripMenuItem.Name = "VerToolStripMenuItem"
-        Me.VerToolStripMenuItem.Size = New System.Drawing.Size(49, 33)
-        Me.VerToolStripMenuItem.Text = "Ver"
-        '
-        'ReporteToolStripMenuItem
-        '
-        Me.ReporteToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.ReporteToolStripMenuItem.ForeColor = System.Drawing.Color.White
-        Me.ReporteToolStripMenuItem.Name = "ReporteToolStripMenuItem"
-        Me.ReporteToolStripMenuItem.Size = New System.Drawing.Size(218, 22)
-        Me.ReporteToolStripMenuItem.Text = "Reporte"
-        '
-        'DiagramaDiametroToolStripMenuItem
-        '
-        Me.DiagramaDiametroToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
-        Me.DiagramaDiametroToolStripMenuItem.ForeColor = System.Drawing.Color.White
-        Me.DiagramaDiametroToolStripMenuItem.Name = "DiagramaDiametroToolStripMenuItem"
-        Me.DiagramaDiametroToolStripMenuItem.Size = New System.Drawing.Size(218, 22)
-        Me.DiagramaDiametroToolStripMenuItem.Text = "Diagrama de Interacción por Diámetro"
         '
         'Grafica1
         '
@@ -1056,7 +1110,8 @@ Partial Class Form_01_PagPilas
         Legend1.Enabled = False
         Legend1.Name = "Legend1"
         Me.Grafica1.Legends.Add(Legend1)
-        Me.Grafica1.Location = New System.Drawing.Point(42, 287)
+        Me.Grafica1.Location = New System.Drawing.Point(56, 353)
+        Me.Grafica1.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Grafica1.Name = "Grafica1"
         Series1.BackImageAlignment = System.Windows.Forms.DataVisualization.Charting.ChartImageAlignmentStyle.Center
         Series1.BorderWidth = 2
@@ -1073,7 +1128,7 @@ Partial Class Form_01_PagPilas
         Series1.ShadowColor = System.Drawing.Color.White
         Series1.SmartLabelStyle.Enabled = False
         Me.Grafica1.Series.Add(Series1)
-        Me.Grafica1.Size = New System.Drawing.Size(1413, 636)
+        Me.Grafica1.Size = New System.Drawing.Size(1886, 785)
         Me.Grafica1.TabIndex = 2
         Me.Grafica1.Text = "Diagrama de Interacción"
         Me.Grafica1.Visible = False
@@ -1087,20 +1142,22 @@ Partial Class Form_01_PagPilas
         Me.TabControl2.Controls.Add(Me.DiagramaInteraccion)
         Me.TabControl2.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControl2.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.TabControl2.Location = New System.Drawing.Point(305, 30)
+        Me.TabControl2.Location = New System.Drawing.Point(407, 37)
+        Me.TabControl2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.TabControl2.Name = "TabControl2"
         Me.TabControl2.SelectedIndex = 0
-        Me.TabControl2.Size = New System.Drawing.Size(1492, 832)
+        Me.TabControl2.Size = New System.Drawing.Size(1989, 1024)
         Me.TabControl2.TabIndex = 3
         '
         'Seccion
         '
         Me.Seccion.BackColor = System.Drawing.SystemColors.Control
         Me.Seccion.Controls.Add(Me.Panel2)
-        Me.Seccion.Location = New System.Drawing.Point(4, 25)
+        Me.Seccion.Location = New System.Drawing.Point(4, 29)
+        Me.Seccion.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Seccion.Name = "Seccion"
-        Me.Seccion.Padding = New System.Windows.Forms.Padding(3)
-        Me.Seccion.Size = New System.Drawing.Size(1484, 803)
+        Me.Seccion.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Seccion.Size = New System.Drawing.Size(1981, 991)
         Me.Seccion.TabIndex = 1
         Me.Seccion.Text = "Sección"
         '
@@ -1114,9 +1171,10 @@ Partial Class Form_01_PagPilas
         Me.Panel2.Controls.Add(Me.GroupBox3)
         Me.Panel2.Controls.Add(Me.Grafica1)
         Me.Panel2.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.Panel2.Location = New System.Drawing.Point(3, 3)
+        Me.Panel2.Location = New System.Drawing.Point(4, 4)
+        Me.Panel2.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Panel2.Name = "Panel2"
-        Me.Panel2.Size = New System.Drawing.Size(1478, 797)
+        Me.Panel2.Size = New System.Drawing.Size(1973, 983)
         Me.Panel2.TabIndex = 3
         '
         'Tabla_ResumenVisual
@@ -1146,7 +1204,8 @@ Partial Class Form_01_PagPilas
         DataGridViewCellStyle8.WrapMode = System.Windows.Forms.DataGridViewTriState.[False]
         Me.Tabla_ResumenVisual.DefaultCellStyle = DataGridViewCellStyle8
         Me.Tabla_ResumenVisual.GridColor = System.Drawing.SystemColors.Control
-        Me.Tabla_ResumenVisual.Location = New System.Drawing.Point(1002, 15)
+        Me.Tabla_ResumenVisual.Location = New System.Drawing.Point(1338, 18)
+        Me.Tabla_ResumenVisual.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Tabla_ResumenVisual.Name = "Tabla_ResumenVisual"
         DataGridViewCellStyle9.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle9.BackColor = System.Drawing.SystemColors.Control
@@ -1159,7 +1218,7 @@ Partial Class Form_01_PagPilas
         Me.Tabla_ResumenVisual.RowHeadersVisible = False
         Me.Tabla_ResumenVisual.RowHeadersWidth = 51
         Me.Tabla_ResumenVisual.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
-        Me.Tabla_ResumenVisual.Size = New System.Drawing.Size(453, 221)
+        Me.Tabla_ResumenVisual.Size = New System.Drawing.Size(604, 272)
         Me.Tabla_ResumenVisual.TabIndex = 13
         Me.Tabla_ResumenVisual.Visible = False
         '
@@ -1212,9 +1271,10 @@ Partial Class Form_01_PagPilas
         '
         Me.Label20.AutoSize = True
         Me.Label20.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label20.Location = New System.Drawing.Point(97, 145)
+        Me.Label20.Location = New System.Drawing.Point(129, 178)
+        Me.Label20.Margin = New System.Windows.Forms.Padding(4, 0, 4, 0)
         Me.Label20.Name = "Label20"
-        Me.Label20.Size = New System.Drawing.Size(72, 16)
+        Me.Label20.Size = New System.Drawing.Size(87, 20)
         Me.Label20.TabIndex = 12
         Me.Label20.Text = "Elemento"
         Me.Label20.Visible = False
@@ -1223,9 +1283,10 @@ Partial Class Form_01_PagPilas
         '
         Me.ComboElementos.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.ComboElementos.FormattingEnabled = True
-        Me.ComboElementos.Location = New System.Drawing.Point(76, 168)
+        Me.ComboElementos.Location = New System.Drawing.Point(101, 207)
+        Me.ComboElementos.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.ComboElementos.Name = "ComboElementos"
-        Me.ComboElementos.Size = New System.Drawing.Size(112, 24)
+        Me.ComboElementos.Size = New System.Drawing.Size(148, 28)
         Me.ComboElementos.TabIndex = 7
         Me.ComboElementos.Visible = False
         '
@@ -1255,7 +1316,8 @@ Partial Class Form_01_PagPilas
         DataGridViewCellStyle14.WrapMode = System.Windows.Forms.DataGridViewTriState.[False]
         Me.ResumenDI.DefaultCellStyle = DataGridViewCellStyle14
         Me.ResumenDI.GridColor = System.Drawing.SystemColors.Control
-        Me.ResumenDI.Location = New System.Drawing.Point(25, 29)
+        Me.ResumenDI.Location = New System.Drawing.Point(33, 36)
+        Me.ResumenDI.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.ResumenDI.Name = "ResumenDI"
         DataGridViewCellStyle15.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle15.BackColor = System.Drawing.SystemColors.Control
@@ -1268,7 +1330,7 @@ Partial Class Form_01_PagPilas
         Me.ResumenDI.RowHeadersVisible = False
         Me.ResumenDI.RowHeadersWidth = 51
         Me.ResumenDI.ScrollBars = System.Windows.Forms.ScrollBars.None
-        Me.ResumenDI.Size = New System.Drawing.Size(221, 92)
+        Me.ResumenDI.Size = New System.Drawing.Size(295, 113)
         Me.ResumenDI.TabIndex = 6
         Me.ResumenDI.Visible = False
         '
@@ -1295,9 +1357,11 @@ Partial Class Form_01_PagPilas
         Me.GroupBox3.Controls.Add(Me.OpServicio)
         Me.GroupBox3.Controls.Add(Me.OpUltimas)
         Me.GroupBox3.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.GroupBox3.Location = New System.Drawing.Point(252, 35)
+        Me.GroupBox3.Location = New System.Drawing.Point(336, 43)
+        Me.GroupBox3.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.GroupBox3.Name = "GroupBox3"
-        Me.GroupBox3.Size = New System.Drawing.Size(171, 86)
+        Me.GroupBox3.Padding = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.GroupBox3.Size = New System.Drawing.Size(228, 106)
         Me.GroupBox3.TabIndex = 5
         Me.GroupBox3.TabStop = False
         Me.GroupBox3.Text = "Opción"
@@ -1307,9 +1371,10 @@ Partial Class Form_01_PagPilas
         '
         Me.OpServicio.AutoSize = True
         Me.OpServicio.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.OpServicio.Location = New System.Drawing.Point(22, 25)
+        Me.OpServicio.Location = New System.Drawing.Point(29, 31)
+        Me.OpServicio.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.OpServicio.Name = "OpServicio"
-        Me.OpServicio.Size = New System.Drawing.Size(140, 20)
+        Me.OpServicio.Size = New System.Drawing.Size(172, 24)
         Me.OpServicio.TabIndex = 3
         Me.OpServicio.Text = "Cargas de Servicio"
         Me.OpServicio.UseVisualStyleBackColor = True
@@ -1319,9 +1384,10 @@ Partial Class Form_01_PagPilas
         '
         Me.OpUltimas.AutoSize = True
         Me.OpUltimas.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.OpUltimas.Location = New System.Drawing.Point(22, 52)
+        Me.OpUltimas.Location = New System.Drawing.Point(29, 64)
+        Me.OpUltimas.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.OpUltimas.Name = "OpUltimas"
-        Me.OpUltimas.Size = New System.Drawing.Size(117, 20)
+        Me.OpUltimas.Size = New System.Drawing.Size(146, 24)
         Me.OpUltimas.TabIndex = 4
         Me.OpUltimas.Text = "Cargas Últimas"
         Me.OpUltimas.UseVisualStyleBackColor = True
@@ -1331,9 +1397,10 @@ Partial Class Form_01_PagPilas
         '
         Me.CargasServicio.BackColor = System.Drawing.SystemColors.Control
         Me.CargasServicio.Controls.Add(Me.TablaCServicio)
-        Me.CargasServicio.Location = New System.Drawing.Point(4, 25)
+        Me.CargasServicio.Location = New System.Drawing.Point(4, 29)
+        Me.CargasServicio.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.CargasServicio.Name = "CargasServicio"
-        Me.CargasServicio.Size = New System.Drawing.Size(1484, 803)
+        Me.CargasServicio.Size = New System.Drawing.Size(1981, 991)
         Me.CargasServicio.TabIndex = 4
         Me.CargasServicio.Text = "Cargas de Servicio"
         '
@@ -1363,6 +1430,7 @@ Partial Class Form_01_PagPilas
         Me.TablaCServicio.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TablaCServicio.GridColor = System.Drawing.SystemColors.Control
         Me.TablaCServicio.Location = New System.Drawing.Point(0, 0)
+        Me.TablaCServicio.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.TablaCServicio.Name = "TablaCServicio"
         DataGridViewCellStyle19.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle19.BackColor = System.Drawing.SystemColors.Control
@@ -1376,16 +1444,17 @@ Partial Class Form_01_PagPilas
         Me.TablaCServicio.RowHeadersWidth = 51
         DataGridViewCellStyle20.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         Me.TablaCServicio.RowsDefaultCellStyle = DataGridViewCellStyle20
-        Me.TablaCServicio.Size = New System.Drawing.Size(1484, 803)
+        Me.TablaCServicio.Size = New System.Drawing.Size(1981, 991)
         Me.TablaCServicio.TabIndex = 0
         '
         'CargasUltimas
         '
         Me.CargasUltimas.BackColor = System.Drawing.SystemColors.Control
         Me.CargasUltimas.Controls.Add(Me.TablaCUltimas)
-        Me.CargasUltimas.Location = New System.Drawing.Point(4, 25)
+        Me.CargasUltimas.Location = New System.Drawing.Point(4, 29)
+        Me.CargasUltimas.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.CargasUltimas.Name = "CargasUltimas"
-        Me.CargasUltimas.Size = New System.Drawing.Size(1484, 803)
+        Me.CargasUltimas.Size = New System.Drawing.Size(1981, 991)
         Me.CargasUltimas.TabIndex = 5
         Me.CargasUltimas.Text = "Cargas Últimas"
         '
@@ -1407,6 +1476,7 @@ Partial Class Form_01_PagPilas
         Me.TablaCUltimas.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TablaCUltimas.GridColor = System.Drawing.SystemColors.Control
         Me.TablaCUltimas.Location = New System.Drawing.Point(0, 0)
+        Me.TablaCUltimas.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.TablaCUltimas.Name = "TablaCUltimas"
         DataGridViewCellStyle23.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle23.BackColor = System.Drawing.SystemColors.Control
@@ -1420,16 +1490,17 @@ Partial Class Form_01_PagPilas
         Me.TablaCUltimas.RowHeadersWidth = 51
         DataGridViewCellStyle24.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         Me.TablaCUltimas.RowsDefaultCellStyle = DataGridViewCellStyle24
-        Me.TablaCUltimas.Size = New System.Drawing.Size(1484, 803)
+        Me.TablaCUltimas.Size = New System.Drawing.Size(1981, 991)
         Me.TablaCUltimas.TabIndex = 1
         '
         'RevNormativa
         '
         Me.RevNormativa.BackColor = System.Drawing.SystemColors.Control
         Me.RevNormativa.Controls.Add(Me.Panel3)
-        Me.RevNormativa.Location = New System.Drawing.Point(4, 25)
+        Me.RevNormativa.Location = New System.Drawing.Point(4, 29)
+        Me.RevNormativa.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.RevNormativa.Name = "RevNormativa"
-        Me.RevNormativa.Size = New System.Drawing.Size(1484, 803)
+        Me.RevNormativa.Size = New System.Drawing.Size(1981, 991)
         Me.RevNormativa.TabIndex = 3
         Me.RevNormativa.Text = "Revisón Normativa"
         '
@@ -1438,8 +1509,9 @@ Partial Class Form_01_PagPilas
         Me.Panel3.Controls.Add(Me.TablaRevi)
         Me.Panel3.Dock = System.Windows.Forms.DockStyle.Fill
         Me.Panel3.Location = New System.Drawing.Point(0, 0)
+        Me.Panel3.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Panel3.Name = "Panel3"
-        Me.Panel3.Size = New System.Drawing.Size(1484, 803)
+        Me.Panel3.Size = New System.Drawing.Size(1981, 991)
         Me.Panel3.TabIndex = 0
         '
         'TablaRevi
@@ -1469,10 +1541,11 @@ Partial Class Form_01_PagPilas
         Me.TablaRevi.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TablaRevi.GridColor = System.Drawing.SystemColors.Control
         Me.TablaRevi.Location = New System.Drawing.Point(0, 0)
+        Me.TablaRevi.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.TablaRevi.Name = "TablaRevi"
         Me.TablaRevi.RowHeadersVisible = False
         Me.TablaRevi.RowHeadersWidth = 51
-        Me.TablaRevi.Size = New System.Drawing.Size(1484, 803)
+        Me.TablaRevi.Size = New System.Drawing.Size(1981, 991)
         Me.TablaRevi.TabIndex = 0
         '
         'Elemento
@@ -1682,9 +1755,10 @@ Partial Class Form_01_PagPilas
         '
         Me.DiagramaInteraccion.BackColor = System.Drawing.SystemColors.Control
         Me.DiagramaInteraccion.Controls.Add(Me.TablaDI)
-        Me.DiagramaInteraccion.Location = New System.Drawing.Point(4, 25)
+        Me.DiagramaInteraccion.Location = New System.Drawing.Point(4, 29)
+        Me.DiagramaInteraccion.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.DiagramaInteraccion.Name = "DiagramaInteraccion"
-        Me.DiagramaInteraccion.Size = New System.Drawing.Size(1484, 803)
+        Me.DiagramaInteraccion.Size = New System.Drawing.Size(1981, 991)
         Me.DiagramaInteraccion.TabIndex = 2
         Me.DiagramaInteraccion.Text = "Diagrama de Interacción"
         '
@@ -1706,6 +1780,7 @@ Partial Class Form_01_PagPilas
         Me.TablaDI.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TablaDI.GridColor = System.Drawing.SystemColors.Control
         Me.TablaDI.Location = New System.Drawing.Point(0, 0)
+        Me.TablaDI.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.TablaDI.Name = "TablaDI"
         DataGridViewCellStyle54.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
         DataGridViewCellStyle54.BackColor = System.Drawing.SystemColors.Control
@@ -1717,7 +1792,7 @@ Partial Class Form_01_PagPilas
         Me.TablaDI.RowHeadersDefaultCellStyle = DataGridViewCellStyle54
         Me.TablaDI.RowHeadersVisible = False
         Me.TablaDI.RowHeadersWidth = 51
-        Me.TablaDI.Size = New System.Drawing.Size(1484, 803)
+        Me.TablaDI.Size = New System.Drawing.Size(1981, 991)
         Me.TablaDI.TabIndex = 0
         '
         'Column1
@@ -1761,21 +1836,23 @@ Partial Class Form_01_PagPilas
         Me.Panel4.Controls.Add(Me.MenuStrip1)
         Me.Panel4.Dock = System.Windows.Forms.DockStyle.Top
         Me.Panel4.Location = New System.Drawing.Point(0, 0)
+        Me.Panel4.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
         Me.Panel4.Name = "Panel4"
-        Me.Panel4.Size = New System.Drawing.Size(1797, 30)
+        Me.Panel4.Size = New System.Drawing.Size(2396, 37)
         Me.Panel4.TabIndex = 6
         '
-        'Form_07_PagZapatas
+        'Form_01_PagPilas
         '
-        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(1797, 862)
+        Me.ClientSize = New System.Drawing.Size(2396, 1061)
         Me.Controls.Add(Me.TabControl2)
         Me.Controls.Add(Me.Panel1)
         Me.Controls.Add(Me.Panel4)
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.MainMenuStrip = Me.MenuStrip1
-        Me.Name = "Form_07_PagZapatas"
+        Me.Margin = New System.Windows.Forms.Padding(4, 4, 4, 4)
+        Me.Name = "Form_01_PagPilas"
         Me.Text = "Revisión de Pilas"
         Me.Panel1.ResumeLayout(False)
         Me.GroupBox8.ResumeLayout(False)

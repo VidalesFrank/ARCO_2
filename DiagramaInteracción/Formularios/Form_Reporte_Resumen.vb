@@ -166,11 +166,12 @@ Public Class Form_Reporte_Resumen
         dgv.Columns.Clear()
         dgv.Rows.Clear()
 
-        AgregarColumna(dgv, "Piso", "Piso", 100)
-        AgregarColumna(dgv, "Viga", "Nombre (plano)", 150)
-        AgregarColumna(dgv, "Frames", "Frames ETABS", 200)
-        AgregarColumna(dgv, "FNeg", "F M- mín", 110)
-        AgregarColumna(dgv, "FPos", "F M+ mín", 110)
+        AgregarColumna(dgv, "Piso", "Piso", 80)
+        AgregarColumna(dgv, "Eje", "Eje", 60)
+        AgregarColumna(dgv, "Viga", "Nombre (plano)", 160)
+        AgregarColumna(dgv, "Frames", "Frames ETABS", 190)
+        AgregarColumna(dgv, "FNeg", "F M-  mín", 110)
+        AgregarColumna(dgv, "FPos", "F M+  mín", 110)
 
         Dim idx As Integer = 0
 
@@ -193,6 +194,7 @@ Public Class Form_Reporte_Resumen
             Dim row = dgv.Rows(r)
 
             row.Cells("Piso").Value = viga.Piso
+            row.Cells("Eje").Value = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
             row.Cells("Viga").Value = NombreReporte(viga)
             row.Cells("Frames").Value = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
 
@@ -213,10 +215,13 @@ Public Class Form_Reporte_Resumen
         For Each dgv In {DgvCortanteTodas, DgvCortanteNoCumple}
             dgv.Columns.Clear()
             dgv.Rows.Clear()
-            AgregarColumna(dgv, "Piso", "Piso", 100)
-            AgregarColumna(dgv, "Viga", "Nombre (plano)", 150)
-            AgregarColumna(dgv, "Frames", "Frames ETABS", 200)
-            AgregarColumna(dgv, "FMin", "F Cortante mín", 130)
+            AgregarColumna(dgv, "Piso", "Piso", 80)
+            AgregarColumna(dgv, "Eje", "Eje", 60)
+            AgregarColumna(dgv, "Viga", "Nombre (plano)", 160)
+            AgregarColumna(dgv, "Frames", "Frames ETABS", 180)
+            AgregarColumna(dgv, "FCon", "F Conv", 90)
+            AgregarColumna(dgv, "FPlas", "F Plástico", 90)
+            AgregarColumna(dgv, "FFin", "F Final", 90)
             AgregarColumna(dgv, "Zona", "Zona crítica", 120)
             AgregarColumna(dgv, "Cumple", "Cumple", 90)
         Next
@@ -228,29 +233,54 @@ Public Class Form_Reporte_Resumen
 
             If Not viga.Frames.Any(Function(f) f.RevisionCortante.Any(Function(z) z.phiVn > 0)) Then Continue For
 
-            Dim fMin As Double = Double.MaxValue
+            ' Factor convencional
+            Dim fCon As Double = Double.MaxValue
             Dim zonaCritica As String = "-"
-            Dim cumpleViga As Boolean = True
-
             For Each frame In viga.Frames
                 For Each zona In frame.RevisionCortante
                     If zona.phiVn = 0 Then Continue For
-                    If zona.Factor < fMin Then
-                        fMin = zona.Factor
+                    If zona.Factor < fCon Then
+                        fCon = zona.Factor
                         zonaCritica = frame.ObjectLabel & " " & PosTexto(zona.Posicion)
                     End If
-                    If Not zona.Cumple Then cumpleViga = False
                 Next
             Next
 
-            Dim frameLabels = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
-            Dim fVal = Math.Round(Math.Min(If(fMin = Double.MaxValue, 0.0, fMin), 9.99), 2)
+            ' Factor cortante plástico (mínimo entre ZonaIzq y ZonaDer de todos los frames)
+            Dim fPlas As Double = Double.MaxValue
+            For Each frame In viga.Frames
+                If frame.CortantePlastico Is Nothing Then Continue For
+                Dim cp = frame.CortantePlastico
+                If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
+                If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
+            Next
+            Dim tienePlastico = (fPlas < Double.MaxValue)
 
-            AgregarFilaCortante(DgvCortanteTodas, idxT, viga, frameLabels, fVal, zonaCritica, cumpleViga)
+            ' Envolvente: prima convencional; si no cumple, recurrir al plástico
+            Dim cumpleConv = (fCon <> Double.MaxValue AndAlso fCon >= 1.0)
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            Dim cumpleViga = cumpleConv OrElse cumplePlas
+
+            Dim fFin As Double
+            If cumpleConv Then
+                fFin = fCon
+            ElseIf cumplePlas Then
+                fFin = fPlas
+            ElseIf tienePlastico Then
+                fFin = Math.Max(If(fCon = Double.MaxValue, 0.0, fCon), fPlas)
+            Else
+                fFin = fCon
+            End If
+
+            Dim frameLabels = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
+
+            AgregarFilaCortante(DgvCortanteTodas, idxT, viga, frameLabels,
+                                fCon, If(tienePlastico, fPlas, Double.MaxValue), fFin, zonaCritica, cumpleViga)
             idxT += 1
 
             If Not cumpleViga Then
-                AgregarFilaCortante(DgvCortanteNoCumple, idxN, viga, frameLabels, fVal, zonaCritica, cumpleViga)
+                AgregarFilaCortante(DgvCortanteNoCumple, idxN, viga, frameLabels,
+                                    fCon, If(tienePlastico, fPlas, Double.MaxValue), fFin, zonaCritica, cumpleViga)
                 idxN += 1
             End If
 
@@ -266,22 +296,25 @@ Public Class Form_Reporte_Resumen
     End Sub
 
     Private Sub AgregarFilaCortante(dgv As DataGridView, idx As Integer, viga As cViga,
-                                    frames As String, fVal As Double, zona As String, cumple As Boolean)
+                                    frames As String, fCon As Double, fPlas As Double,
+                                    fFin As Double, zona As String, cumple As Boolean)
         Dim r = dgv.Rows.Add()
         Dim row = dgv.Rows(r)
 
         row.Cells("Piso").Value = viga.Piso
+        row.Cells("Eje").Value = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
         row.Cells("Viga").Value = NombreReporte(viga)
         row.Cells("Frames").Value = frames
-        row.Cells("FMin").Value = fVal
+        AsignarFactorCelda(row.Cells("FCon"), fCon)
+        AsignarFactorCelda(row.Cells("FPlas"), fPlas)
+        AsignarFactorCelda(row.Cells("FFin"), fFin)
         row.Cells("Zona").Value = zona
         row.Cells("Cumple").Value = If(cumple, "SI", "NO")
 
         Dim fondo = If(cumple, ColorOK, ColorMal)
         Dim texto = If(cumple, ColorOKTexto, ColorMalTexto)
-
-        row.Cells("FMin").Style.BackColor = fondo
-        row.Cells("FMin").Style.ForeColor = texto
+        row.Cells("FFin").Style.BackColor = fondo
+        row.Cells("FFin").Style.ForeColor = texto
         row.Cells("Cumple").Style.BackColor = fondo
         row.Cells("Cumple").Style.ForeColor = texto
 
@@ -297,12 +330,13 @@ Public Class Form_Reporte_Resumen
         dgv.Columns.Clear()
         dgv.Rows.Clear()
 
-        AgregarColumna(dgv, "Piso", "Piso", 100)
-        AgregarColumna(dgv, "Viga", "Nombre (plano)", 150)
-        AgregarColumna(dgv, "Frames", "Frames ETABS", 200)
-        AgregarColumna(dgv, "FNeg", "F M- mín", 110)
-        AgregarColumna(dgv, "FPos", "F M+ mín", 110)
-        AgregarColumna(dgv, "FCor", "F Cor mín", 110)
+        AgregarColumna(dgv, "Piso", "Piso", 80)
+        AgregarColumna(dgv, "Eje", "Eje", 60)
+        AgregarColumna(dgv, "Viga", "Nombre (plano)", 160)
+        AgregarColumna(dgv, "Frames", "Frames ETABS", 180)
+        AgregarColumna(dgv, "FNeg", "F M-  mín", 100)
+        AgregarColumna(dgv, "FPos", "F M+  mín", 100)
+        AgregarColumna(dgv, "FCor", "F Cor Final", 110)
         AgregarColumna(dgv, "EstFlex", "Flexión", 90)
         AgregarColumna(dgv, "EstCor", "Cortante", 90)
         AgregarColumna(dgv, "Estado", "Estado", 90)
@@ -311,16 +345,15 @@ Public Class Form_Reporte_Resumen
 
         For Each viga In Vigas
 
-            Dim tieneFlex = viga.Frames.Any(Function(f) f.RevisionFlexion.Count > 0)
-            Dim tieneCor = viga.Frames.Any(Function(f) f.RevisionCortante.Count > 0)
-            If Not tieneFlex AndAlso Not tieneCor Then Continue For
+            ' Solo vigas con refuerzo asignado o con revisión de cortante calculada
+            Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
+            Dim tieneCor = viga.Frames.Any(Function(f) f.RevisionCortante.Any(Function(z) z.phiVn > 0))
+            If Not tieneRef AndAlso Not tieneCor Then Continue For
 
             Dim fNegMin As Double = Double.MaxValue
             Dim fPosMin As Double = Double.MaxValue
-            Dim fCorMin As Double = Double.MaxValue
+            Dim fConMin As Double = Double.MaxValue
             Dim cumpleFlex As Boolean = True
-            Dim cumpleCor As Boolean = True
-            Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
 
             For Each frame In viga.Frames
                 For Each rev In frame.RevisionFlexion
@@ -335,23 +368,46 @@ Public Class Form_Reporte_Resumen
                     End If
                 Next
                 For Each zona In frame.RevisionCortante
-                    If zona.phiVn > 0 Then
-                        fCorMin = Math.Min(fCorMin, zona.Factor)
-                        If Not zona.Cumple Then cumpleCor = False
-                    End If
+                    If zona.phiVn > 0 Then fConMin = Math.Min(fConMin, zona.Factor)
                 Next
             Next
+
+            ' Cortante plástico — envolvente
+            Dim fPlas As Double = Double.MaxValue
+            For Each frame In viga.Frames
+                If frame.CortantePlastico Is Nothing Then Continue For
+                Dim cp = frame.CortantePlastico
+                If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
+                If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
+            Next
+            Dim tienePlastico = (fPlas < Double.MaxValue)
+
+            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= 1.0)
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            Dim cumpleCor = cumpleConv OrElse cumplePlas
+
+            Dim fFin As Double
+            If cumpleConv Then
+                fFin = fConMin
+            ElseIf cumplePlas Then
+                fFin = fPlas
+            ElseIf tienePlastico Then
+                fFin = Math.Max(If(fConMin = Double.MaxValue, 0.0, fConMin), fPlas)
+            Else
+                fFin = fConMin
+            End If
 
             Dim r = dgv.Rows.Add()
             Dim row = dgv.Rows(r)
 
             row.Cells("Piso").Value = viga.Piso
+            row.Cells("Eje").Value = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
             row.Cells("Viga").Value = NombreReporte(viga)
             row.Cells("Frames").Value = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
 
             AsignarFactorCelda(row.Cells("FNeg"), fNegMin)
             AsignarFactorCelda(row.Cells("FPos"), fPosMin)
-            AsignarFactorCelda(row.Cells("FCor"), fCorMin)
+            AsignarFactorCelda(row.Cells("FCor"), fFin)
 
             ' Flexión
             If Not tieneRef Then
@@ -363,7 +419,7 @@ Public Class Form_Reporte_Resumen
             End If
 
             ' Cortante
-            If fCorMin = Double.MaxValue Then
+            If fFin = Double.MaxValue Then
                 AplicarEstado(row.Cells("EstCor"), "Sin datos", ColorAlerta, ColorAlertaTexto)
             ElseIf cumpleCor Then
                 AplicarEstado(row.Cells("EstCor"), "OK", ColorOK, ColorOKTexto)
@@ -372,8 +428,8 @@ Public Class Form_Reporte_Resumen
             End If
 
             ' Estado general
-            Dim ok = tieneRef AndAlso cumpleFlex AndAlso fCorMin <> Double.MaxValue AndAlso cumpleCor
-            Dim pendiente = Not tieneRef OrElse fCorMin = Double.MaxValue
+            Dim ok = tieneRef AndAlso cumpleFlex AndAlso tieneCor AndAlso cumpleCor
+            Dim pendiente = Not tieneRef OrElse Not tieneCor
 
             If ok Then
                 AplicarEstado(row.Cells("Estado"), "OK", ColorOK, ColorOKTexto)
@@ -439,7 +495,7 @@ Public Class Form_Reporte_Resumen
 
         Dim ws = wb.Worksheets.Add("Resumen Flexión")
 
-        Dim encabezados = {"Piso", "Nombre (plano)", "Frames ETABS", "F M- mín", "F M+ mín"}
+        Dim encabezados = {"Piso", "Eje", "Nombre (plano)", "Frames ETABS", "F M- mín", "F M+ mín"}
         EscribirEncabezados(ws, 1, encabezados)
 
         Dim fila As Integer = 2
@@ -460,11 +516,12 @@ Public Class Form_Reporte_Resumen
             Next
 
             ws.Cell(fila, 1).Value = viga.Piso
-            ws.Cell(fila, 2).Value = NombreReporte(viga)
-            ws.Cell(fila, 3).Value = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
+            ws.Cell(fila, 2).Value = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
+            ws.Cell(fila, 3).Value = NombreReporte(viga)
+            ws.Cell(fila, 4).Value = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
 
-            EscribirFactor(ws.Cell(fila, 4), fNegMin)
-            EscribirFactor(ws.Cell(fila, 5), fPosMin)
+            EscribirFactor(ws.Cell(fila, 5), fNegMin)
+            EscribirFactor(ws.Cell(fila, 6), fPosMin)
 
             EstilarFilaDatos(ws, fila, encabezados.Length, fila Mod 2 = 1)
             fila += 1
@@ -482,7 +539,7 @@ Public Class Form_Reporte_Resumen
 
         Dim ws = wb.Worksheets.Add("Resumen Cortante")
 
-        Dim encabezados = {"Piso", "Nombre (plano)", "Frames ETABS", "F Cortante mín", "Zona crítica", "Cumple"}
+        Dim encabezados = {"Piso", "Eje", "Nombre (plano)", "Frames ETABS", "F Conv", "F Plástico", "F Final", "Zona crítica", "Cumple"}
 
         ' Bloque 1: Todas las vigas
         ws.Cell(1, 1).Value = "TODAS LAS VIGAS"
@@ -497,43 +554,70 @@ Public Class Form_Reporte_Resumen
         EscribirEncabezados(ws, 2, encabezados)
 
         Dim fila As Integer = 3
-        Dim filaInicioTodas As Integer = 3
-        Dim vigasNoCumplen As New List(Of (Piso As String, Nombre As String, Frames As String, FVal As Double, Zona As String, Cumple As Boolean))
+        Dim vigasNoCumplen As New List(Of (Piso As String, Eje As String, Nombre As String, Frames As String,
+                                           FCon As Double, FPlas As Double, FFin As Double,
+                                           Zona As String, Cumple As Boolean))
 
         For Each viga In Vigas
 
             If Not viga.Frames.Any(Function(f) f.RevisionCortante.Any(Function(z) z.phiVn > 0)) Then Continue For
 
-            Dim fMin As Double = Double.MaxValue
+            Dim fCon As Double = Double.MaxValue
             Dim zonaCritica As String = "-"
-            Dim cumpleViga As Boolean = True
-
             For Each frame In viga.Frames
                 For Each zona In frame.RevisionCortante
                     If zona.phiVn = 0 Then Continue For
-                    If zona.Factor < fMin Then
-                        fMin = zona.Factor
+                    If zona.Factor < fCon Then
+                        fCon = zona.Factor
                         zonaCritica = frame.ObjectLabel & " " & PosTexto(zona.Posicion)
                     End If
-                    If Not zona.Cumple Then cumpleViga = False
                 Next
             Next
 
-            Dim fVal = Math.Round(Math.Min(If(fMin = Double.MaxValue, 0.0, fMin), 9.99), 2)
+            Dim fPlas As Double = Double.MaxValue
+            For Each frame In viga.Frames
+                If frame.CortantePlastico Is Nothing Then Continue For
+                Dim cp = frame.CortantePlastico
+                If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
+                If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
+            Next
+            Dim tienePlas = (fPlas < Double.MaxValue)
+
+            Dim cumpleConv = (fCon <> Double.MaxValue AndAlso fCon >= 1.0)
+            Dim cumplePlas = (tienePlas AndAlso fPlas >= 1.0)
+            Dim cumpleViga = cumpleConv OrElse cumplePlas
+
+            Dim fFin As Double
+            If cumpleConv Then
+                fFin = fCon
+            ElseIf cumplePlas Then
+                fFin = fPlas
+            ElseIf tienePlas Then
+                fFin = Math.Max(If(fCon = Double.MaxValue, 0.0, fCon), fPlas)
+            Else
+                fFin = fCon
+            End If
+
             Dim frameLabels = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
+            Dim ejeStr = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
 
             ws.Cell(fila, 1).Value = viga.Piso
-            ws.Cell(fila, 2).Value = NombreReporte(viga)
-            ws.Cell(fila, 3).Value = frameLabels
-            EscribirFactor(ws.Cell(fila, 4), If(fMin = Double.MaxValue, 0.0, fMin))
-            ws.Cell(fila, 5).Value = zonaCritica
-            EscribirCeldaCumple(ws.Cell(fila, 6), cumpleViga)
+            ws.Cell(fila, 2).Value = ejeStr
+            ws.Cell(fila, 3).Value = NombreReporte(viga)
+            ws.Cell(fila, 4).Value = frameLabels
+            EscribirFactor(ws.Cell(fila, 5), fCon)
+            EscribirFactor(ws.Cell(fila, 6), If(tienePlas, fPlas, Double.MaxValue))
+            EscribirFactor(ws.Cell(fila, 7), fFin)
+            ws.Cell(fila, 8).Value = zonaCritica
+            EscribirCeldaCumple(ws.Cell(fila, 9), cumpleViga)
 
             EstilarFilaDatos(ws, fila, encabezados.Length, fila Mod 2 = 1)
             fila += 1
 
             If Not cumpleViga Then
-                vigasNoCumplen.Add((viga.Piso, NombreReporte(viga), frameLabels, fVal, zonaCritica, cumpleViga))
+                vigasNoCumplen.Add((viga.Piso, ejeStr, NombreReporte(viga), frameLabels,
+                                    fCon, If(tienePlas, fPlas, Double.MaxValue), fFin,
+                                    zonaCritica, cumpleViga))
             End If
 
         Next
@@ -565,11 +649,14 @@ Public Class Form_Reporte_Resumen
         Else
             For Each item In vigasNoCumplen
                 ws.Cell(fila, 1).Value = item.Piso
-                ws.Cell(fila, 2).Value = item.Nombre
-                ws.Cell(fila, 3).Value = item.Frames
-                EscribirFactor(ws.Cell(fila, 4), item.FVal)
-                ws.Cell(fila, 5).Value = item.Zona
-                EscribirCeldaCumple(ws.Cell(fila, 6), False)
+                ws.Cell(fila, 2).Value = item.Eje
+                ws.Cell(fila, 3).Value = item.Nombre
+                ws.Cell(fila, 4).Value = item.Frames
+                EscribirFactor(ws.Cell(fila, 5), item.FCon)
+                EscribirFactor(ws.Cell(fila, 6), item.FPlas)
+                EscribirFactor(ws.Cell(fila, 7), item.FFin)
+                ws.Cell(fila, 8).Value = item.Zona
+                EscribirCeldaCumple(ws.Cell(fila, 9), False)
                 EstilarFilaDatos(ws, fila, encabezados.Length, fila Mod 2 = 1)
                 fila += 1
             Next
@@ -586,23 +673,21 @@ Public Class Form_Reporte_Resumen
 
         Dim ws = wb.Worksheets.Add("Resumen Completo")
 
-        Dim encabezados = {"Piso", "Nombre (plano)", "Frames ETABS", "F M- mín", "F M+ mín", "F Cor mín", "Flexión", "Cortante", "Estado"}
+        Dim encabezados = {"Piso", "Eje", "Nombre (plano)", "Frames ETABS", "F M- mín", "F M+ mín", "F Cor Final", "Flexión", "Cortante", "Estado"}
         EscribirEncabezados(ws, 1, encabezados)
 
         Dim fila As Integer = 2
 
         For Each viga In Vigas
 
-            Dim tieneFlex = viga.Frames.Any(Function(f) f.RevisionFlexion.Count > 0)
-            Dim tieneCor = viga.Frames.Any(Function(f) f.RevisionCortante.Count > 0)
-            If Not tieneFlex AndAlso Not tieneCor Then Continue For
+            Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
+            Dim tieneCor = viga.Frames.Any(Function(f) f.RevisionCortante.Any(Function(z) z.phiVn > 0))
+            If Not tieneRef AndAlso Not tieneCor Then Continue For
 
             Dim fNegMin As Double = Double.MaxValue
             Dim fPosMin As Double = Double.MaxValue
-            Dim fCorMin As Double = Double.MaxValue
+            Dim fConMin As Double = Double.MaxValue
             Dim cumpleFlex As Boolean = True
-            Dim cumpleCor As Boolean = True
-            Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
 
             For Each frame In viga.Frames
                 For Each rev In frame.RevisionFlexion
@@ -617,47 +702,71 @@ Public Class Form_Reporte_Resumen
                     End If
                 Next
                 For Each zona In frame.RevisionCortante
-                    If zona.phiVn > 0 Then
-                        fCorMin = Math.Min(fCorMin, zona.Factor)
-                        If Not zona.Cumple Then cumpleCor = False
-                    End If
+                    If zona.phiVn > 0 Then fConMin = Math.Min(fConMin, zona.Factor)
                 Next
             Next
 
-            ws.Cell(fila, 1).Value = viga.Piso
-            ws.Cell(fila, 2).Value = NombreReporte(viga)
-            ws.Cell(fila, 3).Value = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
+            ' Cortante plástico — envolvente
+            Dim fPlas As Double = Double.MaxValue
+            For Each frame In viga.Frames
+                If frame.CortantePlastico Is Nothing Then Continue For
+                Dim cp = frame.CortantePlastico
+                If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
+                If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
+            Next
+            Dim tienePlastico = (fPlas < Double.MaxValue)
 
-            EscribirFactor(ws.Cell(fila, 4), fNegMin)
-            EscribirFactor(ws.Cell(fila, 5), fPosMin)
-            EscribirFactor(ws.Cell(fila, 6), fCorMin)
+            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= 1.0)
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            Dim cumpleCor = cumpleConv OrElse cumplePlas
 
-            ' Col 7 — Flexión
-            If Not tieneRef Then
-                EscribirEstado(ws.Cell(fila, 7), "Sin ref.", XLAlertaFondo, XLAlertaTexto)
-            ElseIf cumpleFlex Then
-                EscribirEstado(ws.Cell(fila, 7), "OK", XLOKFondo, XLOKTexto)
+            Dim fFin As Double
+            If cumpleConv Then
+                fFin = fConMin
+            ElseIf cumplePlas Then
+                fFin = fPlas
+            ElseIf tienePlastico Then
+                fFin = Math.Max(If(fConMin = Double.MaxValue, 0.0, fConMin), fPlas)
             Else
-                EscribirEstado(ws.Cell(fila, 7), "Revisar", XLMalFondo, XLMalTexto)
+                fFin = fConMin
             End If
 
-            ' Col 8 — Cortante
-            If fCorMin = Double.MaxValue Then
-                EscribirEstado(ws.Cell(fila, 8), "Sin datos", XLAlertaFondo, XLAlertaTexto)
-            ElseIf cumpleCor Then
+            ws.Cell(fila, 1).Value = viga.Piso
+            ws.Cell(fila, 2).Value = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
+            ws.Cell(fila, 3).Value = NombreReporte(viga)
+            ws.Cell(fila, 4).Value = String.Join(", ", viga.Frames.Select(Function(f) f.ObjectLabel))
+
+            EscribirFactor(ws.Cell(fila, 5), fNegMin)
+            EscribirFactor(ws.Cell(fila, 6), fPosMin)
+            EscribirFactor(ws.Cell(fila, 7), fFin)
+
+            ' Col 8 — Flexión
+            If Not tieneRef Then
+                EscribirEstado(ws.Cell(fila, 8), "Sin ref.", XLAlertaFondo, XLAlertaTexto)
+            ElseIf cumpleFlex Then
                 EscribirEstado(ws.Cell(fila, 8), "OK", XLOKFondo, XLOKTexto)
             Else
                 EscribirEstado(ws.Cell(fila, 8), "Revisar", XLMalFondo, XLMalTexto)
             End If
 
-            ' Col 9 — Estado general
-            Dim ok = tieneRef AndAlso cumpleFlex AndAlso fCorMin <> Double.MaxValue AndAlso cumpleCor
-            If ok Then
+            ' Col 9 — Cortante
+            If fFin = Double.MaxValue Then
+                EscribirEstado(ws.Cell(fila, 9), "Sin datos", XLAlertaFondo, XLAlertaTexto)
+            ElseIf cumpleCor Then
                 EscribirEstado(ws.Cell(fila, 9), "OK", XLOKFondo, XLOKTexto)
-            ElseIf Not tieneRef OrElse fCorMin = Double.MaxValue Then
-                EscribirEstado(ws.Cell(fila, 9), "Pendiente", XLAlertaFondo, XLAlertaTexto)
             Else
                 EscribirEstado(ws.Cell(fila, 9), "Revisar", XLMalFondo, XLMalTexto)
+            End If
+
+            ' Col 10 — Estado general
+            Dim ok = tieneRef AndAlso cumpleFlex AndAlso tieneCor AndAlso cumpleCor
+            Dim pendiente = Not tieneRef OrElse Not tieneCor
+            If ok Then
+                EscribirEstado(ws.Cell(fila, 10), "OK", XLOKFondo, XLOKTexto)
+            ElseIf pendiente Then
+                EscribirEstado(ws.Cell(fila, 10), "Pendiente", XLAlertaFondo, XLAlertaTexto)
+            Else
+                EscribirEstado(ws.Cell(fila, 10), "Revisar", XLMalFondo, XLMalTexto)
             End If
 
             EstilarFilaDatos(ws, fila, encabezados.Length, fila Mod 2 = 1)

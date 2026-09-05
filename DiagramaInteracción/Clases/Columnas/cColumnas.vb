@@ -28,6 +28,10 @@ Public Class cColumnas
     <OptionalField> Public ListA_Combinaciones_Design As New List(Of String)
     <OptionalField> Public Lista_Combinaciones_Cortante As New List(Of String)
 
+    ' "Espiral" → usa ρs_a = 0.45(Ag/Ach-1)fc/fy además del mínimo NSR-10 C.7.10.4.3
+    ' "Estribo cerrado" → solo ρs_b = 0.08|0.12 fc/fy (sin término Ag/Ach)
+    <OptionalField> Public Trans_Circular As String = "Espiral"
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         If Lista_Pisos Is Nothing Then Lista_Pisos = New List(Of String)
@@ -38,6 +42,7 @@ Public Class cColumnas
         If Lista_Combinaciones_Grafico_ALR Is Nothing Then Lista_Combinaciones_Grafico_ALR = New List(Of String)
         If ListA_Combinaciones_Design Is Nothing Then ListA_Combinaciones_Design = New List(Of String)
         If Lista_Combinaciones_Cortante Is Nothing Then Lista_Combinaciones_Cortante = New List(Of String)
+        If String.IsNullOrEmpty(Trans_Circular) Then Trans_Circular = "Espiral"
     End Sub
 
 End Class

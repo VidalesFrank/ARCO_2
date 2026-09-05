@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>ARCO — Módulo Muros</title><link rel="stylesheet" href="../style.css"></head>
+<body>
+<div class="header">
+  <img src="../img/ARCO_LOGOGRIS.png" alt="ARCO">
+  <div><div style="font-size:20px;font-weight:700;color:#fff;">ARCO 2.0</div><div class="modulo">Manual de Usuario · Módulo Muros</div></div>
+</div>
+<div class="breadcrumb"><a href="../index.html">Inicio</a> › Manual de Usuario › Módulo Muros</div>
+<div class="container">
+<div class="nav-links">
+  <a href="../index.html">Inicio</a>
+  <a href="04_columnas.html">← Columnas</a>
+  <a href="06_pilas.html">Siguiente: Pilas →</a>
+  <a href="../criterios/03_muros.html">Ver Criterios de Diseño</a>
+</div>
+
+<h2>Descripción del Módulo</h2>
+<p>El módulo de Muros verifica muros estructurales de concreto reforzado bajo tres estados límite: <strong>flexo-compresión</strong>, <strong>cortante</strong> y <strong>elementos de borde</strong>. Usa las fuerzas de los Pier de ETABS y verifica el refuerzo colocado por el usuario en cada piso y dirección.</p>
+
+<h2>Requisitos ETABS</h2>
+<table>
+  <tr><th>Dato</th><th>Hoja E17</th><th>Hoja E23</th></tr>
+  <tr><td>Fuerzas en muros Pier</td><td>Pier Forces</td><td>Pier Forces</td></tr>
+  <tr><td>Diseño de muros</td><td>Shear Wall Pier Summary</td><td>Pier Dgn Sum</td></tr>
+</table>
+
+<h2>Concepto de Sección Patrón (S_Patron)</h2>
+<p>En edificios de varios pisos, los muros tienen la misma geometría en múltiples pisos con variaciones de refuerzo. ARCO permite definir una <strong>sección patrón</strong> (S_Patron = True) que sirve como referencia para secciones similares del mismo muro.</p>
+<ul>
+  <li>La sección patrón es la sección maestra donde se define el refuerzo de diseño.</li>
+  <li>Las secciones similares pueden adoptar el refuerzo de la sección patrón o tener su propio refuerzo.</li>
+  <li>Solo los muros con <code>Ref_Modificado_Muros = True</code> y al menos una sección con <code>S_Patron = True</code> aparecen en el listado de verificación.</li>
+</ul>
+
+<h2>Parámetros de Entrada del Usuario</h2>
+
+<h3>Geometría del Muro</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>tw (espesor)</td><td>cm</td><td>Espesor del muro (ancho del alma)</td></tr>
+  <tr><td>Lw (longitud)</td><td>cm</td><td>Longitud total del muro en planta</td></tr>
+  <tr><td>Hw (altura total)</td><td>m</td><td>Altura total del muro (suma de todos los pisos)</td></tr>
+  <tr><td>fc</td><td>MPa</td><td>Resistencia a compresión del concreto</td></tr>
+  <tr><td>fy</td><td>MPa</td><td>Esfuerzo de fluencia del acero de refuerzo</td></tr>
+</table>
+
+<h3>Refuerzo Distribuido</h3>
+<table>
+  <tr><th>Parámetro</th><th>Unidad</th><th>Descripción</th></tr>
+  <tr><td>ρh (cuantía horizontal)</td><td>%</td><td>Cuantía de refuerzo horizontal distribuido en el alma</td></tr>
+  <tr><td>ρv (cuantía vertical)</td><td>%</td><td>Cuantía de refuerzo vertical distribuido en el alma</td></tr>
+  <tr><td>Barra horizontal</td><td>#N</td><td>Calibre de la barra horizontal del alma</td></tr>
+  <tr><td>Separación horizontal</td><td>cm</td><td>Separación entre barras horizontales del alma</td></tr>
+  <tr><td>Barra vertical</td><td>#N</td><td>Calibre de la barra vertical del alma</td></tr>
+  <tr><td>Separación vertical</td><td>cm</td><td>Separación entre barras verticales del alma</td></tr>
+</table>
+
+<h3>Elementos de Borde (EB_I y EB_D)</h3>
+<table>
+  <tr><th>Parámetro</th><th>Descripción</th></tr>
+  <tr><td>L_EB</td><td>Longitud del elemento de borde desde el extremo del muro [cm]</td></tr>
+  <tr><td>Barras_2 a Barras_10</td><td>Número de barras por calibre en el elemento de borde (desde #2 hasta #10)</td></tr>
+  <tr><td>RefH (refuerzo horizontal EB)</td><td>Estribos de confinamiento del elemento de borde: calibre y separación</td></tr>
+</table>
+<div class="nota">El módulo tiene elementos de borde en el extremo izquierdo (EB_I) y derecho (EB_D) de cada muro, tanto en la parte superior (Top) como inferior (Bot) de cada piso.</div>
+
+<h2>Flujo de Trabajo en el Módulo</h2>
+<div class="paso"><div class="paso-num">1</div><div class="paso-texto"><strong>Importar desde ETABS</strong> — Botón "Importar ETABS". ARCO carga los Pier con sus fuerzas por combinación y piso.</div></div>
+<div class="paso"><div class="paso-num">2</div><div class="paso-texto"><strong>Seleccionar combinaciones de diseño</strong> — El módulo de muros tiene su propia lista de combinaciones, independiente de columnas y vigas.</div></div>
+<div class="paso"><div class="paso-num">3</div><div class="paso-texto"><strong>Calcular macroparámetros</strong> — Hace clic en "Calcular macroparámetros" (o "Obtencion_Macroparametros"). ARCO calcula Vu de diseño y otros parámetros derivados de las combinaciones seleccionadas. Este paso es obligatorio antes de ingresar refuerzo.</div></div>
+<div class="paso"><div class="paso-num">4</div><div class="paso-texto"><strong>Ingresar refuerzo por sección</strong> — Seleccione el muro y la sección patrón en la lista. Ingrese el refuerzo distribuido y los elementos de borde en la tabla "Tabla_Info_EBorde".</div></div>
+<div class="paso"><div class="paso-num">5</div><div class="paso-texto"><strong>Guardar refuerzo</strong> — Haga clic en el botón guardar (Button4). Los datos de refuerzo se asocian a la sección patrón seleccionada.</div></div>
+<div class="paso"><div class="paso-num">6</div><div class="paso-texto"><strong>Calcular verificación</strong> — Ejecute el cálculo para obtener los factores C/D por flexo-compresión, cortante y elementos de borde.</div></div>
+<div class="paso"><div class="paso-num">7</div><div class="paso-texto"><strong>Revisar resultados en los cuatro tabs</strong> — Los resultados se presentan en cuatro pestañas separadas.</div></div>
+
+<h2>Cuatro Tabs de Resultados</h2>
+
+<h3>Tab 1: Flexo-compresión</h3>
+<p>Muestra el factor C/D por flexo-compresión para cada piso y combinación de diseño. Reporta la combinación gobernante y el C/D mínimo. Los puntos de demanda se pueden visualizar sobre el diagrama de interacción P-M.</p>
+
+<h3>Tab 2: Cortante</h3>
+<p>Muestra la verificación por cortante. Incluye:</p>
+<ul>
+  <li>Vu de diseño (máximo de las combinaciones seleccionadas)</li>
+  <li>Vc (resistencia del concreto)</li>
+  <li>Vs (resistencia del refuerzo horizontal)</li>
+  <li>φVn = Vc + Vs</li>
+  <li>C/D cortante = φVn / Vu</li>
+  <li>Verificación de cuantías mínimas ρh y ρv según NSR-10 C.11.9</li>
+</ul>
+
+<h3>Tab 3: Elementos de Borde — Estado Inicial</h3>
+<p>Verifica si el muro requiere elementos de borde especiales bajo el criterio de esfuerzo de compresión del concreto. Muestra:</p>
+<ul>
+  <li>Esfuerzo máximo en la fibra comprimida [MPa]</li>
+  <li>Límite de esfuerzo según nivel de ductilidad (0.2fc para DUO, 0.3fc para DMO)</li>
+  <li>Si requiere EB especial: sí/no</li>
+  <li>Longitud requerida del EB (si aplica)</li>
+  <li>Longitud provista del EB</li>
+</ul>
+
+<h3>Tab 4: Elementos de Borde — Estado Dinámico</h3>
+<p>Verifica los elementos de borde bajo el criterio de deformación (profundidad del eje neutro). Muestra:</p>
+<ul>
+  <li>Profundidad del eje neutro C calculada</li>
+  <li>Límite de eje neutro C_lim según NSR-10 C.21.9.6.3</li>
+  <li>Si requiere EB por deformación: sí/no</li>
+  <li>Factor de ductilidad Du/Hw considerado</li>
+</ul>
+
+<h2>Criterio de Cumplimiento</h2>
+<p>ARCO considera que un muro cumple cuando todos sus factores son ≥ 0.9:</p>
+<ul>
+  <li>C/D por flexo-compresión ≥ 0.9</li>
+  <li>C/D por cortante ≥ 0.9</li>
+  <li>Longitud EB provista / Longitud EB requerida ≥ 0.9 (si aplica)</li>
+</ul>
+
+<h2>Exportación a Excel y Reportes</h2>
+<p>ARCO genera dos tipos de reportes para muros:</p>
+<ul>
+  <li><strong>Reporte de Resumen</strong> (Form_Reporte_Resumen_Muros): cuatro tabs con todos los resultados tabulados y exportables a Excel (ClosedXML). Incluye tabla de flexo-compresión, cortante, EB inicial y EB dinámico.</li>
+  <li><strong>Reporte Ejecutivo</strong> (Form_Reporte_Ejecutivo_Muros): tabla resumen plana con el estado de cada muro y piso. Incluye opción de filtrar "solo con observaciones" para mostrar únicamente los elementos que no cumplen.</li>
+</ul>
+</div>
+</body>
+</html>
