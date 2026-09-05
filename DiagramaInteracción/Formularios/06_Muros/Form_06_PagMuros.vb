@@ -13,7 +13,6 @@ Public Class Form_06_PagMuros
     Private MaxCoorY As Single = 0
     Private MinCoorY As Single = 0
 
-    'Private WithEvents Reporte As ReporteInicial
 
     Public Class Rectangulo
         Public Property Name As String
@@ -876,25 +875,13 @@ Public Class Form_06_PagMuros
 
     Private Sub ReporteInicialToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ReporteInicialToolStripMenuItem.Click
 
-        Crear_Subgrafico()
+        If proyecto Is Nothing OrElse proyecto.Elementos.Muros.Lista_Muros Is Nothing OrElse proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then
+            MessageBox.Show("Primero calcule los muros del proyecto (botón Calcular) para poder generar el informe.",
+                             "Informe de Estado del Proyecto", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
 
-        Dim List_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Dim List_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-
-        Llenar_Tablas_Macroparametros(Tabla_Parametros, List_X, List_Y)
-        Funciones_00_Varias.EstiloTabla(Tabla_Parametros)
-
-        Dim List_Prot_X As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.X And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Dim List_Prot_Y As List(Of Muro) = proyecto.Elementos.Muros.Lista_Muros.Where(Function(p) p.Direccion = eNumeradores.eDireccion.Y And p.TipoMuro = eNumeradores.eTipoMuro.Protagonico).OrderByDescending(Function(seccion) seccion.Porc_Vs).ToList()
-        Llenar_Tablas_Macroparametros(Tabla_Muros_Protagonicos, List_Prot_X, List_Prot_Y)
-        Funciones_00_Varias.EstiloTabla(Tabla_Muros_Protagonicos)
-
-        Func_Muros.CalcularGeometriaMuros()
-        Func_Muros.GraficosMurosPlanta(Figura_Muros_Tw, Figura_Muros_Protagonicos)
-
-        'R_ReporteInicial.Show()
-        Dim reporte As New ReporteInicial()
-        reporte.Generar_Reporte()
+        Form_InformeEstadoMuros.Mostrar(proyecto)
 
     End Sub
 

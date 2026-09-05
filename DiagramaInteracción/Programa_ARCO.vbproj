@@ -356,10 +356,7 @@
     <Compile Include="Formularios\06_Muros\Form_InfoDesignMuros.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\06_Muros\R_ReporteInicial.Designer.vb">
-      <DependentUpon>R_ReporteInicial.vb</DependentUpon>
-    </Compile>
-    <Compile Include="Formularios\06_Muros\R_ReporteInicial.vb">
+    <Compile Include="Formularios\06_Muros\Form_InformeEstadoMuros.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\09_Vigas\DiagramaService.vb" />
@@ -438,6 +435,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_Reporte_Proyecto_Completo.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Reporte_Revision.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_Reporte_Zapatas.vb">
@@ -626,9 +626,11 @@
     <Compile Include="Funciones\Logger.vb" />
     <Compile Include="Funciones\Funciones_02_Columnas.vb" />
     <Compile Include="Funciones\Funciones_Muros.vb" />
+    <Compile Include="Funciones\ReporteRevisionService.vb" />
+    <Compile Include="Funciones\ReporteRevisionWordHelpers.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
     <Compile Include="Funciones\Funciones_Zapatas.vb" />
-    <Compile Include="Funciones\ReporteInicial.vb" />
+    <Compile Include="Funciones\InformeEstadoMurosService.vb" />
     <Compile Include="Microsofts\Office.vb" />
     <Compile Include="Funciones\Diagrama_Interaccion_Rectangular.vb" />
     <Compile Include="Funciones\Funciones_10_AnalisisSeccion.vb" />
@@ -684,9 +686,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\06_Muros\Form_InfoDesignMuros.resx">
       <DependentUpon>Form_InfoDesignMuros.vb</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Formularios\06_Muros\R_ReporteInicial.resx">
-      <DependentUpon>R_ReporteInicial.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Complementos\Form_Fuerzas.resx">
       <DependentUpon>Form_Fuerzas.vb</DependentUpon>
@@ -946,6 +945,7 @@
     <None Include="Resources\ARCO_ICONOVERDE.ico" />
     <None Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_LOGOVerde.png" />
+    <None Include="Resources\PlantillaReporteRevision.docx" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Clases\Vigas\" />

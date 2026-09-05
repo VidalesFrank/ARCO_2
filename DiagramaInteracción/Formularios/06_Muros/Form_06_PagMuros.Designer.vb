@@ -464,7 +464,7 @@ Partial Class Form_06_PagMuros
         Me.ReporteInicialToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ReporteInicialToolStripMenuItem.Name = "ReporteInicialToolStripMenuItem"
         Me.ReporteInicialToolStripMenuItem.Size = New System.Drawing.Size(159, 22)
-        Me.ReporteInicialToolStripMenuItem.Text = "Reporte Inicial"
+        Me.ReporteInicialToolStripMenuItem.Text = "Informe de Estado del Proyecto…"
         '
         'ImportarDatosEtabsToolStripMenuItem
         '

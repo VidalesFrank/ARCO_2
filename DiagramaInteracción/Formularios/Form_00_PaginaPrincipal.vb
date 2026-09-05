@@ -257,6 +257,13 @@ Public Class Form_00_PaginaPrincipal
         OpcionesToolStripMenuItem1.DropDownItems.Add(sep)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporte)
 
+        ' Agregar ítem "Reporte de Revisión..." en menú Opciones
+        Dim mnuReporteRevision As New ToolStripMenuItem("Reporte de Revisión…")
+        mnuReporteRevision.BackColor = Color.FromArgb(87, 87, 86)
+        mnuReporteRevision.ForeColor = Color.White
+        AddHandler mnuReporteRevision.Click, Sub(s, ev) Form_Reporte_Revision.Mostrar(proyecto)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporteRevision)
+
         ' Análisis de Sección independiente (Módulo 10)
         Dim sepAS As New ToolStripSeparator()
         Dim mnuAS As New ToolStripMenuItem("Análisis de Sección…")

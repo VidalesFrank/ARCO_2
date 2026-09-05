@@ -108,5 +108,15 @@ Namespace My.Resources
                 Return ResourceManager.GetString("String1", resourceCulture)
             End Get
         End Property
+
+        '''<summary>
+        '''  Busca un recurso binario de tipo System.Byte[] (plantilla .docx del Reporte de Revisión).
+        '''</summary>
+        Friend ReadOnly Property PlantillaReporteRevision() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("PlantillaReporteRevision", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
     End Module
 End Namespace
