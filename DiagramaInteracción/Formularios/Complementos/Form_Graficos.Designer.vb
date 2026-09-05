@@ -33,6 +33,7 @@ Partial Class Form_Graficos
         Me.PictureBox1 = New System.Windows.Forms.PictureBox()
         Me.Label2 = New System.Windows.Forms.Label()
         Me.Boton_Cortante = New System.Windows.Forms.Button()
+        Me.Boton_Confinamiento = New System.Windows.Forms.Button()
         Me.Boton_Flexo = New System.Windows.Forms.Button()
         Me.Boton_ALR = New System.Windows.Forms.Button()
         Me.Panel2 = New System.Windows.Forms.Panel()
@@ -53,6 +54,7 @@ Partial Class Form_Graficos
         Me.Panel1.Controls.Add(Me.PictureBox1)
         Me.Panel1.Controls.Add(Me.Label2)
         Me.Panel1.Controls.Add(Me.Boton_Exportar)
+        Me.Panel1.Controls.Add(Me.Boton_Confinamiento)
         Me.Panel1.Controls.Add(Me.Boton_Cortante)
         Me.Panel1.Controls.Add(Me.Boton_Flexo)
         Me.Panel1.Controls.Add(Me.Boton_ALR)
@@ -102,6 +104,22 @@ Partial Class Form_Graficos
         Me.Boton_Cortante.Text = "Cortante"
         Me.Boton_Cortante.UseVisualStyleBackColor = False
         '
+        'Boton_Confinamiento
+        '
+        Me.Boton_Confinamiento.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Boton_Confinamiento.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.Boton_Confinamiento.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.Boton_Confinamiento.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.Boton_Confinamiento.Font = New System.Drawing.Font("SansSerif", 12.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Boton_Confinamiento.ForeColor = System.Drawing.Color.White
+        Me.Boton_Confinamiento.Location = New System.Drawing.Point(3, 223)
+        Me.Boton_Confinamiento.Name = "Boton_Confinamiento"
+        Me.Boton_Confinamiento.Size = New System.Drawing.Size(160, 40)
+        Me.Boton_Confinamiento.TabIndex = 20
+        Me.Boton_Confinamiento.Text = "Confinamiento"
+        Me.Boton_Confinamiento.UseVisualStyleBackColor = False
+        '
         'Boton_Exportar
         '
         Me.Boton_Exportar.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
@@ -111,7 +129,7 @@ Partial Class Form_Graficos
         Me.Boton_Exportar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.Boton_Exportar.Font = New System.Drawing.Font("Segoe UI", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Boton_Exportar.ForeColor = System.Drawing.Color.White
-        Me.Boton_Exportar.Location = New System.Drawing.Point(3, 240)
+        Me.Boton_Exportar.Location = New System.Drawing.Point(3, 281)
         Me.Boton_Exportar.Name = "Boton_Exportar"
         Me.Boton_Exportar.Size = New System.Drawing.Size(160, 40)
         Me.Boton_Exportar.TabIndex = 19
@@ -277,6 +295,7 @@ Partial Class Form_Graficos
     Friend WithEvents EditarToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents CombinacionesDeAnálisisToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents Boton_Cortante As Button
+    Friend WithEvents Boton_Confinamiento As Button
     Friend WithEvents Boton_Exportar As Button
     Friend WithEvents Label2 As Label
     Friend WithEvents PictureBox1 As PictureBox

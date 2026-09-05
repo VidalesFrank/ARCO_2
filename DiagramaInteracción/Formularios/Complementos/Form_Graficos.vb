@@ -21,9 +21,12 @@ Public Class Form_Graficos
 
     ' -----------------------------------------------------------------------
     ' Aplica estilo profesional al área del gráfico y agrega título.
+    ' `nCols` permite rotar las etiquetas del eje X cuando hay muchas columnas
+    ' para que no se encimen y queden ilegibles.
     ' -----------------------------------------------------------------------
     Private Sub EstilizarGrafico(titulo As String, tituloY As String,
-                                 Optional tituloX As String = "Columna")
+                                 Optional tituloX As String = "Columna",
+                                 Optional nCols As Integer = 0)
 
         Dim area = Grafico.ChartAreas("ChartArea1")
 
@@ -49,6 +52,11 @@ Public Class Form_Graficos
         area.AxisY.LabelStyle.Font = fntLabel
         area.AxisX.LabelStyle.ForeColor = Color.FromArgb(60, 60, 60)
         area.AxisY.LabelStyle.ForeColor = Color.FromArgb(60, 60, 60)
+
+        ' Con muchas columnas, las etiquetas horizontales se superponen.
+        ' Se rotan a vertical y se fuerza a mostrar todas (Interval = 1).
+        area.AxisX.LabelStyle.Angle = If(nCols > 12, -90, 0)
+        If nCols > 0 Then area.AxisX.LabelStyle.Interval = 1
 
         area.AxisX.Title = tituloX
         area.AxisX.TitleFont = fntAxisTitle
@@ -88,6 +96,15 @@ Public Class Form_Graficos
     End Function
 
     ' -----------------------------------------------------------------------
+    ' Columnas con refuerzo definido y cálculo ejecutado (Button2 en
+    ' Form_02_00_PagInfoColumnas). Las columnas sin refuerzo se omiten de los
+    ' gráficos en vez de mostrarse como una barra en cero (sería engañoso).
+    ' -----------------------------------------------------------------------
+    Private Function ColumnasCalculadas(cols As cColumnas) As List(Of Columna)
+        Return cols.Lista_Columnas.Where(Function(c) c.Ref_Modificado).ToList()
+    End Function
+
+    ' -----------------------------------------------------------------------
     ' ALR — Relación de Carga Axial
     ' -----------------------------------------------------------------------
     Private Sub Boton_ALR_Click(sender As Object, e As EventArgs) Handles Boton_ALR.Click
@@ -102,11 +119,19 @@ Public Class Form_Graficos
             Return
         End If
 
+        Dim colsCalc = ColumnasCalculadas(cols)
+        If colsCalc.Count = 0 Then
+            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
+                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
+                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
         Dim combosGrafico As List(Of String) = If(cols.Lista_Combinaciones_Grafico_ALR,
                                                   New List(Of String))
         Dim paleta() As Color = {ColAzul, ColVerde, ColGris, ColNaranja, ColAzulClaro}
         Dim fmax As Single = 0
-        Dim nCols = cols.Lista_Columnas.Count
+        Dim nCols = colsCalc.Count
 
         If combosGrafico.Count = 0 Then
             ' ── Modo automático: ALR máxima de todas las combinaciones ────────
@@ -121,12 +146,15 @@ Public Class Form_Graficos
 
             Dim tieneData As Boolean = False
             For j = 0 To nCols - 1
-                Dim col = cols.Lista_Columnas(j)
+                Dim col = colsCalc(j)
                 Dim alrVal As Single = 0
+                Dim comboCritico As String = ""
 
                 ' Prioridad 1: Lista_ALR pre-calculada
                 If col.Lista_ALR IsNot Nothing AndAlso col.Lista_ALR.Count > 0 Then
-                    alrVal = col.Lista_ALR.Max(Function(a) a.ALR)
+                    Dim peor = col.Lista_ALR.OrderByDescending(Function(a) a.ALR).First()
+                    alrVal = peor.ALR
+                    comboCritico = peor.Combinacion
                     tieneData = True
                     ' Prioridad 2: calcular en el momento desde fuerzas de los tramos
                 ElseIf col.Lista_Tramos_Columnas IsNot Nothing AndAlso col.Lista_Tramos_Columnas.Count > 0 Then
@@ -141,6 +169,7 @@ Public Class Form_Graficos
                         If alrTramo > alrVal Then alrVal = CSng(alrTramo)
                     Next
                     If alrVal > 0 Then tieneData = True
+                    comboCritico = "Estimado desde fuerzas de tramos"
                 End If
 
                 Dim pt As New DataPoint
@@ -149,6 +178,7 @@ Public Class Form_Graficos
                 pt.YValues(0) = alrVal
                 pt.Color = If(alrVal > 0.3F, ColRojo, ColAzul)
                 pt.LabelForeColor = If(alrVal > 0.3F, ColRojo, Color.FromArgb(40, 40, 40))
+                If comboCritico <> "" Then pt.ToolTip = "Combinación crítica: " & comboCritico
                 If alrVal > fmax Then fmax = alrVal
                 serie.Points.Add(pt)
             Next
@@ -174,7 +204,7 @@ Public Class Form_Graficos
 
                 Dim combNombre = combosGrafico(i)
                 For j = 0 To nCols - 1
-                    Dim col = cols.Lista_Columnas(j)
+                    Dim col = colsCalc(j)
                     Dim entrada = If(col.Lista_ALR IsNot Nothing,
                                     col.Lista_ALR.Find(Function(p) p.Combinacion = combNombre),
                                     Nothing)
@@ -184,6 +214,7 @@ Public Class Form_Graficos
                     pt.AxisLabel = col.Name_Label
                     pt.XValue = j + 1
                     pt.YValues(0) = alrVal
+                    pt.ToolTip = combNombre
                     If alrVal > 0.3F Then
                         pt.Color = ColRojo
                         pt.LabelForeColor = ColRojo
@@ -216,7 +247,7 @@ Public Class Form_Graficos
         area.AxisY.Maximum = ym
         area.AxisY.Interval = Math.Round(ym / 8, 2)
 
-        EstilizarGrafico("Relación de Carga Axial (ALR) — Columnas", "ALR = Pu / (Ag · f'c)")
+        EstilizarGrafico("Relación de Carga Axial (ALR) — Columnas", "ALR = Pu / (Ag · f'c)", "Columna", nCols)
     End Sub
 
     ' -----------------------------------------------------------------------
@@ -228,6 +259,14 @@ Public Class Form_Graficos
 
         Dim cols = Proyecto.Elementos.Columnas
         If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then Return
+
+        Dim colsCalc = ColumnasCalculadas(cols)
+        If colsCalc.Count = 0 Then
+            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
+                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
+                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
 
         Dim sCumple As New Series
         Dim sNoCumple As New Series
@@ -254,10 +293,10 @@ Public Class Form_Graficos
         sLim.LegendText = "C/D mínimo = 0.90"
 
         Dim fmax As Single = 0
-        Dim nCols = cols.Lista_Columnas.Count
+        Dim nCols = colsCalc.Count
 
         For i = 0 To nCols - 1
-            Dim col = cols.Lista_Columnas(i)
+            Dim col = colsCalc(i)
             If col.Lista_F Is Nothing OrElse col.Lista_F.Count = 0 Then
                 sCumple.Points.AddXY(i + 1, 0)
                 sNoCumple.Points.AddXY(i + 1, 0)
@@ -265,10 +304,13 @@ Public Class Form_Graficos
             End If
 
             Dim cd As Single = col.Lista_F(0)
+            Dim piso As String = If(col.Lista_F_Piso IsNot Nothing AndAlso col.Lista_F_Piso.Count > 0,
+                                    col.Lista_F_Piso(0), "—")
             Dim pt As New DataPoint
             pt.AxisLabel = col.Name_Label
             pt.XValue = i + 1
             pt.YValues(0) = cd
+            pt.ToolTip = "Piso crítico: " & piso
 
             If cd >= 0.9F Then
                 sCumple.Points.Add(pt)
@@ -295,7 +337,7 @@ Public Class Form_Graficos
         area.AxisY.Maximum = ym
         area.AxisY.Interval = Math.Round(ym / 8, 2)
 
-        EstilizarGrafico("Flexo-Compresión Biaxial (C/D) — Columnas", "C/D  (Criterio Bresler)")
+        EstilizarGrafico("Flexo-Compresión Biaxial (C/D) — Columnas", "C/D  (Criterio Bresler)", "Columna", nCols)
     End Sub
 
     ' -----------------------------------------------------------------------
@@ -307,6 +349,14 @@ Public Class Form_Graficos
 
         Dim cols = Proyecto.Elementos.Columnas
         If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then Return
+
+        Dim colsCalc = ColumnasCalculadas(cols)
+        If colsCalc.Count = 0 Then
+            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
+                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
+                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
 
         Dim sLargo As New Series
         Dim sCorto As New Series
@@ -331,10 +381,10 @@ Public Class Form_Graficos
         sLim.LegendText = "C/D mínimo = 0.90"
 
         Dim fmax As Single = 0
-        Dim nCols = cols.Lista_Columnas.Count
+        Dim nCols = colsCalc.Count
 
         For i = 0 To nCols - 1
-            Dim col = cols.Lista_Columnas(i)
+            Dim col = colsCalc(i)
             If col.Lista_F Is Nothing OrElse col.Lista_F.Count < 3 Then
                 sLargo.Points.AddXY(i + 1, 0)
                 sCorto.Points.AddXY(i + 1, 0)
@@ -343,11 +393,16 @@ Public Class Form_Graficos
 
             Dim fV2 As Single = col.Lista_F(1)
             Dim fV3 As Single = col.Lista_F(2)
+            Dim pisoV2 As String = If(col.Lista_F_Piso IsNot Nothing AndAlso col.Lista_F_Piso.Count > 1,
+                                      col.Lista_F_Piso(1), "—")
+            Dim pisoV3 As String = If(col.Lista_F_Piso IsNot Nothing AndAlso col.Lista_F_Piso.Count > 2,
+                                      col.Lista_F_Piso(2), "—")
 
             Dim ptL As New DataPoint
             ptL.AxisLabel = col.Name_Label
             ptL.XValue = i + 1
             ptL.YValues(0) = fV2
+            ptL.ToolTip = "Piso crítico: " & pisoV2
             If fV2 < 0.9F Then
                 ptL.Color = ColRojo
                 ptL.LabelForeColor = ColRojo
@@ -357,6 +412,7 @@ Public Class Form_Graficos
             ptC.AxisLabel = col.Name_Label
             ptC.XValue = i + 1
             ptC.YValues(0) = fV3
+            ptC.ToolTip = "Piso crítico: " & pisoV3
             If fV3 < 0.9F Then
                 ptC.Color = ColRojo
                 ptC.LabelForeColor = ColRojo
@@ -382,7 +438,117 @@ Public Class Form_Graficos
         area.AxisY.Maximum = ym
         area.AxisY.Interval = Math.Round(ym / 8, 2)
 
-        EstilizarGrafico("Verificación de Cortante (φVn/Vu) — Columnas", "φVn / Vu")
+        EstilizarGrafico("Verificación de Cortante (φVn/Vu) — Columnas", "φVn / Vu", "Columna", nCols)
+    End Sub
+
+    ' -----------------------------------------------------------------------
+    ' Confinamiento NSR-10 — Ash (estribos) y L0 (longitud zona confinada)
+    ' Se calcula el peor caso por columna recorriendo todos sus tramos, igual
+    ' que hace Form_02_Reporte_Columnas en su pestaña "Confinamiento NSR-10",
+    ' ya que estos factores no se guardan agregados en Columna.Lista_F.
+    ' -----------------------------------------------------------------------
+    Private Sub Boton_Confinamiento_Click(sender As Object, e As EventArgs) Handles Boton_Confinamiento.Click
+
+        Grafico.Series.Clear()
+
+        Dim cols = Proyecto.Elementos.Columnas
+        If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then Return
+
+        Dim colsCalc = ColumnasCalculadas(cols).Where(
+            Function(c) c.Lista_Tramos_Columnas IsNot Nothing AndAlso c.Lista_Tramos_Columnas.Count > 0).ToList()
+        If colsCalc.Count = 0 Then
+            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
+                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
+                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim sAsh As New Series
+        Dim sL0 As New Series
+        sAsh.ChartType = SeriesChartType.Column
+        sL0.ChartType = SeriesChartType.Column
+        sAsh.Color = ColAzul
+        sL0.Color = ColNaranja
+        sAsh.IsValueShownAsLabel = True
+        sL0.IsValueShownAsLabel = True
+        sAsh.LabelFormat = "F2"
+        sL0.LabelFormat = "F2"
+        sAsh.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
+        sL0.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
+        sAsh.LegendText = "Ash provisto/requerido (mín. entre sentidos)"
+        sL0.LegendText = "L0 provisto/requerido"
+
+        Dim sLim As New Series
+        sLim.ChartType = SeriesChartType.Line
+        sLim.Color = Color.FromArgb(70, 70, 70)
+        sLim.BorderWidth = 2
+        sLim.BorderDashStyle = ChartDashStyle.DashDot
+        sLim.LegendText = "Mínimo = 0.90"
+
+        Dim fmax As Single = 0
+        Dim nCols = colsCalc.Count
+
+        For i = 0 To nCols - 1
+            Dim col = colsCalc(i)
+            Dim fMinAsh As Single = Single.MaxValue
+            Dim fMinL0 As Single = Single.MaxValue
+            Dim pisoAsh As String = "—"
+            Dim pisoL0 As String = "—"
+
+            For Each tr In col.Lista_Tramos_Columnas
+                If tr.F_Ash_Largo > 0 AndAlso tr.F_Ash_Largo < fMinAsh Then fMinAsh = tr.F_Ash_Largo : pisoAsh = tr.Piso
+                If tr.F_Ash_Corto > 0 AndAlso tr.F_Ash_Corto < fMinAsh Then fMinAsh = tr.F_Ash_Corto : pisoAsh = tr.Piso
+
+                Dim l0Req As Single = Math.Max(tr.L0_L, tr.L0_C)
+                If l0Req > 0 AndAlso tr.L0_Prov > 0 Then
+                    Dim fl0 As Single = CSng(Math.Round(tr.L0_Prov / l0Req, 2))
+                    If fl0 < fMinL0 Then fMinL0 = fl0 : pisoL0 = tr.Piso
+                End If
+            Next
+
+            If fMinAsh = Single.MaxValue Then fMinAsh = 0
+            If fMinL0 = Single.MaxValue Then fMinL0 = 0
+
+            Dim ptAsh As New DataPoint
+            ptAsh.AxisLabel = col.Name_Label
+            ptAsh.XValue = i + 1
+            ptAsh.YValues(0) = fMinAsh
+            ptAsh.ToolTip = "Piso crítico: " & pisoAsh
+            If fMinAsh > 0 AndAlso fMinAsh < 0.9F Then
+                ptAsh.Color = ColRojo
+                ptAsh.LabelForeColor = ColRojo
+            End If
+            sAsh.Points.Add(ptAsh)
+
+            Dim ptL0 As New DataPoint
+            ptL0.AxisLabel = col.Name_Label
+            ptL0.XValue = i + 1
+            ptL0.YValues(0) = fMinL0
+            ptL0.ToolTip = "Piso crítico: " & pisoL0
+            If fMinL0 > 0 AndAlso fMinL0 < 0.9F Then
+                ptL0.Color = ColRojo
+                ptL0.LabelForeColor = ColRojo
+            End If
+            sL0.Points.Add(ptL0)
+
+            If Math.Max(fMinAsh, fMinL0) > fmax Then fmax = Math.Max(fMinAsh, fMinL0)
+        Next
+
+        sLim.Points.AddXY(0, 0.9)
+        sLim.Points.AddXY(nCols + 1, 0.9)
+
+        Grafico.Series.Add(sAsh)
+        Grafico.Series.Add(sL0)
+        Grafico.Series.Add(sLim)
+
+        Dim area = Grafico.ChartAreas("ChartArea1")
+        area.AxisX.Minimum = 0
+        area.AxisX.Maximum = nCols + 1
+        Dim ym As Double = YMax(fmax, 1.2)
+        area.AxisY.Maximum = ym
+        area.AxisY.Interval = Math.Round(ym / 8, 2)
+
+        EstilizarGrafico("Confinamiento NSR-10 (Ash y L0) — Columnas", "Provisto / Requerido", "Columna", nCols)
     End Sub
 
     ' -----------------------------------------------------------------------
@@ -431,7 +597,16 @@ Public Class Form_Graficos
             Next
         End If
 
-        Form_Opciones_Combinaciones.Show()
+        ' El diálogo es compartido por todos los módulos (Columnas, Muros, Pilas,
+        ' Vigas...) y decide qué lista guardar según OpcionLlamado. Debe fijarse
+        ' aquí explícitamente y mostrarse modal: de lo contrario, si antes se
+        ' abrió el diálogo desde otro módulo, "Guardar" sobrescribiría la lista
+        ' equivocada (el diálogo conserva el valor de la última vez que se usó).
+        Form_Opciones_Combinaciones.OpcionLlamado = "Columna"
+        If Form_Opciones_Combinaciones.ShowDialog() = DialogResult.OK Then
+            ' Refrescar el gráfico de ALR con la nueva selección de combinaciones
+            Boton_ALR_Click(sender, e)
+        End If
     End Sub
 
 End Class
