@@ -440,6 +440,9 @@
     <Compile Include="Formularios\Form_Reporte_Proyecto_Completo.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Form_Reporte_Revision.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Form_Reporte_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -626,6 +629,8 @@
     <Compile Include="Funciones\Logger.vb" />
     <Compile Include="Funciones\Funciones_02_Columnas.vb" />
     <Compile Include="Funciones\Funciones_Muros.vb" />
+    <Compile Include="Funciones\ReporteRevisionService.vb" />
+    <Compile Include="Funciones\ReporteRevisionWordHelpers.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
     <Compile Include="Funciones\Funciones_Zapatas.vb" />
     <Compile Include="Funciones\ReporteInicial.vb" />
@@ -946,6 +951,7 @@
     <None Include="Resources\ARCO_ICONOVERDE.ico" />
     <None Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_LOGOVerde.png" />
+    <None Include="Resources\PlantillaReporteRevision.docx" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Clases\Vigas\" />
