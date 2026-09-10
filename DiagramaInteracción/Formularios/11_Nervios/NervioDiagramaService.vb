@@ -33,11 +33,14 @@ Public Class NervioDiagramaService
     Public Sub DibujarDiagramaMomento(nervio As cNervio, pictureBox As PictureBox,
                                        combosDiseno As HashSet(Of String),
                                        Optional mostrarCapacidad As Boolean = False)
-        ' Mu_Neg_I/D son magnitudes de momento NEGATIVO (hogging) por definición
-        ' (NervioService.CalcularEnvolventesNervios) — el signo siempre es negativo.
+        ' Convención estructural: M+ hacia abajo (tensión en fibra inferior),
+        ' M- hacia arriba (tensión en fibra superior). invertirY=True invierte el eje Y.
+        ' Mu_Neg_I/D son magnitudes positivas → con signoFijo=-1 → valor negativo
+        ' → con eje invertido queda arriba (M- arriba ✓).
         Dibujar(nervio, pictureBox, combosDiseno, Function(c) c.Momentos,
                 Function(fn) fn.Mu_Neg_I, Function(fn) fn.Mu_Neg_D, "kN·m", signoFijo:=-1,
-                nervioCapacidad:=If(mostrarCapacidad, nervio, Nothing))
+                nervioCapacidad:=If(mostrarCapacidad, nervio, Nothing),
+                invertirY:=True)
     End Sub
 
     Public Sub DibujarDiagramaCortante(nervio As cNervio, pictureBox As PictureBox, combosDiseno As HashSet(Of String))
@@ -56,7 +59,8 @@ Public Class NervioDiagramaService
                          unidad As String,
                          signoFijo As Integer,
                          Optional nervioCapacidad As cNervio = Nothing,
-                         Optional nervioVnCapacidad As cNervio = Nothing)
+                         Optional nervioVnCapacidad As cNervio = Nothing,
+                         Optional invertirY As Boolean = False)
 
         If pictureBox.Width <= 0 OrElse pictureBox.Height <= 0 Then Return
 
@@ -157,7 +161,10 @@ Public Class NervioDiagramaService
             Dim yZero As Single = pictureBox.Height / 2.0F
 
             Dim TransformX = Function(x As Double) CSng(margin + x * scaleX)
-            Dim TransformY = Function(y As Double) CSng(yZero - y * scaleY)
+            ' invertirY=True: M+ hacia abajo, M- hacia arriba (convención estructural)
+            Dim TransformY = If(Not invertirY,
+                                Function(y As Double) CSng(yZero - y * scaleY),
+                                Function(y As Double) CSng(yZero + y * scaleY))
 
             ' ── Eje cero ──
             Using penZero As New Pen(Color.FromArgb(120, 120, 120), 1) With {.DashStyle = DashStyle.Dash}
@@ -212,21 +219,25 @@ Public Class NervioDiagramaService
                     Dim xMid = xOff + L / 2.0
 
                     ' Zonas con C/D < 0.9 — relleno rojo translúcido
+                    ' Math.Min/Max hace el rect correcto independientemente de la orientación del eje Y
                     Using brFail As New SolidBrush(Color.FromArgb(45, 220, 0, 0))
                         If fn.CD_Flex_Sup_I > 0 AndAlso fn.CD_Flex_Sup_I < 0.9 AndAlso fn.PhiMn_Sup_I > 0 Then
                             Dim x1 = TransformX(xOff) : Dim x2 = TransformX(xMid)
-                            Dim yT = yZero : Dim yB = TransformY(-fn.PhiMn_Sup_I)
-                            If yB > yT Then g.FillRectangle(brFail, x1, yT, x2 - x1, yB - yT)
+                            Dim yA = Math.Min(yZero, TransformY(-fn.PhiMn_Sup_I))
+                            Dim yB = Math.Max(yZero, TransformY(-fn.PhiMn_Sup_I))
+                            g.FillRectangle(brFail, x1, yA, x2 - x1, yB - yA)
                         End If
                         If fn.CD_Flex_Inf_C > 0 AndAlso fn.CD_Flex_Inf_C < 0.9 AndAlso fn.PhiMn_Inf_C > 0 Then
                             Dim x1 = TransformX(xOff + L * 0.25) : Dim x2 = TransformX(xOff + L * 0.75)
-                            Dim yT = TransformY(fn.PhiMn_Inf_C) : Dim yB = yZero
-                            If yB > yT Then g.FillRectangle(brFail, x1, yT, x2 - x1, yB - yT)
+                            Dim yA = Math.Min(yZero, TransformY(fn.PhiMn_Inf_C))
+                            Dim yB = Math.Max(yZero, TransformY(fn.PhiMn_Inf_C))
+                            g.FillRectangle(brFail, x1, yA, x2 - x1, yB - yA)
                         End If
                         If fn.CD_Flex_Sup_D > 0 AndAlso fn.CD_Flex_Sup_D < 0.9 AndAlso fn.PhiMn_Sup_D > 0 Then
                             Dim x1 = TransformX(xMid) : Dim x2 = TransformX(xOff + L)
-                            Dim yT = yZero : Dim yB = TransformY(-fn.PhiMn_Sup_D)
-                            If yB > yT Then g.FillRectangle(brFail, x1, yT, x2 - x1, yB - yT)
+                            Dim yA = Math.Min(yZero, TransformY(-fn.PhiMn_Sup_D))
+                            Dim yB = Math.Max(yZero, TransformY(-fn.PhiMn_Sup_D))
+                            g.FillRectangle(brFail, x1, yA, x2 - x1, yB - yA)
                         End If
                     End Using
 
@@ -285,17 +296,21 @@ Public Class NervioDiagramaService
                     Using brFail As New SolidBrush(Color.FromArgb(45, 220, 0, 0))
                         If fn.CD_Cortante_I > 0 AndAlso fn.CD_Cortante_I < 0.9 AndAlso fn.PhiVn_I > 0 Then
                             Dim x1 = TransformX(xOff) : Dim x2 = TransformX(xMid)
-                            Dim yTp = TransformY(fn.PhiVn_I) : Dim yBp = yZero
-                            If yBp > yTp Then g.FillRectangle(brFail, x1, yTp, x2 - x1, yBp - yTp)
-                            Dim yTn = yZero : Dim yBn = TransformY(-fn.PhiVn_I)
-                            If yBn > yTn Then g.FillRectangle(brFail, x1, yTn, x2 - x1, yBn - yTn)
+                            Dim yAp = Math.Min(yZero, TransformY(fn.PhiVn_I))
+                            Dim yBp = Math.Max(yZero, TransformY(fn.PhiVn_I))
+                            g.FillRectangle(brFail, x1, yAp, x2 - x1, yBp - yAp)
+                            Dim yAn = Math.Min(yZero, TransformY(-fn.PhiVn_I))
+                            Dim yBn = Math.Max(yZero, TransformY(-fn.PhiVn_I))
+                            g.FillRectangle(brFail, x1, yAn, x2 - x1, yBn - yAn)
                         End If
                         If fn.CD_Cortante_D > 0 AndAlso fn.CD_Cortante_D < 0.9 AndAlso fn.PhiVn_D > 0 Then
                             Dim x1 = TransformX(xMid) : Dim x2 = TransformX(xOff + L)
-                            Dim yTp = TransformY(fn.PhiVn_D) : Dim yBp = yZero
-                            If yBp > yTp Then g.FillRectangle(brFail, x1, yTp, x2 - x1, yBp - yTp)
-                            Dim yTn = yZero : Dim yBn = TransformY(-fn.PhiVn_D)
-                            If yBn > yTn Then g.FillRectangle(brFail, x1, yTn, x2 - x1, yBn - yTn)
+                            Dim yAp = Math.Min(yZero, TransformY(fn.PhiVn_D))
+                            Dim yBp = Math.Max(yZero, TransformY(fn.PhiVn_D))
+                            g.FillRectangle(brFail, x1, yAp, x2 - x1, yBp - yAp)
+                            Dim yAn = Math.Min(yZero, TransformY(-fn.PhiVn_D))
+                            Dim yBn = Math.Max(yZero, TransformY(-fn.PhiVn_D))
+                            g.FillRectangle(brFail, x1, yAn, x2 - x1, yBn - yAn)
                         End If
                     End Using
 

@@ -17,6 +17,11 @@ Public Class cNervios
     <OptionalField> Public GruposManual As New List(Of List(Of String))()
     <OptionalField> Public BeamForces As New List(Of cCombinacionBeamForce)()
 
+    ' Joints y Frames propios del módulo Nervios — se leen del Excel importado en este módulo,
+    ' independientes de los que puedan tener Vigas/Columnas/Muros en Proyecto.Elementos.
+    <OptionalField> Public Joints As New List(Of cJoint)()
+    <OptionalField> Public Frames As New List(Of cFrame)()
+
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
         If Elementos Is Nothing Then Elementos = New List(Of cNervio)()
@@ -26,6 +31,8 @@ Public Class cNervios
         If Propiedades_Secciones Is Nothing Then Propiedades_Secciones = New Dictionary(Of String, PropSeccionNervio)(StringComparer.OrdinalIgnoreCase)
         If GruposManual Is Nothing Then GruposManual = New List(Of List(Of String))()
         If BeamForces Is Nothing Then BeamForces = New List(Of cCombinacionBeamForce)()
+        If Joints Is Nothing Then Joints = New List(Of cJoint)()
+        If Frames Is Nothing Then Frames = New List(Of cFrame)()
     End Sub
 
 End Class

@@ -239,7 +239,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.MenuDocumentacion.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.MenuDocumentacion.ForeColor = System.Drawing.Color.White
         Me.MenuDocumentacion.Name = "MenuDocumentacion"
-        Me.MenuDocumentacion.Size = New System.Drawing.Size(220, 30)
+        Me.MenuDocumentacion.Size = New System.Drawing.Size(284, 30)
         Me.MenuDocumentacion.Text = "Documentacion ARCO"
         '
         'ToolStripMenuItem1
@@ -248,7 +248,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem1.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem1.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
-        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(220, 30)
+        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(284, 30)
         Me.ToolStripMenuItem1.Text = "Ayuda"
         '
         'ToolStripMenuItem2
@@ -257,7 +257,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem2.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem2.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem2.Name = "ToolStripMenuItem2"
-        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(220, 30)
+        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(284, 30)
         Me.ToolStripMenuItem2.Text = "Soporte"
         '
         'ToolStripMenuItem3
@@ -266,7 +266,7 @@ Partial Class Form_00_PaginaPrincipal
         Me.ToolStripMenuItem3.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.ToolStripMenuItem3.ForeColor = System.Drawing.Color.White
         Me.ToolStripMenuItem3.Name = "ToolStripMenuItem3"
-        Me.ToolStripMenuItem3.Size = New System.Drawing.Size(220, 30)
+        Me.ToolStripMenuItem3.Size = New System.Drawing.Size(284, 30)
         Me.ToolStripMenuItem3.Text = "Acerca"
         '
         'ArchivoToolStripMenuItem
@@ -481,7 +481,6 @@ Partial Class Form_00_PaginaPrincipal
         Me.BtnNervios.Text = "         NERVIOS"
         Me.BtnNervios.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         Me.BtnNervios.UseVisualStyleBackColor = True
-        Me.BtnNervios.Visible = False
         '
         'Button2
         '

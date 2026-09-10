@@ -233,6 +233,63 @@ Public Class NervioService
     End Function
 
     ' ──────────────────────────────────────────────────────────────────────────
+    '  AGRUPACIONES MANUALES: reaplicar grupos definidos por el usuario
+    '  Misma lógica que VigaService.AplicarGruposManual — reagrupa los cFrameNervio
+    '  que corresponden a los labels del grupo en un único cNervio.
+    ' ──────────────────────────────────────────────────────────────────────────
+    Public Sub AplicarGruposManual(nervios As List(Of cNervio),
+                                    gruposManual As List(Of List(Of String)),
+                                    todosFrames As List(Of cFrame),
+                                    joints As Dictionary(Of String, cJoint))
+
+        If gruposManual Is Nothing OrElse gruposManual.Count = 0 Then Return
+
+        For Each grupo In gruposManual
+            If grupo Is Nothing OrElse grupo.Count = 0 Then Continue For
+
+            Dim setLabels As New HashSet(Of String)(grupo, StringComparer.OrdinalIgnoreCase)
+
+            ' Verificar si ya existe un nervio con exactamente esos frames
+            Dim existente = nervios.FirstOrDefault(
+                Function(n) setLabels.SetEquals(n.Frames.Select(Function(f) f.ObjectLabel)))
+            If existente IsNot Nothing Then Continue For
+
+            ' Extraer frames de sus nervios originales
+            Dim fnGrupo As New List(Of cFrameNervio)()
+            Dim pisoGrupo As String = Nothing
+
+            For Each label In grupo
+                Dim nervioOrigen = nervios.FirstOrDefault(
+                    Function(n) n.Frames.Any(Function(f) f.ObjectLabel.Equals(label, StringComparison.OrdinalIgnoreCase)))
+                If nervioOrigen Is Nothing Then Continue For
+
+                Dim fn = nervioOrigen.Frames.First(Function(f) f.ObjectLabel.Equals(label, StringComparison.OrdinalIgnoreCase))
+                If pisoGrupo Is Nothing Then pisoGrupo = fn.Story
+                nervioOrigen.Frames.Remove(fn)
+                fnGrupo.Add(fn)
+            Next
+
+            If fnGrupo.Count = 0 Then Continue For
+
+            ' Ordenar frames según la lista del usuario
+            Dim orden = grupo.Select(Function(l, i) (l, i)).ToDictionary(Function(x) x.l, Function(x) x.i, StringComparer.OrdinalIgnoreCase)
+            fnGrupo = fnGrupo.OrderBy(Function(f) If(orden.ContainsKey(f.ObjectLabel), orden(f.ObjectLabel), 999)).ToList()
+
+            ' Crear o reusar nervio
+            Dim nuevo As New cNervio With {
+                .Nombre = $"NR-M{nervios.Count + 1}",
+                .NombrePlano = $"NR-M{nervios.Count + 1}",
+                .Piso = If(pisoGrupo, "")
+            }
+            nuevo.Frames.AddRange(fnGrupo)
+            nervios.Add(nuevo)
+        Next
+
+        ' Eliminar nervios que quedaron vacíos tras la reagrupación
+        nervios.RemoveAll(Function(n) n.Frames.Count = 0)
+    End Sub
+
+    ' ──────────────────────────────────────────────────────────────────────────
     '  PASO AUTO: distancia mínima c-c entre nervios paralelos del mismo piso
     ' ──────────────────────────────────────────────────────────────────────────
     Public Function CalcularPasoNerviosAuto(nervio As cNervio,

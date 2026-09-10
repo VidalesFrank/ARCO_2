@@ -93,7 +93,11 @@ Public Class Form_11_Nervios
             Proyecto.Elementos.Nervios = New cNervios()
         End If
 
-        _joints = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
+        Dim nerv0 = Proyecto.Elementos.Nervios
+        Dim srcJoints As List(Of cJoint) = If(nerv0 IsNot Nothing AndAlso nerv0.Joints.Count > 0,
+                                               nerv0.Joints,
+                                               Proyecto.Elementos.Joints)
+        _joints = srcJoints.ToDictionary(Function(j) j.ElementLabel)
 
         _cargando = True
         RefrescarListaPisos()
@@ -177,33 +181,27 @@ Public Class Form_11_Nervios
 
             Dim hojas = ObtenerHojasExcel(ruta)
 
-            ' Bootstrap del modelo base (Joints/Frames/Secciones) si aún no se ha
-            ' cargado desde otro módulo (Vigas/Columnas/Muros). Sin esto, Frames
-            ' queda vacío y el diálogo de selección de secciones no muestra nada.
-            If Proyecto.Elementos.Frames.Count = 0 Then
-                Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
-                Dim hFrames = ResolverNombreHoja(hojas, "Objects and Elements - Frames", "Connectivity - Frame")
-                Proyecto.TablasEtabs.TablaOEJoints = LeerHojaExcel(ruta, hJoints)
-                Proyecto.TablasEtabs.TablaOEFrames = LeerHojaExcel(ruta, hFrames)
-
-                Proyecto.Elementos.Joints = DataTableToJoints(Proyecto.TablasEtabs.TablaOEJoints)
-                Proyecto.Elementos.Frames = DataTableToFrames(Proyecto.TablasEtabs.TablaOEFrames)
-
-                Dim hAsigFrame = ResolverNombreHoja(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
-                Dim hSecDef = ResolverNombreHoja(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
-                Dim hMaterial = ResolverNombreHoja(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
-
-                Dim Data_Asig_Frame As DataTable = LeerHojaExcel(ruta, hAsigFrame)
-                Dim Data_Frame_Section As DataTable = LeerHojaExcel(ruta, hSecDef)
-                Dim Data_Material_Concrete As DataTable = LeerHojaExcel(ruta, hMaterial)
-
-                DataTableToAsignFrame(Proyecto.Elementos.Frames, Data_Asig_Frame, Data_Frame_Section, Data_Material_Concrete)
-
-                _joints = Proyecto.Elementos.Joints.ToDictionary(Function(j) j.ElementLabel)
-            End If
-
             Dim nerv = Proyecto.Elementos.Nervios
-            Dim todosFrames = Proyecto.Elementos.Frames
+
+            ' Leer joints y frames PROPIOS de Nervios desde el Excel importado,
+            ' sin depender de lo que cargaron Vigas u otros módulos.
+            Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
+            Dim hFrames = ResolverNombreHoja(hojas, "Objects and Elements - Frames", "Connectivity - Frame")
+            nerv.Joints = DataTableToJoints(LeerHojaExcel(ruta, hJoints))
+            nerv.Frames = DataTableToFrames(LeerHojaExcel(ruta, hFrames))
+
+            Dim hAsigFrame = ResolverNombreHoja(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
+            Dim hSecDef = ResolverNombreHoja(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
+            Dim hMaterial = ResolverNombreHoja(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
+
+            DataTableToAsignFrame(nerv.Frames,
+                                  LeerHojaExcel(ruta, hAsigFrame),
+                                  LeerHojaExcel(ruta, hSecDef),
+                                  LeerHojaExcel(ruta, hMaterial))
+
+            _joints = nerv.Joints.ToDictionary(Function(j) j.ElementLabel)
+
+            Dim todosFrames = nerv.Frames
 
             ' Selección de secciones nervio
             Dim resultado As New List(Of String)
@@ -238,6 +236,11 @@ Public Class Form_11_Nervios
 
             ' Auto-agrupar nervios
             nerv.Elementos = _svc.GenerarNerviosAuto(framesNervio, _joints)
+
+            ' Aplicar agrupaciones manuales previas (si el usuario las había definido)
+            If nerv.GruposManual.Count > 0 Then
+                _svc.AplicarGruposManual(nerv.Elementos, nerv.GruposManual, nerv.Frames, _joints)
+            End If
 
             ' Detectar apoyos
             _svc.DetectarApoyos(nerv.Elementos, todosFrames, _joints, secNervioSet)
@@ -438,6 +441,7 @@ Public Class Form_11_Nervios
                                 nervio.NombrePlano, nervio.Nombre)
 
         ActualizarCmbTipoNervio(nervio)
+        ActualizarInfoGrupo(nervio)
 
         ' Sync Tabla_Nervios selection without triggering its handler
         _cargando = True
@@ -559,12 +563,20 @@ Public Class Form_11_Nervios
             Tabla_Demandas.Rows(rowIdx).HeaderCell.Value = lbl
         Next
 
-        ' Solo Es T / Eje Izq / Eje Der son editables; el resto son valores calculados/importados
-        For row As Integer = FILA_BW To FILA_VUD
+        ' BW, H, L, Mu/Vu → solo lectura (vienen de ETABS)
+        ' B_Apoyo_I y B_Apoyo_D → editables para corrección manual cuando la auto-detección falla
+        ' Es T / Eje Izq / Eje Der → editables por diseño
+        Dim filasLectura = {FILA_BW, FILA_H, FILA_L, FILA_MUI, FILA_MUC, FILA_MUD, FILA_VUI, FILA_VUD}
+        For Each row In filasLectura
             For col As Integer = 0 To Tabla_Demandas.Columns.Count - 1
                 Tabla_Demandas.Rows(row).Cells(col).Style.BackColor = Color.FromArgb(240, 240, 240)
                 Tabla_Demandas.Rows(row).Cells(col).ReadOnly = True
             Next
+        Next
+        ' Marcar b_apoyo como editables con fondo amarillo suave (indican corrección manual posible)
+        For col As Integer = 0 To Tabla_Demandas.Columns.Count - 1
+            Tabla_Demandas.Rows(FILA_BAPO_I).Cells(col).Style.BackColor = Color.FromArgb(255, 250, 210)
+            Tabla_Demandas.Rows(FILA_BAPO_D).Cells(col).Style.BackColor = Color.FromArgb(255, 250, 210)
         Next
     End Sub
 
@@ -653,17 +665,62 @@ Public Class Form_11_Nervios
         Ref_Cortante.Rows(FILA_COR_SEP).Cells(col).Value = If(zona IsNot Nothing AndAlso zona.Separacion > 0, zona.Separacion, 0.15).ToString("F3")
     End Sub
 
-    ''' <summary>Resalta las celdas de calibre con cantidad > 0 (puede haber varios calibres combinados por zona).</summary>
+    ''' <summary>Resalta las celdas de calibre con cantidad > 0 — verde Excel con texto verde oscuro en bold.</summary>
     Private Sub ColorizarCeldasConValor(dgv As DataGridView, col As Integer)
         For row As Integer = 0 To BarSizes.Length - 1
             Dim v As Integer = 0
             Integer.TryParse(dgv.Rows(row).Cells(col).Value?.ToString(), v)
             Dim esActivo = v > 0
             dgv.Rows(row).Cells(col).Style.BackColor =
-                If(esActivo, Color.FromArgb(200, 230, 255), Color.Empty)
+                If(esActivo, ColorTranslator.FromHtml("#C6EFCE"), Color.Empty)
+            dgv.Rows(row).Cells(col).Style.ForeColor =
+                If(esActivo, ColorTranslator.FromHtml("#006100"), Color.Empty)
             dgv.Rows(row).Cells(col).Style.Font =
                 If(esActivo, New Font("Segoe UI", 9, FontStyle.Bold), Nothing)
         Next
+    End Sub
+
+    ' ── Separadores de vano (igual que Vigas) ────────────────────────────────────
+    Private Sub PintarLineasCada3Columnas(sender As Object, e As DataGridViewCellPaintingEventArgs)
+        If e.RowIndex < 0 Then Return
+        e.Paint(e.CellBounds, DataGridViewPaintParts.All)
+        If (e.ColumnIndex + 1) Mod 3 = 0 Then
+            Using pen As New Pen(Color.Black, 2)
+                Dim x = e.CellBounds.Right - 1
+                e.Graphics.DrawLine(pen, x, e.CellBounds.Top, x, e.CellBounds.Bottom)
+            End Using
+        End If
+        e.Handled = True
+    End Sub
+
+    Private Sub Ref_Superior_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) _
+        Handles Ref_Superior.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Ref_Inferior_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) _
+        Handles Ref_Inferior.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Ref_Cortante_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) _
+        Handles Ref_Cortante.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Tabla_Resultados_Flexion_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) _
+        Handles Tabla_Resultados_Flexion.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Tabla_Resultados_Cortante_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) _
+        Handles Tabla_Resultados_Cortante.CellPainting
+        PintarLineasCada3Columnas(sender, e)
+    End Sub
+
+    Private Sub Tabla_Demandas_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) _
+        Handles Tabla_Demandas.CellPainting
+        ' Tabla_Demandas tiene 1 columna por tramo (no 3), no aplica separador de vano
     End Sub
 
     Private Sub LlenarDemandas()
@@ -672,16 +729,10 @@ Public Class Form_11_Nervios
             Tabla_Demandas.Rows(FILA_BW).Cells(col).Value = fn.Bw.ToString("F3")
             Tabla_Demandas.Rows(FILA_H).Cells(col).Value = fn.H.ToString("F3")
             Tabla_Demandas.Rows(FILA_L).Cells(col).Value = fn.Longitud.ToString("F2")
-            Tabla_Demandas.Rows(FILA_BAPO_I).Cells(col).Value = fn.B_Apoyo_I.ToString("F3")
-            Tabla_Demandas.Rows(FILA_BAPO_D).Cells(col).Value = fn.B_Apoyo_D.ToString("F3")
-            Tabla_Demandas.Rows(FILA_MUI).Cells(col).Value = fn.Mu_Neg_I.ToString("F2")
-            Tabla_Demandas.Rows(FILA_MUC).Cells(col).Value = fn.Mu_Pos_C.ToString("F2")
-            Tabla_Demandas.Rows(FILA_MUD).Cells(col).Value = fn.Mu_Neg_D.ToString("F2")
-            Tabla_Demandas.Rows(FILA_VUI).Cells(col).Value = fn.Vu_I.ToString("F2")
-            Tabla_Demandas.Rows(FILA_VUD).Cells(col).Value = fn.Vu_D.ToString("F2")
             Tabla_Demandas.Rows(FILA_ESECT).Cells(col).Value = If(fn.EsSeccionT, "S", "N")
             Tabla_Demandas.Rows(FILA_EJE_I).Cells(col).Value = If(String.IsNullOrWhiteSpace(fn.EjeApoyo_I), "—", fn.EjeApoyo_I)
             Tabla_Demandas.Rows(FILA_EJE_D).Cells(col).Value = If(String.IsNullOrWhiteSpace(fn.EjeApoyo_D), "—", fn.EjeApoyo_D)
+            LlenarDemandasColumna(col)
         Next
     End Sub
 
@@ -692,6 +743,30 @@ Public Class Form_11_Nervios
 
         Dim fn = _framesActuales(e.ColumnIndex)
         Select Case e.RowIndex
+            Case FILA_BAPO_I
+                Dim valI As Double = 0
+                Double.TryParse(Tabla_Demandas.Rows(FILA_BAPO_I).Cells(e.ColumnIndex).Value?.ToString(),
+                                Globalization.NumberStyles.Any,
+                                Globalization.CultureInfo.InvariantCulture, valI)
+                fn.B_Apoyo_I = Math.Max(0, valI)
+                RecalcularDemandas(fn)
+                _cargando = True
+                LlenarDemandasColumna(e.ColumnIndex)
+                LlenarResultadosColumna(e.ColumnIndex)
+                _cargando = False
+
+            Case FILA_BAPO_D
+                Dim valD As Double = 0
+                Double.TryParse(Tabla_Demandas.Rows(FILA_BAPO_D).Cells(e.ColumnIndex).Value?.ToString(),
+                                Globalization.NumberStyles.Any,
+                                Globalization.CultureInfo.InvariantCulture, valD)
+                fn.B_Apoyo_D = Math.Max(0, valD)
+                RecalcularDemandas(fn)
+                _cargando = True
+                LlenarDemandasColumna(e.ColumnIndex)
+                LlenarResultadosColumna(e.ColumnIndex)
+                _cargando = False
+
             Case FILA_ESECT
                 Dim v = Tabla_Demandas.Rows(FILA_ESECT).Cells(e.ColumnIndex).Value?.ToString().ToUpperInvariant()
                 fn.EsSeccionT = (v = "S" OrElse v = "SI" OrElse v = "Y" OrElse v = "TRUE")
@@ -850,6 +925,54 @@ Public Class Form_11_Nervios
         LlenarResultadosColumna(fi)
         _cargando = False
         DibujarPlanta()
+    End Sub
+
+    ''' <summary>
+    ''' Re-interpola las fuerzas en cara de apoyo para el frame dado usando los
+    ''' B_Apoyo_I/D actuales y actualiza las demandas Mu/Vu del frame.
+    ''' Se llama cuando el usuario edita manualmente b_apoyo en la tabla.
+    ''' </summary>
+    Private Sub RecalcularDemandas(fn As cFrameNervio)
+        Dim nerv = Proyecto.Elementos.Nervios
+        Dim combosSet As New HashSet(Of String)(
+            nerv.ListA_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)))
+
+        ' Re-interpolar fuerzas en cara para cada combo de este frame
+        For Each combo In fn.Combinaciones
+            If Not combosSet.Contains(combo.Nombre) Then Continue For
+            _svc.CalcularFuerzasCaraApoyo(combo, fn.B_Apoyo_I, fn.B_Apoyo_D)
+        Next
+
+        ' Recalcular demandas máximas
+        Dim combosDiseno = fn.Combinaciones.Where(Function(c) combosSet.Contains(c.Nombre)).ToList()
+        If combosDiseno.Count > 0 Then
+            fn.Mu_Neg_I = combosDiseno.Max(Function(c) Math.Abs(Math.Min(c.M_Cara_I, 0)))
+            fn.Mu_Pos_C = combosDiseno.Max(Function(c) c.M_Max_Pos)
+            fn.Mu_Neg_D = combosDiseno.Max(Function(c) Math.Abs(Math.Min(c.M_Cara_D, 0)))
+            fn.Vu_I = combosDiseno.Max(Function(c) Math.Abs(c.V_Cara_I))
+            fn.Vu_D = combosDiseno.Max(Function(c) Math.Abs(c.V_Cara_D))
+        End If
+
+        ' Recalcular capacidad con las nuevas demandas
+        RecalcularFrame(fn)
+    End Sub
+
+    ''' <summary>Actualiza solo las filas de demandas Mu/Vu/b_apoyo en la columna indicada.</summary>
+    Private Sub LlenarDemandasColumna(col As Integer)
+        If col >= _framesActuales.Count Then Return
+        Dim fn = _framesActuales(col)
+        Tabla_Demandas.Rows(FILA_BAPO_I).Cells(col).Value = fn.B_Apoyo_I.ToString("F3")
+        Tabla_Demandas.Rows(FILA_BAPO_D).Cells(col).Value = fn.B_Apoyo_D.ToString("F3")
+        Tabla_Demandas.Rows(FILA_MUI).Cells(col).Value = fn.Mu_Neg_I.ToString("F2")
+        Tabla_Demandas.Rows(FILA_MUC).Cells(col).Value = fn.Mu_Pos_C.ToString("F2")
+        Tabla_Demandas.Rows(FILA_MUD).Cells(col).Value = fn.Mu_Neg_D.ToString("F2")
+        Tabla_Demandas.Rows(FILA_VUI).Cells(col).Value = fn.Vu_I.ToString("F2")
+        Tabla_Demandas.Rows(FILA_VUD).Cells(col).Value = fn.Vu_D.ToString("F2")
+        ' Colorear b_apoyo: naranja si está en 0 (posible fallo de detección)
+        Dim colorI = If(fn.B_Apoyo_I < 0.001, Color.FromArgb(255, 220, 180), Color.FromArgb(255, 250, 210))
+        Dim colorD = If(fn.B_Apoyo_D < 0.001, Color.FromArgb(255, 220, 180), Color.FromArgb(255, 250, 210))
+        Tabla_Demandas.Rows(FILA_BAPO_I).Cells(col).Style.BackColor = colorI
+        Tabla_Demandas.Rows(FILA_BAPO_D).Cells(col).Style.BackColor = colorD
     End Sub
 
     Private Sub RecalcularFrame(fn As cFrameNervio)
@@ -1170,8 +1293,8 @@ Public Class Form_11_Nervios
         Dim Tx = Function(x As Double) CSng(margen + (x - xMin) * esc)
         Dim Ty = Function(y As Double) CSng(sz.Height - margen - (y - yMin) * esc)
 
-        ' Fondo de estructura
-        Dim framesTodos = Proyecto.Elementos.Frames _
+        ' Fondo de estructura (frames del modelo propio de Nervios)
+        Dim framesTodos = Proyecto.Elementos.Nervios.Frames _
             .Where(Function(f) nervios.Any(Function(n) n.Piso = f.Story)).ToList()
         Using penFondo As New Pen(Color.FromArgb(210, 210, 210), 1)
             For Each f In framesTodos
@@ -1561,6 +1684,64 @@ Public Class Form_11_Nervios
     '  SISTEMA PATRÓN / SIMILAR
     ' ══════════════════════════════════════════════════════════════════════════
 
+    ''' <summary>Actualiza LblInfoGrupo con el resumen del grupo y el tramo más solicitado.</summary>
+    Private Sub ActualizarInfoGrupo(nervio As cNervio)
+        If nervio Is Nothing Then
+            LblInfoGrupo.Text = ""
+            Return
+        End If
+
+        Dim nerv = Proyecto.Elementos.Nervios
+
+        If nervio.EsPatron Then
+            Dim similares = nerv.Elementos.Where(
+                Function(n) Not String.IsNullOrEmpty(n.PatronRef) AndAlso
+                            n.PatronRef.Equals(nervio.Nombre, StringComparison.OrdinalIgnoreCase)).ToList()
+
+            ' Buscar tramo más solicitado en todo el grupo (Patrón + Similares)
+            Dim grupo = similares.Concat({nervio}).ToList()
+            Dim gobernante As (Frame As cFrameNervio, Nervio As cNervio) = Nothing
+            Dim cdMin As Double = 99.0
+
+            For Each ng In grupo
+                For Each fn In ng.Frames
+                    If Not fn.Ref_Modificado Then Continue For
+                    Dim vals As New List(Of Double)()
+                    If fn.Mu_Neg_I > 0.001 Then vals.Add(fn.CD_Flex_Sup_I)
+                    If fn.Mu_Pos_C > 0.001 Then vals.Add(fn.CD_Flex_Inf_C)
+                    If fn.Mu_Neg_D > 0.001 Then vals.Add(fn.CD_Flex_Sup_D)
+                    If fn.Vu_I > 0.001 Then vals.Add(fn.CD_Cortante_I)
+                    If fn.Vu_D > 0.001 Then vals.Add(fn.CD_Cortante_D)
+                    If vals.Count = 0 Then Continue For
+                    Dim cdFrame = vals.Min()
+                    If cdFrame < cdMin Then
+                        cdMin = cdFrame
+                        gobernante = (fn, ng)
+                    End If
+                Next
+            Next
+
+            Dim nSim = similares.Count
+            If gobernante.Frame IsNot Nothing Then
+                Dim icon = If(cdMin >= 1.0, "✓", If(cdMin >= 0.9, "⚠", "✗"))
+                LblInfoGrupo.Text = $"★ Patrón · {nSim} sim. · {icon} Crit: [{gobernante.Frame.ObjectLabel}] C/D={cdMin:F2}"
+                LblInfoGrupo.ForeColor = If(cdMin >= 1.0,
+                    Color.FromArgb(100, 255, 150),
+                    If(cdMin >= 0.9, Color.FromArgb(255, 220, 100), Color.FromArgb(255, 120, 100)))
+            Else
+                LblInfoGrupo.Text = $"★ Patrón · {nSim} similares"
+                LblInfoGrupo.ForeColor = Color.FromArgb(200, 200, 200)
+            End If
+
+        ElseIf Not String.IsNullOrEmpty(nervio.PatronRef) Then
+            LblInfoGrupo.Text = $"Similar de: {nervio.PatronRef}"
+            LblInfoGrupo.ForeColor = Color.FromArgb(180, 200, 255)
+        Else
+            LblInfoGrupo.Text = "— Independiente —"
+            LblInfoGrupo.ForeColor = Color.FromArgb(160, 160, 160)
+        End If
+    End Sub
+
     Private Sub ActualizarCmbTipoNervio(nervio As cNervio)
         _cargando = True
         CmbTipoNervio.Items.Clear()
@@ -1611,6 +1792,117 @@ Public Class Form_11_Nervios
         End If
 
         LlenarTablaNervios()
+    End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  REAGRUPACIÓN MANUAL DE FRAMES
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    Private Sub BtnReagrupar_Click(sender As Object, e As EventArgs) Handles BtnReagrupar.Click
+        If _nervioActual Is Nothing Then
+            MessageBox.Show("Seleccione un nervio primero.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim nerv = Proyecto.Elementos.Nervios
+        If nerv.Frames.Count = 0 Then
+            MessageBox.Show("Primero importe las demandas ETABS.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ' Frames del mismo piso según el modelo propio de Nervios
+        Dim pisoSel = _nervioActual.Piso
+        Dim framesPiso = nerv.Frames.Where(Function(f) f.Story = pisoSel).ToList()
+
+        ' Frames ocupados en OTROS nervios del mismo piso
+        Dim framesOcupados As New HashSet(Of String)(
+            nerv.Elementos.Where(Function(n) n.Piso = pisoSel AndAlso Not ReferenceEquals(n, _nervioActual)) _
+                          .SelectMany(Function(n) n.Frames.Select(Function(f) f.ObjectLabel)),
+            StringComparer.OrdinalIgnoreCase)
+
+        ' Buscar objetos cFrame para los frames del nervio actual
+        Dim framesEnNervio As New List(Of cFrame)()
+        For Each fn In _nervioActual.Frames
+            Dim cf = nerv.Frames.FirstOrDefault(Function(f) f.ObjectLabel.Equals(fn.ObjectLabel, StringComparison.OrdinalIgnoreCase))
+            If cf IsNot Nothing Then framesEnNervio.Add(cf)
+        Next
+
+        Using dlg As New Form_AgrupacionManualNervios(
+                If(Not String.IsNullOrWhiteSpace(_nervioActual.NombrePlano), _nervioActual.NombrePlano, _nervioActual.Nombre),
+                framesEnNervio, framesPiso, framesOcupados)
+
+            If dlg.ShowDialog(Me) <> DialogResult.OK Then Return
+
+            Dim labelsResultantes = dlg.FramesResultantes
+            If labelsResultantes.Count = 0 Then Return
+
+            ' Registrar agrupación manual para persistencia (se reaplica en recalcular)
+            Dim gruposManual = nerv.GruposManual
+            ' Remover entrada anterior de este nervio
+            gruposManual.RemoveAll(Function(g) g.Count > 0 AndAlso
+                _nervioActual.Frames.Any(Function(f) g.Contains(f.ObjectLabel, StringComparer.OrdinalIgnoreCase)))
+            gruposManual.Add(labelsResultantes)
+
+            ' Aplicar inmediatamente: rearmar los cFrameNervio del nervio actual
+            AplicarReagrupacionInmediata(_nervioActual, labelsResultantes, nerv)
+
+            _framesActuales = _nervioActual.Frames
+            _cargando = True
+            LlenarTablaFrames(_nervioActual)
+            ConstruirTablas()
+            LlenarTablas()
+            _cargando = False
+            DibujarPlanta()
+
+            MessageBox.Show($"Nervio reagrupado: {_nervioActual.Frames.Count} frames.", "Listo",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End Using
+    End Sub
+
+    ''' <summary>
+    ''' Reasigna los cFrameNervio del nervio activo según los labels seleccionados.
+    ''' Frames que se mueven desde otros nervios del mismo piso se trasladan a este.
+    ''' Frames que se quitan de este nervio se crean como nervio nuevo (1 frame).
+    ''' </summary>
+    Private Sub AplicarReagrupacionInmediata(nervio As cNervio, labelsDestino As List(Of String), nerv As cNervios)
+        Dim pisoSel = nervio.Piso
+        Dim setDestino As New HashSet(Of String)(labelsDestino, StringComparer.OrdinalIgnoreCase)
+        Dim setActual As New HashSet(Of String)(nervio.Frames.Select(Function(f) f.ObjectLabel), StringComparer.OrdinalIgnoreCase)
+
+        ' Frames que salen de este nervio → crear nervio individual por cada uno
+        Dim salen = nervio.Frames.Where(Function(f) Not setDestino.Contains(f.ObjectLabel)).ToList()
+        For Each fn In salen
+            nervio.Frames.Remove(fn)
+            ' Crear nervio individual para el frame huérfano
+            Dim contador = nerv.Elementos.Count + 1
+            Dim nuevoNervio As New cNervio With {
+                .Nombre = $"NR-{contador}",
+                .NombrePlano = $"NR-{contador}",
+                .Piso = pisoSel,
+                .Tf_Losa = nervio.Tf_Losa,
+                .Paso_Nervios = nervio.Paso_Nervios
+            }
+            nuevoNervio.Frames.Add(fn)
+            nerv.Elementos.Add(nuevoNervio)
+        Next
+
+        ' Frames que entran de otros nervios → moverlos aquí
+        For Each label In labelsDestino
+            If setActual.Contains(label) Then Continue For  ' Ya estaba en este nervio
+            ' Buscar el frame en otro nervio del mismo piso
+            Dim donante = nerv.Elementos.FirstOrDefault(
+                Function(n) n.Piso = pisoSel AndAlso Not ReferenceEquals(n, nervio) AndAlso
+                            n.Frames.Any(Function(f) f.ObjectLabel.Equals(label, StringComparison.OrdinalIgnoreCase)))
+            If donante Is Nothing Then Continue For
+            Dim fn = donante.Frames.First(Function(f) f.ObjectLabel.Equals(label, StringComparison.OrdinalIgnoreCase))
+            donante.Frames.Remove(fn)
+            nervio.Frames.Add(fn)
+            ' Si el donante quedó vacío, eliminarlo
+            If donante.Frames.Count = 0 Then nerv.Elementos.Remove(donante)
+        Next
+
+        ' Reordenar frames del nervio según el orden especificado por el usuario
+        Dim orden = labelsDestino.Select(Function(l, i) (Label := l, Idx := i)).ToDictionary(Function(x) x.Label, Function(x) x.Idx, StringComparer.OrdinalIgnoreCase)
+        nervio.Frames = nervio.Frames.OrderBy(Function(f) If(orden.ContainsKey(f.ObjectLabel), orden(f.ObjectLabel), 999)).ToList()
     End Sub
 
     Private Sub BtnPropagar_Click(sender As Object, e As EventArgs) Handles BtnPropagar.Click

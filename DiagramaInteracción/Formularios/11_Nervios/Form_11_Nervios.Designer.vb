@@ -93,6 +93,7 @@ Partial Class Form_11_Nervios
         Me.Tabla_Nervios = New System.Windows.Forms.DataGridView()
         Me.GbTablaFrames = New System.Windows.Forms.GroupBox()
         Me.Tabla_Frames_Nervio = New System.Windows.Forms.DataGridView()
+        Me.BtnReagrupar = New System.Windows.Forms.Button()
 
         Me.MenuStrip1.SuspendLayout()
         Me.Panel3.SuspendLayout()
@@ -156,6 +157,9 @@ Partial Class Form_11_Nervios
         Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
         Me.MenuStrip1.Name = "MenuStrip1"
         Me.MenuStrip1.Size = New System.Drawing.Size(1200, 24)
+        Me.MenuStrip1.BackColor = System.Drawing.Color.FromArgb(87, 87, 87)
+        Me.MenuStrip1.ForeColor = System.Drawing.Color.White
+        Me.MenuStrip1.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional
 
         Me.Archivo_Zapatas.Name = "Archivo_Zapatas"
         Me.Archivo_Zapatas.Text = "Archivo"
@@ -197,8 +201,8 @@ Partial Class Form_11_Nervios
         Me.GbFiltro.Location = New System.Drawing.Point(4, 4)
         Me.GbFiltro.Size = New System.Drawing.Size(258, 56)
         Me.GbFiltro.Name = "GbFiltro"
-        Me.GbFiltro.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
-        Me.GbFiltro.BackColor = System.Drawing.Color.FromArgb(240, 240, 240)
+        Me.GbFiltro.ForeColor = System.Drawing.Color.White
+        Me.GbFiltro.BackColor = System.Drawing.Color.Transparent
         Me.Lista_Pisos.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.Lista_Pisos.Location = New System.Drawing.Point(8, 22)
         Me.Lista_Pisos.Size = New System.Drawing.Size(242, 21)
@@ -208,10 +212,10 @@ Partial Class Form_11_Nervios
         ' GroupBox Nervio selección
         Me.GbNervio.Text = "Nervio"
         Me.GbNervio.Location = New System.Drawing.Point(4, 64)
-        Me.GbNervio.Size = New System.Drawing.Size(258, 210)
+        Me.GbNervio.Size = New System.Drawing.Size(258, 240)
         Me.GbNervio.Name = "GbNervio"
-        Me.GbNervio.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
-        Me.GbNervio.BackColor = System.Drawing.Color.FromArgb(240, 240, 240)
+        Me.GbNervio.ForeColor = System.Drawing.Color.White
+        Me.GbNervio.BackColor = System.Drawing.Color.Transparent
 
         Me.Lista_Nervios.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.Lista_Nervios.Location = New System.Drawing.Point(8, 20)
@@ -221,6 +225,7 @@ Partial Class Form_11_Nervios
         Me.LblNombreNervio.AutoSize = True
         Me.LblNombreNervio.Location = New System.Drawing.Point(8, 52)
         Me.LblNombreNervio.Text = "Nombre:"
+        Me.LblNombreNervio.ForeColor = System.Drawing.Color.White
 
         Me.Nombre_Nervio.Location = New System.Drawing.Point(8, 68)
         Me.Nombre_Nervio.Size = New System.Drawing.Size(242, 21)
@@ -268,6 +273,7 @@ Partial Class Form_11_Nervios
         Me.LblTipoNervio.Location = New System.Drawing.Point(8, 163)
         Me.LblTipoNervio.Text = "Tipo nervio:"
         Me.LblTipoNervio.Name = "LblTipoNervio"
+        Me.LblTipoNervio.ForeColor = System.Drawing.Color.White
 
         Me.CmbTipoNervio.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.CmbTipoNervio.Location = New System.Drawing.Point(8, 180)
@@ -283,6 +289,15 @@ Partial Class Form_11_Nervios
         Me.BtnPropagar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.BtnPropagar.FlatAppearance.BorderSize = 0
         Me.BtnPropagar.Font = New System.Drawing.Font("Segoe UI", 8, System.Drawing.FontStyle.Bold)
+
+        ' Label info grupo (Patrón/Similar + tramo crítico)
+        Me.LblInfoGrupo = New System.Windows.Forms.Label()
+        Me.LblInfoGrupo.Location = New System.Drawing.Point(8, 208)
+        Me.LblInfoGrupo.Size = New System.Drawing.Size(242, 28)
+        Me.LblInfoGrupo.Name = "LblInfoGrupo"
+        Me.LblInfoGrupo.ForeColor = System.Drawing.Color.FromArgb(255, 220, 100)
+        Me.LblInfoGrupo.Font = New System.Drawing.Font("Segoe UI", 7.5!, System.Drawing.FontStyle.Italic)
+        Me.LblInfoGrupo.Text = ""
 
         Me.CtxRefuerzo.Items.Add(Me.CtxCopiarCol)
         Me.CtxRefuerzo.Items.Add(Me.CtxPegarCol)
@@ -301,18 +316,20 @@ Partial Class Form_11_Nervios
         Me.GbNervio.Controls.Add(Me.LblTipoNervio)
         Me.GbNervio.Controls.Add(Me.CmbTipoNervio)
         Me.GbNervio.Controls.Add(Me.BtnPropagar)
+        Me.GbNervio.Controls.Add(Me.LblInfoGrupo)
 
         ' GroupBox Losa
         Me.GbLosa.Text = "Losa"
-        Me.GbLosa.Location = New System.Drawing.Point(4, 278)
+        Me.GbLosa.Location = New System.Drawing.Point(4, 308)
         Me.GbLosa.Size = New System.Drawing.Size(258, 58)
         Me.GbLosa.Name = "GbLosa"
-        Me.GbLosa.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
-        Me.GbLosa.BackColor = System.Drawing.Color.FromArgb(240, 240, 240)
+        Me.GbLosa.ForeColor = System.Drawing.Color.White
+        Me.GbLosa.BackColor = System.Drawing.Color.Transparent
 
         Me.LblTf.AutoSize = True
         Me.LblTf.Location = New System.Drawing.Point(8, 26)
         Me.LblTf.Text = "Espesor tf (m):"
+        Me.LblTf.ForeColor = System.Drawing.Color.White
 
         Me.NudTf.Location = New System.Drawing.Point(130, 24)
         Me.NudTf.Size = New System.Drawing.Size(80, 22)
@@ -328,23 +345,25 @@ Partial Class Form_11_Nervios
 
         ' GroupBox opciones planta
         Me.GbPlanta.Text = "Vista planta"
-        Me.GbPlanta.Location = New System.Drawing.Point(4, 340)
+        Me.GbPlanta.Location = New System.Drawing.Point(4, 370)
         Me.GbPlanta.Size = New System.Drawing.Size(258, 104)
         Me.GbPlanta.Name = "GbPlanta"
-        Me.GbPlanta.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
-        Me.GbPlanta.BackColor = System.Drawing.Color.FromArgb(240, 240, 240)
+        Me.GbPlanta.ForeColor = System.Drawing.Color.White
+        Me.GbPlanta.BackColor = System.Drawing.Color.Transparent
 
         Me.ChkMostrarEtiquetas.AutoSize = True
         Me.ChkMostrarEtiquetas.Location = New System.Drawing.Point(8, 22)
         Me.ChkMostrarEtiquetas.Text = "Mostrar etiquetas"
         Me.ChkMostrarEtiquetas.Checked = True
         Me.ChkMostrarEtiquetas.Name = "ChkMostrarEtiquetas"
+        Me.ChkMostrarEtiquetas.ForeColor = System.Drawing.Color.White
 
         Me.ChkMostrarApoyos.AutoSize = True
         Me.ChkMostrarApoyos.Location = New System.Drawing.Point(8, 44)
         Me.ChkMostrarApoyos.Text = "Mostrar apoyos detectados"
         Me.ChkMostrarApoyos.Checked = True
         Me.ChkMostrarApoyos.Name = "ChkMostrarApoyos"
+        Me.ChkMostrarApoyos.ForeColor = System.Drawing.Color.White
 
         Me.BtnVerPlantaAmpliada.Location = New System.Drawing.Point(8, 68)
         Me.BtnVerPlantaAmpliada.Size = New System.Drawing.Size(242, 28)
@@ -443,12 +462,31 @@ Partial Class Form_11_Nervios
         Me.GbTablaFrames.Name = "GbTablaFrames"
         Me.GbTablaFrames.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
         Me.GbTablaFrames.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
+
+        ' Panel interno para dejar espacio al botón Reagrupar
+        Dim panelFrames As New System.Windows.Forms.Panel()
+        panelFrames.Dock = System.Windows.Forms.DockStyle.Fill
+
+        Me.BtnReagrupar.Text = "✎  Reagrupar frames manualmente..."
+        Me.BtnReagrupar.Name = "BtnReagrupar"
+        Me.BtnReagrupar.Dock = System.Windows.Forms.DockStyle.Bottom
+        Me.BtnReagrupar.Height = 30
+        Me.BtnReagrupar.BackColor = System.Drawing.Color.FromArgb(60, 100, 160)
+        Me.BtnReagrupar.ForeColor = System.Drawing.Color.White
+        Me.BtnReagrupar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.BtnReagrupar.FlatAppearance.BorderSize = 0
+        Me.BtnReagrupar.Font = New System.Drawing.Font("Segoe UI", 9, System.Drawing.FontStyle.Bold)
+
         ApplyDgvStyle(Me.Tabla_Frames_Nervio)
+        Me.Tabla_Frames_Nervio.Dock = System.Windows.Forms.DockStyle.Fill
         Me.Tabla_Frames_Nervio.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
         Me.Tabla_Frames_Nervio.MultiSelect = False
         Me.Tabla_Frames_Nervio.ReadOnly = True
         Me.Tabla_Frames_Nervio.Name = "Tabla_Frames_Nervio"
-        Me.GbTablaFrames.Controls.Add(Me.Tabla_Frames_Nervio)
+
+        panelFrames.Controls.Add(Me.Tabla_Frames_Nervio)
+        panelFrames.Controls.Add(Me.BtnReagrupar)
+        Me.GbTablaFrames.Controls.Add(panelFrames)
         Me.SplitNervios.Panel2.Controls.Add(Me.GbTablaFrames)
 
         Me.TabPage5.Controls.Add(Me.SplitNervios)
@@ -523,8 +561,8 @@ Partial Class Form_11_Nervios
         Me.TabPage3.Name = "TabPage3"
 
         Me.SplitRes.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.SplitRes.Orientation = System.Windows.Forms.Orientation.Vertical
-        Me.SplitRes.SplitterDistance = 250
+        Me.SplitRes.Orientation = System.Windows.Forms.Orientation.Horizontal
+        Me.SplitRes.SplitterDistance = 220
         Me.SplitRes.Name = "SplitRes"
         Me.SplitRes.SplitterWidth = 4
 
@@ -731,6 +769,7 @@ Partial Class Form_11_Nervios
     Friend WithEvents LblTipoNervio As System.Windows.Forms.Label
     Friend WithEvents CmbTipoNervio As System.Windows.Forms.ComboBox
     Friend WithEvents BtnPropagar As System.Windows.Forms.Button
+    Friend WithEvents LblInfoGrupo As System.Windows.Forms.Label
     Friend WithEvents CtxRefuerzo As System.Windows.Forms.ContextMenuStrip
     Friend WithEvents CtxCopiarCol As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents CtxPegarCol As System.Windows.Forms.ToolStripMenuItem
@@ -779,4 +818,5 @@ Partial Class Form_11_Nervios
     Friend WithEvents Tabla_Nervios As System.Windows.Forms.DataGridView
     Friend WithEvents GbTablaFrames As System.Windows.Forms.GroupBox
     Friend WithEvents Tabla_Frames_Nervio As System.Windows.Forms.DataGridView
+    Friend WithEvents BtnReagrupar As System.Windows.Forms.Button
 End Class
