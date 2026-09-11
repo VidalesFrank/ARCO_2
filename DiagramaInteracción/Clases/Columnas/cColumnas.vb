@@ -32,6 +32,10 @@ Public Class cColumnas
     ' "Estribo cerrado" → solo ρs_b = 0.08|0.12 fc/fy (sin término Ag/Ach)
     <OptionalField> Public Trans_Circular As String = "Espiral"
 
+    ' Geometría propia del módulo — snapshot del import ETABS, independiente de otros módulos
+    <OptionalField> Public Joints As New List(Of cJoint)()
+    <OptionalField> Public Frames As New List(Of cFrame)()
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         If Lista_Pisos Is Nothing Then Lista_Pisos = New List(Of String)
@@ -43,6 +47,8 @@ Public Class cColumnas
         If ListA_Combinaciones_Design Is Nothing Then ListA_Combinaciones_Design = New List(Of String)
         If Lista_Combinaciones_Cortante Is Nothing Then Lista_Combinaciones_Cortante = New List(Of String)
         If String.IsNullOrEmpty(Trans_Circular) Then Trans_Circular = "Espiral"
+        If Joints Is Nothing Then Joints = New List(Of cJoint)()
+        If Frames Is Nothing Then Frames = New List(Of cFrame)()
     End Sub
 
 End Class

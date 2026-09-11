@@ -284,6 +284,54 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuE2K.Click, AddressOf VisualizadorE2K_Click
         OpcionesToolStripMenuItem1.DropDownItems.Add(sepE2K)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuE2K)
+
+        ' Combinar módulos desde archivo — en menú Archivo antes de Salir
+        Dim sepCombinar As New ToolStripSeparator()
+        sepCombinar.BackColor = Color.FromArgb(87, 87, 86)
+        Dim mnuCombinar As New ToolStripMenuItem("Combinar módulos desde archivo...")
+        mnuCombinar.BackColor = Color.FromArgb(87, 87, 86)
+        mnuCombinar.ForeColor = Color.White
+        AddHandler mnuCombinar.Click, AddressOf CombinarModulos_Click
+        Dim idxSalir = ArchivoToolStripMenuItem1.DropDownItems.IndexOf(SalirToolStripMenuItem1)
+        If idxSalir >= 0 Then
+            ArchivoToolStripMenuItem1.DropDownItems.Insert(idxSalir, mnuCombinar)
+            ArchivoToolStripMenuItem1.DropDownItems.Insert(idxSalir, sepCombinar)
+        Else
+            ArchivoToolStripMenuItem1.DropDownItems.Add(sepCombinar)
+            ArchivoToolStripMenuItem1.DropDownItems.Add(mnuCombinar)
+        End If
+    End Sub
+
+    Private Sub CombinarModulos_Click(sender As Object, e As EventArgs)
+        Using frm As New Form_CombinarProyecto()
+            frm.ProyectoDestino = proyecto
+            If frm.ShowDialog(Me) = DialogResult.OK Then
+                SincronizarModulos()
+                _hayCambiosPP = True
+            End If
+        End Using
+    End Sub
+
+    ''' <summary>
+    ''' Copia los Joints y Frames compartidos a cada módulo justo después del import ETABS.
+    ''' Así cada módulo lleva su propia geometría y combinar proyectos no genera
+    ''' solapamiento entre módulos.
+    ''' </summary>
+    Private Sub SnapshotGeometriaModulos()
+        Dim j = proyecto.Elementos.Joints
+        Dim f = proyecto.Elementos.Frames
+        With proyecto.Elementos
+            .Pilas.Joints = New List(Of cJoint)(j)
+            .Pilas.Frames = New List(Of cFrame)(f)
+            .Columnas.Joints = New List(Of cJoint)(j)
+            .Columnas.Frames = New List(Of cFrame)(f)
+            .Muros.Joints = New List(Of cJoint)(j)
+            .Muros.Frames = New List(Of cFrame)(f)
+            If .Vigas.Joints.Count = 0 Then
+                .Vigas.Joints = New List(Of cJoint)(j)
+                .Vigas.Frames = New List(Of cFrame)(f)
+            End If
+        End With
     End Sub
 
     Private Sub VisualizadorE2K_Click(sender As Object, e As EventArgs)
@@ -743,6 +791,7 @@ Public Class Form_00_PaginaPrincipal
 
                     proyecto.Elementos.Joints = DataTableToJoints(proyecto.TablasEtabs.TablaOEJoints)
                     proyecto.Elementos.Frames = DataTableToFrames(proyecto.TablasEtabs.TablaOEFrames)
+                    SnapshotGeometriaModulos()
 
                 Catch ex As Exception
                     MsgBox("Error al importar: " & ex.Message, MsgBoxStyle.Critical)
@@ -762,14 +811,10 @@ Public Class Form_00_PaginaPrincipal
     End Sub
 
     Private Sub Button2_Click_1(sender As Object, e As EventArgs) Handles Button2.Click
-
-        If proyecto.Elementos.Zapatas.Tipos.Count > 0 Then
-            Form_08_VigasFundacion.Pu_Analisis.Text = Math.Round(proyecto.Elementos.Zapatas.Reactions.Max(Function(r) r.FZ), 2)
-        End If
-
-        Form_08_VigasFundacion.Show()
-        'Form_08_VigasFundacion.WindowState = FormWindowState.Maximized
-
+        Dim form As New Form_08_VigasFundacion()
+        form.Proyecto = proyecto
+        form.Show(Me)
+        form.WindowState = FormWindowState.Maximized
     End Sub
 
     Private Sub Button3_Click_1(sender As Object, e As EventArgs) Handles Button3.Click

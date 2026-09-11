@@ -91,13 +91,19 @@ Public Class Form_Reporte_Revision
         y += 32
 
         Dim lbl6 = EtiquetaY("Secciones a incluir")
-        _clbSecciones = New CheckedListBox With {.Location = New Point(0, y), .Width = 300, .Height = 96, .CheckOnClick = True}
-        _clbSecciones.Items.Add("Cimentaciones (Pilas + Vigas de cimentación)", True)
-        _clbSecciones.Items.Add("Muros", True)
-        _clbSecciones.Items.Add("Vigas", True)
-        _clbSecciones.Items.Add("Losas", True)
+        _clbSecciones = New CheckedListBox With {.Location = New Point(0, y), .Width = 420, .Height = 122, .CheckOnClick = True}
+        Dim tienePilas = Funciones_Programa.ContarElementosMod("Pilas", _proyecto) > 0
+        Dim tieneColumnas = Funciones_Programa.ContarElementosMod("Columnas", _proyecto) > 0
+        Dim tieneMuros = Funciones_Programa.ContarElementosMod("Muros", _proyecto) > 0
+        Dim tieneVigas = Funciones_Programa.ContarElementosMod("Vigas", _proyecto) > 0
+        Dim tieneNervios = Funciones_Programa.ContarElementosMod("Nervios", _proyecto) > 0
+        _clbSecciones.Items.Add("Cimentaciones (Pilas + Vigas de cimentación)", tienePilas)
+        _clbSecciones.Items.Add("Columnas", tieneColumnas)
+        _clbSecciones.Items.Add("Muros", tieneMuros)
+        _clbSecciones.Items.Add("Vigas", tieneVigas)
+        _clbSecciones.Items.Add("Losas", tieneNervios)
         _clbSecciones.Items.Add("Detalles en Planos", True)
-        y += 104
+        y += 132
 
         Dim lbl7 = EtiquetaY("Detalles en Planos (uno por línea, se listan como viñetas)")
         _txtDetallesPlanos = New TextBox With {
@@ -176,10 +182,11 @@ Public Class Form_Reporte_Revision
                 .Cliente = _txtCliente.Text.Trim(),
                 .AsuntoProyecto = _txtAsunto.Text.Trim(),
                 .IncluirCimentaciones = _clbSecciones.GetItemChecked(0),
-                .IncluirMuros = _clbSecciones.GetItemChecked(1),
-                .IncluirVigas = _clbSecciones.GetItemChecked(2),
-                .IncluirLosas = _clbSecciones.GetItemChecked(3),
-                .IncluirDetallesPlanos = _clbSecciones.GetItemChecked(4),
+                .IncluirColumnas = _clbSecciones.GetItemChecked(1),
+                .IncluirMuros = _clbSecciones.GetItemChecked(2),
+                .IncluirVigas = _clbSecciones.GetItemChecked(3),
+                .IncluirLosas = _clbSecciones.GetItemChecked(4),
+                .IncluirDetallesPlanos = _clbSecciones.GetItemChecked(5),
                 .DetallesPlanos = _txtDetallesPlanos.Lines.ToList()
             }
 

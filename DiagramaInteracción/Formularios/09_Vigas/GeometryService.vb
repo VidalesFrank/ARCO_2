@@ -155,9 +155,15 @@ Public Class GeometryService
         Dim esX As Boolean = Math.Abs(viga.Direccion.X) >= Math.Abs(viga.Direccion.Y)
         Dim dirBuscar As String = If(esX, "X", "Y")
 
-        ' Incluir grids X/Y perpendiculares al beam + todos los General (se filtran por distancia)
+        ' Solo incluir grids perpendiculares a la viga:
+        '   - Cartesianos X/Y: filtro por tipo (opuesto a la dirección de la viga)
+        '   - General (G): solo si el eje no es paralelo a la viga (|cos θ| < 0.7 → θ > 45°).
+        '     Sin este filtro un eje paralelo tipo General queda a distancia 0 de los joints
+        '     y siempre "gana" sobre los ejes perpendiculares reales.
         Dim gridsPerp = grids.Where(Function(g) Not String.IsNullOrWhiteSpace(g.GridID) AndAlso
-                                                (g.Direction = dirBuscar OrElse g.EsTipoGeneral)).ToList()
+                                                (g.Direction = dirBuscar OrElse
+                                                 (g.EsTipoGeneral AndAlso
+                                                  EsAproximadamentePerpendicularA(g, viga.Direccion)))).ToList()
         If gridsPerp.Count = 0 Then Exit Sub
 
         For Each frame In viga.Frames
@@ -166,6 +172,17 @@ Public Class GeometryService
         Next
 
     End Sub
+
+    ''' True si el grid General (X1,Y1→X2,Y2) es suficientemente perpendicular al vector de
+    ''' dirección dado: |cos θ| &lt; 0.7  (θ > 45°). Descarta ejes paralelos a la viga que
+    ''' producen distancia ≈ 0 a sus joints y anulan la búsqueda de los ejes reales.
+    Private Shared Function EsAproximadamentePerpendicularA(g As cGridLine, dir As Vector3) As Boolean
+        Dim gx = g.X2 - g.X1 : Dim gy = g.Y2 - g.Y1
+        Dim len = Math.Sqrt(gx * gx + gy * gy)
+        If len < 0.001 Then Return False
+        Dim dotAbs = Math.Abs(gx * dir.X + gy * dir.Y) / len
+        Return dotAbs < 0.7
+    End Function
 
     ''' Distancia perpendicular de un punto (px,py) a la línea infinita que pasa por (x1,y1)-(x2,y2).
     Private Shared Function DistanciaPuntoALinea(px As Double, py As Double,

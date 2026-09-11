@@ -105,6 +105,7 @@ Public Module ReporteRevisionWordHelpers
         Dim tbl As New Table()
         tbl.Append(New TableProperties(
             New TableStyle() With {.Val = "Tabladelista3"},
+            New TableLayout() With {.Type = TableLayoutValues.Fixed},
             New TableWidth() With {.Type = TableWidthUnitValues.Pct, .Width = "5000"},
             New TableLook() With {.Val = "04A0", .FirstRow = True, .LastRow = False, .FirstColumn = True, .LastColumn = False, .NoHorizontalBand = False, .NoVerticalBand = True}))
 
@@ -120,7 +121,10 @@ Public Module ReporteRevisionWordHelpers
 
         ' Fila de encabezado
         Dim filaEnc As New TableRow()
-        filaEnc.Append(New TableRowProperties(New TableHeader()))
+        filaEnc.Append(New TableRowProperties(
+            New TableHeader(),
+            New TableRowHeight() With {.Val = 360, .HeightType = HeightRuleValues.AtLeast},
+            New ConditionalFormatStyle() With {.Val = "100000000000", .FirstRow = True}))
         For i = 0 To nCols - 1
             Dim tc As New TableCell()
             tc.Append(New TableCellProperties(
@@ -138,8 +142,13 @@ Public Module ReporteRevisionWordHelpers
         tbl.Append(filaEnc)
 
         ' Filas de datos
-        For Each fila In filas
+        For rowIdx = 0 To filas.Count - 1
+            Dim fila = filas(rowIdx)
+            Dim isOdd As Boolean = (rowIdx Mod 2 = 0)
             Dim tr As New TableRow()
+            tr.Append(New TableRowProperties(
+                New TableRowHeight() With {.Val = 317, .HeightType = HeightRuleValues.AtLeast},
+                New ConditionalFormatStyle() With {.Val = If(isOdd, "000000100000", "000000010000")}))
             For i = 0 To nCols - 1
                 Dim tc As New TableCell()
                 tc.Append(New TableCellProperties(
@@ -151,7 +160,7 @@ Public Module ReporteRevisionWordHelpers
                     New Justification() With {.Val = JustificationValues.Center}))
                 Dim valor As String = If(i < fila.Length, fila(i), "")
                 Dim esNegrita As Boolean = Array.IndexOf(colsNegrita, i) >= 0
-                p.Append(CrearRun(valor, negrita:=esNegrita, tamanoMedioPunto:=TAM_TABLA))
+                p.Append(CrearRun(valor, negrita:=esNegrita, tamanoMedioPunto:="16"))
                 tc.Append(p)
                 tr.Append(tc)
             Next

@@ -163,30 +163,44 @@ Partial Class Form_11_Nervios
 
         Me.Archivo_Zapatas.Name = "Archivo_Zapatas"
         Me.Archivo_Zapatas.Text = "Archivo"
+        Me.Archivo_Zapatas.ForeColor = System.Drawing.Color.White
         Me.Save_Pilas.Name = "Save_Pilas"
         Me.Save_Pilas.Text = "Guardar"
         Me.Save_Pilas.ShortcutKeys = System.Windows.Forms.Keys.Control Or System.Windows.Forms.Keys.S
+        Me.Save_Pilas.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.Save_Pilas.ForeColor = System.Drawing.Color.White
         Me.Archivo_Zapatas.DropDownItems.Add(Me.Save_Pilas)
 
         Me.Importar_Zapatas.Name = "Importar_Zapatas"
         Me.Importar_Zapatas.Text = "Importar"
+        Me.Importar_Zapatas.ForeColor = System.Drawing.Color.White
         Me.ImportarDemandasToolStripMenuItem.Name = "ImportarDemandasToolStripMenuItem"
         Me.ImportarDemandasToolStripMenuItem.Text = "Importar demandas ETABS..."
+        Me.ImportarDemandasToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.ImportarDemandasToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.Importar_Zapatas.DropDownItems.Add(Me.ImportarDemandasToolStripMenuItem)
 
         Me.OpcionesToolStripMenuItem.Name = "OpcionesToolStripMenuItem"
         Me.OpcionesToolStripMenuItem.Text = "Opciones"
+        Me.OpcionesToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.ActualizarDemandasToolStripMenuItem.Name = "ActualizarDemandasToolStripMenuItem"
         Me.ActualizarDemandasToolStripMenuItem.Text = "Combinaciones de diseño..."
+        Me.ActualizarDemandasToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.ActualizarDemandasToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.OpcionesToolStripMenuItem.DropDownItems.Add(Me.ActualizarDemandasToolStripMenuItem)
         Me.DefinirEjesManualmenteToolStripMenuItem.Name = "DefinirEjesManualmenteToolStripMenuItem"
         Me.DefinirEjesManualmenteToolStripMenuItem.Text = "Definir ejes manualmente..."
+        Me.DefinirEjesManualmenteToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.DefinirEjesManualmenteToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.OpcionesToolStripMenuItem.DropDownItems.Add(Me.DefinirEjesManualmenteToolStripMenuItem)
 
         Me.Exportar_Zapatas.Name = "Exportar_Zapatas"
         Me.Exportar_Zapatas.Text = "Exportar"
+        Me.Exportar_Zapatas.ForeColor = System.Drawing.Color.White
         Me.Exportar_Excel.Name = "Exportar_Excel"
         Me.Exportar_Excel.Text = "Exportar Excel..."
+        Me.Exportar_Excel.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.Exportar_Excel.ForeColor = System.Drawing.Color.White
         Me.Exportar_Zapatas.DropDownItems.Add(Me.Exportar_Excel)
 
         ' ── Panel izquierdo ───────────────────────────────────────────────────
@@ -299,12 +313,18 @@ Partial Class Form_11_Nervios
         Me.LblInfoGrupo.Font = New System.Drawing.Font("Segoe UI", 7.5!, System.Drawing.FontStyle.Italic)
         Me.LblInfoGrupo.Text = ""
 
+        Me.CtxRefuerzo.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.CtxRefuerzo.ForeColor = System.Drawing.Color.White
         Me.CtxRefuerzo.Items.Add(Me.CtxCopiarCol)
         Me.CtxRefuerzo.Items.Add(Me.CtxPegarCol)
         Me.CtxCopiarCol.Text = "Copiar columna de refuerzo"
         Me.CtxCopiarCol.Name = "CtxCopiarCol"
+        Me.CtxCopiarCol.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.CtxCopiarCol.ForeColor = System.Drawing.Color.White
         Me.CtxPegarCol.Text = "Pegar columna de refuerzo"
         Me.CtxPegarCol.Name = "CtxPegarCol"
+        Me.CtxPegarCol.BackColor = System.Drawing.Color.FromArgb(57, 57, 57)
+        Me.CtxPegarCol.ForeColor = System.Drawing.Color.White
 
         Me.GbNervio.Controls.Add(Me.Lista_Nervios)
         Me.GbNervio.Controls.Add(Me.LblNombreNervio)
@@ -496,20 +516,19 @@ Partial Class Form_11_Nervios
         Me.TabPage1.Name = "TabPage1"
         Me.TabPage1.Padding = New System.Windows.Forms.Padding(3)
 
-        ' SplitRef — izq = Sup+Inf | der = Cortante
-        Me.SplitRef.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.SplitRef.Orientation = System.Windows.Forms.Orientation.Vertical
-        Me.SplitRef.SplitterDistance = 340
-        Me.SplitRef.Name = "SplitRef"
-        Me.SplitRef.SplitterWidth = 4
-
-        ' Panel izq SplitRef: Ref_Superior + Ref_Inferior
-        Me.PanelRefSup.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.PanelRefSup.Name = "PanelRefSup"
+        ' TableLayout — 3 filas verticales: Superior / Inferior / Cortante
+        Dim tlpRef As New System.Windows.Forms.TableLayoutPanel()
+        tlpRef.Dock = System.Windows.Forms.DockStyle.Fill
+        tlpRef.Name = "TlpRef"
+        tlpRef.ColumnCount = 1
+        tlpRef.RowCount = 3
+        tlpRef.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33F))
+        tlpRef.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33F))
+        tlpRef.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.34F))
+        tlpRef.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0F))
 
         Me.GroupBox5.Text = "Refuerzo Superior  (momentos negativos en apoyos)"
-        Me.GroupBox5.Dock = System.Windows.Forms.DockStyle.Top
-        Me.GroupBox5.Height = 168
+        Me.GroupBox5.Dock = System.Windows.Forms.DockStyle.Fill
         Me.GroupBox5.Name = "GroupBox5"
         Me.GroupBox5.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
         Me.GroupBox5.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
@@ -528,11 +547,6 @@ Partial Class Form_11_Nervios
         Me.Ref_Inferior.ContextMenuStrip = Me.CtxRefuerzo
         Me.GroupBox6.Controls.Add(Me.Ref_Inferior)
 
-        Me.PanelRefSup.Controls.Add(Me.GroupBox6)
-        Me.PanelRefSup.Controls.Add(Me.GroupBox5)
-        Me.SplitRef.Panel1.Controls.Add(Me.PanelRefSup)
-
-        ' Panel der SplitRef: Ref_Cortante
         Me.GroupBox8.Text = "Refuerzo a Cortante"
         Me.GroupBox8.Dock = System.Windows.Forms.DockStyle.Fill
         Me.GroupBox8.Name = "GroupBox8"
@@ -542,9 +556,11 @@ Partial Class Form_11_Nervios
         Me.Ref_Cortante.Name = "Ref_Cortante"
         Me.Ref_Cortante.ContextMenuStrip = Me.CtxRefuerzo
         Me.GroupBox8.Controls.Add(Me.Ref_Cortante)
-        Me.SplitRef.Panel2.Controls.Add(Me.GroupBox8)
 
-        Me.TabPage1.Controls.Add(Me.SplitRef)
+        tlpRef.Controls.Add(Me.GroupBox5, 0, 0)
+        tlpRef.Controls.Add(Me.GroupBox6, 0, 1)
+        tlpRef.Controls.Add(Me.GroupBox8, 0, 2)
+        Me.TabPage1.Controls.Add(tlpRef)
 
         ' ── TabPage2 "Demandas" ────────────────────────────────────────────────
         Me.TabPage2.Text = "Demandas"
@@ -572,7 +588,7 @@ Partial Class Form_11_Nervios
         Me.GroupBox7.Padding = New System.Windows.Forms.Padding(4, 16, 4, 4)
         Me.GroupBox7.ForeColor = System.Drawing.Color.FromArgb(87, 87, 87)
         ApplyDgvStyle(Me.Tabla_Resultados_Flexion)
-        Me.Tabla_Resultados_Flexion.ReadOnly = True
+        Me.Tabla_Resultados_Flexion.ReadOnly = False
         Me.Tabla_Resultados_Flexion.Name = "Tabla_Resultados_Flexion"
         Me.GroupBox7.Controls.Add(Me.Tabla_Resultados_Flexion)
         Me.SplitRes.Panel1.Controls.Add(Me.GroupBox7)

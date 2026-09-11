@@ -13,6 +13,7 @@ Public Class OpcionesReporteRevision
     Public Property AsuntoProyecto As String = ""
 
     Public Property IncluirCimentaciones As Boolean = True
+    Public Property IncluirColumnas As Boolean = True
     Public Property IncluirMuros As Boolean = True
     Public Property IncluirVigas As Boolean = True
     Public Property IncluirLosas As Boolean = True
@@ -35,6 +36,18 @@ Public Class ReporteRevisionService
 
     Private Shared Function EsConforme(ratio As Double) As Boolean
         Return ratio >= UMBRAL_CD
+    End Function
+
+    ''' Devuelve True si la zona indicada supera el chequeo de cortante plástico (C.21.5.4).
+    ''' Solo aplica para zonas Izquierda/Derecha; la zona Centro no tiene chequeo plástico.
+    Private Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
+                                                    cp As cResultadoCortantePlasticoFrame) As Boolean
+        If cp Is Nothing Then Return False
+        Select Case pos
+            Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
+            Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
+            Case Else : Return False
+        End Select
     End Function
 
     Private Shared Function FCD(valor As Double) As String
@@ -68,6 +81,11 @@ Public Class ReporteRevisionService
                 EscribirSeccionPilas(body, proyecto)
                 body.Append(Heading2("VIGAS DE CIMENTACIÓN"))
                 EscribirVigasCimentacion(body)
+            End If
+
+            If opciones.IncluirColumnas Then
+                body.Append(Heading1("COLUMNAS"))
+                EscribirSeccionColumnas(body, proyecto)
             End If
 
             If opciones.IncluirMuros Then
@@ -275,6 +293,82 @@ Public Class ReporteRevisionService
     End Sub
 
     ' =========================================================================
+    '  COLUMNAS
+    ' =========================================================================
+    Private Sub EscribirSeccionColumnas(body As Body, proyecto As Proyecto)
+        body.Append(ParrafoNormal("Se realiza la revisión de las columnas a partir de la información recibida."))
+
+        Dim columnas As List(Of Columna) = proyecto.Elementos.Columnas.Lista_Columnas
+        If columnas Is Nothing Then columnas = New List(Of Columna)
+        Dim columnasCalculadas = columnas.Where(
+            Function(c) c.Ref_Modificado AndAlso
+                        c.Lista_Tramos_Columnas IsNot Nothing AndAlso
+                        c.Lista_Tramos_Columnas.Count > 0).ToList()
+
+        ' ── Flexo-compresión ─────────────────────────────────────────────────
+        body.Append(Heading2("FLEXO-COMPRESIÓN"))
+        Dim noFlexo As New List(Of String())
+        For Each col In columnasCalculadas
+            For Each tr In col.Lista_Tramos_Columnas
+                Dim cdTop = CDbl(tr.F_Flexo_Top)
+                Dim cdBot = CDbl(tr.F_Flexo_Bottom)
+                Dim failTop = cdTop > 0 AndAlso Not EsConforme(cdTop)
+                Dim failBot = cdBot > 0 AndAlso Not EsConforme(cdBot)
+                If Not failTop AndAlso Not failBot Then Continue For
+
+                Dim asCol = Math.Max(CDbl(tr.As_Col_Top), CDbl(tr.As_Col_Bottom))
+                Dim asReq = Math.Max(CDbl(tr.As_Req_Top), CDbl(tr.As_Req_Bottom))
+                Dim cdVals = {cdTop, cdBot}.Where(Function(v) v > 0)
+                Dim cdMin = If(cdVals.Any(), cdVals.Min(), 0.0)
+                Dim obs As String
+                If failTop AndAlso failBot Then
+                    obs = "En zona superior e inferior"
+                ElseIf failTop Then
+                    obs = "En zona superior"
+                Else
+                    obs = "En zona inferior"
+                End If
+                noFlexo.Add({col.Name_Elemento, tr.Piso, FNum(asCol), FNum(asReq), FCD(cdMin), obs})
+            Next
+        Next
+        If noFlexo.Count = 0 Then
+            body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad de flexo compresión es mayor a la demanda."))
+        Else
+            _numTabla += 1
+            body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexo-compresión de las columnas."))
+            body.Append(TablaDatos({"COLUMNA", "TRAMO", "As colocada (cm" & ChrW(178) & ")", "As requerida (cm" & ChrW(178) & ")", "C/D", "OBSERVACIONES"}, noFlexo, {4}))
+        End If
+
+        ' ── Cortante (Ash colocado vs requerido, LC y LL) ───────────────────────
+        body.Append(Heading2("CORTANTE"))
+        Dim noCortante As New List(Of String())
+        For Each col In columnasCalculadas
+            For Each tr In col.Lista_Tramos_Columnas
+                Dim failLC = tr.F_Ash_Corto > 0 AndAlso Not EsConforme(CDbl(tr.F_Ash_Corto))
+                Dim failLL = tr.F_Ash_Largo > 0 AndAlso Not EsConforme(CDbl(tr.F_Ash_Largo))
+                If Not failLC AndAlso Not failLL Then Continue For
+                Dim seccion = FNum(CDbl(tr.B_Plano), 2) & "x" & FNum(CDbl(tr.H_Plano), 2)
+                Dim verif = If(failLC AndAlso failLL, "No cumple (LC y LL)",
+                            If(failLC, "No cumple (LC)", "No cumple (LL)"))
+                noCortante.Add({col.Name_Elemento, seccion,
+                                FNum(CDbl(tr.Ash_Col_Corto)), FNum(CDbl(tr.Ash_Col_Largo)),
+                                FNum(CDbl(tr.Ash_C)), FNum(CDbl(tr.Ash_L)),
+                                verif})
+            Next
+        Next
+        If noCortante.Count = 0 Then
+            body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a cortante de las columnas es mayor a la demanda."))
+        Else
+            _numTabla += 1
+            body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a cortante de las columnas."))
+            body.Append(TablaDatos(
+                {"COLUMNA", "SECCIÓN", "Ash col. LC (cm" & ChrW(178) & ")", "Ash col. LL (cm" & ChrW(178) & ")",
+                 "Ash req. LC (cm" & ChrW(178) & ")", "Ash req. LL (cm" & ChrW(178) & ")", "VERIFICACIÓN"},
+                noCortante, {6}))
+        End If
+    End Sub
+
+    ' =========================================================================
     '  MUROS
     ' =========================================================================
     Private Sub EscribirSeccionMuros(body As Body, proyecto As Proyecto)
@@ -451,25 +545,67 @@ Public Class ReporteRevisionService
         For Each v In vigas
             Dim nombreViga = ObtenerNombreViga(v)
             For Each f In v.Frames
-                If f.RevisionFlexion Is Nothing Then Continue For
-                For Each zona In f.RevisionFlexion
-                    Dim r = zona.ResultadoActual
-                    If r Is Nothing Then Continue For
-                    If r.AsReqSup > 0 AndAlso Not EsConforme(r.RatioSup) Then
-                        noFlexion.Add({f.Story, nombreViga, zona.Posicion.ToString(), FNum(r.AsProvSup), FNum(r.AsReqSup), FCD(r.RatioSup), "Momento negativo (refuerzo superior)"})
-                    End If
-                    If r.AsReqInf > 0 AndAlso Not EsConforme(r.RatioInf) Then
-                        noFlexion.Add({f.Story, nombreViga, zona.Posicion.ToString(), FNum(r.AsProvInf), FNum(r.AsReqInf), FCD(r.RatioInf), "Momento positivo (refuerzo inferior)"})
-                    End If
-                Next
+                If f.RevisionFlexion Is Nothing OrElse f.RevisionFlexion.Count = 0 Then Continue For
+                If Not (f.RefuerzoSuperior IsNot Nothing AndAlso f.RefuerzoSuperior.Any()) AndAlso
+                   Not (f.RefuerzoInferior IsNot Nothing AndAlso f.RefuerzoInferior.Any()) Then Continue For
+
+                ' Buscar peor resultado por zona
+                Dim zonaIzq = f.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+                Dim zonaCen = f.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Centro)
+                Dim zonaDer = f.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+
+                Dim failSupIzq = zonaIzq IsNot Nothing AndAlso zonaIzq.ResultadoActual IsNot Nothing AndAlso
+                                 zonaIzq.ResultadoActual.AsReqSup > 0 AndAlso Not EsConforme(zonaIzq.ResultadoActual.RatioSup)
+                Dim failSupDer = zonaDer IsNot Nothing AndAlso zonaDer.ResultadoActual IsNot Nothing AndAlso
+                                 zonaDer.ResultadoActual.AsReqSup > 0 AndAlso Not EsConforme(zonaDer.ResultadoActual.RatioSup)
+                Dim failInfCen = zonaCen IsNot Nothing AndAlso zonaCen.ResultadoActual IsNot Nothing AndAlso
+                                 zonaCen.ResultadoActual.AsReqInf > 0 AndAlso Not EsConforme(zonaCen.ResultadoActual.RatioInf)
+
+                If Not failSupIzq AndAlso Not failSupDer AndAlso Not failInfCen Then Continue For
+
+                ' Peor caso superior
+                Dim rIzq = If(zonaIzq?.ResultadoActual, New cResultadoFlexion())
+                Dim rDer = If(zonaDer?.ResultadoActual, New cResultadoFlexion())
+                Dim rCen = If(zonaCen?.ResultadoActual, New cResultadoFlexion())
+
+                Dim worstSup As cResultadoFlexion
+                If failSupIzq AndAlso failSupDer Then
+                    worstSup = If(rIzq.RatioSup <= rDer.RatioSup, rIzq, rDer)
+                ElseIf failSupIzq Then
+                    worstSup = rIzq
+                Else
+                    worstSup = rDer
+                End If
+
+                ' Observación
+                Dim obsParts As New List(Of String)
+                If failSupIzq AndAlso failSupDer Then
+                    obsParts.Add("En ambos extremos por M(-)")
+                ElseIf failSupIzq Then
+                    obsParts.Add("Extremo izquierdo por M(-)")
+                ElseIf failSupDer Then
+                    obsParts.Add("Extremo derecho por M(-)")
+                End If
+                If failInfCen Then obsParts.Add("zona central por M(+)")
+
+                Dim eje = EjeFrame(f)
+                noFlexion.Add({f.Story, nombreViga, eje,
+                               FNum(worstSup.AsProvSup / 100.0), FNum(worstSup.AsReqSup / 100.0), FCD(worstSup.RatioSup),
+                               FNum(rCen.AsProvInf / 100.0), FNum(rCen.AsReqInf / 100.0), FCD(rCen.RatioInf),
+                               String.Join(" y ", obsParts)})
             Next
         Next
         If noFlexion.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a flexión de las vigas es mayor a la demanda."))
         Else
             _numTabla += 1
-            body.Append(TituloTabla(_numTabla, "Verificación de flexión en vigas."))
-            body.Append(TablaDatos({"PISO", "VIGA", "TRAMO", "Ash colocada (cm2)", "Ash requerida (cm2)", "CAPACIDAD/DEMANDA", "OBSERVACIÓN"}, noFlexion, {5}))
+            body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexión de las vigas."))
+            body.Append(TablaDatos(
+                {"PISO", "VIGA", "EJE",
+                 "As col. sup. (cm" & ChrW(178) & ")", "As req. sup. (cm" & ChrW(178) & ")", "C/D sup.",
+                 "As col. inf. (cm" & ChrW(178) & ")", "As req. inf. (cm" & ChrW(178) & ")", "C/D inf.",
+                 "OBSERVACIONES"},
+                noFlexion, {5, 8}))
         End If
 
         ' ── Cortante ─────────────────────────────────────────────────────────
@@ -478,20 +614,47 @@ Public Class ReporteRevisionService
         For Each v In vigas
             Dim nombreViga = ObtenerNombreViga(v)
             For Each f In v.Frames
-                If f.RevisionCortante Is Nothing Then Continue For
-                For Each zona In f.RevisionCortante
-                    If zona.Vu > 0 AndAlso zona.Factor > 0 AndAlso Not EsConforme(zona.Factor) Then
-                        noCortante.Add({f.Story, nombreViga, zona.Posicion.ToString(), FNum(zona.Vu), FNum(zona.phiVn), FCD(zona.Factor)})
-                    End If
-                Next
+                If f.RevisionCortante Is Nothing OrElse f.RevisionCortante.Count = 0 Then Continue For
+                If Not (f.RefuerzoSuperior IsNot Nothing AndAlso f.RefuerzoSuperior.Any()) AndAlso
+                   Not (f.RefuerzoInferior IsNot Nothing AndAlso f.RefuerzoInferior.Any()) Then Continue For
+
+                ' Excluir zonas que, aunque fallen el chequeo estándar, pasan el cortante plástico
+                Dim zonasQ = f.RevisionCortante.Where(Function(z) z.Vu > 0 AndAlso z.Factor > 0 AndAlso
+                                                        Not EsConforme(z.Factor) AndAlso
+                                                        Not CumpleCortantePlastico(z.Posicion, f.CortantePlastico)).ToList()
+                If zonasQ.Count = 0 Then Continue For
+
+                ' Peor zona
+                Dim peor = zonasQ.OrderBy(Function(z) z.Factor).First()
+
+                ' Observación posicional
+                Dim failIzq = zonasQ.Any(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+                Dim failCen = zonasQ.Any(Function(z) z.Posicion = PosicionTramoViga.Centro)
+                Dim failDer = zonasQ.Any(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+
+                Dim obs As String
+                If failIzq AndAlso failDer Then
+                    obs = If(failCen, "En ambos extremos y zona central", "En ambos extremos")
+                ElseIf failIzq Then
+                    obs = If(failCen, "Extremo izquierdo y zona central", "Extremo izquierdo")
+                ElseIf failDer Then
+                    obs = If(failCen, "Extremo derecho y zona central", "Extremo derecho")
+                Else
+                    obs = "Zona central"
+                End If
+
+                noCortante.Add({f.Story, nombreViga, EjeFrame(f),
+                                FNum(peor.phiVn), FNum(peor.Vu), FCD(peor.Factor), obs})
             Next
         Next
         If noCortante.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a cortante de las vigas es mayor a la demanda."))
         Else
             _numTabla += 1
-            body.Append(TituloTabla(_numTabla, "Verificación de cortante en vigas."))
-            body.Append(TablaDatos({"PISO", "VIGA", "TRAMO", "Vu (kN)", "φVn (kN)", "CAPACIDAD/DEMANDA"}, noCortante))
+            body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a cortante de las vigas."))
+            body.Append(TablaDatos(
+                {"PISO", "VIGA", "EJE", ChrW(966) & "Vn (kN)", "Vu (kN)", "C/D", "OBSERVACIONES"},
+                noCortante, {5}))
         End If
 
         body.Append(Heading2("DEFLEXIONES"))
@@ -517,52 +680,129 @@ Public Class ReporteRevisionService
 
         Dim nervios As List(Of cNervio) = proyecto.Elementos.Nervios.Elementos
         If nervios Is Nothing Then nervios = New List(Of cNervio)
+        Dim nerviosCalculados = nervios.Where(Function(n) n.Frames IsNot Nothing AndAlso
+            n.Frames.Any(Function(f) f.Ref_Modificado)).ToList()
 
         ' ── Flexión ──────────────────────────────────────────────────────────
         body.Append(Heading2("FLEXIÓN"))
         Dim noFlexion As New List(Of String())
-        For Each n In nervios
+        For Each n In nerviosCalculados
             Dim nombre = If(String.IsNullOrWhiteSpace(n.NombrePlano), n.Nombre, n.NombrePlano)
             For Each f In n.Frames
-                For Each z In New List(Of (Zona As String, Mu As Double, PhiMn As Double, CD As Double)) From {
-                    ("Apoyo izquierdo", f.Mu_Neg_I, f.PhiMn_Sup_I, f.CD_Flex_Sup_I),
-                    ("Centro (vano)", f.Mu_Pos_C, f.PhiMn_Inf_C, f.CD_Flex_Inf_C),
-                    ("Apoyo derecho", f.Mu_Neg_D, f.PhiMn_Sup_D, f.CD_Flex_Sup_D)}
-                    If z.CD > 0 AndAlso Not EsConforme(z.CD) Then
-                        noFlexion.Add({f.Story, nombre, z.Zona, FNum(z.Mu), FNum(z.PhiMn), FCD(z.CD)})
-                    End If
-                Next
+                If Not f.Ref_Modificado Then Continue For
+
+                Dim failSupI = f.CD_M_Sup_I > 0 AndAlso Not EsConforme(f.CD_M_Sup_I)
+                Dim failSupD = f.CD_M_Sup_D > 0 AndAlso Not EsConforme(f.CD_M_Sup_D)
+                Dim failInfC = f.CD_M_Inf_C > 0 AndAlso Not EsConforme(f.CD_M_Inf_C)
+                If Not failSupI AndAlso Not failSupD AndAlso Not failInfC Then Continue For
+
+                ' Peor superior
+                Dim cdSupI = If(f.CD_M_Sup_I > 0, f.CD_M_Sup_I, 99.0)
+                Dim cdSupD = If(f.CD_M_Sup_D > 0, f.CD_M_Sup_D, 99.0)
+                Dim asColSup As Double
+                Dim asReqSup As Double
+                Dim cdSup As Double
+                If cdSupI <= cdSupD Then
+                    asColSup = f.As_Prov_Sup_I
+                    asReqSup = f.As_Req_Sup_I
+                    cdSup = cdSupI
+                Else
+                    asColSup = f.As_Prov_Sup_D
+                    asReqSup = f.As_Req_Sup_D
+                    cdSup = cdSupD
+                End If
+
+                ' Observación
+                Dim obsParts As New List(Of String)
+                If failSupI AndAlso failSupD Then
+                    obsParts.Add("En ambos extremos por M(-)")
+                ElseIf failSupI Then
+                    obsParts.Add("Extremo izquierdo por M(-)")
+                ElseIf failSupD Then
+                    obsParts.Add("Extremo derecho por M(-)")
+                End If
+                If failInfC Then obsParts.Add("zona central por M(+)")
+
+                Dim eje = EjeNervio(f)
+                noFlexion.Add({f.Story, nombre, eje,
+                               FNum(asColSup), FNum(asReqSup), FCD(cdSup),
+                               FNum(f.As_Prov_Inf_C), FNum(f.As_Req_Inf_C), FCD(f.CD_M_Inf_C),
+                               String.Join(" y ", obsParts)})
             Next
         Next
         If noFlexion.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a flexión de las viguetas es mayor a la demanda."))
         Else
             _numTabla += 1
-            body.Append(TituloTabla(_numTabla, "Verificación de flexión en viguetas."))
-            body.Append(TablaDatos({"PISO", "VIGUETA", "ZONA", "Mu (kN·m)", "φMn (kN·m)", "CAPACIDAD/DEMANDA"}, noFlexion))
+            body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexión de viguetas de losa nervada."))
+            body.Append(TablaDatos(
+                {"PISO", "NERVIO", "EJE",
+                 "As col. sup. (cm" & ChrW(178) & ")", "As req. sup. (cm" & ChrW(178) & ")", "C/D sup.",
+                 "As col. inf. (cm" & ChrW(178) & ")", "As req. inf. (cm" & ChrW(178) & ")", "C/D inf.",
+                 "OBSERVACIONES"},
+                noFlexion, {5, 8}))
         End If
 
         ' ── Cortante ─────────────────────────────────────────────────────────
         body.Append(Heading2("CORTANTE"))
         Dim noCortante As New List(Of String())
-        For Each n In nervios
+        For Each n In nerviosCalculados
             Dim nombre = If(String.IsNullOrWhiteSpace(n.NombrePlano), n.Nombre, n.NombrePlano)
             For Each f In n.Frames
-                For Each z In New List(Of (Zona As String, Vu As Double, PhiVn As Double, CD As Double)) From {
-                    ("Izquierdo", f.Vu_I, f.PhiVn_I, f.CD_Cortante_I),
-                    ("Derecho", f.Vu_D, f.PhiVn_D, f.CD_Cortante_D)}
-                    If z.CD > 0 AndAlso Not EsConforme(z.CD) Then
-                        noCortante.Add({f.Story, nombre, z.Zona, FNum(z.Vu), FNum(z.PhiVn), FCD(z.CD)})
+                If Not f.Ref_Modificado Then Continue For
+
+                Dim failI = f.CD_Cortante_I > 0 AndAlso Not EsConforme(f.CD_Cortante_I)
+                Dim failD = f.CD_Cortante_D > 0 AndAlso Not EsConforme(f.CD_Cortante_D)
+                If Not failI AndAlso Not failD Then Continue For
+
+                ' Calcular Ash colocado y requerido
+                Dim d_m = f.H - f.Recubrimiento  ' m
+                Dim fy_mpa = If(f.fy > 0, f.fy, 420.0)
+
+                Dim AshColI As Double = 0
+                Dim AshColD As Double = 0
+                For Each zt In f.RefuerzoTransversal
+                    Dim av = Funciones_00_Varias.AreaRefuerzo("#" & zt.NumeroBarra.ToString()) * zt.CantEstribos
+                    If zt.Separacion > 0 Then
+                        Dim ash = av / zt.Separacion
+                        If zt.Posicion = PosicionTramoViga.Izquierda Then AshColI = ash
+                        If zt.Posicion = PosicionTramoViga.Derecha Then AshColD = ash
                     End If
                 Next
+
+                ' Ash requerido: Vs_req / (fy * d) × 10 → cm²/m
+                Dim AshReqI As Double = 0
+                Dim AshReqD As Double = 0
+                If f.Vu_I > 0 AndAlso d_m > 0 Then
+                    Dim vsReqI = Math.Max(0, (f.Vu_I - f.PhiVc_I) / 0.75)
+                    AshReqI = 10 * vsReqI / (fy_mpa * d_m)
+                End If
+                If f.Vu_D > 0 AndAlso d_m > 0 Then
+                    Dim vsReqD = Math.Max(0, (f.Vu_D - f.PhiVc_D) / 0.75)
+                    AshReqD = 10 * vsReqD / (fy_mpa * d_m)
+                End If
+
+                ' Un registro por lado que falla
+                If failI Then
+                    Dim cdI = If(f.CD_Cortante_I > 0, f.CD_Cortante_I, 0.0)
+                    noCortante.Add({f.Story, nombre, EjeNervio(f) & " (I)",
+                                    FNum(AshColI, 3), FNum(AshReqI, 3), FCD(cdI), "Extremo izquierdo"})
+                End If
+                If failD Then
+                    Dim cdD = If(f.CD_Cortante_D > 0, f.CD_Cortante_D, 0.0)
+                    noCortante.Add({f.Story, nombre, EjeNervio(f) & " (D)",
+                                    FNum(AshColD, 3), FNum(AshReqD, 3), FCD(cdD), "Extremo derecho"})
+                End If
             Next
         Next
         If noCortante.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a cortante de las viguetas es mayor a la demanda."))
         Else
             _numTabla += 1
-            body.Append(TituloTabla(_numTabla, "Verificación de cortante en viguetas."))
-            body.Append(TablaDatos({"PISO", "VIGUETA", "ZONA", "Vu (kN)", "φVn (kN)", "CAPACIDAD/DEMANDA"}, noCortante))
+            body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a cortante de viguetas de losa nervada."))
+            body.Append(TablaDatos(
+                {"PISO", "NERVIO", "EJE", "Ash col. (cm" & ChrW(178) & "/m)", "Ash req. (cm" & ChrW(178) & "/m)", "C/D", "OBSERVACIONES"},
+                noCortante, {5}))
         End If
 
         body.Append(Heading2("DEFLEXIONES"))
@@ -591,6 +831,21 @@ Public Class ReporteRevisionService
 
     Private Shared Function NuevoParrafoViñeta(texto As String) As Paragraph
         Return ParrafoNormal("•  " & texto)
+    End Function
+
+    Private Shared Function EjeFrame(f As cFrame) As String
+        If Not String.IsNullOrWhiteSpace(f.EjeApoyo_I) AndAlso Not String.IsNullOrWhiteSpace(f.EjeApoyo_J) Then
+            Return f.EjeApoyo_I & "-" & f.EjeApoyo_J
+        End If
+        If Not String.IsNullOrWhiteSpace(f.ObjectLabel) Then Return f.ObjectLabel
+        Return f.ElementLabel
+    End Function
+
+    Private Shared Function EjeNervio(f As cFrameNervio) As String
+        If Not String.IsNullOrWhiteSpace(f.EjeApoyo_I) AndAlso Not String.IsNullOrWhiteSpace(f.EjeApoyo_D) Then
+            Return f.EjeApoyo_I & "-" & f.EjeApoyo_D
+        End If
+        Return If(f.ObjectLabel, f.ElementLabel)
     End Function
 
     ' =========================================================================

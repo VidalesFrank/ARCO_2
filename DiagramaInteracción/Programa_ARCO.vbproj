@@ -267,6 +267,7 @@
     <Compile Include="Clases\Columnas\Columnas.vb" />
     <Compile Include="Clases\Columnas\Elemento_Columna.vb" />
     <Compile Include="Clases\Nervios\cNervios.vb" />
+    <Compile Include="Clases\VigasFundacion\cVigasFundacion.vb" />
     <Compile Include="Clases\cParametrosSismicos.vb" />
     <Compile Include="Clases\cResultadosGlobales.vb" />
     <Compile Include="Clases\cTablasETABS.vb" />
@@ -388,6 +389,9 @@
     <Compile Include="Formularios\11_Nervios\Form_11_01_Resultados.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_Reporte_Resumen_Nervios.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
       <DependentUpon>Form_Logos.vb</DependentUpon>
     </Compile>
@@ -400,10 +404,10 @@
     <Compile Include="Formularios\Form_07_Pag_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\Form_08_VigasFundacion.Designer.vb">
-      <DependentUpon>Form_08_VigasFundacion.vb</DependentUpon>
+    <Compile Include="Formularios\08_VigasFundacion\Form_08_VigasFundacion.vb">
+      <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\Form_08_VigasFundacion.vb">
+    <Compile Include="Formularios\08_VigasFundacion\Form_Reporte_VigasFundacion.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_09_Vigas.Designer.vb">
@@ -439,6 +443,12 @@
     </Compile>
     <Compile Include="Formularios\Form_Reporte_Resumen.vb">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_CombinarProyecto.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_CombinarProyecto.Designer.vb">
+      <DependentUpon>Form_CombinarProyecto.vb</DependentUpon>
     </Compile>
     <Compile Include="Formularios\Form_Reporte_Proyecto_Completo.vb">
       <SubType>Form</SubType>
@@ -628,6 +638,7 @@
     <Compile Include="Funciones\Funciones_03_Losa.vb" />
     <Compile Include="Funciones\Funciones_05_MurosNoEstructurales.vb" />
     <Compile Include="Funciones\Funciones_01_Pilas.vb" />
+    <Compile Include="Funciones\ARCOMenuRenderer.vb" />
     <Compile Include="Funciones\Funciones_00_Varias.vb" />
     <Compile Include="Funciones\Logger.vb" />
     <Compile Include="Funciones\Funciones_02_Columnas.vb" />
@@ -740,9 +751,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Form_07_Pag_Zapatas.resx">
       <DependentUpon>Form_07_Pag_Zapatas.vb</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Formularios\Form_08_VigasFundacion.resx">
-      <DependentUpon>Form_08_VigasFundacion.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Form_09_Vigas.resx">
       <DependentUpon>Form_09_Vigas.vb</DependentUpon>

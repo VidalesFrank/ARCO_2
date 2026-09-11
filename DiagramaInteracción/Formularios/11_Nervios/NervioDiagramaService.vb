@@ -77,7 +77,8 @@ Public Class NervioDiagramaService
                 Return
             End If
 
-            Dim margin As Single = 40
+            Dim margin As Single = Math.Max(15.0F, Math.Min(28.0F, CSng(pictureBox.Height) * 0.09F))
+            Dim lblSpace As Single = Math.Max(12.0F, Math.Min(20.0F, CSng(pictureBox.Height) * 0.07F))
 
             ' ── Preparar datos por tramo: offset acumulado + combos de diseño + envolvente ──
             Dim datos As New List(Of (fn As cFrameNervio, offset As Double, L As Double,
@@ -157,7 +158,7 @@ Public Class NervioDiagramaService
             If maxAbsY < 0.001 Then maxAbsY = 1
 
             Dim scaleX As Single = CSng((pictureBox.Width - 2 * margin) / totalLen)
-            Dim scaleY As Single = CSng((pictureBox.Height / 2.0 - margin - 24) / maxAbsY)   ' -24: deja aire para etiquetas de cara
+            Dim scaleY As Single = CSng((pictureBox.Height / 2.0 - margin - lblSpace) / maxAbsY)
             Dim yZero As Single = pictureBox.Height / 2.0F
 
             Dim TransformX = Function(x As Double) CSng(margin + x * scaleX)
@@ -377,9 +378,9 @@ Public Class NervioDiagramaService
                     Dim signoI = If(signoFijo <> 0, signoFijo, SignoCercano(d.estaciones, d.envMax, d.envMin, xLocalI))
                     Dim signoD = If(signoFijo <> 0, signoFijo, SignoCercano(d.estaciones, d.envMax, d.envMin, xLocalD))
 
-                    MarcarCaraApoyo(g, fontCara, TransformX, TransformY, yZero,
+                    MarcarCaraApoyo(g, fontCara, TransformX, TransformY, yZero, bmp.Height,
                                      d.offset + xLocalI, signoI * Math.Abs(valorCaraI(d.fn)), d.fn.EjeApoyo_I, d.fn.Frame_Apoyo_I, unidad)
-                    MarcarCaraApoyo(g, fontCara, TransformX, TransformY, yZero,
+                    MarcarCaraApoyo(g, fontCara, TransformX, TransformY, yZero, bmp.Height,
                                      d.offset + xLocalD, signoD * Math.Abs(valorCaraD(d.fn)), d.fn.EjeApoyo_D, d.fn.Frame_Apoyo_D, unidad)
                 Next
             End Using
@@ -415,7 +416,7 @@ Public Class NervioDiagramaService
     ''' es la demanda de diseño.</summary>
     Private Shared Sub MarcarCaraApoyo(g As Graphics, font As Font,
                                         TransformX As Func(Of Double, Single), TransformY As Func(Of Double, Single),
-                                        yZero As Single,
+                                        yZero As Single, pictureHeight As Integer,
                                         xFace As Double, valor As Double,
                                         eje As String, frameApoyo As String, unidad As String)
         If Math.Abs(valor) < 0.01 Then Return
@@ -438,6 +439,8 @@ Public Class NervioDiagramaService
         Dim sz = g.MeasureString(texto, font)
         Dim xLbl = xPix - sz.Width / 2.0F
         Dim yLbl = If(valor >= 0, yPix - sz.Height - 5.0F, yPix + 5.0F)
+        yLbl = Math.Max(2.0F, Math.Min(yLbl, CSng(pictureHeight) - sz.Height - 2.0F))
+        xLbl = Math.Max(2.0F, Math.Min(xLbl, CSng(g.VisibleClipBounds.Width) - sz.Width - 2.0F))
 
         Using bBg As New SolidBrush(Color.FromArgb(230, Color.White))
             g.FillRectangle(bBg, xLbl - 2, yLbl - 1, sz.Width + 4, sz.Height + 2)
