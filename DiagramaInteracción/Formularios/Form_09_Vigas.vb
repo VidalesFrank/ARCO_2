@@ -1219,8 +1219,16 @@ Public Class Form_09_Vigas
             count += 1
         Next
 
+        ' Antes solo se recalculaba la capacidad: el Vu de la zona Centro quedaba con el valor
+        ' de la última envolvente y no reflejaba los estribos actuales de las ZC Izq/Der.
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
-            _vigaService.CalcularCapacidadCortante(_vigas)
+            Dim combsCortante_rt = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
+            _vigaService.RecalcularCortanteVigas(_vigas,
+                                                 Proyecto.Elementos.Vigas.BeamForces,
+                                                 combsCortante_rt,
+                                                 incluirPlastico:=False)
         End If
 
         TriggerCortantePlastico(_vigas)
@@ -2310,16 +2318,17 @@ Public Class Form_09_Vigas
         _vigaService.CalcularFlexionViga(viga)
         MostrarResultadosFlexion(viga)
 
-        ' Recalcular cortante con el nuevo refuerzo transversal (zonas N×s)
+        ' Recalcular cortante con el nuevo refuerzo transversal (zonas N×s):
+        ' RecalcularCortanteViga encadena NumEstribos(Centro) → envolvente → capacidad,
+        ' de modo que el Vu del Centro se re-toma en el nuevo borde de las ZC Izq/Der.
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
             Dim combsCortante_ap = New HashSet(Of String)(
                 Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
                 StringComparer.OrdinalIgnoreCase)
-            Dim listaViga As New List(Of cViga) From {viga}
-            _vigaService.CalcularEnvolventeCortante(listaViga,
-                                                    Proyecto.Elementos.Vigas.BeamForces,
-                                                    combsCortante_ap)
-            _vigaService.CalcularCapacidadCortante(listaViga)
+            _vigaService.RecalcularCortanteViga(viga,
+                                                Proyecto.Elementos.Vigas.BeamForces,
+                                                combsCortante_ap,
+                                                incluirPlastico:=False)
             MostrarResultadosCortante(viga)
 
             Dim bfCortante = Proyecto.Elementos.Vigas.BeamForces _
@@ -2674,8 +2683,9 @@ Public Class Form_09_Vigas
                 If miembro IsNot Nothing Then miembro.NombreViga = sim.Name_Beam
             Next
 
-            ' Propagar refuerzo inmediatamente
+            ' Propagar refuerzo inmediatamente (incluye envolvente + capacidad de cortante)
             _vigaService.PropagateRefuerzoGrupo(patron, similares, combosCortante)
+            TriggerCortantePlastico(similares)
 
             ' Guardar grupo en el proyecto
             If Proyecto.Elementos.Vigas.GruposReplica Is Nothing Then
@@ -2737,6 +2747,7 @@ Public Class Form_09_Vigas
             StringComparer.OrdinalIgnoreCase)
 
         _vigaService.PropagateRefuerzoGrupo(patron, similares, combosCortante)
+        TriggerCortantePlastico(similares)
 
         HayCambios = True
 
@@ -2863,10 +2874,18 @@ Public Class Form_09_Vigas
 
         Next
 
-        ' Recalcular flexión y cortante para la viga destino con el refuerzo copiado
+        ' Recalcular flexión y cortante para la viga destino con el refuerzo copiado.
+        ' Los estribos copiados cambian el límite de las zonas confinadas, así que hay que
+        ' rehacer la envolvente completa (antes solo se llamaba CalcularCapacidadCortante
+        ' y el Vu de la zona Centro de la viga destino quedaba obsoleto).
         _vigaService.CalcularFlexionViga(destino)
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
-            _vigaService.CalcularCapacidadCortante(New List(Of cViga) From {destino})
+            Dim combsCortante_cp = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
+            _vigaService.RecalcularCortanteViga(destino,
+                                                Proyecto.Elementos.Vigas.BeamForces,
+                                                combsCortante_cp)
         End If
 
     End Sub
@@ -3519,6 +3538,17 @@ Public Class Form_09_Vigas
             For Each pos In posiciones
 
                 Dim zonaCor = frame.RevisionCortante.FirstOrDefault(Function(z) z.Posicion = pos)
+
+                ' Limpiar la columna antes de escribir: la zona Centro puede dejar de existir
+                ' (ZC de ambos extremos cubriendo todo el vano) y quedarían valores obsoletos
+                ' al refrescar la tabla sin reconstruirla (p. ej. desde Boton_Aplicar).
+                dgv.Rows(FILA_COR_VU).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_VC).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_VS).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_PHIVN).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Style.BackColor = Color.Empty
+                dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Style.ForeColor = Color.Empty
 
                 If pos = PosicionTramoViga.Centro Then
                     dgv.Rows(FILA_COR_SECCION).Cells(colBase).Value = frame.Section.LabelSec
