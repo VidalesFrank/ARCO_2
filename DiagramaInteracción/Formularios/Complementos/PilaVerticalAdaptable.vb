@@ -48,6 +48,7 @@ Public Class PilaVerticalAdaptable
     Private _activa As Boolean = False
     Private _aplicando As Boolean = False
     Private _scrollActivo As Boolean = False
+    Private _enganchado As Boolean = False
 
     ''' <param name="contenedor">
     ''' TabPage, Panel o cualquier ScrollableControl: se necesita AutoScroll
@@ -188,10 +189,38 @@ Public Class PilaVerticalAdaptable
         Return RepartoEquitativo AndAlso _elementos.Count > 0
     End Function
 
-    ''' <summary>Captura la maqueta de diseño y hace el primer reparto.</summary>
+    ''' <summary>
+    ''' Captura la maqueta de diseño, se engancha al contenedor y hace el primer
+    ''' reparto.
+    '''
+    ''' El enganche a SizeChanged es lo que hace fiable todo esto. Activar() se
+    ''' llama desde el Load del formulario, y en ese momento el contenedor todavía
+    ''' reporta su tamaño de DISEÑO, no el real: una TabPage diseñada a 917 px de
+    ''' alto sigue diciendo 917 hasta que el formulario se muestra y el TabControl
+    ''' la redimensiona a lo que de verdad hay (~594). Repartir sobre 917 coloca
+    ''' el último bloque más abajo del borde visible, y como cada tabla cree que
+    ''' su contenido le cabe, ni siquiera saca barra de desplazamiento: las
+    ''' últimas filas quedan fuera y sin forma de llegar a ellas.
+    '''
+    ''' Escuchando SizeChanged el reparto se rehace solo en cuanto el contenedor
+    ''' toma su tamaño real, sin depender de que el formulario dispare Shown o
+    ''' Resize en el momento oportuno.
+    ''' </summary>
     Public Sub Activar()
+
         If _elementos.Count = 0 Then Exit Sub
         _activa = True
+
+        If Not _enganchado Then
+            AddHandler _contenedor.SizeChanged, AddressOf ContenedorRedimensionado
+            _enganchado = True
+        End If
+
+        Aplicar()
+
+    End Sub
+
+    Private Sub ContenedorRedimensionado(sender As Object, e As EventArgs)
         Aplicar()
     End Sub
 
