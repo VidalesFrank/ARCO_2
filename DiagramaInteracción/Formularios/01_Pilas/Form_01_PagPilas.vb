@@ -1038,6 +1038,9 @@ Public Class Form_01_PagPilas
     Private _timerAutoSavePilas As New Timer With {.Interval = 60000}
 
     Private Sub Form_01_PagPilas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         Dim itemAyuda As New ToolStripMenuItem("? Tablas ETABS")
         itemAyuda.ForeColor = Color.White
         itemAyuda.BackColor = Color.FromArgb(87, 87, 87)

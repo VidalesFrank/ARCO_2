@@ -272,4 +272,72 @@ Public Class PilaVerticalAdaptable
 
     End Sub
 
+    ''' <summary>
+    ''' Ajuste mínimo para formularios cuya maqueta interna NO es adaptable: los
+    ''' controles conservan su Y y su alto de diseño, pero al menos se puede
+    ''' llegar a todos.
+    '''
+    ''' Maximizar por sí solo NO basta: al maximizar el alto llega como mucho al
+    ''' del área de trabajo, y si el contenido se diseñó para 1061 px en una
+    ''' pantalla de 816 lo de abajo sigue sin verse. De ahí el scroll.
+    '''
+    ''' No usar en formularios que ya reparten su alto con PilaVerticalAdaptable
+    ''' (como Form_09_Vigas): esas pestañas gestionan su propio AutoScroll.
+    ''' </summary>
+    Public Shared Sub AjustarAPantallaConScroll(frm As Form,
+                                                Optional anchoMinimo As Integer = 1024,
+                                                Optional altoMinimo As Integer = 600)
+
+        If frm Is Nothing Then Exit Sub
+
+        AjustarAPantalla(frm, anchoMinimo, altoMinimo)
+        HabilitarScrollEnContenedores(frm)
+
+    End Sub
+
+    ''' <summary>
+    ''' Activa AutoScroll en los contenedores desplazables del árbol que tengan
+    ''' hijos con posición fija (Dock = None).
+    '''
+    ''' Por qué recorrer el árbol y no poner AutoScroll en el formulario: casi
+    ''' todos los formularios de ARCO tienen un TabControl o un Panel con
+    ''' Dock = Fill colgando directamente del formulario. Ese hijo siempre mide
+    ''' exactamente lo que mide el área cliente, así que nada lo desborda y el
+    ''' AutoScroll del formulario no se dispararía jamás. El recorte ocurre más
+    ''' adentro, en las TabPage y paneles que sí contienen los GroupBox con Y y
+    ''' alto fijos, y es ahí donde hay que habilitarlo.
+    '''
+    ''' Activarlo es gratis cuando el contenido cabe: WinForms solo dibuja la
+    ''' barra cuando algún hijo desborda el área cliente.
+    '''
+    ''' GroupBox, DataGridView y Chart derivan de Control, no de
+    ''' ScrollableControl, así que quedan fuera del recorrido por sí solos.
+    ''' </summary>
+    Public Shared Sub HabilitarScrollEnContenedores(raiz As Control)
+
+        If raiz Is Nothing Then Exit Sub
+
+        Try
+            Dim cont = TryCast(raiz, ScrollableControl)
+            If cont IsNot Nothing Then
+                Dim tieneHijosFijos As Boolean = False
+                For Each c As Control In cont.Controls
+                    If c.Dock = DockStyle.None Then
+                        tieneHijosFijos = True
+                        Exit For
+                    End If
+                Next
+                If tieneHijosFijos Then cont.AutoScroll = True
+            End If
+
+            For Each c As Control In raiz.Controls
+                HabilitarScrollEnContenedores(c)
+            Next
+
+        Catch ex As Exception
+            Logger.Error(ex, "PilaVerticalAdaptable.HabilitarScrollEnContenedores", raiz.Name)
+        End Try
+
+    End Sub
+
 End Class

@@ -3,6 +3,12 @@ Imports ARCO.Funciones_03_Losa
 
 Public Class Form_03_Losas
     Public Shared Proyecto As New Proyecto_Losas
+
+    Private Sub Form_03_Losas_LoadAdaptable(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
+    End Sub
     Private Sub C_D_L_CheckedChanged(sender As Object, e As EventArgs) Handles C_D_L.CheckedChanged
         If C_C_L.Checked = True Then
             C_C_L.Checked = False
