@@ -3315,6 +3315,15 @@ Public Class Form_09_Vigas
             CargarVigaCompleta(_vigaActual)
         End If
 
+        ' Chequeos que no existían cuando el proyecto se guardó (p. ej. el cortante
+        ' plástico de la zona central, o el Vc de C.21.5.4.2) llegan con sus campos
+        ' vacíos al deserializar. Se recalcula todo el edificio una vez, en silencio,
+        ' para que el ingeniero no tenga que ir viga por viga ni acordarse de pulsar
+        ' "Recalcular revisión completa". Solo cuesta tiempo si hay refuerzo colocado:
+        ' RecalcularRevisionTodo omite las vigas que no lo tienen.
+        RecalcularRevisionTodo(silencioso:=True)
+        ActualizarTablaCortantePlastico()
+
     End Sub
 
     Private Sub Tabla_Resultados_Flexion_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles Tabla_Resultados_Flexion.CellEndEdit

@@ -1143,6 +1143,15 @@ Public Class VigaService
                                   r.Story.Trim().ToUpperInvariant())) _
             .ToDictionary(Function(g) g.Key, Function(g) g.ToList())
 
+        ' Compresión axial mayorada por frame, sobre TODAS las combinaciones — la
+        ' condición (b) de C.21.5.4.2 pide Pu "incluyendo los efectos sísmicos", y las
+        ' combinaciones del plástico son solo gravitacionales.
+        Dim axiales = beamForces _
+            .GroupBy(Function(r) (r.Beam.Trim().ToUpperInvariant(),
+                                  r.Story.Trim().ToUpperInvariant())) _
+            .ToDictionary(Function(g) g.Key,
+                          Function(g) Math.Max(0.0, -g.Min(Function(r) r.P)))
+
         For Each viga In vigas
 
             Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
@@ -1203,8 +1212,12 @@ Public Class VigaService
                 Dim Vu_B_der = -Ve_B + Vg_der
                 Dim Vu_dis_der = Math.Max(Math.Abs(Vu_A_der), Math.Abs(Vu_B_der))
 
-                ' Capacidad Vc (igual que chequeo estándar)
+                ' Capacidad Vc nominal. Dentro de 2h puede anularse por C.21.5.4.2
+                ' — ver VcEfectivo().
                 Dim Vc = 0.17 * Math.Sqrt(fc) * sec.b * sec.d * 1000.0   ' kN
+                Dim Ag As Double = sec.b * sec.h                          ' m²
+                Dim Pu_comp As Double = 0.0
+                axiales.TryGetValue(key, Pu_comp)
 
                 Dim res As New cResultadoCortantePlasticoFrame With {
                     .Ln = Ln,
@@ -1224,7 +1237,9 @@ Public Class VigaService
                     .Vu_A = Vu_A_izq
                     .Vu_B = Vu_B_izq
                     .Vu_diseno = Vu_dis_izq
-                    .Vc = Vc
+                    ' Ve que gobierna esta zona (la parte sísmica del caso crítico)
+                    Dim VeGobIzq = If(Math.Abs(Vu_A_izq) >= Math.Abs(Vu_B_izq), Ve_A, Ve_B)
+                    .Vc = VcEfectivo(Vc, d, sec.h, VeGobIzq, Vu_dis_izq, Pu_comp, Ag, fc)
                     Dim refIzq = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
                     If refIzq IsNot Nothing Then
                         Dim Av = refIzq.CantEstribos * AreaRefuerzo("#" & refIzq.NumeroBarra)
@@ -1285,7 +1300,12 @@ Public Class VigaService
                         .Vu_A = Ve_A + VgCenReport
                         .Vu_B = -Ve_B + VgCenReport
                         .Vu_diseno = Vu_dis_cen
-                        .Vc = Vc
+                        ' Distancia a la cara del apoyo del borde de ZC que gobierna.
+                        ' Si la zona confinada es más corta que 2h, este punto sigue
+                        ' dentro de la zona de rótula y a Vc también le aplica C.21.5.4.2.
+                        Dim distCen As Double = If(Math.Abs(VgCenReport - Vg_cen_i) < 0.000001, zcIzq, zcDer)
+                        Dim VeGobCen = If(Math.Abs(Ve_A + VgCenReport) >= Math.Abs(-Ve_B + VgCenReport), Ve_A, Ve_B)
+                        .Vc = VcEfectivo(Vc, distCen, sec.h, VeGobCen, Vu_dis_cen, Pu_comp, Ag, fc)
                         Dim Av = refCen.CantEstribos * AreaRefuerzo("#" & refCen.NumeroBarra)
                         .Vs = Av * fy * sec.d / refCen.Separacion / 1000.0
                         .phiVn = phi * (.Vc + .Vs)
@@ -1302,7 +1322,8 @@ Public Class VigaService
                     .Vu_A = Vu_A_der
                     .Vu_B = Vu_B_der
                     .Vu_diseno = Vu_dis_der
-                    .Vc = Vc
+                    Dim VeGobDer = If(Math.Abs(Vu_A_der) >= Math.Abs(Vu_B_der), Ve_A, Ve_B)
+                    .Vc = VcEfectivo(Vc, d, sec.h, VeGobDer, Vu_dis_der, Pu_comp, Ag, fc)
                     Dim refDer = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
                     If refDer IsNot Nothing Then
                         Dim Av = refDer.CantEstribos * AreaRefuerzo("#" & refDer.NumeroBarra)
@@ -1319,6 +1340,37 @@ Public Class VigaService
         Next
 
     End Sub
+
+    ''' <summary>
+    ''' Vc efectivo según NSR-10 C.21.5.4.2: dentro de la longitud 2h medida desde la
+    ''' cara del apoyo se debe tomar Vc = 0 cuando se cumplen A LA VEZ:
+    '''   (a) el cortante inducido por el sismo Ve representa la mitad o más del
+    '''       cortante máximo requerido en esa longitud, y
+    '''   (b) la fuerza axial de compresión mayorada Pu es menor que Ag·f'c/20.
+    '''
+    ''' Fuera de 2h (la zona central de un vano normal) Vc se conserva íntegro: ahí no
+    ''' se espera la rótula plástica que degrada el aporte del concreto.
+    '''
+    ''' En vigas Pu suele ser prácticamente nulo, así que (b) casi siempre se cumple y
+    ''' quien decide es (a). Convención de signo: en ETABS la compresión en frames es
+    ''' P negativo, así que la compresión máxima es -min(P).
+    ''' </summary>
+    ''' <param name="distanciaCara">Distancia del punto evaluado a la cara del apoyo (m).</param>
+    ''' <param name="Pu_comp">Compresión axial mayorada, positiva (kN). 0 si no hay.</param>
+    Private Shared Function VcEfectivo(Vc As Double,
+                                       distanciaCara As Double, h As Double,
+                                       Ve As Double, Vu As Double,
+                                       Pu_comp As Double, Ag As Double, fc As Double) As Double
+
+        If distanciaCara > 2.0 * h Then Return Vc      ' fuera de la zona de rótula
+        If Vu <= 0 Then Return Vc
+
+        Dim condA As Boolean = Math.Abs(Ve) >= 0.5 * Vu
+        Dim condB As Boolean = Pu_comp < Ag * fc * 1000.0 / 20.0   ' Ag[m²]·fc[MPa]·1000 = kN
+
+        Return If(condA AndAlso condB, 0.0, Vc)
+
+    End Function
 
     ' Mn = As·fy·(d − a/2) / 10⁶  [kN·m], φ = 1.0, bloque rectangular ACI
     Private Function CalcularMnNominal(As_mm2 As Double, fy_dis As Double,
