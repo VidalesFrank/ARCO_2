@@ -1,4 +1,5 @@
 Imports System.Windows.Forms.DataVisualization.Charting
+Imports ARCO.eNumeradores
 
 ''' <summary>
 ''' Dashboard de gráficas resumen del módulo de Vigas. Cierra la réplica del
