@@ -25,14 +25,14 @@ Partial Class Form_09_Vigas
         Me.components = New System.ComponentModel.Container()
         Dim DataGridViewCellStyle1 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle5 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle6 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle7 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle8 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle9 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim DataGridViewCellStyle10 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
-        Dim DataGridViewCellStyle3 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
-        Dim DataGridViewCellStyle4 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form_09_Vigas))
         Me.Button1 = New System.Windows.Forms.Button()
         Me.Tabla_Demandas = New System.Windows.Forms.DataGridView()
@@ -73,6 +73,13 @@ Partial Class Form_09_Vigas
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.GroupBox8 = New System.Windows.Forms.GroupBox()
+        Me.Ref_Transversal = New System.Windows.Forms.DataGridView()
+        Me.DataGridViewTextBoxColumn16 = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.DataGridViewTextBoxColumn17 = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.DataGridViewTextBoxColumn18 = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.DataGridViewTextBoxColumn19 = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.DataGridViewTextBoxColumn20 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Boton_Replicar = New System.Windows.Forms.Button()
         Me.Boton_VerGrupo = New System.Windows.Forms.Button()
         Me.Boton_Copiar = New System.Windows.Forms.Button()
@@ -92,6 +99,8 @@ Partial Class Form_09_Vigas
         Me.DataGridViewTextBoxColumn4 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.DataGridViewTextBoxColumn5 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.TabPage3 = New System.Windows.Forms.TabPage()
+        Me.GroupBox_Cortante = New System.Windows.Forms.GroupBox()
+        Me.Tabla_Resultados_Cortante = New System.Windows.Forms.DataGridView()
         Me.GroupBox7 = New System.Windows.Forms.GroupBox()
         Me.Tabla_Resultados_Flexion = New System.Windows.Forms.DataGridView()
         Me.DataGridViewTextBoxColumn11 = New System.Windows.Forms.DataGridViewTextBoxColumn()
@@ -104,15 +113,6 @@ Partial Class Form_09_Vigas
         Me.Button3 = New System.Windows.Forms.Button()
         Me.Panel4 = New System.Windows.Forms.Panel()
         Me.TimerAutoSave = New System.Windows.Forms.Timer(Me.components)
-        Me.GroupBox8 = New System.Windows.Forms.GroupBox()
-        Me.Ref_Transversal = New System.Windows.Forms.DataGridView()
-        Me.DataGridViewTextBoxColumn16 = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.DataGridViewTextBoxColumn17 = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.DataGridViewTextBoxColumn18 = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.DataGridViewTextBoxColumn19 = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.DataGridViewTextBoxColumn20 = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.GroupBox_Cortante = New System.Windows.Forms.GroupBox()
-        Me.Tabla_Resultados_Cortante = New System.Windows.Forms.DataGridView()
         CType(Me.Tabla_Demandas, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel3.SuspendLayout()
@@ -127,19 +127,19 @@ Partial Class Form_09_Vigas
         Me.TabControl1.SuspendLayout()
         Me.TabPage1.SuspendLayout()
         Me.TabPage2.SuspendLayout()
+        Me.GroupBox8.SuspendLayout()
+        CType(Me.Ref_Transversal, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox6.SuspendLayout()
         CType(Me.Ref_Inferior, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox5.SuspendLayout()
         CType(Me.Ref_Superior, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.TabPage3.SuspendLayout()
+        Me.GroupBox_Cortante.SuspendLayout()
+        CType(Me.Tabla_Resultados_Cortante, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox7.SuspendLayout()
         CType(Me.Tabla_Resultados_Flexion, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel2.SuspendLayout()
         Me.Panel4.SuspendLayout()
-        Me.GroupBox8.SuspendLayout()
-        CType(Me.Ref_Transversal, System.ComponentModel.ISupportInitialize).BeginInit()
-        Me.GroupBox_Cortante.SuspendLayout()
-        CType(Me.Tabla_Resultados_Cortante, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'Button1
@@ -270,7 +270,7 @@ Partial Class Form_09_Vigas
         Me.Panel3.Location = New System.Drawing.Point(0, 37)
         Me.Panel3.Margin = New System.Windows.Forms.Padding(4)
         Me.Panel3.Name = "Panel3"
-        Me.Panel3.Size = New System.Drawing.Size(513, 1047)
+        Me.Panel3.Size = New System.Drawing.Size(513, 1018)
         Me.Panel3.TabIndex = 9
         '
         'Label2
@@ -348,7 +348,7 @@ Partial Class Form_09_Vigas
         Me.New_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.New_Pilas.ForeColor = System.Drawing.Color.White
         Me.New_Pilas.Name = "New_Pilas"
-        Me.New_Pilas.Size = New System.Drawing.Size(245, 28)
+        Me.New_Pilas.Size = New System.Drawing.Size(264, 28)
         Me.New_Pilas.Text = "Limpiar datos de vigas"
         '
         'Open_Pilas
@@ -356,7 +356,7 @@ Partial Class Form_09_Vigas
         Me.Open_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Open_Pilas.ForeColor = System.Drawing.Color.White
         Me.Open_Pilas.Name = "Open_Pilas"
-        Me.Open_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.Open_Pilas.Size = New System.Drawing.Size(264, 28)
         Me.Open_Pilas.Text = "Abrir"
         '
         'Save_Pilas
@@ -364,7 +364,7 @@ Partial Class Form_09_Vigas
         Me.Save_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.Save_Pilas.ForeColor = System.Drawing.Color.White
         Me.Save_Pilas.Name = "Save_Pilas"
-        Me.Save_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.Save_Pilas.Size = New System.Drawing.Size(264, 28)
         Me.Save_Pilas.Text = "Guardar"
         '
         'SaveAs_Pilas
@@ -372,7 +372,7 @@ Partial Class Form_09_Vigas
         Me.SaveAs_Pilas.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(86, Byte), Integer))
         Me.SaveAs_Pilas.ForeColor = System.Drawing.Color.White
         Me.SaveAs_Pilas.Name = "SaveAs_Pilas"
-        Me.SaveAs_Pilas.Size = New System.Drawing.Size(207, 28)
+        Me.SaveAs_Pilas.Size = New System.Drawing.Size(264, 28)
         Me.SaveAs_Pilas.Text = "Guardar Como"
         '
         'Importar_Zapatas
@@ -551,7 +551,7 @@ Partial Class Form_09_Vigas
         Me.TabControl1.Location = New System.Drawing.Point(0, 0)
         Me.TabControl1.Name = "TabControl1"
         Me.TabControl1.SelectedIndex = 0
-        Me.TabControl1.Size = New System.Drawing.Size(1411, 950)
+        Me.TabControl1.Size = New System.Drawing.Size(1411, 921)
         Me.TabControl1.TabIndex = 37
         '
         'TabPage1
@@ -563,7 +563,7 @@ Partial Class Form_09_Vigas
         Me.TabPage1.Location = New System.Drawing.Point(4, 29)
         Me.TabPage1.Name = "TabPage1"
         Me.TabPage1.Padding = New System.Windows.Forms.Padding(3)
-        Me.TabPage1.Size = New System.Drawing.Size(1403, 917)
+        Me.TabPage1.Size = New System.Drawing.Size(1403, 888)
         Me.TabPage1.TabIndex = 0
         Me.TabPage1.Text = "Diagramas"
         '
@@ -580,9 +580,93 @@ Partial Class Form_09_Vigas
         Me.TabPage2.Location = New System.Drawing.Point(4, 29)
         Me.TabPage2.Name = "TabPage2"
         Me.TabPage2.Padding = New System.Windows.Forms.Padding(3)
-        Me.TabPage2.Size = New System.Drawing.Size(1403, 917)
+        Me.TabPage2.Size = New System.Drawing.Size(1403, 888)
         Me.TabPage2.TabIndex = 1
         Me.TabPage2.Text = "Refuerzo"
+        '
+        'GroupBox8
+        '
+        Me.GroupBox8.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.GroupBox8.Controls.Add(Me.Ref_Transversal)
+        Me.GroupBox8.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.GroupBox8.ForeColor = System.Drawing.Color.Black
+        Me.GroupBox8.Location = New System.Drawing.Point(11, 624)
+        Me.GroupBox8.Margin = New System.Windows.Forms.Padding(4)
+        Me.GroupBox8.Name = "GroupBox8"
+        Me.GroupBox8.Padding = New System.Windows.Forms.Padding(4)
+        Me.GroupBox8.Size = New System.Drawing.Size(1390, 175)
+        Me.GroupBox8.TabIndex = 37
+        Me.GroupBox8.TabStop = False
+        Me.GroupBox8.Text = "Refuerzo Transversal"
+        '
+        'Ref_Transversal
+        '
+        Me.Ref_Transversal.AllowUserToAddRows = False
+        Me.Ref_Transversal.AllowUserToDeleteRows = False
+        Me.Ref_Transversal.BackgroundColor = System.Drawing.SystemColors.Control
+        Me.Ref_Transversal.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D
+        Me.Ref_Transversal.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.[Single]
+        DataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Control
+        DataGridViewCellStyle3.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        DataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.WindowText
+        DataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight
+        DataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.HighlightText
+        DataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
+        Me.Ref_Transversal.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
+        Me.Ref_Transversal.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        Me.Ref_Transversal.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.DataGridViewTextBoxColumn16, Me.DataGridViewTextBoxColumn17, Me.DataGridViewTextBoxColumn18, Me.DataGridViewTextBoxColumn19, Me.DataGridViewTextBoxColumn20})
+        DataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window
+        DataGridViewCellStyle4.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        DataGridViewCellStyle4.ForeColor = System.Drawing.Color.Black
+        DataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight
+        DataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.HighlightText
+        DataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.[False]
+        Me.Ref_Transversal.DefaultCellStyle = DataGridViewCellStyle4
+        Me.Ref_Transversal.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.Ref_Transversal.Location = New System.Drawing.Point(4, 24)
+        Me.Ref_Transversal.Margin = New System.Windows.Forms.Padding(4)
+        Me.Ref_Transversal.Name = "Ref_Transversal"
+        Me.Ref_Transversal.RowHeadersWidth = 51
+        Me.Ref_Transversal.Size = New System.Drawing.Size(1382, 147)
+        Me.Ref_Transversal.TabIndex = 5
+        '
+        'DataGridViewTextBoxColumn16
+        '
+        Me.DataGridViewTextBoxColumn16.HeaderText = "Story"
+        Me.DataGridViewTextBoxColumn16.MinimumWidth = 6
+        Me.DataGridViewTextBoxColumn16.Name = "DataGridViewTextBoxColumn16"
+        Me.DataGridViewTextBoxColumn16.Width = 125
+        '
+        'DataGridViewTextBoxColumn17
+        '
+        Me.DataGridViewTextBoxColumn17.HeaderText = "Beam"
+        Me.DataGridViewTextBoxColumn17.MinimumWidth = 6
+        Me.DataGridViewTextBoxColumn17.Name = "DataGridViewTextBoxColumn17"
+        Me.DataGridViewTextBoxColumn17.Width = 125
+        '
+        'DataGridViewTextBoxColumn18
+        '
+        Me.DataGridViewTextBoxColumn18.HeaderText = "Station (m)"
+        Me.DataGridViewTextBoxColumn18.MinimumWidth = 6
+        Me.DataGridViewTextBoxColumn18.Name = "DataGridViewTextBoxColumn18"
+        Me.DataGridViewTextBoxColumn18.Width = 125
+        '
+        'DataGridViewTextBoxColumn19
+        '
+        Me.DataGridViewTextBoxColumn19.HeaderText = "V (kN)"
+        Me.DataGridViewTextBoxColumn19.MinimumWidth = 6
+        Me.DataGridViewTextBoxColumn19.Name = "DataGridViewTextBoxColumn19"
+        Me.DataGridViewTextBoxColumn19.Width = 125
+        '
+        'DataGridViewTextBoxColumn20
+        '
+        Me.DataGridViewTextBoxColumn20.HeaderText = "M3 (kN.m)"
+        Me.DataGridViewTextBoxColumn20.MinimumWidth = 6
+        Me.DataGridViewTextBoxColumn20.Name = "DataGridViewTextBoxColumn20"
+        Me.DataGridViewTextBoxColumn20.Width = 125
         '
         'Boton_Replicar
         '
@@ -817,9 +901,43 @@ Partial Class Form_09_Vigas
         Me.TabPage3.Location = New System.Drawing.Point(4, 29)
         Me.TabPage3.Name = "TabPage3"
         Me.TabPage3.Padding = New System.Windows.Forms.Padding(3)
-        Me.TabPage3.Size = New System.Drawing.Size(1403, 917)
+        Me.TabPage3.Size = New System.Drawing.Size(1403, 888)
         Me.TabPage3.TabIndex = 2
         Me.TabPage3.Text = "Resultados"
+        '
+        'GroupBox_Cortante
+        '
+        Me.GroupBox_Cortante.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.GroupBox_Cortante.Controls.Add(Me.Tabla_Resultados_Cortante)
+        Me.GroupBox_Cortante.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.GroupBox_Cortante.ForeColor = System.Drawing.Color.Black
+        Me.GroupBox_Cortante.Location = New System.Drawing.Point(4, 480)
+        Me.GroupBox_Cortante.Margin = New System.Windows.Forms.Padding(4)
+        Me.GroupBox_Cortante.Name = "GroupBox_Cortante"
+        Me.GroupBox_Cortante.Padding = New System.Windows.Forms.Padding(4)
+        Me.GroupBox_Cortante.Size = New System.Drawing.Size(1390, 399)
+        Me.GroupBox_Cortante.TabIndex = 36
+        Me.GroupBox_Cortante.TabStop = False
+        Me.GroupBox_Cortante.Text = "Cortante"
+        '
+        'Tabla_Resultados_Cortante
+        '
+        Me.Tabla_Resultados_Cortante.AllowUserToAddRows = False
+        Me.Tabla_Resultados_Cortante.AllowUserToDeleteRows = False
+        Me.Tabla_Resultados_Cortante.BackgroundColor = System.Drawing.SystemColors.Control
+        Me.Tabla_Resultados_Cortante.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D
+        Me.Tabla_Resultados_Cortante.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.[Single]
+        Me.Tabla_Resultados_Cortante.ColumnHeadersHeight = 29
+        Me.Tabla_Resultados_Cortante.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.Tabla_Resultados_Cortante.Location = New System.Drawing.Point(4, 24)
+        Me.Tabla_Resultados_Cortante.Margin = New System.Windows.Forms.Padding(4)
+        Me.Tabla_Resultados_Cortante.Name = "Tabla_Resultados_Cortante"
+        Me.Tabla_Resultados_Cortante.ReadOnly = True
+        Me.Tabla_Resultados_Cortante.RowHeadersVisible = False
+        Me.Tabla_Resultados_Cortante.RowHeadersWidth = 51
+        Me.Tabla_Resultados_Cortante.Size = New System.Drawing.Size(1382, 371)
+        Me.Tabla_Resultados_Cortante.TabIndex = 5
         '
         'GroupBox7
         '
@@ -906,39 +1024,6 @@ Partial Class Form_09_Vigas
         Me.DataGridViewTextBoxColumn15.Name = "DataGridViewTextBoxColumn15"
         Me.DataGridViewTextBoxColumn15.Width = 125
         '
-        'GroupBox_Cortante
-        '
-        Me.GroupBox_Cortante.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
-            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.GroupBox_Cortante.Controls.Add(Me.Tabla_Resultados_Cortante)
-        Me.GroupBox_Cortante.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.GroupBox_Cortante.ForeColor = System.Drawing.Color.Black
-        Me.GroupBox_Cortante.Location = New System.Drawing.Point(4, 480)
-        Me.GroupBox_Cortante.Margin = New System.Windows.Forms.Padding(4)
-        Me.GroupBox_Cortante.Name = "GroupBox_Cortante"
-        Me.GroupBox_Cortante.Padding = New System.Windows.Forms.Padding(4)
-        Me.GroupBox_Cortante.Size = New System.Drawing.Size(1390, 430)
-        Me.GroupBox_Cortante.TabIndex = 36
-        Me.GroupBox_Cortante.TabStop = False
-        Me.GroupBox_Cortante.Text = "Cortante"
-        '
-        'Tabla_Resultados_Cortante
-        '
-        Me.Tabla_Resultados_Cortante.AllowUserToAddRows = False
-        Me.Tabla_Resultados_Cortante.AllowUserToDeleteRows = False
-        Me.Tabla_Resultados_Cortante.BackgroundColor = System.Drawing.SystemColors.Control
-        Me.Tabla_Resultados_Cortante.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D
-        Me.Tabla_Resultados_Cortante.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.[Single]
-        Me.Tabla_Resultados_Cortante.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.Tabla_Resultados_Cortante.Location = New System.Drawing.Point(4, 24)
-        Me.Tabla_Resultados_Cortante.Margin = New System.Windows.Forms.Padding(4)
-        Me.Tabla_Resultados_Cortante.Name = "Tabla_Resultados_Cortante"
-        Me.Tabla_Resultados_Cortante.ReadOnly = True
-        Me.Tabla_Resultados_Cortante.RowHeadersVisible = False
-        Me.Tabla_Resultados_Cortante.RowHeadersWidth = 51
-        Me.Tabla_Resultados_Cortante.Size = New System.Drawing.Size(1382, 402)
-        Me.Tabla_Resultados_Cortante.TabIndex = 5
-        '
         'Panel2
         '
         Me.Panel2.Controls.Add(Me.Button4)
@@ -988,102 +1073,18 @@ Partial Class Form_09_Vigas
         Me.Panel4.Dock = System.Windows.Forms.DockStyle.Fill
         Me.Panel4.Location = New System.Drawing.Point(513, 134)
         Me.Panel4.Name = "Panel4"
-        Me.Panel4.Size = New System.Drawing.Size(1411, 950)
+        Me.Panel4.Size = New System.Drawing.Size(1411, 921)
         Me.Panel4.TabIndex = 39
         '
         'TimerAutoSave
         '
         Me.TimerAutoSave.Interval = 60000
         '
-        'GroupBox8
-        '
-        Me.GroupBox8.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
-            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.GroupBox8.Controls.Add(Me.Ref_Transversal)
-        Me.GroupBox8.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.GroupBox8.ForeColor = System.Drawing.Color.Black
-        Me.GroupBox8.Location = New System.Drawing.Point(11, 624)
-        Me.GroupBox8.Margin = New System.Windows.Forms.Padding(4)
-        Me.GroupBox8.Name = "GroupBox8"
-        Me.GroupBox8.Padding = New System.Windows.Forms.Padding(4)
-        Me.GroupBox8.Size = New System.Drawing.Size(1390, 175)
-        Me.GroupBox8.TabIndex = 37
-        Me.GroupBox8.TabStop = False
-        Me.GroupBox8.Text = "Refuerzo Transversal"
-        '
-        'Ref_Transversal
-        '
-        Me.Ref_Transversal.AllowUserToAddRows = False
-        Me.Ref_Transversal.AllowUserToDeleteRows = False
-        Me.Ref_Transversal.BackgroundColor = System.Drawing.SystemColors.Control
-        Me.Ref_Transversal.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D
-        Me.Ref_Transversal.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.[Single]
-        DataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Control
-        DataGridViewCellStyle3.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        DataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.WindowText
-        DataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight
-        DataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.HighlightText
-        DataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
-        Me.Ref_Transversal.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
-        Me.Ref_Transversal.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        Me.Ref_Transversal.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.DataGridViewTextBoxColumn16, Me.DataGridViewTextBoxColumn17, Me.DataGridViewTextBoxColumn18, Me.DataGridViewTextBoxColumn19, Me.DataGridViewTextBoxColumn20})
-        DataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window
-        DataGridViewCellStyle4.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.5!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        DataGridViewCellStyle4.ForeColor = System.Drawing.Color.Black
-        DataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight
-        DataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.HighlightText
-        DataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.[False]
-        Me.Ref_Transversal.DefaultCellStyle = DataGridViewCellStyle4
-        Me.Ref_Transversal.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.Ref_Transversal.Location = New System.Drawing.Point(4, 24)
-        Me.Ref_Transversal.Margin = New System.Windows.Forms.Padding(4)
-        Me.Ref_Transversal.Name = "Ref_Transversal"
-        Me.Ref_Transversal.RowHeadersWidth = 51
-        Me.Ref_Transversal.Size = New System.Drawing.Size(1382, 147)
-        Me.Ref_Transversal.TabIndex = 5
-        '
-        'DataGridViewTextBoxColumn16
-        '
-        Me.DataGridViewTextBoxColumn16.HeaderText = "Story"
-        Me.DataGridViewTextBoxColumn16.MinimumWidth = 6
-        Me.DataGridViewTextBoxColumn16.Name = "DataGridViewTextBoxColumn16"
-        Me.DataGridViewTextBoxColumn16.Width = 125
-        '
-        'DataGridViewTextBoxColumn17
-        '
-        Me.DataGridViewTextBoxColumn17.HeaderText = "Beam"
-        Me.DataGridViewTextBoxColumn17.MinimumWidth = 6
-        Me.DataGridViewTextBoxColumn17.Name = "DataGridViewTextBoxColumn17"
-        Me.DataGridViewTextBoxColumn17.Width = 125
-        '
-        'DataGridViewTextBoxColumn18
-        '
-        Me.DataGridViewTextBoxColumn18.HeaderText = "Station (m)"
-        Me.DataGridViewTextBoxColumn18.MinimumWidth = 6
-        Me.DataGridViewTextBoxColumn18.Name = "DataGridViewTextBoxColumn18"
-        Me.DataGridViewTextBoxColumn18.Width = 125
-        '
-        'DataGridViewTextBoxColumn19
-        '
-        Me.DataGridViewTextBoxColumn19.HeaderText = "V (kN)"
-        Me.DataGridViewTextBoxColumn19.MinimumWidth = 6
-        Me.DataGridViewTextBoxColumn19.Name = "DataGridViewTextBoxColumn19"
-        Me.DataGridViewTextBoxColumn19.Width = 125
-        '
-        'DataGridViewTextBoxColumn20
-        '
-        Me.DataGridViewTextBoxColumn20.HeaderText = "M3 (kN.m)"
-        Me.DataGridViewTextBoxColumn20.MinimumWidth = 6
-        Me.DataGridViewTextBoxColumn20.Name = "DataGridViewTextBoxColumn20"
-        Me.DataGridViewTextBoxColumn20.Width = 125
-        '
         'Form_09_Vigas
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(1924, 1084)
+        Me.ClientSize = New System.Drawing.Size(1924, 1055)
         Me.Controls.Add(Me.Panel4)
         Me.Controls.Add(Me.Panel2)
         Me.Controls.Add(Me.Panel3)
@@ -1109,20 +1110,20 @@ Partial Class Form_09_Vigas
         Me.TabControl1.ResumeLayout(False)
         Me.TabPage1.ResumeLayout(False)
         Me.TabPage2.ResumeLayout(False)
+        Me.GroupBox8.ResumeLayout(False)
+        CType(Me.Ref_Transversal, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox6.ResumeLayout(False)
         CType(Me.Ref_Inferior, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox5.ResumeLayout(False)
         CType(Me.Ref_Superior, System.ComponentModel.ISupportInitialize).EndInit()
         Me.TabPage3.ResumeLayout(False)
+        Me.GroupBox_Cortante.ResumeLayout(False)
+        CType(Me.Tabla_Resultados_Cortante, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox7.ResumeLayout(False)
         CType(Me.Tabla_Resultados_Flexion, System.ComponentModel.ISupportInitialize).EndInit()
         Me.Panel2.ResumeLayout(False)
         Me.Panel2.PerformLayout()
         Me.Panel4.ResumeLayout(False)
-        Me.GroupBox8.ResumeLayout(False)
-        CType(Me.Ref_Transversal, System.ComponentModel.ISupportInitialize).EndInit()
-        Me.GroupBox_Cortante.ResumeLayout(False)
-        CType(Me.Tabla_Resultados_Cortante, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub

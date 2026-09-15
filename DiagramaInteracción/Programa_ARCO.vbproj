@@ -647,7 +647,9 @@
     <Compile Include="Servicios\ExcelExportService.vb" />
     <Compile Include="Funciones\Logger.vb" />
     <Compile Include="Formularios\02_Columnas\ColumnaService.vb" />
-    <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.XLSXReader.vb" />
+    <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.XLSXReader.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\06_Muros\MuroService.vb" />
     <Compile Include="Formularios\06_Muros\MuroService.Charts.vb" />
     <Compile Include="Funciones\ReporteRevisionService.vb" />
