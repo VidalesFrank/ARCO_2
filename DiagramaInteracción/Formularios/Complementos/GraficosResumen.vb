@@ -407,7 +407,7 @@ Public NotInheritable Class GraficosResumen
                     MessageBox.Show("Imagen guardada correctamente." & vbCrLf & dlg.FileName,
                                     "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
                 Catch ex As Exception
-                    Logger.Error("Exportar gráfico: " & ex.Message)
+                    Logger.Error(ex, "GraficosResumen.ExportarImagen", dlg.FileName)
                     MessageBox.Show("No se pudo guardar la imagen." & vbCrLf & ex.Message,
                                     "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 End Try

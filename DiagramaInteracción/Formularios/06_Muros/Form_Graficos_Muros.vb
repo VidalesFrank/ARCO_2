@@ -77,7 +77,7 @@ Public Class Form_Graficos_Muros
             _filas = muros.Select(AddressOf MurosResumenService.CalcularFila).ToList()
 
         Catch ex As Exception
-            Logger.Error("Gráficas Muros — obtener datos: " & ex.Message)
+            Logger.Error(ex, "Form_Graficos_Muros.ObtenerFilas")
             _filas = New List(Of FilaMuro)
         End Try
 

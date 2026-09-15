@@ -61,7 +61,7 @@ Public Class Form_Graficos_Pilas
             End If
             Return If(p.Elementos.Pilas.ListaElementos, New List(Of Elemento_Pila))
         Catch ex As Exception
-            Logger.Error("Gráficas Pilas — obtener datos: " & ex.Message)
+            Logger.Error(ex, "Form_Graficos_Pilas.ObtenerPilas")
             Return New List(Of Elemento_Pila)
         End Try
     End Function
