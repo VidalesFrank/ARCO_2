@@ -370,7 +370,9 @@ Public Class Form_Reporte_Proyecto_Completo
             EscribirFactor(ws.Cell(fila, 10), fCv3)
             ws.Cell(fila, 11).Value = pCv3
 
-            Dim cumple = fFlex >= 1.0F AndAlso fCv2 >= 1.0F AndAlso fCv3 >= 1.0F
+            Dim cumple = fFlex >= Funciones_00_Varias.UMBRAL_CD AndAlso
+                         fCv2 >= Funciones_00_Varias.UMBRAL_CD AndAlso
+                         fCv3 >= Funciones_00_Varias.UMBRAL_CD
             Dim cEstado = ws.Cell(fila, 12)
             cEstado.Value = If(cumple, "CUMPLE", "NO CUMPLE")
             cEstado.Style.Font.Bold = True
@@ -497,7 +499,8 @@ Public Class Form_Reporte_Proyecto_Completo
                 EscribirFactor(ws.Cell(fila, 5), sec.F_Flexo_Top)
                 EscribirFactor(ws.Cell(fila, 6), sec.F_Flexo_Bot)
 
-                Dim cumple = sec.F_Flexo_Top >= 1.0 AndAlso sec.F_Flexo_Bot >= 1.0
+                Dim cumple = sec.F_Flexo_Top >= Funciones_00_Varias.UMBRAL_CD AndAlso
+                             sec.F_Flexo_Bot >= Funciones_00_Varias.UMBRAL_CD
                 Dim cE = ws.Cell(fila, 7)
                 cE.Value = If(cumple, "CUMPLE", "NO CUMPLE")
                 cE.Style.Font.Bold = True

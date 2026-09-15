@@ -539,9 +539,13 @@ Public Class Form_PlantaInteractiva
                     Case PosicionTramoViga.Centro : posNombre = "Cen"
                     Case Else : posNombre = "Der"
                 End Select
-                Dim ok = z.Cumple
+                ' Una zona que falla el chequeo convencional pero cumple el cortante plástico
+                ' (C.21.5.4, solo extremos) no se marca como falla — misma regla que los reportes.
+                Dim okPlas = VigaService.CumpleCortantePlastico(z.Posicion, f.CortantePlastico)
+                Dim ok = z.Cumple OrElse okPlas
+                Dim marca As String = If(z.Cumple, " ✓", If(okPlas, " ✓ (plást.)", " ✗"))
                 Dim clr = If(ok, Color.FromArgb(0, 120, 0), Color.FromArgb(180, 0, 0))
-                lineas.Add(($"  {posNombre}  Vu={Math.Round(z.Vu, 1)} kN   φVn={Math.Round(z.phiVn, 1)} kN   F={Math.Round(z.Factor, 2)}{If(ok, " ✓", " ✗")}", False, clr))
+                lineas.Add(($"  {posNombre}  Vu={Math.Round(z.Vu, 1)} kN   φVn={Math.Round(z.phiVn, 1)} kN   F={Math.Round(z.Factor, 2)}{marca}", False, clr))
             Next
         End If
 

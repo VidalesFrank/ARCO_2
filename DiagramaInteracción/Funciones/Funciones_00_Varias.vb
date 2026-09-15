@@ -9,6 +9,20 @@ Imports System.Drawing
 '   Servicios\Funciones_UIHelpers.vb                → FuncionColorCumple / CasillaCumple / EstiloTabla
 Partial Public Class Funciones_00_Varias
 
+    ''' <summary>
+    ''' Umbral único de cumplimiento de TODO el programa: C/D >= 0.90 cumple.
+    ''' Aplica a vigas, columnas, muros, pilas y nervios, y a todas las vistas
+    ''' (tablas, resúmenes, planta interactiva, gráficas y reportes .docx/.xlsx).
+    ''' Las excepciones documentadas son los límites de ALR (0.30 columnas,
+    ''' 0.35 muros), que no son C/D sino relaciones de carga axial.
+    '''
+    ''' No introducir umbrales locales. Hasta 2026-09-15 las hojas "Resumen
+    ''' Completo" de vigas y las de columnas/muros del Reporte de Proyecto
+    ''' Completo usaban 1.0 mientras el resto usaba 0.9: el mismo elemento con
+    ''' C/D entre 0.90 y 0.99 salía "CUMPLE" en una vista y "Revisar" en otra.
+    ''' </summary>
+    Public Const UMBRAL_CD As Double = 0.9
+
     ''' <summary>Normaliza claves E17 ("Envolvente Min/Max") al formato canónico "Envolvente (Min/Max)".</summary>
     Public Shared Function NormalizarClaveCombo(nombre As String) As String
         If String.IsNullOrWhiteSpace(nombre) Then Return nombre
