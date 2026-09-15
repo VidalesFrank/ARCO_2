@@ -72,7 +72,7 @@ Partial Public Class SRectangular
 
         If Combinacion IsNot Nothing Then
 
-            Dim recta_Capacidad = Funciones_Muros.RectaCapacidadDemanda(Combinacion, Lista_Phi_Mn, Lista_Phi_Pn)
+            Dim recta_Capacidad = MuroService.RectaCapacidadDemanda(Combinacion, Lista_Phi_Mn, Lista_Phi_Pn)
             Dim List_X As List(Of Single) = recta_Capacidad.Item1
             Dim List_Y As List(Of Single) = recta_Capacidad.Item2
 

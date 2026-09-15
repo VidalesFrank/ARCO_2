@@ -12,6 +12,7 @@ Public Class cElementos
     Public Property Grids As New cGrids()
 
     <OptionalField> Public Nervios As New cNervios()
+    <OptionalField> Public VigasFundacion As New cVigasFundacion()
 
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
@@ -24,6 +25,7 @@ Public Class cElementos
         If Vigas Is Nothing Then Vigas = New cVigas()
         If Grids Is Nothing Then Grids = New cGrids()
         If Nervios Is Nothing Then Nervios = New cNervios()
+        If VigasFundacion Is Nothing Then VigasFundacion = New cVigasFundacion()
     End Sub
 
 End Class

@@ -1,4 +1,6 @@
-﻿<Serializable>
+﻿Imports System.Runtime.Serialization
+
+<Serializable>
 Public Class Proyecto_Losas
 
     Public Nombre As String
@@ -36,5 +38,14 @@ Public Class Proyecto_Losas
     Public Op_Continua_T As Boolean
     Public Op_Continua_R As Boolean
     Public Op_Continua_B As Boolean
+
+    <OnDeserialized>
+    Private Sub OnDeserialized(ctx As StreamingContext)
+        If Titulos_Coeficientes Is Nothing Then Titulos_Coeficientes = New List(Of String)
+        If Coeficientes Is Nothing Then Coeficientes = New List(Of Single)
+        If Titulos_Demandas Is Nothing Then Titulos_Demandas = New List(Of String)
+        If Momentos_Franja_Central Is Nothing Then Momentos_Franja_Central = New List(Of Single)
+        If Momentos_Franja_Borde Is Nothing Then Momentos_Franja_Borde = New List(Of Single)
+    End Sub
 
 End Class

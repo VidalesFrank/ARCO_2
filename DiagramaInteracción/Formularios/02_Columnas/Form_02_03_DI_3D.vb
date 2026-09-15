@@ -1,5 +1,5 @@
 Imports System.Drawing.Drawing2D
-Imports ARCO.Funciones_02_Columnas
+Imports ARCO.ColumnaService
 
 ''' <summary>
 ''' Superficie de interacción P–M2–M3 en 3D con rotación interactiva.

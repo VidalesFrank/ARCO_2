@@ -267,6 +267,7 @@
     <Compile Include="Clases\Columnas\Columnas.vb" />
     <Compile Include="Clases\Columnas\Elemento_Columna.vb" />
     <Compile Include="Clases\Nervios\cNervios.vb" />
+    <Compile Include="Clases\VigasFundacion\cVigasFundacion.vb" />
     <Compile Include="Clases\cParametrosSismicos.vb" />
     <Compile Include="Clases\cResultadosGlobales.vb" />
     <Compile Include="Clases\cTablasETABS.vb" />
@@ -376,6 +377,9 @@
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
     <Compile Include="Formularios\11_Nervios\NervioService.vb" />
     <Compile Include="Formularios\11_Nervios\NervioDiagramaService.vb" />
+    <Compile Include="Formularios\11_Nervios\Form_AgrupacionManualNervios.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\11_Nervios\Form_11_SepararNervio.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -383,6 +387,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\11_Nervios\Form_11_01_Resultados.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_Reporte_Resumen_Nervios.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Complementos\Form_Logos.Designer.vb">
@@ -397,10 +404,10 @@
     <Compile Include="Formularios\Form_07_Pag_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\Form_08_VigasFundacion.Designer.vb">
-      <DependentUpon>Form_08_VigasFundacion.vb</DependentUpon>
+    <Compile Include="Formularios\08_VigasFundacion\Form_08_VigasFundacion.vb">
+      <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\Form_08_VigasFundacion.vb">
+    <Compile Include="Formularios\08_VigasFundacion\Form_Reporte_VigasFundacion.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_09_Vigas.Designer.vb">
@@ -437,7 +444,16 @@
     <Compile Include="Formularios\Form_Reporte_Resumen.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Form_CombinarProyecto.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_CombinarProyecto.Designer.vb">
+      <DependentUpon>Form_CombinarProyecto.vb</DependentUpon>
+    </Compile>
     <Compile Include="Formularios\Form_Reporte_Proyecto_Completo.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\Form_Reporte_Revision.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Form_Reporte_Zapatas.vb">
@@ -621,11 +637,21 @@
     <Compile Include="Funciones\Funciones_04_Escalera.vb" />
     <Compile Include="Funciones\Funciones_03_Losa.vb" />
     <Compile Include="Funciones\Funciones_05_MurosNoEstructurales.vb" />
-    <Compile Include="Funciones\Funciones_01_Pilas.vb" />
+    <Compile Include="Formularios\01_Pilas\PilaService.vb" />
+    <Compile Include="Funciones\ARCOMenuRenderer.vb" />
     <Compile Include="Funciones\Funciones_00_Varias.vb" />
+    <Compile Include="Servicios\Funciones_ExcelETABSImport.vb" />
+    <Compile Include="Servicios\Funciones_DataTransformationETABS.vb" />
+    <Compile Include="Servicios\Funciones_Refuerzo.vb" />
+    <Compile Include="Servicios\Funciones_UIHelpers.vb" />
+    <Compile Include="Servicios\ExcelExportService.vb" />
     <Compile Include="Funciones\Logger.vb" />
-    <Compile Include="Funciones\Funciones_02_Columnas.vb" />
-    <Compile Include="Funciones\Funciones_Muros.vb" />
+    <Compile Include="Formularios\02_Columnas\ColumnaService.vb" />
+    <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.XLSXReader.vb" />
+    <Compile Include="Formularios\06_Muros\MuroService.vb" />
+    <Compile Include="Formularios\06_Muros\MuroService.Charts.vb" />
+    <Compile Include="Funciones\ReporteRevisionService.vb" />
+    <Compile Include="Funciones\ReporteRevisionWordHelpers.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
     <Compile Include="Funciones\Funciones_Zapatas.vb" />
     <Compile Include="Funciones\ReporteInicial.vb" />
@@ -732,9 +758,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Form_07_Pag_Zapatas.resx">
       <DependentUpon>Form_07_Pag_Zapatas.vb</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Formularios\Form_08_VigasFundacion.resx">
-      <DependentUpon>Form_08_VigasFundacion.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Form_09_Vigas.resx">
       <DependentUpon>Form_09_Vigas.vb</DependentUpon>
@@ -946,6 +969,7 @@
     <None Include="Resources\ARCO_ICONOVERDE.ico" />
     <None Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_LOGOVerde.png" />
+    <None Include="Resources\PlantillaReporteRevision.docx" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Clases\Vigas\" />

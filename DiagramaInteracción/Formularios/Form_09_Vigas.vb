@@ -829,7 +829,19 @@ Public Class Form_09_Vigas
         Dim menuReportes As New ToolStripMenuItem("Reportes")
         menuReportes.ForeColor = Color.White
         menuReportes.BackColor = Color.FromArgb(87, 87, 87)
-        AddHandler menuReportes.Click, AddressOf AbrirReportes
+
+        Dim itemRecalcular As New ToolStripMenuItem("Recalcular revisión completa")
+        itemRecalcular.BackColor = Color.FromArgb(87, 87, 87)
+        itemRecalcular.ForeColor = Color.White
+        AddHandler itemRecalcular.Click, Sub(s, ev) RecalcularRevisionTodo(silencioso:=False)
+
+        Dim itemVerResumen As New ToolStripMenuItem("Ver Resumen de Vigas")
+        itemVerResumen.BackColor = Color.FromArgb(87, 87, 87)
+        itemVerResumen.ForeColor = Color.White
+        AddHandler itemVerResumen.Click, AddressOf AbrirReportes
+
+        menuReportes.DropDownItems.Add(itemRecalcular)
+        menuReportes.DropDownItems.Add(itemVerResumen)
         MenuStrip1.Items.Add(menuReportes)
 
         ' ── Nivel de Disipación (DMO / DES) ──────────────────────────────────
@@ -1155,10 +1167,68 @@ Public Class Form_09_Vigas
             Return
         End If
 
+        RecalcularRevisionTodo(silencioso:=True)
+
         Dim form As New Form_Reporte_Resumen()
         form.Vigas = _vigas
         form.Show(Me)
 
+    End Sub
+
+    ''' <summary>
+    ''' Recalcula la revisión de flexión, cortante y cortante plástico para todas las
+    ''' vigas del edificio que tienen refuerzo longitudinal colocado. Evita tener que
+    ''' navegar manualmente por cada piso para que la revisión esté actualizada.
+    ''' </summary>
+    Private Sub RecalcularRevisionTodo(Optional silencioso As Boolean = False)
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            If Not silencioso Then
+                MessageBox.Show("No hay vigas cargadas.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End If
+            Return
+        End If
+
+        Dim count As Integer = 0
+        For Each v In _vigas
+            If Not ExisteRefuerzo(v) Then Continue For
+
+            ' CalcularEnvolventesVigas() reconstruye RevisionFlexion con AsProvSup=0.
+            ' Hay que re-sincronizar desde los tramos de refuerzo guardados antes de calcular C/D.
+            For Each f In v.Frames
+                For Each rev In f.RevisionFlexion
+                    rev.ResultadoBase.AsProvSup = 0 : rev.ResultadoActual.AsProvSup = 0
+                    rev.ResultadoBase.AsProvInf = 0 : rev.ResultadoActual.AsProvInf = 0
+                Next
+                For Each tramo In f.RefuerzoSuperior
+                    Dim asT = tramo.Barras.Sum(Function(kvp) CDbl(kvp.Value) * AreaRefuerzo(kvp.Key))
+                    Dim rev = f.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = tramo.Posicion)
+                    If rev IsNot Nothing Then
+                        rev.ResultadoBase.AsProvSup += asT : rev.ResultadoActual.AsProvSup += asT
+                    End If
+                Next
+                For Each tramo In f.RefuerzoInferior
+                    Dim asT = tramo.Barras.Sum(Function(kvp) CDbl(kvp.Value) * AreaRefuerzo(kvp.Key))
+                    Dim rev = f.RevisionFlexion.FirstOrDefault(Function(r) r.Posicion = tramo.Posicion)
+                    If rev IsNot Nothing Then
+                        rev.ResultadoBase.AsProvInf += asT : rev.ResultadoActual.AsProvInf += asT
+                    End If
+                Next
+            Next
+
+            _vigaService.CalcularFlexionViga(v)
+            count += 1
+        Next
+
+        If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+            _vigaService.CalcularCapacidadCortante(_vigas)
+        End If
+
+        TriggerCortantePlastico(_vigas)
+
+        If Not silencioso Then
+            MessageBox.Show($"Revisión actualizada: {count} viga(s) con refuerzo colocado.",
+                            "Recalcular Revisión", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
     End Sub
 
     Private Sub AbrirVistaInteractiva(sender As Object, e As EventArgs)
@@ -2232,6 +2302,10 @@ Public Class Form_09_Vigas
         ' Guardar refuerzo transversal
         Dim datosTransv = ExtraerEstribosDesdeGrid(Ref_Transversal)
         _vigaService.GuardarRefuerzoTransversal(viga, datosTransv)
+
+        ' Recalcular NumEstribos zona Centro según la longitud libre resultante de Izq/Der
+        _vigaService.RecalcularNumEstribosCentro(viga)
+        CargarRefuerzoTransversalTabla(viga, Ref_Transversal)
 
         _vigaService.CalcularFlexionViga(viga)
         MostrarResultadosFlexion(viga)

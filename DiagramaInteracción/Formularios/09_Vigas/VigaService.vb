@@ -798,12 +798,13 @@ Public Class VigaService
                 Dim refIzq = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
                 Dim refDer = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
 
+                ' Longitud ZC = 0.05m (primer estribo desde cara) + (n-1)×sep
                 Dim zoneIzqLen As Double = If(refIzq IsNot Nothing AndAlso refIzq.NumEstribos > 0,
-                                               CDbl(refIzq.NumEstribos) * refIzq.Separacion,
+                                               0.05 + (CDbl(refIzq.NumEstribos) - 1.0) * refIzq.Separacion,
                                                2.0 * frame.Section.h)
 
                 Dim zoneDerLen As Double = If(refDer IsNot Nothing AndAlso refDer.NumEstribos > 0,
-                                               CDbl(refDer.NumEstribos) * refDer.Separacion,
+                                               0.05 + (CDbl(refDer.NumEstribos) - 1.0) * refDer.Separacion,
                                                2.0 * frame.Section.h)
 
                 frame.RevisionCortante.Clear()
@@ -827,12 +828,12 @@ Public Class VigaService
                             Dim limDer As Double = sLast - zoneDerLen
 
                             If limIzq < limDer Then
-                                Dim candidatos = bfFrame.Where(Function(bf) bf.Station > limIzq AndAlso bf.Station < limDer)
-                                If candidatos.Any() Then
-                                    zona.Vu = candidatos.Max(Function(bf) Math.Abs(bf.V2))
-                                End If
+                                ' Vu al borde exterior de cada ZC (consistente con la evaluación)
+                                Dim vuBordIzq = InterpolarCortanteEnEstacion(bfFrame, limIzq)
+                                Dim vuBordDer = InterpolarCortanteEnEstacion(bfFrame, limDer)
+                                zona.Vu = Math.Max(vuBordIzq, vuBordDer)
                             Else
-                                zona.Vu = InterpolarCortanteEnEstacion(bfFrame, (sFirst + sLast) / 2.0)
+                                zona.Vu = 0  ' ZC cubre todo el vano → sin zona central independiente
                             End If
 
                     End Select
@@ -902,6 +903,36 @@ Public Class VigaService
             zona.NumeroBarra = Math.Max(item.NumBarra, 2)
             zona.CantEstribos = Math.Max(item.CantEstribos, 1)
             zona.Separacion = Math.Max(item.Separacion, 0.001)
+
+        Next
+
+    End Sub
+
+    ''' Recalcula NumEstribos de la zona Centro de cada frame a partir de la longitud libre
+    ''' (Longitud − ZCIzq − ZCDer) y la separación actual del Centro.
+    ''' Llamar después de GuardarRefuerzoTransversal cuando el usuario ajusta Izq o Der.
+    Public Sub RecalcularNumEstribosCentro(viga As cViga)
+
+        For Each frame In viga.Frames
+
+            Dim refIzq = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+            Dim refDer = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+            Dim refCen = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Centro)
+
+            If refIzq Is Nothing OrElse refDer Is Nothing OrElse refCen Is Nothing Then Continue For
+
+            Dim zoneIzqLen As Double = If(refIzq.NumEstribos > 0,
+                                          0.05 + (CDbl(refIzq.NumEstribos) - 1.0) * refIzq.Separacion,
+                                          0.0)
+            Dim zoneDerLen As Double = If(refDer.NumEstribos > 0,
+                                          0.05 + (CDbl(refDer.NumEstribos) - 1.0) * refDer.Separacion,
+                                          0.0)
+            Dim lzCentral As Double = frame.Longitud - zoneIzqLen - zoneDerLen
+            Dim sepCentro As Double = If(refCen.Separacion > 0.0, refCen.Separacion, frame.Section.d / 2.0)
+
+            refCen.NumEstribos = If(lzCentral > sepCentro,
+                                    Math.Max(1, CInt(Math.Floor(lzCentral / sepCentro)) - 1),
+                                    0)
 
         Next
 
@@ -1167,6 +1198,13 @@ Public Class VigaService
                 Dim numEstribosConfinado As Integer = Math.Max(CInt(Math.Ceiling(2.0 * h / sepConfinada)), 1)
                 Dim sepCentro As Double = Math.Round(d / 2.0, 3)
 
+                ' Calcular estribos zona central a partir de la longitud restante
+                Dim zoneConLen As Double = 0.05 + (CDbl(numEstribosConfinado) - 1.0) * sepConfinada
+                Dim lzCentral As Double = frame.Longitud - 2.0 * zoneConLen
+                Dim numEstriboCentro As Integer = If(lzCentral > sepCentro,
+                                                     Math.Max(1, CInt(Math.Floor(lzCentral / sepCentro)) - 1),
+                                                     0)
+
                 frame.RefuerzoTransversal.Clear()
 
                 For Each pos In {PosicionTramoViga.Izquierda, PosicionTramoViga.Centro, PosicionTramoViga.Derecha}
@@ -1177,7 +1215,7 @@ Public Class VigaService
                         zona.NumeroBarra = 3
                         zona.CantEstribos = 2
                         zona.Separacion = sepCentro
-                        zona.NumEstribos = 10
+                        zona.NumEstribos = numEstriboCentro
                     Else
                         zona.NumeroBarra = 3
                         zona.CantEstribos = cantConfinada

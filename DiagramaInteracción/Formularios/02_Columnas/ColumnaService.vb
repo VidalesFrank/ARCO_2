@@ -1,5 +1,10 @@
-﻿Imports ARCO.Funciones_00_Varias
-Public Class Funciones_02_Columnas
+Imports ARCO.Funciones_00_Varias
+
+' Servicio de negocio del módulo Columnas — cálculos NSR-10 puros: cortante, confinamiento,
+' ALR, diagrama de interacción biaxial (Bresler), distribución de barras, e índices de tablas
+' ETABS (E17/E23). Renombrado desde Funciones_02_Columnas (agosto 2026) para alinear la
+' arquitectura con VigaService / NervioService / PilaService.
+Public Class ColumnaService
     Public Shared Function FuncionCortante(ByVal B As Single, ByVal H As Single, ByVal fc As Single, ByVal Fy As Single, ByVal s As Single,
                         ByVal Ref_Trans As String, ByVal Num_Ramas As Integer, ByVal Vu As Single, ByVal Pu As Single,
                         Optional ByVal AreaUser As Single = 0)
@@ -593,7 +598,7 @@ Public Class Funciones_02_Columnas
         Return Pu / (Ag * fc * 1000)
     End Function
 
-    ' Genera el diagrama de interacción para sección circular (reutiliza Funciones_01_Pilas)
+    ' Genera el diagrama de interacción para sección circular (reutiliza PilaService)
     ' y evalúa todas las combinaciones de diseño (Bresler lineal). Isótropo: M3 = M2.
     ' Retorna True si el diagrama se calculó, False si no hay refuerzo.
     Public Shared Function FuncionDiagramaColumnaCircular(
@@ -611,7 +616,7 @@ Public Class Funciones_02_Columnas
         Dim D As Single = tramo.Diametro
         Dim recub As Single = 0.05F   ' recubrimiento al centroide de barra longitudinal (m)
 
-        Dim res = Funciones_01_Pilas.DiagramaInteraccionCircular(D, recub, barra, 0, nBarras, tramo.fc, Es, 0.003F, fy)
+        Dim res = PilaService.DiagramaInteraccionCircular(D, recub, barra, 0, nBarras, tramo.fc, Es, 0.003F, fy)
 
         Dim nPts As Integer = CInt(res(1, 5))
         If nPts < 2 Then Return False
@@ -702,10 +707,5 @@ Public Class Funciones_02_Columnas
 
         CoordenadasBarras = Lista_Coordendas
     End Function
-
-
-
-
-
 
 End Class

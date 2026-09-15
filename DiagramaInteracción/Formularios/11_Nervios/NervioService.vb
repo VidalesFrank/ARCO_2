@@ -233,6 +233,63 @@ Public Class NervioService
     End Function
 
     ' ──────────────────────────────────────────────────────────────────────────
+    '  AGRUPACIONES MANUALES: reaplicar grupos definidos por el usuario
+    '  Misma lógica que VigaService.AplicarGruposManual — reagrupa los cFrameNervio
+    '  que corresponden a los labels del grupo en un único cNervio.
+    ' ──────────────────────────────────────────────────────────────────────────
+    Public Sub AplicarGruposManual(nervios As List(Of cNervio),
+                                    gruposManual As List(Of List(Of String)),
+                                    todosFrames As List(Of cFrame),
+                                    joints As Dictionary(Of String, cJoint))
+
+        If gruposManual Is Nothing OrElse gruposManual.Count = 0 Then Return
+
+        For Each grupo In gruposManual
+            If grupo Is Nothing OrElse grupo.Count = 0 Then Continue For
+
+            Dim setLabels As New HashSet(Of String)(grupo, StringComparer.OrdinalIgnoreCase)
+
+            ' Verificar si ya existe un nervio con exactamente esos frames
+            Dim existente = nervios.FirstOrDefault(
+                Function(n) setLabels.SetEquals(n.Frames.Select(Function(f) f.ObjectLabel)))
+            If existente IsNot Nothing Then Continue For
+
+            ' Extraer frames de sus nervios originales
+            Dim fnGrupo As New List(Of cFrameNervio)()
+            Dim pisoGrupo As String = Nothing
+
+            For Each label In grupo
+                Dim nervioOrigen = nervios.FirstOrDefault(
+                    Function(n) n.Frames.Any(Function(f) f.ObjectLabel.Equals(label, StringComparison.OrdinalIgnoreCase)))
+                If nervioOrigen Is Nothing Then Continue For
+
+                Dim fn = nervioOrigen.Frames.First(Function(f) f.ObjectLabel.Equals(label, StringComparison.OrdinalIgnoreCase))
+                If pisoGrupo Is Nothing Then pisoGrupo = fn.Story
+                nervioOrigen.Frames.Remove(fn)
+                fnGrupo.Add(fn)
+            Next
+
+            If fnGrupo.Count = 0 Then Continue For
+
+            ' Ordenar frames según la lista del usuario
+            Dim orden = grupo.Select(Function(l, i) (l, i)).ToDictionary(Function(x) x.l, Function(x) x.i, StringComparer.OrdinalIgnoreCase)
+            fnGrupo = fnGrupo.OrderBy(Function(f) If(orden.ContainsKey(f.ObjectLabel), orden(f.ObjectLabel), 999)).ToList()
+
+            ' Crear o reusar nervio
+            Dim nuevo As New cNervio With {
+                .Nombre = $"NR-M{nervios.Count + 1}",
+                .NombrePlano = $"NR-M{nervios.Count + 1}",
+                .Piso = If(pisoGrupo, "")
+            }
+            nuevo.Frames.AddRange(fnGrupo)
+            nervios.Add(nuevo)
+        Next
+
+        ' Eliminar nervios que quedaron vacíos tras la reagrupación
+        nervios.RemoveAll(Function(n) n.Frames.Count = 0)
+    End Sub
+
+    ' ──────────────────────────────────────────────────────────────────────────
     '  PASO AUTO: distancia mínima c-c entre nervios paralelos del mismo piso
     ' ──────────────────────────────────────────────────────────────────────────
     Public Function CalcularPasoNerviosAuto(nervio As cNervio,
@@ -311,10 +368,13 @@ Public Class NervioService
 
     ' ──────────────────────────────────────────────────────────────────────────
     '  FUERZAS EN CARA DEL APOYO — interpolación lineal en la lista de estaciones
+    '  d_m : profundidad efectiva (m). El cortante de diseño Vu se toma a distancia
+    '        d de la cara del apoyo, según NSR-10 §9.4.3.2 (ACI 318-19 §9.4.3.2).
     ' ──────────────────────────────────────────────────────────────────────────
     Public Sub CalcularFuerzasCaraApoyo(combo As cComboNervio,
                                          bApoyoI As Double,
-                                         bApoyoD As Double)
+                                         bApoyoD As Double,
+                                         Optional d_m As Double = 0)
 
         If combo.Estaciones.Count < 2 Then Return
 
@@ -326,6 +386,13 @@ Public Class NervioService
         combo.V_Cara_I = InterpolateAt(combo.Estaciones, combo.Cortantes, xI)
         combo.M_Cara_D = InterpolateAt(combo.Estaciones, combo.Momentos, xD)
         combo.V_Cara_D = InterpolateAt(combo.Estaciones, combo.Cortantes, xD)
+
+        ' Cortante de diseño a distancia d de la cara (NSR-10 §9.4.3.2)
+        ' Si el tramo es muy corto y d_m no cabe, se conserva el valor en cara.
+        Dim xI_v = xI + d_m
+        Dim xD_v = xD - d_m
+        combo.V_d_I = If(d_m > 0 AndAlso xI_v < xD, InterpolateAt(combo.Estaciones, combo.Cortantes, xI_v), combo.V_Cara_I)
+        combo.V_d_D = If(d_m > 0 AndAlso xD_v > xI, InterpolateAt(combo.Estaciones, combo.Cortantes, xD_v), combo.V_Cara_D)
 
         ' Momento positivo máximo en el vano (entre caras)
         Dim mPos As Double = 0
@@ -378,6 +445,8 @@ Public Class NervioService
                 ' Agrupar por combo
                 Dim porCombo = bfFrame.GroupBy(Function(r) r.LoadCaseKey)
 
+                Dim d_m = fn.H - fn.Recubrimiento  ' profundidad efectiva (m)
+
                 For Each grp In porCombo
                     Dim combo As New cComboNervio With {.Nombre = grp.Key}
 
@@ -388,7 +457,7 @@ Public Class NervioService
                         combo.Cortantes.Add(r.V2)
                     Next
 
-                    CalcularFuerzasCaraApoyo(combo, fn.B_Apoyo_I, fn.B_Apoyo_D)
+                    CalcularFuerzasCaraApoyo(combo, fn.B_Apoyo_I, fn.B_Apoyo_D, d_m)
                     fn.Combinaciones.Add(combo)
                 Next
 
@@ -396,8 +465,12 @@ Public Class NervioService
                 fn.Mu_Neg_I = fn.Combinaciones.Max(Function(c) Math.Abs(Math.Min(c.M_Cara_I, 0)))
                 fn.Mu_Pos_C = fn.Combinaciones.Max(Function(c) c.M_Max_Pos)
                 fn.Mu_Neg_D = fn.Combinaciones.Max(Function(c) Math.Abs(Math.Min(c.M_Cara_D, 0)))
-                fn.Vu_I = fn.Combinaciones.Max(Function(c) Math.Abs(c.V_Cara_I))
-                fn.Vu_D = fn.Combinaciones.Max(Function(c) Math.Abs(c.V_Cara_D))
+                fn.Vu_I = fn.Combinaciones.Max(Function(c) Math.Abs(c.V_d_I))
+                fn.Vu_D = fn.Combinaciones.Max(Function(c) Math.Abs(c.V_d_D))
+                ' Guardar valores base para redistribución de momentos
+                fn.Mu_Neg_I_Base = fn.Mu_Neg_I
+                fn.Mu_Pos_C_Base = fn.Mu_Pos_C
+                fn.Mu_Neg_D_Base = fn.Mu_Neg_D
             Next
         Next
     End Sub
@@ -426,47 +499,71 @@ Public Class NervioService
         fn.As_Prov_Sup_D = asSupD / 100.0   ' cm²
         fn.As_Prov_Inf_C = asInfC / 100.0   ' cm²
 
-        ' Mínimo y máximo
+        ' As_min NSR-10 C.9.6.1.2 (usa bw para ambas zonas)
         Dim rhoMin = Math.Max(1.4 / fn.fy, 0.25 * Math.Sqrt(fn.fc) / fn.fy)
-        fn.As_Min = rhoMin * bw_mm * d_mm / 100.0  ' cm²
+        fn.As_Min = rhoMin * bw_mm * d_mm / 100.0      ' cm² — zona negativa
+        fn.As_Min_Pos = fn.As_Min                       ' cm² — zona positiva (misma regla bw)
 
+        ' As_max NSR-10 C.9.7.3.4
         Dim eps_u As Double = 0.003
-        Dim Es As Double = 200000  ' MPa
-        ' c_max = ε_u / (ε_u + 0.004) × d  → As_max rectangular con bw
         Dim c_max = eps_u / (eps_u + 0.004) * d_mm
-        Dim a_max = 0.85 * c_max  ' β1≈0.85 para fc≤28MPa
-        fn.As_Max = 0.85 * fn.fc * a_max * bw_mm / fn.fy / 100.0  ' cm²
+        fn.As_Max = 0.85 * fn.fc * 0.85 * c_max * bw_mm / fn.fy / 100.0  ' cm² (β1≈0.85)
 
         ' φMn superior por zona (negativo, alma rectangular bw)
         fn.PhiMn_Sup_I = CapacidadFlexion(asSupI, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
         fn.PhiMn_Sup_D = CapacidadFlexion(asSupD, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
 
         ' φMn inferior en Centro (positivo)
+        Dim be_mm = If(fn.EsSeccionT AndAlso fn.Be > 0, fn.Be * 1000, bw_mm)
+        Dim tf_mm = fn.Tf * 1000
         If fn.EsSeccionT AndAlso fn.Be > 0 Then
-            Dim be_mm = fn.Be * 1000
-            Dim tf_mm = fn.Tf * 1000
             fn.PhiMn_Inf_C = CapacidadFlexionT(asInfC, fn.fy, fn.fc, be_mm, bw_mm, tf_mm, d_mm, phi_f)
         Else
             fn.PhiMn_Inf_C = CapacidadFlexion(asInfC, fn.fy, fn.fc, bw_mm, d_mm, phi_f)
         End If
 
-        ' C/D por zona (C/D ≥ 1 → cumple) — cada zona con su propia capacidad
-        fn.CD_Flex_Sup_I = If(fn.Mu_Neg_I > 0.001, fn.PhiMn_Sup_I / fn.Mu_Neg_I, 99.0)
-        fn.CD_Flex_Inf_C = If(fn.Mu_Pos_C > 0.001, fn.PhiMn_Inf_C / fn.Mu_Pos_C, 99.0)
-        fn.CD_Flex_Sup_D = If(fn.Mu_Neg_D > 0.001, fn.PhiMn_Sup_D / fn.Mu_Neg_D, 99.0)
+        ' C/D Rel M: φMn / Mu (sin penalización por As_min)
+        fn.CD_M_Sup_I = If(fn.Mu_Neg_I > 0.001, fn.PhiMn_Sup_I / fn.Mu_Neg_I, 99.0)
+        fn.CD_M_Inf_C = If(fn.Mu_Pos_C > 0.001, fn.PhiMn_Inf_C / fn.Mu_Pos_C, 99.0)
+        fn.CD_M_Sup_D = If(fn.Mu_Neg_D > 0.001, fn.PhiMn_Sup_D / fn.Mu_Neg_D, 99.0)
 
-        ' Verificación de cuantía mínima (como restricción adicional)
-        ' Si As_prov < As_min, el C/D se penaliza a (As_prov/As_min)×C/D
-        If asSupI < fn.As_Min * 100 AndAlso fn.Mu_Neg_I > 0.001 Then
-            fn.CD_Flex_Sup_I = Math.Min(fn.CD_Flex_Sup_I, (asSupI / 100.0) / fn.As_Min)
-        End If
-        If asInfC < fn.As_Min * 100 AndAlso fn.Mu_Pos_C > 0.001 Then
-            fn.CD_Flex_Inf_C = Math.Min(fn.CD_Flex_Inf_C, (asInfC / 100.0) / fn.As_Min)
-        End If
-        If asSupD < fn.As_Min * 100 AndAlso fn.Mu_Neg_D > 0.001 Then
-            fn.CD_Flex_Sup_D = Math.Min(fn.CD_Flex_Sup_D, (asSupD / 100.0) / fn.As_Min)
-        End If
+        ' C/D base (sin redistribuir): usa Mu_*_Base para mostrar "como estaba"
+        fn.CD_M_Sup_I_Base = If(fn.Mu_Neg_I_Base > 0.001, fn.PhiMn_Sup_I / fn.Mu_Neg_I_Base, fn.CD_M_Sup_I)
+        fn.CD_M_Inf_C_Base = If(fn.Mu_Pos_C_Base > 0.001, fn.PhiMn_Inf_C / fn.Mu_Pos_C_Base, fn.CD_M_Inf_C)
+        fn.CD_M_Sup_D_Base = If(fn.Mu_Neg_D_Base > 0.001, fn.PhiMn_Sup_D / fn.Mu_Neg_D_Base, fn.CD_M_Sup_D)
+
+        ' Sincronizar CD_Flex con CD_M (mantiene compatibilidad con código existente)
+        fn.CD_Flex_Sup_I = fn.CD_M_Sup_I
+        fn.CD_Flex_Inf_C = fn.CD_M_Inf_C
+        fn.CD_Flex_Sup_D = fn.CD_M_Sup_D
+
+        ' As requerido por demanda (cuadratic Whitney) y C/D Rel As
+        fn.As_Req_Sup_I = AsRequerido(fn.Mu_Neg_I, phi_f, fn.fy, fn.fc, bw_mm, d_mm) / 100.0   ' cm²
+        fn.As_Req_Inf_C = AsRequerido(fn.Mu_Pos_C, phi_f, fn.fy, fn.fc, be_mm, d_mm) / 100.0   ' cm²
+        fn.As_Req_Sup_D = AsRequerido(fn.Mu_Neg_D, phi_f, fn.fy, fn.fc, bw_mm, d_mm) / 100.0   ' cm²
+
+        ' Denominador de Rel As = max(As_req_demanda, As_min) — gobierna lo que sea mayor
+        Dim demI = Math.Max(fn.As_Req_Sup_I, fn.As_Min)
+        Dim demC = Math.Max(fn.As_Req_Inf_C, fn.As_Min_Pos)
+        Dim demD = Math.Max(fn.As_Req_Sup_D, fn.As_Min)
+        fn.CD_As_Sup_I = If(demI > 0.001, fn.As_Prov_Sup_I / demI, 99.0)
+        fn.CD_As_Inf_C = If(demC > 0.001, fn.As_Prov_Inf_C / demC, 99.0)
+        fn.CD_As_Sup_D = If(demD > 0.001, fn.As_Prov_Sup_D / demD, 99.0)
     End Sub
+
+    ''' <summary>As (mm²) requerido para Mu dado, por la fórmula cuadrática de Whitney.
+    ''' Retorna 0 si Mu=0; valor grande si la sección es insuficiente.</summary>
+    Private Shared Function AsRequerido(Mu_kNm As Double, phi As Double,
+                                        fy As Double, fc As Double,
+                                        b_mm As Double, d_mm As Double) As Double
+        If Mu_kNm <= 0 OrElse b_mm <= 0 OrElse d_mm <= 0 Then Return 0
+        Dim Mu_Nmm = Mu_kNm * 1.0e6
+        Dim a_c = phi * fy * fy / (1.7 * fc * b_mm)
+        Dim b_c = phi * fy * d_mm
+        Dim disc = b_c * b_c - 4.0 * a_c * Mu_Nmm
+        If disc < 0 Then Return b_c / (a_c) * 1.5   ' sección insuficiente
+        Return (b_c - Math.Sqrt(disc)) / (2.0 * a_c)
+    End Function
 
     ''' <summary>Suma el área de acero (mm²) de todos los calibres de la zona indicada.</summary>
     Private Shared Function AreaZona(lista As List(Of cRefuerzoTramo), posicion As PosicionTramoViga) As Double
@@ -523,10 +620,15 @@ Public Class NervioService
         Dim factorNervio As Double = If(fn.Paso * 1000 <= 750 AndAlso fn.Paso > 0, 1.1, 1.0)
 
         Dim Vc = factorNervio * 0.17 * Math.Sqrt(fn.fc) * bw_mm * d_mm / 1000.0  ' kN
+        Dim VsI = VsZona(fn.RefuerzoTransversal, PosicionTramoViga.Izquierda, fn.fy, d_mm)
+        Dim VsD = VsZona(fn.RefuerzoTransversal, PosicionTramoViga.Derecha, fn.fy, d_mm)
 
-        ' Estribos por zona: Izquierda protege la cara izq, Derecha la cara der
-        fn.PhiVn_I = phi_v * (Vc + VsZona(fn.RefuerzoTransversal, PosicionTramoViga.Izquierda, fn.fy, d_mm))
-        fn.PhiVn_D = phi_v * (Vc + VsZona(fn.RefuerzoTransversal, PosicionTramoViga.Derecha, fn.fy, d_mm))
+        fn.PhiVc_I = phi_v * Vc
+        fn.PhiVc_D = phi_v * Vc
+        fn.PhiVs_I = phi_v * VsI
+        fn.PhiVs_D = phi_v * VsD
+        fn.PhiVn_I = fn.PhiVc_I + fn.PhiVs_I
+        fn.PhiVn_D = fn.PhiVc_D + fn.PhiVs_D
 
         fn.CD_Cortante_I = If(fn.Vu_I > 0.001, fn.PhiVn_I / fn.Vu_I, 99.0)
         fn.CD_Cortante_D = If(fn.Vu_D > 0.001, fn.PhiVn_D / fn.Vu_D, 99.0)
@@ -543,31 +645,77 @@ Public Class NervioService
     End Function
 
     ' ──────────────────────────────────────────────────────────────────────────
+    '  REDISTRIBUCIÓN DE MOMENTOS — NSR-10 / ACI 318 §6.6.5 (máx 20%)
+    '  Transfiere fracción de M- en apoyos al M+ del vano.
+    ' ──────────────────────────────────────────────────────────────────────────
+    Public Sub AplicarRedistribucionNervio(fn As cFrameNervio)
+        ' Guardar bases la primera vez que llega sin haberlas guardado
+        If fn.Mu_Neg_I_Base = 0 AndAlso fn.Mu_Neg_D_Base = 0 AndAlso fn.Mu_Pos_C_Base = 0 Then
+            fn.Mu_Neg_I_Base = fn.Mu_Neg_I
+            fn.Mu_Pos_C_Base = fn.Mu_Pos_C
+            fn.Mu_Neg_D_Base = fn.Mu_Neg_D
+        End If
+
+        Dim fI = Math.Min(Math.Max(fn.FactorRedist_I, 0), 0.20)
+        Dim fD = Math.Min(Math.Max(fn.FactorRedist_D, 0), 0.20)
+
+        fn.Mu_Neg_I = fn.Mu_Neg_I_Base * (1.0 - fI)
+        fn.Mu_Neg_D = fn.Mu_Neg_D_Base * (1.0 - fD)
+        fn.Mu_Pos_C = fn.Mu_Pos_C_Base + fn.Mu_Neg_I_Base * fI + fn.Mu_Neg_D_Base * fD
+
+        ' Redistribución M+ → apoyos (análisis independiente: reduce vano, aumenta apoyos)
+        Dim fC = Math.Min(Math.Max(fn.FactorRedist_C, 0), 0.20)
+        If fC > 0 Then
+            Dim deltaPos = fn.Mu_Pos_C_Base * fC
+            fn.Mu_Pos_C -= deltaPos
+            fn.Mu_Neg_I += deltaPos * 0.5
+            fn.Mu_Neg_D += deltaPos * 0.5
+        End If
+    End Sub
+
+    ''' <summary>Reinicia las bases de redistribución al valor actual (útil tras recalcular envolventes).</summary>
+    Public Shared Sub GuardarBasesMomentos(fn As cFrameNervio)
+        fn.Mu_Neg_I_Base = fn.Mu_Neg_I
+        fn.Mu_Pos_C_Base = fn.Mu_Pos_C
+        fn.Mu_Neg_D_Base = fn.Mu_Neg_D
+    End Sub
+
+    ' ──────────────────────────────────────────────────────────────────────────
     '  DISEÑO COMPLETO de todos los nervios (llama flexión + cortante + be)
+    '  recNervios: recubrimiento global del módulo (0 = usar por tramo)
     ' ──────────────────────────────────────────────────────────────────────────
     Public Sub DesignarNervios(nervios As List(Of cNervio),
-                                joints As Dictionary(Of String, cJoint))
+                                joints As Dictionary(Of String, cJoint),
+                                Optional recGlobal As Double = 0)
 
         For Each nervio In nervios
-            ' Paso: usar el del grupo o auto-calculado
             Dim paso = nervio.Paso_Nervios
 
             For Each fn In nervio.Frames
                 fn.Tf = nervio.Tf_Losa
                 fn.Paso = paso
 
+                ' Recubrimiento global si el usuario lo especificó
+                If recGlobal > 0 Then fn.Recubrimiento = recGlobal
+
                 ' Calcular be si es T
                 If fn.EsSeccionT Then
                     fn.Be = CalcularBe(fn.Bw, fn.Tf, fn.Paso, fn.Longitud, fn.B_Apoyo_I, fn.B_Apoyo_D)
                 End If
 
+                ' Guardar base de momentos y aplicar redistribución si hay factores activos
+                GuardarBasesMomentos(fn)
+                If fn.FactorRedist_I > 0 OrElse fn.FactorRedist_D > 0 OrElse fn.FactorRedist_C > 0 Then
+                    AplicarRedistribucionNervio(fn)
+                End If
+
                 CalcularFlexion(fn)
                 CalcularCortante(fn)
 
-                ' Cumple global: todas las zonas ≥ 0.9 (misma regla que vigas/muros)
-                fn.Cumple = fn.CD_Flex_Sup_I >= 0.9 AndAlso
-                            fn.CD_Flex_Inf_C >= 0.9 AndAlso
-                            fn.CD_Flex_Sup_D >= 0.9 AndAlso
+                ' Cumple: basado en C/D Rel M (φMn/Mu) y cortante — sin penalización As_min
+                fn.Cumple = fn.CD_M_Sup_I >= 0.9 AndAlso
+                            fn.CD_M_Inf_C >= 0.9 AndAlso
+                            fn.CD_M_Sup_D >= 0.9 AndAlso
                             fn.CD_Cortante_I >= 0.9 AndAlso
                             fn.CD_Cortante_D >= 0.9
             Next

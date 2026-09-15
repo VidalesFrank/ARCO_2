@@ -155,37 +155,27 @@ Public Class Form_02_Reporte_Columnas
     End Function
 
     Private Sub DefColsFlex()
-        DgvFlex.Columns.Add(NCol("Elemento", 110, DataGridViewContentAlignment.MiddleLeft))
-        DgvFlex.Columns.Add(NCol("Piso", 68))
-        DgvFlex.Columns.Add(NCol("B (m)", 62))
-        DgvFlex.Columns.Add(NCol("H (m)", 62))
+        DgvFlex.Columns.Add(NCol("Columna", 110, DataGridViewContentAlignment.MiddleLeft))
+        DgvFlex.Columns.Add(NCol("Tramo", 68))
+        DgvFlex.Columns.Add(NCol("Sección", 95))
         DgvFlex.Columns.Add(NCol("f'c (MPa)", 68))
-        DgvFlex.Columns.Add(NCol("As Req Top (mm²)", 118))
-        DgvFlex.Columns.Add(NCol("As Col Top (mm²)", 118))
-        DgvFlex.Columns.Add(NCol("F Flex Top", 82))
-        DgvFlex.Columns.Add(NCol("As Req Bot (mm²)", 118))
-        DgvFlex.Columns.Add(NCol("As Col Bot (mm²)", 118))
-        DgvFlex.Columns.Add(NCol("F Flex Bot", 82))
+        DgvFlex.Columns.Add(NCol("As Col (cm²)", 100))
+        DgvFlex.Columns.Add(NCol("As Req (cm²)", 100))
+        DgvFlex.Columns.Add(NCol("C/D", 72))
+        DgvFlex.Columns.Add(NCol("Zona", 110))
         DgvFlex.Columns.Add(NCol("Estado", 80))
     End Sub
 
     Private Sub DefColsCortante()
-        DgvCortante.Columns.Add(NCol("Elemento", 110, DataGridViewContentAlignment.MiddleLeft))
-        DgvCortante.Columns.Add(NCol("Piso", 68))
-        DgvCortante.Columns.Add(NCol("B (m)", 58))
-        DgvCortante.Columns.Add(NCol("H (m)", 58))
-        DgvCortante.Columns.Add(NCol("Sep ZC (m)", 82))
-        DgvCortante.Columns.Add(NCol("# Barra", 72))
-        DgvCortante.Columns.Add(NCol("Ram. L", 60))
-        DgvCortante.Columns.Add(NCol("Ram. C", 60))
-        DgvCortante.Columns.Add(NCol("Vu2 (kN)", 72))
-        DgvCortante.Columns.Add(NCol("Vc2 (kN)", 72))
-        DgvCortante.Columns.Add(NCol("Vn2 (kN)", 72))
-        DgvCortante.Columns.Add(NCol("F V2", 62))
-        DgvCortante.Columns.Add(NCol("Vu3 (kN)", 72))
-        DgvCortante.Columns.Add(NCol("Vc3 (kN)", 72))
-        DgvCortante.Columns.Add(NCol("Vn3 (kN)", 72))
-        DgvCortante.Columns.Add(NCol("F V3", 62))
+        DgvCortante.Columns.Add(NCol("Columna", 110, DataGridViewContentAlignment.MiddleLeft))
+        DgvCortante.Columns.Add(NCol("Tramo", 68))
+        DgvCortante.Columns.Add(NCol("Sección", 95))
+        DgvCortante.Columns.Add(NCol("Vu2 (kN)", 80))
+        DgvCortante.Columns.Add(NCol("φVn2 (kN)", 80))
+        DgvCortante.Columns.Add(NCol("C/D V2", 70))
+        DgvCortante.Columns.Add(NCol("Vu3 (kN)", 80))
+        DgvCortante.Columns.Add(NCol("φVn3 (kN)", 80))
+        DgvCortante.Columns.Add(NCol("C/D V3", 70))
         DgvCortante.Columns.Add(NCol("Estado", 80))
     End Sub
 
@@ -358,58 +348,78 @@ Public Class Form_02_Reporte_Columnas
     ' ── Mostrar por pestaña ────────────────────────────────────────────────
     Private Sub MostrarFlex()
         DgvFlex.Rows.Clear()
-        For i = 0 To _filasFlex.Count - 1
-            Dim f = _filasFlex(i)
-            Dim cumple = (f.FFlexTop >= 0.9F OrElse f.FFlexTop = 0) AndAlso (f.FFlexBot >= 0.9F OrElse f.FFlexBot = 0)
+        Dim idx = 0
+        For Each f In _filasFlex
+            ' Determinar zona gobernante y valores a mostrar
+            Dim cdTop = f.FFlexTop
+            Dim cdBot = f.FFlexBot
+            Dim hayTop = cdTop > 0
+            Dim hayBot = cdBot > 0
+            If Not hayTop AndAlso Not hayBot Then Continue For  ' sin calculo
+            Dim cdMin = If(hayTop AndAlso hayBot, Math.Min(cdTop, cdBot),
+                           If(hayTop, cdTop, cdBot))
+            Dim cumple = cdMin >= 0.9F
             If ChkSoloBad.Checked AndAlso cumple Then Continue For
+            ' Zona gobernante: la de menor C/D
+            Dim usarTop As Boolean
+            Dim zona As String
+            If hayTop AndAlso hayBot Then
+                usarTop = cdTop <= cdBot
+                If cdTop < 0.9F AndAlso cdBot < 0.9F Then
+                    zona = "Ambas zonas"
+                ElseIf cdTop < 0.9F Then
+                    zona = "Zona superior"
+                Else
+                    zona = "Zona inferior"
+                End If
+            ElseIf hayTop Then
+                usarTop = True : zona = "Zona superior"
+            Else
+                usarTop = False : zona = "Zona inferior"
+            End If
+            Dim asCol = If(usarTop, f.AsColTop, f.AsColBot) / 100.0F  ' mm² → cm²
+            Dim asReq = If(usarTop, f.AsReqTop, f.AsReqBot) / 100.0F
+            Dim secc = $"{f.B:0.00}×{f.H:0.00} m"
             Dim r = DgvFlex.Rows(DgvFlex.Rows.Add())
-            If i Mod 2 = 1 Then r.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            If idx Mod 2 = 1 Then r.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
             r.Cells(0).Value = f.Elemento
             r.Cells(1).Value = f.Piso
-            r.Cells(2).Value = Math.Round(f.B, 3)
-            r.Cells(3).Value = Math.Round(f.H, 3)
-            r.Cells(4).Value = f.fc
-            r.Cells(5).Value = If(f.AsReqTop > 0, CObj(Math.Round(f.AsReqTop, 0)), "—")
-            r.Cells(6).Value = If(f.AsColTop > 0, CObj(Math.Round(f.AsColTop, 0)), "—")
-            r.Cells(7).Value = If(f.FFlexTop > 0, Math.Round(f.FFlexTop, 2).ToString("F2"), "—")
-            r.Cells(8).Value = If(f.AsReqBot > 0, CObj(Math.Round(f.AsReqBot, 0)), "—")
-            r.Cells(9).Value = If(f.AsColBot > 0, CObj(Math.Round(f.AsColBot, 0)), "—")
-            r.Cells(10).Value = If(f.FFlexBot > 0, Math.Round(f.FFlexBot, 2).ToString("F2"), "—")
-            r.Cells(11).Value = If(cumple, "OK", "Revisar")
-            AplicarColorFactor(r.Cells(7), f.FFlexTop)
-            AplicarColorFactor(r.Cells(10), f.FFlexBot)
-            AplicarColorEstado(r.Cells(11), cumple)
+            r.Cells(2).Value = secc
+            r.Cells(3).Value = f.fc
+            r.Cells(4).Value = If(asCol > 0, CObj(Math.Round(asCol, 2)), "—")
+            r.Cells(5).Value = If(asReq > 0, CObj(Math.Round(asReq, 2)), "—")
+            r.Cells(6).Value = Math.Round(cdMin, 2).ToString("F2")
+            r.Cells(7).Value = zona
+            r.Cells(8).Value = If(cumple, "OK", "Revisar")
+            AplicarColorFactor(r.Cells(6), cdMin)
+            AplicarColorEstado(r.Cells(8), cumple)
+            idx += 1
         Next
     End Sub
 
     Private Sub MostrarCortante()
         DgvCortante.Rows.Clear()
-        For i = 0 To _filasCortante.Count - 1
-            Dim f = _filasCortante(i)
+        Dim idx = 0
+        For Each f In _filasCortante
             Dim cumple = (f.FV2 >= 0.9F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 0.9F OrElse f.FV3 = 0)
             If ChkSoloBad.Checked AndAlso cumple Then Continue For
+            Dim secc = $"{f.B:0.00}×{f.H:0.00} m"
             Dim r = DgvCortante.Rows(DgvCortante.Rows.Add())
-            If i Mod 2 = 1 Then r.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+            If idx Mod 2 = 1 Then r.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
             r.Cells(0).Value = f.Elemento
             r.Cells(1).Value = f.Piso
-            r.Cells(2).Value = Math.Round(f.B, 3)
-            r.Cells(3).Value = Math.Round(f.H, 3)
-            r.Cells(4).Value = If(f.SepZC > 0, CObj(Math.Round(f.SepZC, 3)), "—")
-            r.Cells(5).Value = If(f.Barra IsNot Nothing, f.Barra, "—")
-            r.Cells(6).Value = f.RamasL
-            r.Cells(7).Value = f.RamasC
-            r.Cells(8).Value = If(f.Vu2 > 0, CObj(Math.Round(f.Vu2, 2)), "—")
-            r.Cells(9).Value = If(f.Vc2 > 0, CObj(Math.Round(f.Vc2, 2)), "—")
-            r.Cells(10).Value = If(f.Vn2 > 0, CObj(Math.Round(f.Vn2, 2)), "—")
-            r.Cells(11).Value = If(f.FV2 > 0, Math.Round(f.FV2, 2).ToString("F2"), "—")
-            r.Cells(12).Value = If(f.Vu3 > 0, CObj(Math.Round(f.Vu3, 2)), "—")
-            r.Cells(13).Value = If(f.Vc3 > 0, CObj(Math.Round(f.Vc3, 2)), "—")
-            r.Cells(14).Value = If(f.Vn3 > 0, CObj(Math.Round(f.Vn3, 2)), "—")
-            r.Cells(15).Value = If(f.FV3 > 0, Math.Round(f.FV3, 2).ToString("F2"), "—")
-            r.Cells(16).Value = If(cumple, "OK", "Revisar")
-            AplicarColorFactor(r.Cells(11), f.FV2)
-            AplicarColorFactor(r.Cells(15), f.FV3)
-            AplicarColorEstado(r.Cells(16), cumple)
+            r.Cells(2).Value = secc
+            r.Cells(3).Value = If(f.Vu2 > 0, CObj(Math.Round(f.Vu2, 2)), "—")
+            r.Cells(4).Value = If(f.Vn2 > 0, CObj(Math.Round(f.Vn2, 2)), "—")
+            r.Cells(5).Value = If(f.FV2 > 0, Math.Round(f.FV2, 2).ToString("F2"), "—")
+            r.Cells(6).Value = If(f.Vu3 > 0, CObj(Math.Round(f.Vu3, 2)), "—")
+            r.Cells(7).Value = If(f.Vn3 > 0, CObj(Math.Round(f.Vn3, 2)), "—")
+            r.Cells(8).Value = If(f.FV3 > 0, Math.Round(f.FV3, 2).ToString("F2"), "—")
+            r.Cells(9).Value = If(cumple, "OK", "Revisar")
+            AplicarColorFactor(r.Cells(5), f.FV2)
+            AplicarColorFactor(r.Cells(8), f.FV3)
+            AplicarColorEstado(r.Cells(9), cumple)
+            idx += 1
         Next
     End Sub
 
@@ -613,48 +623,58 @@ Public Class Form_02_Reporte_Columnas
     End Sub
 
     Private Sub ExportarHojaFlex(ws As IXLWorksheet)
-        Enc(ws, {"Elemento", "Piso", "B (m)", "H (m)", "f'c (MPa)",
-                 "As Req Top (mm2)", "As Col Top (mm2)", "F Flex Top",
-                 "As Req Bot (mm2)", "As Col Bot (mm2)", "F Flex Bot", "Estado"})
+        Enc(ws, {"Columna", "Tramo", "Sección", "f'c (MPa)", "As Col (cm2)", "As Req (cm2)", "C/D", "Zona", "Estado"})
         Dim r = 2
         For Each f In _filasFlex
+            Dim cdTop = f.FFlexTop : Dim cdBot = f.FFlexBot
+            Dim hayTop = cdTop > 0 : Dim hayBot = cdBot > 0
+            If Not hayTop AndAlso Not hayBot Then Continue For
+            Dim cdMin = If(hayTop AndAlso hayBot, Math.Min(cdTop, cdBot), If(hayTop, cdTop, cdBot))
+            Dim usarTop = hayTop AndAlso (Not hayBot OrElse cdTop <= cdBot)
+            Dim zona As String
+            If hayTop AndAlso hayBot Then
+                If cdTop < 0.9F AndAlso cdBot < 0.9F Then
+                    zona = "Ambas zonas"
+                ElseIf cdTop < 0.9F Then
+                    zona = "Zona superior"
+                Else
+                    zona = "Zona inferior"
+                End If
+            Else
+                zona = If(usarTop, "Zona superior", "Zona inferior")
+            End If
+            Dim asCol = CDbl(If(usarTop, f.AsColTop, f.AsColBot)) / 100.0
+            Dim asReq = CDbl(If(usarTop, f.AsReqTop, f.AsReqBot)) / 100.0
+            Dim secc = $"{f.B:0.00}×{f.H:0.00} m"
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Piso
-            ws.Cell(r, 3).Value = CDbl(Math.Round(f.B, 3)) : ws.Cell(r, 4).Value = CDbl(Math.Round(f.H, 3))
-            ws.Cell(r, 5).Value = CDbl(f.fc)
-            ws.Cell(r, 6).Value = CDbl(Math.Round(f.AsReqTop, 0)) : ws.Cell(r, 7).Value = CDbl(Math.Round(f.AsColTop, 0))
-            ws.Cell(r, 8).Value = If(f.FFlexTop > 0, CObj(CDbl(Math.Round(f.FFlexTop, 2))), "-")
-            ws.Cell(r, 9).Value = CDbl(Math.Round(f.AsReqBot, 0)) : ws.Cell(r, 10).Value = CDbl(Math.Round(f.AsColBot, 0))
-            ws.Cell(r, 11).Value = If(f.FFlexBot > 0, CObj(CDbl(Math.Round(f.FFlexBot, 2))), "-")
-            Dim ok = (f.FFlexTop >= 0.9F OrElse f.FFlexTop = 0) AndAlso (f.FFlexBot >= 0.9F OrElse f.FFlexBot = 0)
-            ws.Cell(r, 12).Value = If(ok, "OK", "Revisar")
-            FXL(ws.Cell(r, 8), f.FFlexTop) : FXL(ws.Cell(r, 11), f.FFlexBot)
+            ws.Cell(r, 3).Value = secc : ws.Cell(r, 4).Value = CDbl(f.fc)
+            ws.Cell(r, 5).Value = CDbl(Math.Round(asCol, 2))
+            ws.Cell(r, 6).Value = CDbl(Math.Round(asReq, 2))
+            ws.Cell(r, 7).Value = CDbl(Math.Round(cdMin, 2))
+            ws.Cell(r, 8).Value = zona
+            ws.Cell(r, 9).Value = If(cdMin >= 0.9F, "OK", "Revisar")
+            FXL(ws.Cell(r, 7), CSng(cdMin))
             r += 1
         Next
         ws.Columns().AdjustToContents() : ws.SheetView.FreezeRows(1)
     End Sub
 
     Private Sub ExportarHojaCortante(ws As IXLWorksheet)
-        Enc(ws, {"Elemento", "Piso", "B (m)", "H (m)", "Sep ZC (m)", "Barra",
-                 "Ram. L", "Ram. C", "Vu2 (kN)", "Vc2 (kN)", "Vn2 (kN)", "F V2",
-                 "Vu3 (kN)", "Vc3 (kN)", "Vn3 (kN)", "F V3", "Estado"})
+        Enc(ws, {"Columna", "Tramo", "Sección", "Vu2 (kN)", "φVn2 (kN)", "C/D V2", "Vu3 (kN)", "φVn3 (kN)", "C/D V3", "Estado"})
         Dim r = 2
         For Each f In _filasCortante
+            Dim secc = $"{f.B:0.00}×{f.H:0.00} m"
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Piso
-            ws.Cell(r, 3).Value = CDbl(Math.Round(f.B, 3)) : ws.Cell(r, 4).Value = CDbl(Math.Round(f.H, 3))
-            ws.Cell(r, 5).Value = If(f.SepZC > 0, CObj(CDbl(Math.Round(f.SepZC, 3))), "-")
-            ws.Cell(r, 6).Value = If(f.Barra IsNot Nothing, f.Barra, "-")
-            ws.Cell(r, 7).Value = f.RamasL : ws.Cell(r, 8).Value = f.RamasC
-            ws.Cell(r, 9).Value = If(f.Vu2 > 0, CObj(CDbl(Math.Round(f.Vu2, 2))), "-")
-            ws.Cell(r, 10).Value = If(f.Vc2 > 0, CObj(CDbl(Math.Round(f.Vc2, 2))), "-")
-            ws.Cell(r, 11).Value = If(f.Vn2 > 0, CObj(CDbl(Math.Round(f.Vn2, 2))), "-")
-            ws.Cell(r, 12).Value = If(f.FV2 > 0, CObj(CDbl(Math.Round(f.FV2, 2))), "-")
-            ws.Cell(r, 13).Value = If(f.Vu3 > 0, CObj(CDbl(Math.Round(f.Vu3, 2))), "-")
-            ws.Cell(r, 14).Value = If(f.Vc3 > 0, CObj(CDbl(Math.Round(f.Vc3, 2))), "-")
-            ws.Cell(r, 15).Value = If(f.Vn3 > 0, CObj(CDbl(Math.Round(f.Vn3, 2))), "-")
-            ws.Cell(r, 16).Value = If(f.FV3 > 0, CObj(CDbl(Math.Round(f.FV3, 2))), "-")
+            ws.Cell(r, 3).Value = secc
+            ws.Cell(r, 4).Value = If(f.Vu2 > 0, CObj(CDbl(Math.Round(f.Vu2, 2))), "-")
+            ws.Cell(r, 5).Value = If(f.Vn2 > 0, CObj(CDbl(Math.Round(f.Vn2, 2))), "-")
+            ws.Cell(r, 6).Value = If(f.FV2 > 0, CObj(CDbl(Math.Round(f.FV2, 2))), "-")
+            ws.Cell(r, 7).Value = If(f.Vu3 > 0, CObj(CDbl(Math.Round(f.Vu3, 2))), "-")
+            ws.Cell(r, 8).Value = If(f.Vn3 > 0, CObj(CDbl(Math.Round(f.Vn3, 2))), "-")
+            ws.Cell(r, 9).Value = If(f.FV3 > 0, CObj(CDbl(Math.Round(f.FV3, 2))), "-")
             Dim ok = (f.FV2 >= 0.9F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 0.9F OrElse f.FV3 = 0)
-            ws.Cell(r, 17).Value = If(ok, "OK", "Revisar")
-            FXL(ws.Cell(r, 12), f.FV2) : FXL(ws.Cell(r, 16), f.FV3)
+            ws.Cell(r, 10).Value = If(ok, "OK", "Revisar")
+            FXL(ws.Cell(r, 6), f.FV2) : FXL(ws.Cell(r, 9), f.FV3)
             r += 1
         Next
         ws.Columns().AdjustToContents() : ws.SheetView.FreezeRows(1)

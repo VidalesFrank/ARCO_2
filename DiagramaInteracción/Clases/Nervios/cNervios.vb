@@ -17,6 +17,14 @@ Public Class cNervios
     <OptionalField> Public GruposManual As New List(Of List(Of String))()
     <OptionalField> Public BeamForces As New List(Of cCombinacionBeamForce)()
 
+    ' Datos generales del módulo — ajustables por el usuario
+    <OptionalField> Public Recubrimiento As Double  ' m — global; 0 = usar valor por sección ETABS
+
+    ' Joints y Frames propios del módulo Nervios — se leen del Excel importado en este módulo,
+    ' independientes de los que puedan tener Vigas/Columnas/Muros en Proyecto.Elementos.
+    <OptionalField> Public Joints As New List(Of cJoint)()
+    <OptionalField> Public Frames As New List(Of cFrame)()
+
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
         If Elementos Is Nothing Then Elementos = New List(Of cNervio)()
@@ -26,6 +34,8 @@ Public Class cNervios
         If Propiedades_Secciones Is Nothing Then Propiedades_Secciones = New Dictionary(Of String, PropSeccionNervio)(StringComparer.OrdinalIgnoreCase)
         If GruposManual Is Nothing Then GruposManual = New List(Of List(Of String))()
         If BeamForces Is Nothing Then BeamForces = New List(Of cCombinacionBeamForce)()
+        If Joints Is Nothing Then Joints = New List(Of cJoint)()
+        If Frames Is Nothing Then Frames = New List(Of cFrame)()
     End Sub
 
 End Class
@@ -144,28 +154,55 @@ Public Class cFrameNervio
     <OptionalField> Public Mu_Neg_I As Double   ' kN·m — momento negativo cara izq
     <OptionalField> Public Mu_Pos_C As Double   ' kN·m — momento positivo máximo vano
     <OptionalField> Public Mu_Neg_D As Double   ' kN·m — momento negativo cara der
-    <OptionalField> Public Vu_I As Double       ' kN   — cortante cara izq
-    <OptionalField> Public Vu_D As Double       ' kN   — cortante cara der
+    <OptionalField> Public Vu_I As Double       ' kN — cortante de diseño a distancia d de la cara izq
+    <OptionalField> Public Vu_D As Double       ' kN — cortante de diseño a distancia d de la cara der
 
     ' ── Capacidades calculadas (por zona: Izq/Centro/Der con refuerzo propio) ──
     <OptionalField> Public As_Prov_Sup_I As Double  ' cm² — refuerzo superior zona Izquierda
     <OptionalField> Public As_Prov_Sup_D As Double  ' cm² — refuerzo superior zona Derecha
     <OptionalField> Public As_Prov_Inf_C As Double  ' cm² — refuerzo inferior zona Centro
-    <OptionalField> Public As_Min As Double         ' cm²
+    <OptionalField> Public As_Min As Double         ' cm² — As_min zona negativa (bw)
+    <OptionalField> Public As_Min_Pos As Double     ' cm² — As_min zona positiva (bw; puede diferir si Be aplica)
+    <OptionalField> Public As_Req_Sup_I As Double   ' cm² — acero requerido por demanda Mu-I
+    <OptionalField> Public As_Req_Sup_D As Double   ' cm² — acero requerido por demanda Mu-D
+    <OptionalField> Public As_Req_Inf_C As Double   ' cm² — acero requerido por demanda Mu+C
     <OptionalField> Public As_Max As Double         ' cm²
     <OptionalField> Public PhiMn_Sup_I As Double    ' kN·m
     <OptionalField> Public PhiMn_Sup_D As Double    ' kN·m
     <OptionalField> Public PhiMn_Inf_C As Double    ' kN·m
     <OptionalField> Public PhiVn_I As Double        ' kN
     <OptionalField> Public PhiVn_D As Double        ' kN
+    <OptionalField> Public PhiVc_I As Double        ' kN — aporte concreto φ·Vc izq
+    <OptionalField> Public PhiVc_D As Double        ' kN — aporte concreto φ·Vc der
+    <OptionalField> Public PhiVs_I As Double        ' kN — aporte acero φ·Vs izq
+    <OptionalField> Public PhiVs_D As Double        ' kN — aporte acero φ·Vs der
 
     ' ── C/D por zona ──────────────────────────────────────────────────────────
-    <OptionalField> Public CD_Flex_Sup_I As Double
+    <OptionalField> Public CD_Flex_Sup_I As Double  ' legacy (igual a CD_M_Sup_I)
     <OptionalField> Public CD_Flex_Inf_C As Double
     <OptionalField> Public CD_Flex_Sup_D As Double
+    <OptionalField> Public CD_M_Sup_I As Double     ' C/D Rel M: φMn / Mu- izq
+    <OptionalField> Public CD_M_Inf_C As Double     ' C/D Rel M: φMn / Mu+ cen
+    <OptionalField> Public CD_M_Sup_D As Double     ' C/D Rel M: φMn / Mu- der
+    <OptionalField> Public CD_As_Sup_I As Double    ' C/D Rel As: As_prov / max(As_req, As_min) izq
+    <OptionalField> Public CD_As_Inf_C As Double    ' C/D Rel As: As_prov / max(As_req, As_min) cen
+    <OptionalField> Public CD_As_Sup_D As Double    ' C/D Rel As: As_prov / max(As_req, As_min) der
     <OptionalField> Public CD_Cortante_I As Double
     <OptionalField> Public CD_Cortante_D As Double
     <OptionalField> Public Cumple As Boolean
+
+    ' ── Redistribución de momentos (NSR-10, máx 20%) ──────────────────────────
+    <OptionalField> Public FactorRedist_I As Double   ' 0.0–0.20 fracción de Mu-I a redistribuir al vano
+    <OptionalField> Public FactorRedist_D As Double   ' 0.0–0.20 fracción de Mu-D a redistribuir al vano
+    <OptionalField> Public FactorRedist_C As Double   ' 0.0–0.20 fracción de Mu+C a redistribuir a los apoyos
+    <OptionalField> Public Mu_Neg_I_Base As Double    ' kN·m — Mu-I antes de redistribución
+    <OptionalField> Public Mu_Pos_C_Base As Double    ' kN·m — Mu+C antes de redistribución
+    <OptionalField> Public Mu_Neg_D_Base As Double    ' kN·m — Mu-D antes de redistribución
+
+    ' ── C/D desde Mu base (sin redistribuir) — comparación "como estaba" ──────
+    <OptionalField> Public CD_M_Sup_I_Base As Double  ' C/D neg Izq desde Mu_Neg_I_Base
+    <OptionalField> Public CD_M_Inf_C_Base As Double  ' C/D pos Centro desde Mu_Pos_C_Base
+    <OptionalField> Public CD_M_Sup_D_Base As Double  ' C/D neg Der desde Mu_Neg_D_Base
 
     ' ── Fuerzas por combinación (del import ETABS) ────────────────────────────
     <OptionalField> Public Combinaciones As New List(Of cComboNervio)()
@@ -216,8 +253,11 @@ Public Class cComboNervio
     ' Valores en cara del apoyo (calculados por interpolación)
     <OptionalField> Public M_Cara_I As Double  ' kN·m
     <OptionalField> Public M_Cara_D As Double  ' kN·m
-    <OptionalField> Public V_Cara_I As Double  ' kN
-    <OptionalField> Public V_Cara_D As Double  ' kN
+    <OptionalField> Public V_Cara_I As Double  ' kN — cortante en cara del apoyo (referencia)
+    <OptionalField> Public V_Cara_D As Double  ' kN — cortante en cara del apoyo (referencia)
+    ' Cortante a distancia d de la cara del apoyo — valor de diseño según NSR-10 §9.4.3.2
+    <OptionalField> Public V_d_I As Double     ' kN
+    <OptionalField> Public V_d_D As Double     ' kN
     <OptionalField> Public M_Max_Pos As Double ' kN·m — máximo positivo en el vano
 
     <OnDeserialized>

@@ -1,5 +1,5 @@
 ﻿Imports ARCO.Funciones_00_Varias
-Imports ARCO.Funciones_02_Columnas
+Imports ARCO.ColumnaService
 Public Class Form_02_00_PagInfoColumnas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
     Private Sub Combo_Elementos_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Combo_Elementos.SelectedIndexChanged

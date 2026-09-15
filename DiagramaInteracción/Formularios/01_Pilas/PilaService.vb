@@ -1,6 +1,41 @@
-﻿Imports ARCO.Funciones_00_Varias
-Public Class Funciones_01_Pilas
+Imports ARCO.Funciones_00_Varias
+
+' Servicio de negocio del módulo Pilas — cálculos NSR-10 puros y construcción de secciones.
+' Renombrado desde Funciones_01_Pilas (agosto 2026) para alinear la arquitectura con
+' VigaService / NervioService (patrón: co-ubicado con su formulario en Formularios/XX_XXX/).
+Public Class PilaService
+
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
+
+
+    ' =========================================================================
+    ' Construye los Elemento_Pila a partir de los parámetros comunes del UI y
+    ' la lista de labels de apoyos. Reemplaza el loop inline de Button1_Click
+    ' del formulario — separa lógica de dominio de la manipulación del DataGridView.
+    ' =========================================================================
+    Public Shared Sub CrearSeccionesDesdeParametros(pilas As cPilas,
+                                                    params As ParametrosSeccionPila,
+                                                    nombresElementos As List(Of String))
+        pilas.ListaElementos.Clear()
+        For Each nombreElemento In nombresElementos
+            Dim seccion As New Elemento_Pila With {
+                .Name_Elemento    = nombreElemento,
+                .Name_Label       = nombreElemento,
+                .Df               = params.Df,
+                .Dc               = params.Dc,
+                .L_Pila           = params.L_Pila,
+                .fc               = params.Fc,
+                .Opcion_Hueca     = If(params.EsHueca, "Si", "No"),
+                .Esp_Anillo       = If(params.EsHueca, params.EspAnillo, 0),
+                .N_Barra_Long     = params.NBarraLong,
+                .Cant_Barras_Long = params.CantBarrasLong,
+                .N_Barra_Trans    = params.NBarraTrans,
+                .Separacion_Trans = params.SeparacionTrans,
+                .Acero_Long       = CDbl(AreaRefuerzo(params.NBarraLong))
+            }
+            pilas.ListaElementos.Add(seccion)
+        Next
+    End Sub
 
 
     '-------------------------- FUNCIÓN PARA DETERMINAR EL DIAGRAMA DE INTERACCIÓN EN UNA SECCIÓN CIRCULAR --------------------------
@@ -306,3 +341,19 @@ Public Class Funciones_01_Pilas
     End Function
 
 End Class
+
+
+' Parámetros de sección común compartidos por todas las pilas de un cálculo.
+' Se lee UNA VEZ desde el UI y se propaga a cada Elemento_Pila via PilaService.CrearSeccionesDesdeParametros.
+Public Structure ParametrosSeccionPila
+    Public Df As Double
+    Public Dc As Single
+    Public L_Pila As Single
+    Public Fc As Single
+    Public EsHueca As Boolean
+    Public EspAnillo As Single
+    Public NBarraLong As String
+    Public CantBarrasLong As Integer
+    Public NBarraTrans As String
+    Public SeparacionTrans As Single
+End Structure

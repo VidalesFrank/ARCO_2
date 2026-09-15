@@ -1,5 +1,5 @@
 ﻿Imports System.Windows.Forms.DataVisualization.Charting
-Imports Fun_Muros = ARCO.Funciones_Muros
+Imports Fun_Muros = ARCO.MuroService
 Imports Word = Microsoft.Office.Interop.Word
 
 Public Class ReporteInicial
@@ -54,7 +54,7 @@ Public Class ReporteInicial
         Dim ChartArea2 As New ChartArea("ChartArea2")
         Chart1.ChartAreas.Add(ChartArea2)
 
-        Funciones_Muros.GraficoPorcentajeMuros(Chart1, 18, 16, 14)
+        MuroService.GraficoPorcentajeMuros(Chart1, 18, 16, 14)
 
         ' Ajustar tamaño del gráfico
         Chart1.Width = anchoPx

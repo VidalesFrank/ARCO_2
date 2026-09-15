@@ -501,11 +501,7 @@ Public Class Form_06_01_ResultadosMuros
             Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
             MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
-            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
-            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
-            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
-            GC.Collect()
-            GC.WaitForPendingFinalizers()
+            ExcelExportService.CerrarYLiberar(appXL, wbXL, Hoja_Resultados)
             conexion.Close()
             Cursor = Cursors.Arrow
         End Try
@@ -758,11 +754,7 @@ Public Class Form_06_01_ResultadosMuros
             Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
             MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
-            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
-            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
-            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
-            GC.Collect()
-            GC.WaitForPendingFinalizers()
+            ExcelExportService.CerrarYLiberar(appXL, wbXL, Hoja_Resultados)
             conexion.Close()
             Cursor = Cursors.Arrow
         End Try
@@ -993,11 +985,7 @@ Public Class Form_06_01_ResultadosMuros
             Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
             MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
-            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
-            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
-            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
-            GC.Collect()
-            GC.WaitForPendingFinalizers()
+            ExcelExportService.CerrarYLiberar(appXL, wbXL, Hoja_Resultados)
             conexion.Close()
             Cursor = Cursors.Arrow
         End Try
@@ -1282,11 +1270,7 @@ Public Class Form_06_01_ResultadosMuros
             Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")
             MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
-            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
-            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
-            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
-            GC.Collect()
-            GC.WaitForPendingFinalizers()
+            ExcelExportService.CerrarYLiberar(appXL, wbXL, Hoja_Resultados)
             conexion.Close()
             Cursor = Cursors.Arrow
         End Try

@@ -1,5 +1,5 @@
 ﻿Imports System.IO
-Imports Func_Muros = ARCO.Funciones_Muros
+Imports Func_Muros = ARCO.MuroService
 'Imports System.Windows.Media
 
 Public Class Form_06_PagMuros
@@ -30,9 +30,9 @@ Public Class Form_06_PagMuros
 
         Try
         Dim Tabla As DataGridView
-        Dim Col_Diseno = Funciones_02_Columnas.ColumnasDiseno("Pier")
-        Dim Col_Secciones = Funciones_02_Columnas.ColumnasSecciones("Pier")
-        Dim Col_Fuerzas = Funciones_02_Columnas.ColumnasFuerzas("Pier")
+        Dim Col_Diseno = ColumnaService.ColumnasDiseno("Pier")
+        Dim Col_Secciones = ColumnaService.ColumnasSecciones("Pier")
+        Dim Col_Fuerzas = ColumnaService.ColumnasFuerzas("Pier")
 
         If proyecto.Elementos.Muros.Info_Diseño = True Then
             Tabla = Tabla_Diseño_Flexo
@@ -234,7 +234,7 @@ Public Class Form_06_PagMuros
 
             Dim Salto As Integer = Col_Fuerzas(3)
 
-            Dim cols_M = Funciones_02_Columnas.IndicesColumnasFuerzas(Tabla)
+            Dim cols_M = ColumnaService.IndicesColumnasFuerzas(Tabla)
             Dim Col_Piso        As Integer = If(cols_M.ContainsKey("Story"),      cols_M("Story"),       0)
             Dim Col_Label       As Integer = If(cols_M.ContainsKey("Label"),      cols_M("Label"),       1)
             Dim Col_Combinacion As Integer = If(cols_M.ContainsKey("OutputCase"), cols_M("OutputCase"),  2)
@@ -624,7 +624,7 @@ Public Class Form_06_PagMuros
 
         Dim Tabla As DataGridView
 
-        Dim Col_Diseno = Funciones_02_Columnas.ColumnasDiseno("Pier")
+        Dim Col_Diseno = ColumnaService.ColumnasDiseno("Pier")
 
         If proyecto.Elementos.Muros.Info_Diseño = True Then
             Tabla = Tabla_Diseño_Flexo
@@ -826,7 +826,7 @@ Public Class Form_06_PagMuros
 
         Dim Tabla As DataGridView
 
-        Dim Col_Secciones = Funciones_02_Columnas.ColumnasSecciones("Pier")
+        Dim Col_Secciones = ColumnaService.ColumnasSecciones("Pier")
 
         If proyecto.Elementos.Muros.Info_Secciones = True Then
 

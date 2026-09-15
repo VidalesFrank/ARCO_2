@@ -27,6 +27,10 @@ Public Class cPilas
 
     <OptionalField> Public Lista_Combinaciones_Traccion As New List(Of String)
 
+    ' Geometría propia del módulo — snapshot del import ETABS, independiente de otros módulos
+    <OptionalField> Public Joints As New List(Of cJoint)()
+    <OptionalField> Public Frames As New List(Of cFrame)()
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         If ListaElementos Is Nothing Then ListaElementos = New List(Of Elemento_Pila)
@@ -37,6 +41,8 @@ Public Class cPilas
         If Lista_Combinaciones_Sismicas_Servicio Is Nothing Then Lista_Combinaciones_Sismicas_Servicio = New List(Of String)
         If Lista_Combinaciones_Sismicas_Design Is Nothing Then Lista_Combinaciones_Sismicas_Design = New List(Of String)
         If Lista_Combinaciones_Traccion Is Nothing Then Lista_Combinaciones_Traccion = New List(Of String)
+        If Joints Is Nothing Then Joints = New List(Of cJoint)()
+        If Frames Is Nothing Then Frames = New List(Of cFrame)()
     End Sub
 
 End Class

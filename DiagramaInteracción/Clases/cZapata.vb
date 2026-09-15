@@ -1,5 +1,6 @@
 ﻿Imports ARCO.Refuerzo
 Imports ARCO.eNumeradores
+Imports System.Runtime.Serialization
 
 <Serializable>
 Public Class cZapata
@@ -55,6 +56,14 @@ Public Class cZapata
 
     ' Resultados por combinación
     Public Property Resultados As New Dictionary(Of String, ResultadoZapata)
+
+    <OnDeserialized>
+    Private Sub OnDeserialized(ctx As StreamingContext)
+        If Refuerzos Is Nothing Then Refuerzos = New List(Of cRefuerzo)
+        If Lista_Combinaciones_Estaticas Is Nothing Then Lista_Combinaciones_Estaticas = New List(Of cCombinacionPila)
+        If Lista_Combinaciones_Dinamicas Is Nothing Then Lista_Combinaciones_Dinamicas = New List(Of cCombinacionPila)
+        If Resultados Is Nothing Then Resultados = New Dictionary(Of String, ResultadoZapata)
+    End Sub
 
 End Class
 

@@ -29,6 +29,10 @@ Public Class cMuros
     Public ArMean_X As Single
     Public ArMean_Y As Single
 
+    ' Geometría propia del módulo — snapshot del import ETABS, independiente de otros módulos
+    <OptionalField> Public Joints As New List(Of cJoint)()
+    <OptionalField> Public Frames As New List(Of cFrame)()
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         If Lista_Muros Is Nothing Then Lista_Muros = New List(Of Muro)
@@ -38,6 +42,8 @@ Public Class cMuros
         If Lista_Combinaciones_ALR_Muros Is Nothing Then Lista_Combinaciones_ALR_Muros = New List(Of String)
         If ListA_Combinaciones_Design Is Nothing Then ListA_Combinaciones_Design = New List(Of String)
         If ListA_Combinaciones_Sismo Is Nothing Then ListA_Combinaciones_Sismo = New List(Of String)
+        If Joints Is Nothing Then Joints = New List(Of cJoint)()
+        If Frames Is Nothing Then Frames = New List(Of cFrame)()
     End Sub
 
 End Class
