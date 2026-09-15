@@ -119,6 +119,57 @@ Public Class PilaVerticalAdaptable
         Next
     End Sub
 
+    ''' <summary>
+    ''' Cambia el alto mínimo de un control ya agregado y vuelve a repartir.
+    '''
+    ''' Se usa cuando el contenido solo se conoce en tiempo de ejecución: una
+    ''' tabla de resultados no sabe cuánto alto necesita hasta que se construye
+    ''' con las filas de la viga seleccionada. Ver AltoNaturalGrid().
+    ''' </summary>
+    Public Sub ActualizarAltoMinimo(ctrl As Control, altoMinimo As Integer)
+
+        If ctrl Is Nothing Then Exit Sub
+
+        Dim elem = _elementos.FirstOrDefault(Function(x) x.Ctrl Is ctrl)
+        If elem Is Nothing Then Exit Sub
+
+        elem.AltoMinimo = Math.Max(0, altoMinimo)
+
+        ' El mínimo real puede superar al alto de diseño (una tabla con más filas
+        ' de las que cabían en la maqueta original). En ese caso el alto de diseño
+        ' deja de ser un techo y pasa a ser el mínimo, para no romper la invariante
+        ' sumaDiseno >= sumaMinima de la que depende el reparto.
+        If elem.AltoMinimo > elem.AltoDiseno Then elem.AltoDiseno = elem.AltoMinimo
+
+        Aplicar()
+
+    End Sub
+
+    ''' <summary>
+    ''' Alto que necesita un DataGridView para mostrar TODAS sus filas sin
+    ''' barra vertical propia: encabezado de columnas + alto de cada fila +
+    ''' bordes, más la barra horizontal, que también come alto.
+    ''' </summary>
+    ''' <param name="chrome">
+    ''' Alto extra del contenedor que envuelve la tabla. Para un GroupBox son
+    ''' unos 30 px entre el título y los bordes.
+    ''' </param>
+    Public Shared Function AltoNaturalGrid(dgv As DataGridView,
+                                           Optional chrome As Integer = 0) As Integer
+
+        If dgv Is Nothing Then Return 0
+
+        Dim alto As Integer = dgv.ColumnHeadersHeight + 2
+        For Each fila As DataGridViewRow In dgv.Rows
+            alto += fila.Height
+        Next
+
+        alto += SystemInformation.HorizontalScrollBarHeight
+
+        Return alto + chrome
+
+    End Function
+
     ''' <summary>Captura la maqueta de diseño y hace el primer reparto.</summary>
     Public Sub Activar()
         If _elementos.Count = 0 Then Exit Sub
