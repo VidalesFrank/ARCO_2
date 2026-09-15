@@ -502,6 +502,7 @@
     <Compile Include="Formularios\Complementos\Form_Graficos.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Complementos\PilaVerticalAdaptable.vb" />
     <Compile Include="Formularios\Complementos\Form_ALR.Designer.vb">
       <DependentUpon>Form_ALR.vb</DependentUpon>
     </Compile>
