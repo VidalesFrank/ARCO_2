@@ -854,8 +854,14 @@ Public Class Form_09_Vigas
         itemVerResumen.ForeColor = Color.White
         AddHandler itemVerResumen.Click, AddressOf AbrirReportes
 
+        Dim itemGraficas As New ToolStripMenuItem("Gráficas Resumen")
+        itemGraficas.BackColor = Color.FromArgb(87, 87, 87)
+        itemGraficas.ForeColor = Color.White
+        AddHandler itemGraficas.Click, AddressOf AbrirGraficas
+
         menuReportes.DropDownItems.Add(itemRecalcular)
         menuReportes.DropDownItems.Add(itemVerResumen)
+        menuReportes.DropDownItems.Add(itemGraficas)
         MenuStrip1.Items.Add(menuReportes)
 
         ' ── Nivel de Disipación (DMO / DES) ──────────────────────────────────
@@ -1171,6 +1177,22 @@ Public Class Form_09_Vigas
                             "Haz clic en 'Generar Vigas' para aplicar el nuevo filtro.",
                             "Filtro actualizado", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
+    End Sub
+
+    Private Sub AbrirGraficas(sender As Object, e As EventArgs)
+
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("Primero calcula las vigas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        RecalcularRevisionTodo(silencioso:=True)
+
+        Dim form As New Form_Graficos_Vigas()
+        form.Vigas = _vigas
+        form.Show(Me)
+
     End Sub
 
     Private Sub AbrirReportes(sender As Object, e As EventArgs)

@@ -81,10 +81,10 @@
             Next
 
         ElseIf OpcionLlamado = "Columna" Then
-            For i = 0 To Lista_Cargas_Design.Items.Count - 1
-                Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR.Add(Lista_Cargas_Design.Items(i))
-            Next
             Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR.Clear()
+            For i = 0 To Lista_Cargas_Design.Items.Count - 1
+                Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR.Add(Lista_Cargas_Design.Items(i).ToString())
+            Next
 
         ElseIf OpcionLlamado = "Muros" Then
             If Evaluacion = "Design" Then
