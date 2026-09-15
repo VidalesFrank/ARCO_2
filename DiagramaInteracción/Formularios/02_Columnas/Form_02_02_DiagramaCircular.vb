@@ -1,5 +1,5 @@
 Imports ARCO.Funciones_00_Varias
-Imports ARCO.Funciones_02_Columnas
+Imports ARCO.ColumnaService
 Imports System.Drawing.Drawing2D
 
 Public Class Form_02_02_DiagramaCircular

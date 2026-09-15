@@ -1,6 +1,6 @@
 ﻿Imports ARCO.eNumeradores
 Imports ARCO.Funciones_00_Varias
-Imports ARCO.Funciones_Muros
+Imports ARCO.MuroService
 Imports ARCO.SeccionMuro
 
 Public Class Form_06_00_PagInfoMuros

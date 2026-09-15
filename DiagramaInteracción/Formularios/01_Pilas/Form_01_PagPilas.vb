@@ -3,7 +3,7 @@ Imports System.IO
 Imports System.Linq
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports ARCO.Funciones_00_Varias
-Imports ARCO.Funciones_01_Pilas
+Imports ARCO.PilaService
 Imports Excel = Microsoft.Office.Interop.Excel
 Public Class Form_01_PagPilas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
@@ -43,172 +43,36 @@ Public Class Form_01_PagPilas
         Proyecto.Elementos.Pilas.Fy = Convert.ToSingle(PagMateriales.Fy.Text)
         Proyecto.Elementos.Pilas.ModuloE_Acero = Convert.ToSingle(PagMateriales.Es.Text)
 
-        Proyecto.Elementos.Pilas.ListaElementos.Clear()
-        For Each Elemento_ In Lista_Elementos
+        ' Parámetros de sección leídos del UI — se propagan a cada Elemento_Pila vía PilaService.
+        Dim params As New ParametrosSeccionPila With {
+            .Df              = Convert.ToDouble(Diametro.Text),
+            .Dc              = Convert.ToSingle(Dc.Text),
+            .L_Pila          = Convert.ToSingle(Long_Pila.Text),
+            .Fc              = Convert.ToSingle(T_fc.Text),
+            .EsHueca         = Op_Seccion.Text = "Hueca",
+            .EspAnillo       = If(Op_Seccion.Text = "Hueca", Convert.ToSingle(T_Espesor.Text), 0),
+            .NBarraLong      = RefuerzoLong.Text,
+            .CantBarrasLong  = Convert.ToInt32(NumRLong.Text),
+            .NBarraTrans     = RefuerzoTransv.Text,
+            .SeparacionTrans = Convert.ToSingle(Separacion.Text)
+        }
+        PilaService.CrearSeccionesDesdeParametros(Proyecto.Elementos.Pilas, params, Lista_Elementos)
 
-            Dim Seccion As New Elemento_Pila
-
-            Seccion.Name_Elemento = Elemento_
-            Seccion.Name_Label = Elemento_
-
-            Seccion.Df = Convert.ToDouble(Diametro.Text)
-            Seccion.Dc = Convert.ToSingle(Dc.Text)
-            Seccion.L_Pila = Convert.ToSingle(Long_Pila.Text)
-            Seccion.fc = Convert.ToSingle(T_fc.Text)
-
-            If Op_Seccion.Text = "Hueca" Then
-                Seccion.Opcion_Hueca = "Si"
-                Seccion.Esp_Anillo = Convert.ToSingle(T_Espesor.Text)
-            Else
-                Seccion.Opcion_Hueca = "No"
-                Seccion.Esp_Anillo = 0
-            End If
-
-            Seccion.N_Barra_Long = RefuerzoLong.Text
-            Seccion.Cant_Barras_Long = Convert.ToInt32(NumRLong.Text)
-            Seccion.N_Barra_Trans = RefuerzoTransv.Text
-            Seccion.Separacion_Trans = Convert.ToSingle(Separacion.Text)
-            Seccion.Acero_Long = CDbl(AreaRefuerzo(Seccion.N_Barra_Long))
-
-            Proyecto.Elementos.Pilas.ListaElementos.Add(Seccion)
+        ' Poblar el DataGridView y agregar filas de revisión desde el modelo.
+        For Each seccion As Elemento_Pila In Proyecto.Elementos.Pilas.ListaElementos
             Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
-            Dim nRows As Integer = Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Count
-            Dim te As DataGridViewRow = Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(nRows - 1)
-            te.Cells(0).Value = Seccion.Name_Label
-            te.Cells(1).Value = Seccion.Name_Elemento
-            te.Cells(2).Value = Seccion.Df
-            te.Cells(3).Value = Seccion.Dc
-            te.Cells(4).Value = Seccion.L_Pila
-            te.Cells(5).Value = Seccion.Opcion_Hueca
-            te.Cells(6).Value = Seccion.Esp_Anillo
-            te.Cells(7).Value = Seccion.N_Barra_Long
-            te.Cells(8).Value = Seccion.Acero_Long
-            te.Cells(9).Value = Seccion.Cant_Barras_Long
-            te.Cells(10).Value = Seccion.fc
-
-        Next
-
-
-        'Dim ColLab As Integer = 1
-        'Dim ColComb As Integer = 3
-        'Dim ColP As Integer = 6
-        'Dim ColM2 As Integer = 7
-        'Dim ColM3 As Integer = 8
-        'Dim FT As Integer = 1
-        'Dim V2 As Integer = 4
-        'Dim V3 As Integer = 5
-
-        'If Proyecto.Elementos.Pilas.Opcion_Elemento = "Frame" Then
-        '    ColLab = 1
-        '    ColComb = 3
-        '    ColP = 5
-        '    ColM2 = 9
-        '    ColM3 = 10
-        '    V2 = 6
-        '    V3 = 7
-        '    FT = -1
-        'End If
-        'If Proyecto.Elementos.Pilas.Opcion_Elemento = "Pier" Then
-        '    ColComb = 2
-        '    ColP = 4
-        '    ColM2 = 8
-        '    ColM3 = 9
-        '    V2 = 5
-        '    V3 = 6
-        '    FT = -1
-        'End If
-
-        'Dim NumServ As Double = TablaCServicio.Rows(0).Cells(15).Value + 1
-        'Dim NumUlti As Double = TablaCUltimas.Rows(0).Cells(15).Value + 1
-        'Dim Name As String = ""
-
-        'For i = 2 To NumUlti
-        '    If TablaCUltimas.Rows(i).Cells(ColLab).Value <> Name Then
-
-        '        Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Add()
-        '        Dim Seccion As New Elemento_Pila
-        '        Name = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
-        '        Seccion.Name_Elemento = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
-        '        Seccion.Name_Label = Convert.ToString(TablaCUltimas.Rows(i).Cells(1).Value)
-        '        Seccion.Matriz_PS = New List(Of Single)
-        '        Seccion.Matriz_MS = New List(Of Single)
-        '        Seccion.Matriz_PU = New List(Of Single)
-        '        Seccion.Matriz_MU = New List(Of Single)
-        '        Seccion.Matriz_V2 = New List(Of Single)
-        '        Seccion.Matriz_V3 = New List(Of Single)
-
-        '        Seccion.Matriz_Combinaciones = New List(Of String)
-        '        Seccion.Df = Convert.ToDouble(Diametro.Text)
-        '        Seccion.Dc = Convert.ToSingle(Dc.Text)
-        '        Seccion.fc = Convert.ToSingle(PagMateriales.Fc.Text)
-
-        '        If Op_Seccion.Text = "Hueca" Then
-        '            Seccion.Opcion_Hueca = "Si"
-        '            Seccion.Esp_Anillo = Convert.ToSingle(T_Espesor.Text)
-        '        Else
-        '            Seccion.Opcion_Hueca = "No"
-        '            Seccion.Esp_Anillo = 0
-        '        End If
-
-        '        Seccion.N_Barra_Long = RefuerzoLong.Text
-        '        Seccion.Cant_Barras_Long = Convert.ToInt32(NumRLong.Text)
-        '        Seccion.N_Barra_Trans = RefuerzoTransv.Text
-        '        Seccion.Separacion_Trans = Convert.ToSingle(Separacion.Text)
-
-        '        Seccion.Ps_Estatica = 0
-        '        Seccion.Ps_Dinamica = 0
-        '        Seccion.Pu_Estatica = 0
-        '        Seccion.Pu_Dinamica = 0
-
-        '        For j = 2 To NumServ
-        '            If TablaCServicio.Rows(j).Cells(ColLab).Value = Name Then
-        '                Seccion.Matriz_PS.Add(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-        '                Seccion.Matriz_MS.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColM3).Value))))
-        '                If Len(TablaCServicio.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
-        '                    If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Estatica) Then
-        '                        Seccion.Ps_Estatica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-        '                    End If
-        '                Else
-        '                    If Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Ps_Dinamica) Then
-        '                        Seccion.Ps_Dinamica = Math.Abs(Convert.ToSingle(TablaCServicio.Rows(j).Cells(ColP).Value))
-        '                    End If
-        '                End If
-        '            End If
-        '        Next
-        '        For j = 2 To NumUlti
-        '            If TablaCUltimas.Rows(j).Cells(ColLab).Value = Name Then
-        '                Seccion.Matriz_PU.Add(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-        '                Seccion.Matriz_MU.Add(Math.Max(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM2).Value)), Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColM3).Value))))
-        '                Seccion.Matriz_V2.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V2).Value)))
-        '                Seccion.Matriz_V3.Add(Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(V3).Value)))
-
-        '                Seccion.Matriz_Combinaciones.Add(TablaCUltimas.Rows(j).Cells(ColComb).Value)
-        '                If Len(TablaCUltimas.Rows(j).Cells(ColComb).Value.ToString) < 20 Then
-        '                    If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Estatica) Then
-        '                        Seccion.Pu_Estatica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-        '                    End If
-        '                Else
-        '                    If Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value)) > Math.Abs(Seccion.Pu_Dinamica) Then
-        '                        Seccion.Pu_Dinamica = Math.Abs(Convert.ToSingle(TablaCUltimas.Rows(j).Cells(ColP).Value))
-        '                    End If
-        '                End If
-        '            End If
-        '        Next
-        '        Proyecto.Elementos.Pilas.ListaElementos.Add(Seccion)
-        '    End If
-        'Next
-
-        For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count - 1
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Label
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(1).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(2).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Df
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(3).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Dc
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(4).Value = Proyecto.Elementos.Pilas.ListaElementos(i).L_Pila
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(5).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Opcion_Hueca
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(6).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Esp_Anillo
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(7).Value = Proyecto.Elementos.Pilas.ListaElementos(i).N_Barra_Long
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(9).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Cant_Barras_Long
-            Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(i).Cells(10).Value = Proyecto.Elementos.Pilas.ListaElementos(i).fc
+            Dim te As DataGridViewRow = Form_01_00_PagInfoPilas.Tabla_Elementos.Rows(Form_01_00_PagInfoPilas.Tabla_Elementos.Rows.Count - 1)
+            te.Cells(0).Value  = seccion.Name_Label
+            te.Cells(1).Value  = seccion.Name_Elemento
+            te.Cells(2).Value  = seccion.Df
+            te.Cells(3).Value  = seccion.Dc
+            te.Cells(4).Value  = seccion.L_Pila
+            te.Cells(5).Value  = seccion.Opcion_Hueca
+            te.Cells(6).Value  = seccion.Esp_Anillo
+            te.Cells(7).Value  = seccion.N_Barra_Long
+            te.Cells(8).Value  = seccion.Acero_Long
+            te.Cells(9).Value  = seccion.Cant_Barras_Long
+            te.Cells(10).Value = seccion.fc
 
             TablaRevi.Rows.Add()
         Next

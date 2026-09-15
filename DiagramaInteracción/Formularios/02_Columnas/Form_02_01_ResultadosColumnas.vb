@@ -351,13 +351,7 @@ Public Class Form_02_01_ResultadosColumnas
             MessageBox.Show("Error al exportar a Excel: " & ex.Message,
                             "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
-            ' Liberar objetos COM en orden inverso para evitar procesos EXCEL.EXE huérfanos.
-            ' Sin esto, cada exportación deja un proceso Excel activo en memoria.
-            If Hoja_Resultados IsNot Nothing Then Marshal.ReleaseComObject(Hoja_Resultados)
-            If wbXL IsNot Nothing Then Marshal.ReleaseComObject(wbXL)
-            If appXL IsNot Nothing Then Marshal.ReleaseComObject(appXL)
-            GC.Collect()
-            GC.WaitForPendingFinalizers()
+            ExcelExportService.CerrarYLiberar(appXL, wbXL, Hoja_Resultados)
             conexion.Close()
             Cursor = Cursors.Arrow
         End Try

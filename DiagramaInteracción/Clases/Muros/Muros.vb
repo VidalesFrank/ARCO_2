@@ -1,4 +1,6 @@
-﻿<Serializable>
+﻿Imports System.Runtime.Serialization
+
+<Serializable>
 Public Class Muro
 
     Public Name As String
@@ -38,6 +40,11 @@ Public Class Muro
     Public ALR_D As Single
     Public Porc_Vs As Single
     Public Porc_Vs_Geo As Single
+
+    <OnDeserialized>
+    Private Sub OnDeserialized(ctx As StreamingContext)
+        If Lista_Secciones Is Nothing Then Lista_Secciones = New List(Of SeccionMuro)
+    End Sub
 
 End Class
 

@@ -7,7 +7,11 @@
       "Bash(cp \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Resources/ARCO_LOGOGRIS.png\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/img/\")",
       "Bash(cp \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Resources/ARCO_LOGOVerde.png\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion/img/\")",
       "Bash(cp -r \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/bin/Debug/\")",
-      "Bash(cp -r \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/bin/Release/\")"
+      "Bash(cp -r \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/Documentacion\" \"C:/00_Desarrollo/ProgramaARCO_2/ARCO_2/DiagramaInteracción/bin/Release/\")",
+      "Bash(xargs grep *)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft Visual Studio/**)",
+      "Read(//c/Program Files/Microsoft Visual Studio/**)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"DiagramaInteracción\\\\Programa_ARCO.vbproj\" /t:Build /p:Configuration=Debug /v:quiet /nologo /clp:ErrorsOnly`;Summary 2>&1 | Select-Object -Last 15)"
     ]
   }
 }

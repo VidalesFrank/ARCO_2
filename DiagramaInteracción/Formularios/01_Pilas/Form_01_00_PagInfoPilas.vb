@@ -1,5 +1,5 @@
 ﻿Imports ARCO.Funciones_00_Varias
-Imports ARCO.Funciones_01_Pilas
+Imports ARCO.PilaService
 Public Class Form_01_00_PagInfoPilas
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
 

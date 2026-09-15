@@ -480,7 +480,7 @@ Public Class ReporteRevisionService
                     ("Derecho - Top", s.EB_D_Top), ("Derecho - Bot", s.EB_D_Bot)}
                     If par.EB Is Nothing OrElse par.EB.RefH Is Nothing OrElse par.EB.RefH.Separacion <= 0 Then Continue For
                     Try
-                        Dim resultado = Funciones_Muros.AceroH_EB(nde, par.EB, s.tw_Planos, s.fc, s.fy)
+                        Dim resultado = MuroService.AceroH_EB(nde, par.EB, s.tw_Planos, s.fc, s.fy)
                         Dim sMaxReq As Double = CDbl(resultado(0)) / 1000.0 ' mm -> m
                         Dim sCol As Double = par.EB.RefH.Separacion
                         If Math.Round(sCol, 3) > Math.Round(sMaxReq, 3) Then

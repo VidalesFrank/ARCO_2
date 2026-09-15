@@ -1,0 +1,878 @@
+[Normal] Medellín, 12 de junio de 2026
+[Normal] P57905-C004
+[Normal] Ingeniera
+[Normal] Daniela Velez Cortés
+[Normal] Coordinadora de Interventoría y Control de Costos
+[Normal] FCR S.A.S
+[Sinespaciado] Asunto: Reporte de la revisión del diseño estructural de las Torres del proyecto “MALVA”.
+[Normal] El presente reporte de detalles incluye la revisión del sistema estructural de las Torres, del proyecto “MALVA”, el cual se encuentra localizado en el municipio de Rionegro, departamento de Antioquia. El diseño estructural fue desarrollado por la empresa CO INGENIEROS CIVILES DISEÑO ESTRUCTURAL, por su parte el estudio geotécnico fue realizado por la empresa VIECO INGENIERIA DE SUELOS. El sistema estructural principal consiste en un sistema de pórticos tridimensionales de concreto reforzado con capacidad moderada de disipación de energía (DMO); las estructuras presentan losa aligerada en dos direcciones y loseta de 0,08 m y 0,05 m. La torre 1 (izquierda) cuenta con cuatro (4) niveles, el primero destinado a uso de parqueadero y apartamentos y los siguientes pisos de zonas apartamentos y acceso y un último nivel de cubierta para un total de 4 losas aéreas. La torre 2 (derecha) cuenta con cinco (5) niveles, un “sótano” destinados a parqueaderos, un siguiente nivel destinado a parqueadero y áreas residenciales y los siguientes niveles de zonas de apartamentos y acceso, y un último nivel de cubierta para un total de 5 losas aéreas.
+[Normal] Se realizó la revisión del diseño estructural de acuerdo con la información recibida el 15 de mayo de 2026. En esta se evalúan los elementos estructurales y se presenta la relación más desfavorable entre la capacidad y la demanda, si esta relación es mayor a la unidad indica que la capacidad del elemento es adecuada; sin embargo, el grupo técnico de EstrucMed considera que los elementos que presentan una relación cercana a 0,90 se encuentran dentro del rango admisible asociado probablemente a diferencias menores de modelación y distribución de cargas; mientras que los elementos que presentan una relación inferior podrían requerir una mayor capacidad para cumplir con el requisito evaluado. En este documento se presentan los resultados de los elementos en los cuales la relación capacidad/demanda obtenida es inferior a 0,90 y por lo tanto deben ser revisados por el diseñador estructural. Los elementos que no se presentan en este documento, cumplen con la capacidad requerida.
+[Ttulo1] CIMENTACIONES
+[Ttulo2] MICROPILOTES
+[Ttulo3] CARGA AXIAL
+[Normal] En general se recomienda aclarar el dimensionamiento de los dados que tienen únicamente 2 micropilotes, ya que como criterio general de esta revisión se tiene que este tipo de apoyos deberían contar con un mínimo de 3 micropilotes con el fin de poder atender no solo la carga axial, sino también los momentos provenientes de la superestructura; o en su defecto, analizar las vigas de cimentación con capacidad de tomar los momentos provenientes de la superestructura cumpliendo con lo especificado en el numeral C.15.13.4 de la NSR-10. Igualmente, se debe revisar la configuración de micropilotes y dados en el punto fijo, ya que en los planos no está clara dicha configuración. Adicionalmente a lo anterior, en la Figura 1 se señalan los nodos que requieren revisión e intervención por parte del diseñador ya que al evaluar la capacidad de carga axial de los micropilotes del conjunto su índice capacidad/demanda es inferior a 0,74 en los dados de 3 micropilotes (verde) e inferiores a 0,81 para los dados de 4 micropilotes (naranja).
+[Descripcin] Figura 1. Nodos cuya configuración de dados debe aumentar en torre 2 (Derecha).
+[Ttulo3] CORTANTE
+[Normal] No se presentan anotaciones en la revisión de cortante de micropilotes en las torres. En el caso del punto fijo, dicha revisión se realizará una vez recibida la información actualizada.
+[Ttulo2] DADOS
+[Normal] No se presentan anotaciones en la revisión de los dados, se encontró que el diseño es adecuado.
+[Ttulo2] VIGAS DE AMARRE
+[Normal] No se presentan anotaciones en la revisión de requisitos normativos ni en el diseño; sin embargo, en caso de que se considere que las vigas tomarán los momentos provenientes de la superestructura, éstas se revisarán nuevamente con las condiciones nuevas.
+[Ttulo1] COLUMNAS
+[Ttulo2] Torre 1
+[Ttulo2] FLEXO- COMPRESIÓN
+[Normal] No se tienen anotaciones debido a que la capacidad a flexo compresión de las columnas es adecuada.
+[Ttulo2] CORTANTE
+[Sinespaciado] No se tienen anotaciones debido a que la capacidad de cortante de las columnas es adecuada.
+[Ttulo2] CONFINAMIENTO
+[Normal] En términos generales no se tienen anotaciones del área de confinamiento de los elementos de acuerdo con C.21.3.5.6, C.21.3.5.7, C.21.3.5.8 y C.21.3.5.9 de la NSR-10.
+[Ttulo2] RELACIÓN VIGA COLUMNA
+[Normal] En la revisión del requisito de la relación de la capacidad a momento de las columnas y el de las vigas, no se presentan anotaciones, se encontró que el diseño es adecuado.
+[Ttulo2] Torre 2
+[Ttulo2] FLEXO- COMPRESIÓN
+[Normal] En la Tabla 1 se presentan los resultados de la columna cuya capacidad a flexo compresión es inferior a la demanda.
+[Tabla] Tabla 1. Verificación de la capacidad a flexo-compresión de las columnas.
+[Ttulo2] COLUMNA
+[Ttulo2] TRAMO
+[Ttulo2] As colocada (cm2)
+[Ttulo2] As requerida (cm2)
+[Ttulo2] CAPACIDAD/DEMANDA
+[Ttulo2] OBSERVACIONES
+[Normal] A-21
+[Normal] P99
+[Normal] 38,64
+[Normal] 50,65
+[Normal] 0,76
+[Normal] En la zona inferior
+[Ttulo2] CORTANTE
+[Normal] En la Tabla 2 se presentan los resultados de la columna que no cumple la verificación de la capacidad a cortante.
+[Tabla] Tabla 2. Verificación de la capacidad a cortante de las columnas.
+[Normal] columna
+[Normal] sección
+[Normal] Ash colocada (cm2)
+[Normal] Ash requerida (cm2)
+[Normal] Verificación
+[Normal] Comentario
+[Normal] LC
+[Normal] LL
+[Normal] LC
+[Normal] LL
+[Normal] B-22
+[Normal] 0,40x0,70
+[Normal] 3,55
+[Normal] 2,13
+[Normal] 3,55
+[Normal] 3,38
+[Normal] No cumple
+[Normal] Piso 99
+[Ttulo2] CONFINAMIENTO
+[Normal] En términos generales no se tienen anotaciones del área de confinamiento de los elementos de acuerdo con C.21.3.5.6, C.21.3.5.7, C.21.3.5.8 y C.21.3.5.9 de la NSR-10.
+[Ttulo2] RELACIÓN VIGA COLUMNA
+[Normal] En la revisión del requisito de la relación de la capacidad a momento de las columnas y el de las vigas, no se presentan anotaciones, se encontró que el diseño es adecuado.
+[Ttulo1] MUROS punto fijo
+[Normal] Se realiza la revisión de los muros a partir de la información recibida en la zona de punto fijo. En esta se debe contemplar que este módulo se contempla como una estructura de muros de carga con capacidad moderada de disipación de energía (DMO) y que, al validar la condición de irregularidad se obtiene ausencia de redundancia, con lo cual se obtiene un coeficiente de disipación de energía R= 3.0. Se solicita complementar las memorias de cálculo del proyecto con esta estructura, con el fin de validar las condiciones tenidas en cuenta en el diseño y poder concluir la revisión de los elementos; en la cual actualmente, la capacidad de los elementos e inferior a lo requerido.
+[Ttulo1] VIGAS
+[Ttulo2] torre 1
+[Ttulo2] FLEXIÓN
+[Normal] En la Tabla 3 se presentan las vigas que tienen una capacidad inferior a la demanda obtenida a flexión dentro de la muestra evaluada.
+[Tabla] Tabla 3.Capacidad a flexión de las vigas.
+[Normal] PISO
+[Normal] VIGA
+[Normal] EJE
+[Normal] AsCol Superior (cm2)
+[Normal] AsReq Superior (cm2)
+[Normal] As-Col    As-Req
+[Normal] AsCol Inferior (cm2)
+[Normal] AsReq Inferior (cm2)
+[Normal] As-Col    As-Req
+[Normal] OBSERVACIONES
+[Normal] Piso 1
+[Normal] VE1-2
+[Normal] 2-3
+[Normal] 14,49
+[Normal] 15,63
+[Normal] 24,56
+[Normal] 30,58
+[Normal] 0,59
+[Normal] 0,51
+[Normal] 9,95
+[Normal] 16,14
+[Normal] 0,62
+[Normal] En ambos apoyos por M(-) y el centro de la luz por M(+)
+[Normal] VE1-2
+[Normal] 3-4
+[Normal] 15,63
+[Normal] 11,65
+[Normal] 28,36
+[Normal] 22,30
+[Normal] 0,55
+[Normal] 0,52
+[Normal] 7,96
+[Normal] 13,97
+[Normal] 0,57
+[Normal] En ambos apoyos por M(-) y el centro de la luz por M(+)
+[Normal] VE1-2
+[Normal] 5-6
+[Normal] 11,65
+[Normal] 14,49
+[Normal] 22,00
+[Normal] 28,70
+[Normal] 0,53
+[Normal] 0,50
+[Normal] 7,96
+[Normal] 13,72
+[Normal] 0,58
+[Normal] En ambos apoyos por M(-) y el centro de la luz por M(+)
+[Normal] VE1-2
+[Normal] 6-7
+[Normal] 20,46
+[Normal] 17,62
+[Normal] 34,78
+[Normal] 27,80
+[Normal] 0,59
+[Normal] 0,63
+[Normal] 7,96
+[Normal] 13,64
+[Normal] 9,32
+[Normal] 17,59
+[Normal] 0,85
+[Normal] 0,78
+[Normal] En apoyo ambos apoyos por M(-) y en apoyo 6 y en el centro de la luz por M(+)
+[Ttulo2] CORTANTE
+[Normal] En cuanto al cortante no se tienen anotaciones, la capacidad de los elementos es adecuada para atender la demanda.
+[Ttulo2] torre 2
+[Ttulo2] FLEXIÓN
+[Normal] En la Tabla 4 se presentan las vigas que tienen una capacidad inferior a la demanda obtenida a flexión dentro de la muestra evaluada.
+[Tabla] Tabla 4.Capacidad a flexión de las vigas.
+[Normal] PISO
+[Normal] VIGA
+[Normal] EJE
+[Normal] AsCol Superior (cm2)
+[Normal] AsReq Superior (cm2)
+[Normal] As-Col    As-Req
+[Normal] AsCol Inferior (cm2)
+[Normal] AsReq Inferior (cm2)
+[Normal] As-Col    As-Req
+[Normal] OBSERVACIONES
+[Normal] P99
+[Normal] V17-1
+[Normal] C-B
+[Normal] 11,94
+[Normal] 11,94
+[Normal] 17,24
+[Normal] 16,81
+[Normal] 0,69
+[Normal] 0,71
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En ambos apoyos por M(-)
+[Normal] V17-1
+[Normal] B-A
+[Normal] 11,94
+[Normal] 15,69
+[Normal] 0,76
+[Normal] 7,96
+[Normal] 10,15
+[Normal] 0,78
+[Normal] En apoyo F por M(-) y M(+)
+[Normal] P1
+[Normal] V17-1
+[Normal] E-D
+[Normal] 30,33
+[Normal] 45,38
+[Normal] 0,67
+[Normal] 9,66
+[Normal] 12,24
+[Normal] 0,79
+[Normal] En apoyo E por M(-) y M(+)
+[Normal] V17-1
+[Normal] C-B
+[Normal] 13,93
+[Normal] 13,93
+[Normal] 19,49
+[Normal] 18,32
+[Normal] 0,71
+[Normal] 0,76
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En ambos apoyos por M(-)
+[Normal] V17-1
+[Normal] B-A
+[Normal] 13,93
+[Normal] 16,76
+[Normal] 0,83
+[Normal] 9,95
+[Normal] 12,05
+[Normal] 0,83
+[Normal] En apoyo F por M(-) y M(+)
+[Normal] V19-1
+[Normal] E-D
+[Normal] 30,33
+[Normal] 27,87
+[Normal] 45,24
+[Normal] 38,83
+[Normal] 0,67
+[Normal] 0,72
+[Normal] 9,66
+[Normal] 7,96
+[Normal] 12,21
+[Normal] 10,88
+[Normal] 0,79
+[Normal] 0,73
+[Normal] En ambos apoyos por M(-) y M(+)
+[Normal] V19-1
+[Normal] C-B
+[Normal] 11,94
+[Normal] 11,94
+[Normal] 17,34
+[Normal] 16,41
+[Normal] 0,69
+[Normal] 0,73
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En ambos apoyos por M(-)
+[Normal] V22-1
+[Normal] E-D
+[Normal] 30,33
+[Normal] 24,78
+[Normal] 46,78
+[Normal] 39,95
+[Normal] 0,65
+[Normal] 0,62
+[Normal] 9,66
+[Normal] 7,96
+[Normal] 12,51
+[Normal] 11,12
+[Normal] 0,77
+[Normal] 0,72
+[Normal] En ambos apoyos por M(-) y M(+)
+[Normal] V24-1
+[Normal] E-D
+[Normal] 25,32
+[Normal] 22,23
+[Normal] 32,85
+[Normal] 28,90
+[Normal] 0,77
+[Normal] 0,77
+[Normal] 7,96
+[Normal] 13,64
+[Normal] 9,50
+[Normal] 15,37
+[Normal] 0,84
+[Normal] 0,89
+[Normal] En apoyo ambos apoyos por M(-) y en apoyo E y en el centro de la luz por M(+)
+[Normal] V25-1
+[Normal] E-D
+[Normal] 30,33
+[Normal] 24,78
+[Normal] 44,06
+[Normal] 37,67
+[Normal] 0,69
+[Normal] 0,66
+[Normal] 9,66
+[Normal] 7,96
+[Normal] 11,98
+[Normal] 10,62
+[Normal] 0,81
+[Normal] 0,75
+[Normal] En ambos apoyos por M(-) y M(+)
+[Normal] VE2-1
+[Normal] 21-22
+[Normal] 17,62
+[Normal] 21,25
+[Normal] 0,83
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 21 por M(-)
+[Normal] P2
+[Normal] V17-1
+[Normal] D-C
+[Normal] 7,96
+[Normal] 7,96
+[Normal] 9,88
+[Normal] 11,19
+[Normal] 0,81
+[Normal] 0,71
+[Normal] En ambos apoyos por M(+)
+[Normal] V17-1
+[Normal] C-B
+[Normal] 13,93
+[Normal] 13,93
+[Normal] 19,81
+[Normal] 18,49
+[Normal] 0,70
+[Normal] 0,75
+[Normal] En ambos apoyos por M(-)
+[Normal] V17-1
+[Normal] B-A
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] 7,96
+[Normal] 7,96
+[Normal] 11,41
+[Normal] 10,37
+[Normal] 0,70
+[Normal] 0,77
+[Normal] En ambos apoyos por M(+)
+[Normal] Cub
+[Normal] V19-1
+[Normal] C-B
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] 7,96
+[Normal] 9,45
+[Normal] 0,84
+[Normal] En el centro de la luz por M(+)
+[Ttulo2] CORTANTE
+[Normal] En la Tabla 5 se presentan las vigas que tienen una capacidad inferior a la demanda obtenida a cortante dentro de la muestra evaluada.
+[Tabla] Tabla 5.Capacidad a cortante de las vigas.
+[Normal] PISO
+[Normal] VIGA
+[Normal] TRAMO
+[Normal] ϕVn (kN)
+[Normal] Vu
+[Normal] (kN)
+[Normal] ϕVn
+[Normal] Vu
+[Normal] OBSERVACIÓN
+[Normal] P99 y P1
+[Normal] V16
+[Normal] E-D
+[Normal] 197,41
+[Normal] 224,3
+[Normal] 0,88
+[Normal] Se recomienda prolongar la zona confinada 1 m.
+[Normal] V17
+[Normal] E-D
+[Normal] 197,41
+[Normal] 344,12
+[Normal] 0,57
+[Normal] Se recomienda prolongar la zona confinada 1 m.
+[Normal] V18
+[Normal] E-D
+[Normal] 197,41
+[Normal] 344,3
+[Normal] 0,57
+[Normal] Se recomienda prolongar la zona confinada 1 m.
+[Normal] V19
+[Normal] E-D
+[Normal] 197,41
+[Normal] 349,37
+[Normal] 0,57
+[Normal] Se recomienda prolongar la zona confinada 1 m.
+[Ttulo2] punto fijo
+[Normal] Se deberán complementar los planos estructurales con el despiece de las vigas del punto fijo, para realizar la respectiva revisión de estos elementos.
+[Ttulo1] Losas
+[Ttulo2] torre 1
+[Ttulo2] Flexión
+[Normal] En la Tabla 6, se presentan los nervios que tienen una capacidad a flexión inferior a la demanda obtenida dentro de la muestra evaluada.
+[Tabla] Tabla 6. Capacidad a flexión de nervios
+[Normal] PISO
+[Normal] NERVIO
+[Normal] EJE
+[Normal] Asreq Superior (cm2)
+[Normal] Ascol Superior (cm2)
+[Normal] As-Col
+[Normal] As-Req
+[Normal] Ascol Inferior (cm2)
+[Normal] Asreq Inferior (cm2)
+[Normal] As+Col
+[Normal] As+Req
+[Normal] OBSERVACIONES
+[Normal] PISO 1
+[Normal] N16-2
+[Normal] 2-3
+[Normal] 2,91
+[Normal] 5,23
+[Normal] 2,58
+[Normal] 3,98
+[Normal] 0,89
+[Normal] 0,76
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En ambos apoyos por M(-)
+[Normal] N16-2
+[Normal] 6-7
+[Normal] 4,83
+[Normal] 6,02
+[Normal] 0,80
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 6 por M(-)
+[Normal] N16-2
+[Normal] 5-6
+[Normal] 3,22
+[Normal] 6,02
+[Normal] 2,00
+[Normal] 4,83
+[Normal] 0,62
+[Normal] 0,80
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En toda la luz por M(-)
+[Normal] N16-2
+[Normal] 4-5
+[Normal] 2,00
+[Normal] 2,00
+[Normal] 2,99
+[Normal] 3,22
+[Normal] 0,67
+[Normal] 0,62
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En ambos apoyos por M(-)
+[Normal] N16-2
+[Normal] 3-4
+[Normal] 5,23
+[Normal] 2,99
+[Normal] 3,98
+[Normal] 2,00
+[Normal] 0,76
+[Normal] 0,67
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En ambos apoyos por M(-)
+[Normal] PISO TIPO
+[Normal] N2-2
+[Normal] 4-5
+[Normal] 1,42
+[Normal] 2,15
+[Normal] 0,66
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 5 por M(-)
+[Normal] N2-2
+[Normal] 5-6
+[Normal] 1,42
+[Normal] 2,15
+[Normal] 0,66
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 5 por M(-)
+[Normal] N4
+[Normal] 1-2
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] 0,71
+[Normal] 0,99
+[Normal] 0,71
+[Normal] En el centro de la luz por M(+)
+[Normal] N17
+[Normal] 9-10
+[Normal] 1,29
+[Normal] 2,07
+[Normal] 0,62
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 10 por M(-)
+[Normal] N17
+[Normal] 13-14
+[Normal] 1,29
+[Normal] 1,73
+[Normal] 0,74
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 13 por M(-)
+[Normal] N17
+[Normal] 12-13
+[Normal] 1,29
+[Normal] 1,29
+[Normal] 2,20
+[Normal] 1,73
+[Normal] 0,59
+[Normal] 0,74
+[Normal] 0,71
+[Normal] 1,02
+[Normal] 0,70
+[Normal] En ambos apoyos por M(-) y el centro de la luz por M(+)
+[Normal] N17
+[Normal] 11-12
+[Normal] 1,29
+[Normal] 2,20
+[Normal] 0,59
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 12 por M(-)
+[Normal] N17
+[Normal] 10-11
+[Normal] 1,29
+[Normal] 2,07
+[Normal] 0,62
+[Normal] 0,71
+[Normal] 0,87
+[Normal] 0,82
+[Normal] En apoyo 10 por M(-) y el centro de la luz por M(+)
+[Normal] N18
+[Normal] 8-9
+[Normal] 2,00
+[Normal] 3,30
+[Normal] 0,61
+[Normal] 1,29
+[Normal] 1,48
+[Normal] 0,87
+[Normal] En apoyo 9 por M(-) y el centro de la luz por M(+)
+[Normal] N18
+[Normal] 14-15
+[Normal] 2,58
+[Normal] 3,24
+[Normal] 0,80
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 14 por M(-)
+[Normal] N18
+[Normal] 13-14
+[Normal] 2,58
+[Normal] 3,24
+[Normal] 0,80
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 14 por M(-)
+[Normal] N18
+[Normal] 9-10
+[Normal] 2,00
+[Normal] 3,30
+[Normal] 0,61
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] En apoyo 9 por M(-)
+[Normal] CUB
+[Normal] N17
+[Normal] 10-11
+[Normal] -
+[Normal] -
+[Normal] -
+[Normal] 0,71
+[Normal] 0,87
+[Normal] 0,82
+[Normal] En el centro de la luz por M(+)
+[Ttulo2] cortante
+[Normal] En la Tabla 7 se presentan los resultados de los nervios cuya capacidad a cortante es inferior a la demanda en la muestra evaluada, adicionalmente a ello, los elementos que no presentan información de refuerzo colocado no presentan detallado de refuerzo a cortante.
+[Tabla] Tabla 7. Verificación de cortante en nervios
+[Normal] PISO
+[Normal] VIGA
+[Normal] TRAMO
+[Normal] Ashcol
+[Normal] (cm2)
+[Normal] Ashreq
+[Normal] (cm2)
+[Normal] Ashcol
+[Normal] Ashreq
+[Normal] OBSERVACIÓN
+[Normal] Piso 1
+[Normal] N16-2
+[Normal] 6 - 7
+[Normal] 1,60
+[Normal] 1,97
+[Normal] 0,81
+[Normal] Se recomienda disminuir la separación o aumentar el número de barra del estribo en el apoyo 6
+[Ttulo2] torre 2
+[Ttulo2] Flexión
+[Normal] En la Tabla 8, se presentan los nervios que tienen una capacidad a flexión inferior a la demanda obtenida dentro de la muestra evaluada.
+[Tabla] Tabla 8. Capacidad a flexión de nervios
+[Normal] PISO
+[Normal] NERVIO
+[Normal] EJE
+[Normal] Ascol Superior (cm2)
+[Normal] Asreq Superior (cm2)
+[Normal] As-Col
+[Normal] As-Req
+[Normal] Ascol Inferior (cm2)
+[Normal] Asreq Inferior (cm2)
+[Normal] As+Col
+[Normal] As+Req
+[Normal] OBSERVACIONES
+[Normal] P99
+[Normal] N5-1 (10X30)
+[Normal] C-vol
+[Normal] 2,00
+[Normal] 2,27
+[Normal] 0,88
+[Normal] En apoyo C por M(-)
+[Normal] N7-1 (10X30)
+[Normal] C-B
+[Normal] 1,29
+[Normal] 1,66
+[Normal] 0,78
+[Normal] 1,29
+[Normal] 1,45
+[Normal] 0,89
+[Normal] En apoyo C por M(-) y el centro de la luz por M(+)
+[Normal] N7-1 (10X30)
+[Normal] D-C
+[Normal] 1,29
+[Normal] 1,66
+[Normal] 0,78
+[Normal] 0,71
+[Normal] 0,90
+[Normal] 0,79
+[Normal] En apoyo C por M(-) y el centro de la luz por M(+)
+[Normal] N-H
+[Normal] C-D
+[Normal] 1,59
+[Normal] 1,03
+[Normal] 1,42
+[Normal] 0,71
+[Normal] 0,89
+[Normal] 0,69
+[Normal] En toda la luz por M(-)
+[Normal] N-H
+[Normal] D-E
+[Normal] 0,71
+[Normal] 1,05
+[Normal] 0,68
+[Normal] En apoyo D por M(-)
+[Normal] N16-1 (10X45)
+[Normal] 22-23
+[Normal] 1,29
+[Normal] 1,48
+[Normal] 0,87
+[Normal] 1,29
+[Normal] 1,97
+[Normal] 0,66
+[Normal] En apoyo 23 por M(-) y el centro de la luz por M(+)
+[Normal] N16-1 (10X45)
+[Normal] 25-26
+[Normal] 2,58
+[Normal] 2,91
+[Normal] 0,89
+[Normal] 2,00
+[Normal] 2,33
+[Normal] 0,86
+[Normal] En apoyo 25 por M(-) y el centro de la luz por M(+)
+[Normal] N16-1 (10X45)
+[Normal] 24-25
+[Normal] 1,48
+[Normal] 2,91
+[Normal] 1,29
+[Normal] 2,58
+[Normal] 0,87
+[Normal] 0,89
+[Normal] En toda la luz por M(-)
+[Normal] N16-1 (10X45)
+[Normal] 23-24
+[Normal] 1,48
+[Normal] 1,48
+[Normal] 1,29
+[Normal] 1,29
+[Normal] 0,87
+[Normal] 0,87
+[Normal] En toda la luz por M(-)
+[Normal] PISO 1
+[Normal] N6-2
+[Normal] VOL-E
+[Normal] 2,58
+[Normal] 4,75
+[Normal] 0,54
+[Normal] En apoyo E por M(-)
+[Normal] N6-2
+[Normal] E-D
+[Normal] 2,58
+[Normal] 4,75
+[Normal] 0,54
+[Normal] En apoyo E por M(-)
+[Normal] N8-2
+[Normal] VOL-E
+[Normal] 2,58
+[Normal] 3,80
+[Normal] 0,68
+[Normal] En apoyo E por M(-)
+[Normal] N8-2
+[Normal] E-D
+[Normal] 2,58
+[Normal] 3,80
+[Normal] 0,68
+[Normal] En apoyo E por M(-)
+[Normal] N27-2
+[Normal] 16-17
+[Normal] 0,71
+[Normal] 4,28
+[Normal] 0,17
+[Normal] En apoyo 17 por M(-)
+[Normal] N27-2
+[Normal] 17-18
+[Normal] 3,65
+[Normal] 4,83
+[Normal] En ambos apoyos por M(-)
+[Normal] PISO 2
+[Normal] N7-3
+[Normal] VOL-D
+[Normal] 2,00
+[Normal] 2,28
+[Normal] 0,88
+[Normal] En apoyo D por M(-)
+[Normal] N7-3
+[Normal] D-C
+[Normal] 2,00
+[Normal] 2,27
+[Normal] 0,88
+[Normal] En apoyo D por M(-)
+[Ttulo2] cortante
+[Normal] En la Tabla 9 se presentan los resultados de los nervios cuya capacidad a cortante es inferior a la demanda en la muestra evaluada, adicionalmente a ello, los elementos que no presentan información de refuerzo colocado no presentan detallado de refuerzo a cortante.
+[Tabla] Tabla 9. Verificación de cortante en nervios
+[Normal] PISO
+[Normal] VIGA
+[Normal] TRAMO
+[Normal] Ashcol
+[Normal] Ashreq
+[Normal] Ashcol
+[Normal] OBSERVACIÓN
+[Normal] (cm2)
+[Normal] (cm2)
+[Normal] Ashreq
+[Normal] PISO 99
+[Normal] N4-1
+[Normal] 20 - 21
+[Normal] 1,6
+[Normal] 1,98
+[Normal] 0,81
+[Normal] Se recomienda disminuir la separación del estribo en el apoyo 20
+[Normal] N16-1
+[Normal] 26 - 27
+[Normal] 1,6
+[Normal] 1,98
+[Normal] 0,81
+[Normal] N1-1
+[Normal] 20 - vol
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N13-1
+[Normal] 23 - 24
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] Piso 1
+[Normal] N6-2
+[Normal] A - VOL
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N24-2
+[Normal] 20 - vol
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N27-2
+[Normal] 17 - 18
+[Normal] 2,46
+[Normal] 4,22
+[Normal] 0,58
+[Normal] Se recomienda disminuir la separación del estribo en ambos apoyos
+[Normal] N27-2
+[Normal] 18 - 19
+[Normal] 2,46
+[Normal] 4,37
+[Normal] 0,56
+[Normal] Se recomienda disminuir la separación del estribo en ambos apoyos
+[Normal] N27-2
+[Normal] 19 - 20
+[Normal] 2,46
+[Normal] 4,27
+[Normal] 0,58
+[Normal] Se recomienda disminuir la separación del estribo en ambos apoyos
+[Normal] N27-2
+[Normal] 20 - 21
+[Normal] 2,46
+[Normal] 4,04
+[Normal] 0,61
+[Normal] Se recomienda disminuir la separación del estribo en ambos apoyos
+[Normal] N31-2
+[Normal] 23 - 24
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N28-2
+[Normal] 21 - 22
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N28-2
+[Normal] 22 - 23
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N28-2
+[Normal] 23 - 24
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N28-2
+[Normal] 24 - 25
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] N28-2
+[Normal] 25 - 26
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] Piso 2
+[Normal] N6-2
+[Normal] A - VOL
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Normal] Cub
+[Normal] N6-2
+[Normal] A - VOL
+[Normal] No presenta
+[Normal] 1,90
+[Normal] -
+[Normal] Se debe disponer de refuerzo cortante en los apoyos
+[Sinespaciado] En general se recomienda disponer refuerzo de cortante mínimo en los apoyos de los nervios.
+[Ttulo1] detalles
+[Prrafodelista] En el detalle de los micropilotes, se debe actualizar la cota que indica la barra, ya que se muestra 1#8 pero la especificada por el diseñador geotécnico es una barra de alta resistencia tipo DYWI T76-1300 o TITAN 72/53 o equivalente.
+[Descripcin] Figura 2.Detalle de refuerzo en micro pilotes.
+[Prrafodelista] De acuerdo con lo especificado en el diseño geotécnico, el recrecimiento de la sección superior de los micropilotes debería tener una longitud mínima de 3 m; sin embargo, en los planos estructurales esta longitud se especifica de 1,20 m.
+[Prrafodelista] Se recomienda revisar y validar los traslapos usados en barras N6 en las columnas, dado que en los planos se especifican de 0,86 m, requiriéndose para una resistencia de 28 MPa mínimo 0,95 m (Ver la Figura 3).
+[Descripcin] Figura 3.Despiece columna 19E.
+[Prrafodelista] En la junta constructiva entre las torres y el punto fijo se debe garantizar que al desplazarse el punto fijo no golpee las estructuras, por lo tanto, se recomienda aumentar la separación de estas, ya que durante el proceso de revisión se encontró que el desplazamiento máximo del punto fijo en cubierta es de 0,18 m y el diseñador presenta una separación de 0,07 m.
+[Prrafodelista] Se presenta información trocada en nombres de vigas, las vigas que se referencian como de modulo derecho, corresponden a las vigas del módulo izquierdo.
+[Prrafodelista] No se presentan los despieces completos de las zonas de losa aligerada considerada aérea (sobre rellenos).
+[Prrafodelista] En la nomenclatura de vigas se tiene diferencia entre las plantas y los detallados de refuerzo. En la Figura 4 se presenta unas de las condiciones. Se debe unificar la nomenclatura de los elementos para evitar confusión durante el proceso constructivo.
+[Descripcin] Figura 4.Planta de localización de vigas con nomenclatura de refuerzo piso 2.
+[Prrafodelista] En la planta arquitectónica de piso 1 se presenta una zona de terraza con acceso y zona verde, para este caso se está considerando carga vida de 5,0 kN/m2, se debe validar si es la carga usada por el diseñador. Puesto que en el análisis de nervios estas zonas presentan una capacidad inferior a la demanda, esto considerando que en la memoria estructural únicamente se evidencian 3 tipología de carga, esto se presenta entre los ejes D-E a largo de las torres.
+[Descripcin] Figura 5.Definición de cargas en el diseño estructural.
+[Descripcin] Figura 6.Zona de carga de terrazas.
+[Prrafodelista] En la planta de piso 1 de la torre derecha se presentan los elementos N6-2, N27-2, N31-2 con única sección 0,10x0,30 m, no obstante, el detalle de refuerzo presenta secciones de 0,10x0,45 m, teniendo en cuenta que es una zona de terraza, se debe aclarar la condición de secciones en esta losa.
+[Prrafodelista] En los detalles de refuerzo no se localizan el detallado de los nervios N24-3, N25-3, N26-3, N27-3, N24-4, N25-4, N26-4, N27-4 y en general los elementos horizontales del módulo derecho.
+[Prrafodelista] En el detalle de nervios en piso 2 el N31-2 difiere en la condición de sección en planta y detalle.
+[Prrafodelista] Se debe anexar información del despiece de escaleras.
+[Normal] Quedamos atentos a cualquier aclaración o información adicional que se requiera.
+[Normal] Atentamente,
+[Sinespaciado] Ricardo León Bonett Díaz
+[Sinespaciado] Gerente General
+[Sinespaciado] M.P. 0520269085
+[Sinespaciado] EstrucMed - Ingeniería Especializada
+[Sinespaciado] rbonett@estrucmed.com
