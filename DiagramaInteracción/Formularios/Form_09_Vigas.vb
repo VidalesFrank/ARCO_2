@@ -217,6 +217,11 @@ Public Class Form_09_Vigas
                 CargarVigaCompleta(vigaSel)
             End If
 
+            ' TriggerCortantePlastico corrió antes de que Lista_Pisos tuviera datos,
+            ' así que su tabla se armó sin piso seleccionado (es decir, con todo el
+            ' edificio). Ahora que ya hay piso inicial, se rehace filtrada.
+            ActualizarTablaCortantePlastico()
+
             MessageBox.Show("Proceso finalizado correctamente", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
         Catch ex As Exception
@@ -245,6 +250,10 @@ Public Class Form_09_Vigas
         Lista_Vigas.DisplayMember = "NombreDisplay"
         If vigasPiso.Count > 0 Then Lista_Vigas.SelectedIndex = 0
         _cargando = False
+
+        ' Antes de cualquier salida temprana: la pestaña de Cortante Plástico
+        ' debe seguir al piso aunque el piso no tenga vigas que mostrar.
+        ActualizarTablaCortantePlastico()
 
         Dim vigaSel = TryCast(Lista_Vigas.SelectedItem, cViga)
         If vigaSel Is Nothing Then Exit Sub
@@ -1076,17 +1085,28 @@ Public Class Form_09_Vigas
 
         Dim nivelTexto = If(Proyecto.Elementos.Vigas.NivelDisipacion = "DES",
                             "DES (fy × 1.25)", "DMO (fy × 1.0)")
+
+        ' Solo las vigas del piso seleccionado. Con todo el edificio a la vez la
+        ' tabla se vuelve inmanejable y la revisión piso a piso es imposible.
+        Dim pisoSel As String = If(Lista_Pisos.SelectedItem IsNot Nothing,
+                                   Lista_Pisos.SelectedItem.ToString(), "")
+
         _lblDisipacionPlastico.Text =
-            "Chequeo por Capacidad — NSR-10 C.21.5.4  |  Nivel de disipación: " & nivelTexto
+            "Chequeo por Capacidad — NSR-10 C.21.5.4  |  Nivel de disipación: " & nivelTexto &
+            If(pisoSel <> "", "  |  Piso: " & pisoSel, "")
 
         _dgvPlastico.Rows.Clear()
 
         If _vigas Is Nothing Then Return
 
+        Dim vigasPiso = If(pisoSel = "",
+                           _vigas,
+                           _vigas.Where(Function(v) v.Piso = pisoSel).ToList())
+
         Dim fmtN2 = "F2"
         Dim idx As Integer = 0
 
-        For Each viga In _vigas
+        For Each viga In vigasPiso
 
             For Each frame In viga.Frames
 
