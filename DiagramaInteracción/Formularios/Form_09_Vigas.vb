@@ -1043,6 +1043,11 @@ Public Class Form_09_Vigas
             ("phiVnIzq", "φVn izq" & vbCrLf & "(kN)", 80),
             ("FIzq", "F izq", 65),
             ("CumpleIzq", "✓ izq", 55),
+            ("VuCen", "Vu cen" & vbCrLf & "(kN)", 80),
+            ("VcVsCen", "Vc+Vs cen" & vbCrLf & "(kN)", 90),
+            ("phiVnCen", "φVn cen" & vbCrLf & "(kN)", 80),
+            ("FCen", "F cen", 65),
+            ("CumpleCen", "✓ cen", 55),
             ("VuDer", "Vu der" & vbCrLf & "(kN)", 80),
             ("VcVsDer", "Vc+Vs der" & vbCrLf & "(kN)", 90),
             ("phiVnDer", "φVn der" & vbCrLf & "(kN)", 80),
@@ -1133,6 +1138,19 @@ Public Class Form_09_Vigas
                 row.Cells("VgDer").Value = Math.Round(cp.ZonaDer.Vg, 1).ToString(fmtN2)
 
                 PintarZonaCortantePlastico(row, cp.ZonaIzq, "VuIzq", "VcVsIzq", "phiVnIzq", "FIzq", "CumpleIzq")
+
+                ' ZonaCentro puede ser Nothing: .esm anterior a esta versión, o vano
+                ' donde las zonas confinadas se solapan y no hay tramo central.
+                If cp.ZonaCentro IsNot Nothing Then
+                    PintarZonaCortantePlastico(row, cp.ZonaCentro, "VuCen", "VcVsCen", "phiVnCen", "FCen", "CumpleCen")
+                Else
+                    row.Cells("VuCen").Value = "—"
+                    row.Cells("VcVsCen").Value = "—"
+                    row.Cells("phiVnCen").Value = "—"
+                    row.Cells("FCen").Value = "—"
+                    row.Cells("CumpleCen").Value = "—"
+                End If
+
                 PintarZonaCortantePlastico(row, cp.ZonaDer, "VuDer", "VcVsDer", "phiVnDer", "FDer", "CumpleDer")
 
                 If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)

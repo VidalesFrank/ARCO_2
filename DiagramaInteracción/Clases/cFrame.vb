@@ -194,6 +194,19 @@ Public Class cResultadoCortantePlasticoFrame
     ' Resultados por zona confinada
     Public Property ZonaIzq As New cRevisionCortantePlasticoZona
     Public Property ZonaDer As New cRevisionCortantePlasticoZona
+
+    ''' <summary>
+    ''' Zona central. Ve es CONSTANTE a lo largo del vano — nace de los momentos
+    ''' plasticos de los extremos — mientras que la componente gravitacional se
+    ''' anula hacia el centro. Ahí los estribos van más separados, así que el
+    ''' chequeo por capacidad también puede gobernar en el centro.
+    ''' Queda Nothing en proyectos guardados antes de esta versión y en vanos
+    ''' donde las zonas confinadas se solapan (no hay zona central).
+    ''' </summary>
+    ''' Campo y no propiedad: <OptionalField> solo se puede aplicar a campos.
+    ''' Queda Nothing al abrir un .esm anterior; se recalcula al revisar la viga.
+    <OptionalField> Public ZonaCentro As cRevisionCortantePlasticoZona
+
 End Class
 
 <Serializable>

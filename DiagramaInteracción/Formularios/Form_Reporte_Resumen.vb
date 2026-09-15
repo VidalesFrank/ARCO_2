@@ -357,7 +357,12 @@ Public Class Form_Reporte_Resumen
             For Each z In frame.RevisionCortante
                 If z.Posicion = PosicionTramoViga.Centro AndAlso
                    z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD Then
-                    Return True
+                    ' La zona central también tiene chequeo por capacidad (Ve es
+                    ' constante en el vano), así que se le aplica la misma regla que a
+                    ' los extremos: si cumple a plástico, no cuenta como falla.
+                    If Not VigaService.CumpleCortantePlastico(z.Posicion, frame.CortantePlastico) Then
+                        Return True
+                    End If
                 End If
             Next
         Next
@@ -441,6 +446,9 @@ Public Class Form_Reporte_Resumen
                 Dim cp = frame.CortantePlastico
                 If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
                 If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
+                If cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.phiVn > 0 Then
+                    fPlas = Math.Min(fPlas, cp.ZonaCentro.Factor)
+                End If
             Next
             Dim tienePlastico = (fPlas < Double.MaxValue)
             Dim fallaCentro As Boolean = FallaZonaCentral(viga)
@@ -785,6 +793,9 @@ Public Class Form_Reporte_Resumen
                 Dim cp = frame.CortantePlastico
                 If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
                 If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
+                If cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.phiVn > 0 Then
+                    fPlas = Math.Min(fPlas, cp.ZonaCentro.Factor)
+                End If
             Next
             Dim tienePlastico = (fPlas < Double.MaxValue)
             Dim fallaCentro As Boolean = FallaZonaCentral(viga)

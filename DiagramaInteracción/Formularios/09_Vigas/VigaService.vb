@@ -940,10 +940,12 @@ Public Class VigaService
     ''' (diseño por capacidad, NSR-10 C.21.5.4). Regla del ingeniero: una viga que NO cumple
     ''' a cortante convencional pero SÍ cumple a cortante plástico no se reporta.
     '''
-    ''' La zona Centro devuelve False A PROPÓSITO (no es un olvido): el cortante plástico se
-    ''' evalúa únicamente en las zonas de rótula plástica (extremos Izq/Der), donde se
-    ''' desarrollan los Mn de los apoyos. La zona central no tiene contraparte plástica, así
-    ''' que su falla convencional SIEMPRE debe reportarse.
+    ''' Las tres zonas tienen contraparte plástica. Ve es constante a lo largo del vano
+    ''' — nace de los Mn de los apoyos — así que el centro también recibe demanda por
+    ''' capacidad; lo único que decae hacia el centro es la componente gravitacional.
+    ''' ZonaCentro queda Nothing (y esto devuelve False) en dos casos legítimos: proyectos
+    ''' guardados antes de que se calculara, y vanos donde las zonas confinadas se solapan
+    ''' y no existe tramo central.
     '''
     ''' Único punto de verdad: lo consumen Form_Reporte_Resumen y ReporteRevisionService.
     ''' </summary>
@@ -953,7 +955,8 @@ Public Class VigaService
         Select Case pos
             Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
             Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
-            Case Else : Return False   ' Centro: sin chequeo plástico → la falla se reporta
+            Case PosicionTramoViga.Centro : Return cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.Cumple
+            Case Else : Return False
         End Select
     End Function
 
@@ -1231,6 +1234,66 @@ Public Class VigaService
                         .Cumple = .Factor >= UMBRAL_CD
                     End If
                 End With
+
+                ' Zona Central — chequeo por capacidad también aquí.
+                '
+                ' Ve es CONSTANTE a lo largo del vano: nace de los momentos plásticos
+                ' de los apoyos, no varía con x. Lo único que decae hacia el centro es
+                ' la componente gravitacional Vg. Como en la zona central los estribos
+                ' van más separados (menos Vs), el chequeo por capacidad puede
+                ' gobernar aquí aunque los extremos cumplan.
+                '
+                ' El Vu se toma en los BORDES de las zonas confinadas, no en el centro
+                ' geométrico: ahí es donde |Vg| es mayor dentro del tramo central. Es el
+                ' mismo criterio que usa CalcularEnvolventeCortante para el chequeo
+                ' convencional, para que las dos revisiones hablen del mismo punto.
+                Dim refIzqC = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+                Dim refDerC = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+                Dim refCen = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Centro)
+
+                Dim zcIzq As Double = If(refIzqC IsNot Nothing AndAlso refIzqC.NumEstribos > 0,
+                                         0.05 + (CDbl(refIzqC.NumEstribos) - 1.0) * refIzqC.Separacion,
+                                         2.0 * sec.h)
+                Dim zcDer As Double = If(refDerC IsNot Nothing AndAlso refDerC.NumEstribos > 0,
+                                         0.05 + (CDbl(refDerC.NumEstribos) - 1.0) * refDerC.Separacion,
+                                         2.0 * sec.h)
+
+                Dim limIzq As Double = sFirst + zcIzq
+                Dim limDer As Double = sLast - zcDer
+
+                ' Si las zonas confinadas cubren todo el vano no hay zona central que
+                ' revisar: ZonaCentro queda Nothing y todo el que la consuma la omite.
+                If limIzq < limDer AndAlso refCen IsNot Nothing Then
+
+                    Dim Vg_cen_i = InterpolarCortanteSignado(bfFrame, limIzq)
+                    Dim Vg_cen_d = InterpolarCortanteSignado(bfFrame, limDer)
+
+                    ' Los dos sentidos de volteo, en los dos bordes del tramo central.
+                    Dim cands() As Double = {Ve_A + Vg_cen_i, -Ve_B + Vg_cen_i,
+                                             Ve_A + Vg_cen_d, -Ve_B + Vg_cen_d}
+                    Dim Vu_dis_cen As Double = cands.Max(Function(v) Math.Abs(v))
+
+                    ' Vg reportado: el del borde que gobierna.
+                    Dim VgCenReport As Double = If(Math.Max(Math.Abs(Ve_A + Vg_cen_i), Math.Abs(-Ve_B + Vg_cen_i)) >=
+                                                   Math.Max(Math.Abs(Ve_A + Vg_cen_d), Math.Abs(-Ve_B + Vg_cen_d)),
+                                                   Vg_cen_i, Vg_cen_d)
+
+                    res.ZonaCentro = New cRevisionCortantePlasticoZona()
+                    With res.ZonaCentro
+                        .Posicion = PosicionTramoViga.Centro
+                        .Vg = VgCenReport
+                        .Vu_A = Ve_A + VgCenReport
+                        .Vu_B = -Ve_B + VgCenReport
+                        .Vu_diseno = Vu_dis_cen
+                        .Vc = Vc
+                        Dim Av = refCen.CantEstribos * AreaRefuerzo("#" & refCen.NumeroBarra)
+                        .Vs = Av * fy * sec.d / refCen.Separacion / 1000.0
+                        .phiVn = phi * (.Vc + .Vs)
+                        .Factor = If(Vu_dis_cen > 0, Math.Min(.phiVn / Vu_dis_cen, 9.99), 9.99)
+                        .Cumple = .Factor >= UMBRAL_CD
+                    End With
+
+                End If
 
                 ' Zona Derecha
                 With res.ZonaDer

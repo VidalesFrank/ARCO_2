@@ -156,9 +156,8 @@ Public Class Form_Graficos_Vigas
     ' Cuando esa rama esté en main, reemplazar el cuerpo de FactorEfectivoZona
     ' por una llamada a ese helper en vez de repetir la lógica aquí.
     '
-    ' El cortante plástico por capacidad (NSR-10 C.21.5.4) solo se evalúa en las
-    ' rótulas de los extremos, así que la zona Centro no tiene contraparte
-    ' plástica: su C/D convencional es el definitivo.
+    ' Las tres zonas tienen contraparte plástica: Ve es constante a lo largo del
+    ' vano, así que el centro también recibe demanda por capacidad.
     ' -----------------------------------------------------------------------
     Private Function FactorEfectivoZona(zona As cRevisionCortanteZona,
                                         cp As cResultadoCortantePlasticoFrame) As Double
@@ -174,6 +173,10 @@ Public Class Form_Graficos_Vigas
             Case PosicionTramoViga.Derecha
                 If cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.phiVn > 0 Then
                     Return Math.Max(conv, cp.ZonaDer.Factor)
+                End If
+            Case PosicionTramoViga.Centro
+                If cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.phiVn > 0 Then
+                    Return Math.Max(conv, cp.ZonaCentro.Factor)
                 End If
         End Select
 
