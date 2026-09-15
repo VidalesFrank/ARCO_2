@@ -790,6 +790,19 @@ Public Class Form_06_PagMuros
 
     End Sub
 
+    Private Sub GráficasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles GráficasToolStripMenuItem.Click
+
+        If proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then
+            MessageBox.Show("Primero importe y procese los datos de muros.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim form As New Form_Graficos_Muros()
+        form.Show(Me)
+
+    End Sub
+
     Private Sub UnirArchivosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles UnirArchivosToolStripMenuItem.Click
 
         Dim Open As New OpenFileDialog

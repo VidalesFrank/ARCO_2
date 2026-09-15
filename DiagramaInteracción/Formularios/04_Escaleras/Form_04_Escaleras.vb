@@ -46,6 +46,9 @@ Public Class Form_04_Escaleras
 #Region "Inicialización"
 
     Private Sub Form_04_Escaleras_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         InicializarTabPage2()
     End Sub
 

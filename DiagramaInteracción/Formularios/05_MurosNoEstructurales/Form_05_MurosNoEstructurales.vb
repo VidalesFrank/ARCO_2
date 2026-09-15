@@ -10,6 +10,9 @@ Public Class Form_05_MurosNoEstructurales
 
     ' ── Carga inicial ──────────────────────────────────────────────────────────
     Private Sub Form_MNE_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
 
         Me.WindowState = FormWindowState.Maximized
 

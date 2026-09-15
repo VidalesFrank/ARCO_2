@@ -12,6 +12,19 @@ Public Class Form_09_Vigas
     Private _vigas As List(Of cViga)
     Private _joints As Dictionary(Of String, cJoint)
 
+    ' Layout adaptable: reparten el alto disponible entre los GroupBox de cada
+    ' pestaña según la pantalla del equipo. Ver ConfigurarLayoutAdaptable().
+    Private _pilaDiagramas As PilaVerticalAdaptable
+    Private _pilaRefuerzo As PilaVerticalAdaptable
+    Private _pilaResultados As PilaVerticalAdaptable
+    Private _pilaPanelIzq As PilaVerticalAdaptable
+
+    ' La vista en planta se dibuja sobre un Bitmap del tamaño exacto del
+    ' PictureBox, así que al cambiar de tamaño hay que rehacerla. El temporizador
+    ' evita redibujarla en cada uno de los cientos de eventos Resize que genera
+    ' arrastrar el borde de la ventana: solo se redibuja al soltar.
+    Private WithEvents _timerRelayout As New Timer With {.Interval = 180}
+
     Private _vigaActual As cViga
 
     Private Const FILA_MNEG = 2
@@ -785,6 +798,7 @@ Public Class Form_09_Vigas
 
         ActivarCopiarPegar(Ref_Inferior)
         ActivarCopiarPegar(Ref_Superior)
+        ConfigurarLayoutAdaptable()
         CentrarBotonesRefuerzo()
         TimerAutoSave.Start()
 
@@ -840,8 +854,14 @@ Public Class Form_09_Vigas
         itemVerResumen.ForeColor = Color.White
         AddHandler itemVerResumen.Click, AddressOf AbrirReportes
 
+        Dim itemGraficas As New ToolStripMenuItem("Gráficas Resumen")
+        itemGraficas.BackColor = Color.FromArgb(87, 87, 87)
+        itemGraficas.ForeColor = Color.White
+        AddHandler itemGraficas.Click, AddressOf AbrirGraficas
+
         menuReportes.DropDownItems.Add(itemRecalcular)
         menuReportes.DropDownItems.Add(itemVerResumen)
+        menuReportes.DropDownItems.Add(itemGraficas)
         MenuStrip1.Items.Add(menuReportes)
 
         ' ── Nivel de Disipación (DMO / DES) ──────────────────────────────────
@@ -1159,6 +1179,22 @@ Public Class Form_09_Vigas
         End If
     End Sub
 
+    Private Sub AbrirGraficas(sender As Object, e As EventArgs)
+
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("Primero calcula las vigas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        RecalcularRevisionTodo(silencioso:=True)
+
+        Dim form As New Form_Graficos_Vigas()
+        form.Vigas = _vigas
+        form.Show(Me)
+
+    End Sub
+
     Private Sub AbrirReportes(sender As Object, e As EventArgs)
 
         If _vigas Is Nothing OrElse _vigas.Count = 0 Then
@@ -1219,8 +1255,16 @@ Public Class Form_09_Vigas
             count += 1
         Next
 
+        ' Antes solo se recalculaba la capacidad: el Vu de la zona Centro quedaba con el valor
+        ' de la última envolvente y no reflejaba los estribos actuales de las ZC Izq/Der.
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
-            _vigaService.CalcularCapacidadCortante(_vigas)
+            Dim combsCortante_rt = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
+            _vigaService.RecalcularCortanteVigas(_vigas,
+                                                 Proyecto.Elementos.Vigas.BeamForces,
+                                                 combsCortante_rt,
+                                                 incluirPlastico:=False)
         End If
 
         TriggerCortantePlastico(_vigas)
@@ -1557,7 +1601,115 @@ Public Class Form_09_Vigas
     End Sub
 
     Private Sub Form1_Resize(sender As Object, e As EventArgs) Handles Me.Resize
+        AplicarLayoutAdaptable()
         CentrarBotonesRefuerzo()
+        _timerRelayout.Stop()
+        _timerRelayout.Start()
+    End Sub
+
+    Private Sub _timerRelayout_Tick(sender As Object, e As EventArgs) Handles _timerRelayout.Tick
+        _timerRelayout.Stop()
+        RedibujarPlanta()
+    End Sub
+
+    ''' <summary>Rehace la vista en planta con el tamaño actual del PictureBox.</summary>
+    Private Sub RedibujarPlanta()
+
+        Try
+            If _vigas Is Nothing OrElse _joints Is Nothing Then Exit Sub
+
+            Dim pisoSel = Lista_Pisos.SelectedItem?.ToString()
+            If String.IsNullOrEmpty(pisoSel) Then Exit Sub
+
+            Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+            If grids Is Nothing Then Exit Sub
+
+            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, _vigaActual)
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_09_Vigas.RedibujarPlanta")
+        End Try
+
+    End Sub
+
+    ' =====================================================================
+    ' LAYOUT ADAPTABLE A LA PANTALLA
+    ' =====================================================================
+    ' El formulario está diseñado a 1924x1084 de área cliente, pero los
+    ' GroupBox de las tres pestañas están anclados Top+Left+Right: se estiran
+    ' a lo ancho y conservan su alto y su Y de diseño. En un equipo con menos
+    ' alto de pantalla eso dejaba bloques enteros fuera de la vista y sin forma
+    ' de llegar a ellos — "Resumen Solicitaciones" en Diagramas, los botones de
+    ' Aplicar/Copiar/Replicar en Refuerzo y casi todo "Cortante" en Resultados.
+    '
+    ' PilaVerticalAdaptable captura la maqueta del Designer y la escala: reparte
+    ' el alto disponible respetando un mínimo legible por bloque y, si ni con
+    ' los mínimos alcanza, activa el scroll de la pestaña.
+
+    Private Sub ConfigurarLayoutAdaptable()
+
+        Try
+            ' Si el tamaño de diseño no cabe en el monitor, abrir maximizado.
+            PilaVerticalAdaptable.AjustarAPantalla(Me, anchoMinimo:=1100, altoMinimo:=620)
+
+            ' Pestaña Diagramas: dos diagramas y la tabla de demandas.
+            _pilaDiagramas = New PilaVerticalAdaptable(TabPage1)
+            _pilaDiagramas.Agregar(GroupBox1, altoMinimo:=150)    ' Cortante
+            _pilaDiagramas.Agregar(GroupBox2, altoMinimo:=150)    ' Momento
+            _pilaDiagramas.Agregar(GroupBox4, altoMinimo:=120)    ' Resumen Solicitaciones
+            _pilaDiagramas.Activar()
+
+            ' Pestaña Refuerzo: las tres tablas y, debajo, la fila de botones.
+            ' Los botones solo se mueven en vertical; de su posición horizontal
+            ' sigue encargándose CentrarBotonesRefuerzo().
+            _pilaRefuerzo = New PilaVerticalAdaptable(TabPage2)
+            _pilaRefuerzo.Agregar(GroupBox5, altoMinimo:=140)     ' Refuerzo Superior
+            _pilaRefuerzo.Agregar(GroupBox6, altoMinimo:=140)     ' Refuerzo Inferior
+            _pilaRefuerzo.Agregar(GroupBox8, altoMinimo:=105)     ' Refuerzo Transversal
+            _pilaRefuerzo.SeparacionInferiores = 20
+            _pilaRefuerzo.AgregarInferior(Boton_Aplicar, Boton_Copiar,
+                                          Boton_Replicar, Boton_VerGrupo)
+            _pilaRefuerzo.Activar()
+
+            ' Pestaña Resultados: las dos tablas de revisión.
+            ' Resultados: mitad y mitad. Las dos tablas juntas necesitan ~885 px
+            ' (Flexión 14 filas, Cortante 10) y la pestaña nunca pasa de 840 ni en
+            ' 1080p, así que no hay reparto que las muestre completas. En vez de
+            ' intentarlo, cada una recibe la mitad de la ventana y se desplaza con
+            ' su propia barra interna (ambas tienen ScrollBars.Both).
+            _pilaResultados = New PilaVerticalAdaptable(TabPage3)
+            _pilaResultados.RepartoEquitativo = True
+            _pilaResultados.Agregar(GroupBox7, altoMinimo:=120)         ' Flexión
+            _pilaResultados.Agregar(GroupBox_Cortante, altoMinimo:=120) ' Cortante
+            _pilaResultados.Activar()
+
+            ' Columna izquierda: la vista en planta crece con la ventana y el
+            ' botón Generar Vigas queda siempre pegado debajo de ella (antes se
+            ' salía por abajo en pantallas de 768 px).
+            _pilaPanelIzq = New PilaVerticalAdaptable(Panel3)
+            _pilaPanelIzq.Agregar(GroupBox3, altoMinimo:=220)     ' Vista en Planta
+            _pilaPanelIzq.SeparacionInferiores = 26
+            _pilaPanelIzq.AgregarInferior(Button1)                ' Generar Vigas
+            _pilaPanelIzq.Activar()
+
+            ' Red de seguridad: en algunos equipos el alto real de las pestañas
+            ' solo queda definido cuando la ventana ya se mostró.
+            AddHandler Me.Shown, Sub(s2, e2)
+                                     AplicarLayoutAdaptable()
+                                     RedibujarPlanta()
+                                 End Sub
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_09_Vigas.ConfigurarLayoutAdaptable")
+        End Try
+
+    End Sub
+
+    Private Sub AplicarLayoutAdaptable()
+        If _pilaDiagramas IsNot Nothing Then _pilaDiagramas.Aplicar()
+        If _pilaRefuerzo IsNot Nothing Then _pilaRefuerzo.Aplicar()
+        If _pilaResultados IsNot Nothing Then _pilaResultados.Aplicar()
+        If _pilaPanelIzq IsNot Nothing Then _pilaPanelIzq.Aplicar()
     End Sub
 
     Private Sub ConstruirTablaResumen(viga As cViga, dgv As DataGridView)
@@ -2310,16 +2462,17 @@ Public Class Form_09_Vigas
         _vigaService.CalcularFlexionViga(viga)
         MostrarResultadosFlexion(viga)
 
-        ' Recalcular cortante con el nuevo refuerzo transversal (zonas N×s)
+        ' Recalcular cortante con el nuevo refuerzo transversal (zonas N×s):
+        ' RecalcularCortanteViga encadena NumEstribos(Centro) → envolvente → capacidad,
+        ' de modo que el Vu del Centro se re-toma en el nuevo borde de las ZC Izq/Der.
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
             Dim combsCortante_ap = New HashSet(Of String)(
                 Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
                 StringComparer.OrdinalIgnoreCase)
-            Dim listaViga As New List(Of cViga) From {viga}
-            _vigaService.CalcularEnvolventeCortante(listaViga,
-                                                    Proyecto.Elementos.Vigas.BeamForces,
-                                                    combsCortante_ap)
-            _vigaService.CalcularCapacidadCortante(listaViga)
+            _vigaService.RecalcularCortanteViga(viga,
+                                                Proyecto.Elementos.Vigas.BeamForces,
+                                                combsCortante_ap,
+                                                incluirPlastico:=False)
             MostrarResultadosCortante(viga)
 
             Dim bfCortante = Proyecto.Elementos.Vigas.BeamForces _
@@ -2674,8 +2827,9 @@ Public Class Form_09_Vigas
                 If miembro IsNot Nothing Then miembro.NombreViga = sim.Name_Beam
             Next
 
-            ' Propagar refuerzo inmediatamente
+            ' Propagar refuerzo inmediatamente (incluye envolvente + capacidad de cortante)
             _vigaService.PropagateRefuerzoGrupo(patron, similares, combosCortante)
+            TriggerCortantePlastico(similares)
 
             ' Guardar grupo en el proyecto
             If Proyecto.Elementos.Vigas.GruposReplica Is Nothing Then
@@ -2737,6 +2891,7 @@ Public Class Form_09_Vigas
             StringComparer.OrdinalIgnoreCase)
 
         _vigaService.PropagateRefuerzoGrupo(patron, similares, combosCortante)
+        TriggerCortantePlastico(similares)
 
         HayCambios = True
 
@@ -2863,10 +3018,18 @@ Public Class Form_09_Vigas
 
         Next
 
-        ' Recalcular flexión y cortante para la viga destino con el refuerzo copiado
+        ' Recalcular flexión y cortante para la viga destino con el refuerzo copiado.
+        ' Los estribos copiados cambian el límite de las zonas confinadas, así que hay que
+        ' rehacer la envolvente completa (antes solo se llamaba CalcularCapacidadCortante
+        ' y el Vu de la zona Centro de la viga destino quedaba obsoleto).
         _vigaService.CalcularFlexionViga(destino)
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
-            _vigaService.CalcularCapacidadCortante(New List(Of cViga) From {destino})
+            Dim combsCortante_cp = New HashSet(Of String)(
+                Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                StringComparer.OrdinalIgnoreCase)
+            _vigaService.RecalcularCortanteViga(destino,
+                                                Proyecto.Elementos.Vigas.BeamForces,
+                                                combsCortante_cp)
         End If
 
     End Sub
@@ -3519,6 +3682,17 @@ Public Class Form_09_Vigas
             For Each pos In posiciones
 
                 Dim zonaCor = frame.RevisionCortante.FirstOrDefault(Function(z) z.Posicion = pos)
+
+                ' Limpiar la columna antes de escribir: la zona Centro puede dejar de existir
+                ' (ZC de ambos extremos cubriendo todo el vano) y quedarían valores obsoletos
+                ' al refrescar la tabla sin reconstruirla (p. ej. desde Boton_Aplicar).
+                dgv.Rows(FILA_COR_VU).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_VC).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_VS).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_PHIVN).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Value = Nothing
+                dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Style.BackColor = Color.Empty
+                dgv.Rows(FILA_COR_FACTOR).Cells(colBase).Style.ForeColor = Color.Empty
 
                 If pos = PosicionTramoViga.Centro Then
                     dgv.Rows(FILA_COR_SECCION).Cells(colBase).Value = frame.Section.LabelSec

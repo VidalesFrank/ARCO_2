@@ -401,6 +401,9 @@ Public Class Form_08_VigasFundacion
     ' =========================================================================
 
     Private Sub Form_Load(sender As Object, e As EventArgs)
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         If Proyecto Is Nothing Then Return
         RefrescarLista()
         If _lst.Items.Count > 0 Then _lst.SelectedIndex = 0

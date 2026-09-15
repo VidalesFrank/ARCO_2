@@ -143,6 +143,9 @@ Public Class Form_02_01_ResultadosColumnas
     End Sub
 
     Private Sub Form_03_01_ResultadosColumnas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         If Proyecto.Elementos.Columnas.Verificacion_ALR = True Then
             Button1.Visible = True
         End If

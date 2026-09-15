@@ -146,6 +146,7 @@ Partial Class Form_01_PagPilas
         Me.VerToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ReporteToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.DiagramaDiametroToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.GraficasResumenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ArchivoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.NuevoToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.AbrirToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
@@ -956,7 +957,7 @@ Partial Class Form_01_PagPilas
         '
         'VerToolStripMenuItem
         '
-        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteToolStripMenuItem, Me.DiagramaDiametroToolStripMenuItem})
+        Me.VerToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ReporteToolStripMenuItem, Me.DiagramaDiametroToolStripMenuItem, Me.GraficasResumenToolStripMenuItem})
         Me.VerToolStripMenuItem.Enabled = False
         Me.VerToolStripMenuItem.ForeColor = System.Drawing.Color.White
         Me.VerToolStripMenuItem.Name = "VerToolStripMenuItem"
@@ -978,6 +979,14 @@ Partial Class Form_01_PagPilas
         Me.DiagramaDiametroToolStripMenuItem.Name = "DiagramaDiametroToolStripMenuItem"
         Me.DiagramaDiametroToolStripMenuItem.Size = New System.Drawing.Size(389, 28)
         Me.DiagramaDiametroToolStripMenuItem.Text = "Diagrama de Interacción por Diámetro"
+        '
+        'GraficasResumenToolStripMenuItem
+        '
+        Me.GraficasResumenToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.GraficasResumenToolStripMenuItem.ForeColor = System.Drawing.Color.White
+        Me.GraficasResumenToolStripMenuItem.Name = "GraficasResumenToolStripMenuItem"
+        Me.GraficasResumenToolStripMenuItem.Size = New System.Drawing.Size(389, 28)
+        Me.GraficasResumenToolStripMenuItem.Text = "Gráficas Resumen"
         '
         'ArchivoToolStripMenuItem
         '
@@ -1919,6 +1928,7 @@ Partial Class Form_01_PagPilas
     Friend WithEvents VerToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ReporteToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents DiagramaDiametroToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents GraficasResumenToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents TabControl2 As TabControl
     Friend WithEvents Seccion As TabPage
     Friend WithEvents DiagramaInteraccion As TabPage

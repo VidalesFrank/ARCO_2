@@ -351,6 +351,10 @@
     <Compile Include="Formularios\06_Muros\Form_Reporte_Ejecutivo_Muros.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\06_Muros\Form_Graficos_Muros.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\06_Muros\MurosResumenService.vb" />
     <Compile Include="Formularios\06_Muros\Form_InfoDesignMuros.Designer.vb">
       <DependentUpon>Form_InfoDesignMuros.vb</DependentUpon>
     </Compile>
@@ -375,6 +379,9 @@
     </Compile>
     <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
+    <Compile Include="Formularios\09_Vigas\Form_Graficos_Vigas.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\11_Nervios\NervioService.vb" />
     <Compile Include="Formularios\11_Nervios\NervioDiagramaService.vb" />
     <Compile Include="Formularios\11_Nervios\Form_AgrupacionManualNervios.vb">
@@ -502,6 +509,8 @@
     <Compile Include="Formularios\Complementos\Form_Graficos.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Complementos\PilaVerticalAdaptable.vb" />
+    <Compile Include="Formularios\Complementos\GraficosResumen.vb" />
     <Compile Include="Formularios\Complementos\Form_ALR.Designer.vb">
       <DependentUpon>Form_ALR.vb</DependentUpon>
     </Compile>
@@ -577,6 +586,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\01_Pilas\Form_Reporte_Pilas.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Formularios\01_Pilas\Form_Graficos_Pilas.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\01_Pilas\Form_01_FactorManualPilas.vb">

@@ -1,5 +1,11 @@
 ﻿Public Class Form_02_01_02_ResultadosModelo
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
+
+    Private Sub Form_02_01_02_ResultadosModelo_LoadAdaptable(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
+    End Sub
     Private Sub Combo_Elementos_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Combo_Elementos.SelectedIndexChanged
         Tabla_Resultados.Rows.Clear()
 

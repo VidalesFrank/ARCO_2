@@ -4,6 +4,9 @@ Imports ARCO.Funciones_00_Varias
 
 Public Class VigaService
 
+    ' Umbral de cumplimiento C/D: Funciones_00_Varias.UMBRAL_CD (0.90), visible
+    ' aquí por el Imports de arriba. No declarar uno local.
+
     Private ReadOnly _geo As GeometryService
     Public Sub New(geo As GeometryService)
         _geo = geo
@@ -675,12 +678,12 @@ Public Class VigaService
                 ' =========================================
                 If base.AsReqSup > 0 Then
                     base.RatioSup = Math.Min(base.AsProvSup / base.AsReqSup, 9.99)
-                    base.CumpleSuperior = base.AsProvSup >= 0.9 * base.AsReqSup
+                    base.CumpleSuperior = base.AsProvSup >= UMBRAL_CD * base.AsReqSup
                 End If
 
                 If base.AsReqInf > 0 Then
                     base.RatioInf = Math.Min(base.AsProvInf / base.AsReqInf, 9.99)
-                    base.CumpleInferior = base.AsProvInf >= 0.9 * base.AsReqInf
+                    base.CumpleInferior = base.AsProvInf >= UMBRAL_CD * base.AsReqInf
                 End If
 
                 ' =========================================
@@ -691,12 +694,12 @@ Public Class VigaService
 
                 If act.AsReqSup > 0 Then
                     act.RatioSup = Math.Min(act.AsProvSup / act.AsReqSup, 9.99)
-                    act.CumpleSuperior = act.AsProvSup >= 0.9 * act.AsReqSup
+                    act.CumpleSuperior = act.AsProvSup >= UMBRAL_CD * act.AsReqSup
                 End If
 
                 If act.AsReqInf > 0 Then
                     act.RatioInf = Math.Min(act.AsProvInf / act.AsReqInf, 9.99)
-                    act.CumpleInferior = act.AsProvInf >= 0.9 * act.AsReqInf
+                    act.CumpleInferior = act.AsProvInf >= UMBRAL_CD * act.AsReqInf
                 End If
 
                 'Else
@@ -770,9 +773,28 @@ Public Class VigaService
     ' CORTANTE
     ' =========================================================
 
+    ' Última envolvente de cortante usada. Se memoriza para poder rehacer el Vu
+    ' en los caminos que solo disponen de la viga (propagar a grupo, copiar/pegar
+    ' refuerzo) sin cambiar sus firmas públicas.
+    Private _bfCortante As List(Of cCombinacionBeamForce)
+    Private _combosCortante As HashSet(Of String)
+
+    ' Último contexto de cortante plástico (combos + fy_factor), mismo propósito.
+    Private _combosPlastico As HashSet(Of String)
+    Private _fyFactorPlastico As Double = 1.0
+
     Public Sub CalcularEnvolventeCortante(vigas As List(Of cViga),
                                           beamForces As List(Of cCombinacionBeamForce),
                                           combinaciones As HashSet(Of String))
+
+        If vigas Is Nothing OrElse beamForces Is Nothing OrElse combinaciones Is Nothing Then Exit Sub
+
+        ' Memorizar el contexto para RecalcularCortanteVigas()
+        _bfCortante = beamForces
+        _combosCortante = combinaciones
+
+        ' Frames cuya zona central desaparece porque las ZC de ambos extremos se solapan
+        Dim framesSinCentro As Integer = 0
 
         Dim lookup = beamForces.Where(Function(r) combinaciones.Contains(r.LoadCaseKey)) _
                                .GroupBy(Function(r) (r.Beam.Trim().ToUpperInvariant(),
@@ -812,6 +834,7 @@ Public Class VigaService
                 For Each pos In {PosicionTramoViga.Izquierda, PosicionTramoViga.Centro, PosicionTramoViga.Derecha}
 
                     Dim zona As New cRevisionCortanteZona With {.Posicion = pos}
+                    Dim omitirZona As Boolean = False
 
                     Select Case pos
 
@@ -833,18 +856,106 @@ Public Class VigaService
                                 Dim vuBordDer = InterpolarCortanteEnEstacion(bfFrame, limDer)
                                 zona.Vu = Math.Max(vuBordIzq, vuBordDer)
                             Else
-                                zona.Vu = 0  ' ZC cubre todo el vano → sin zona central independiente
+                                ' Las ZC de ambos extremos se solapan → no existe zona central.
+                                ' No se agrega la zona: si se agregara con Vu = 0,
+                                ' CalcularCapacidadCortante le pondría Factor = 9.99 / Cumple = True
+                                ' y los reportes (que filtran por phiVn > 0 y Factor > 0) la mostrarían
+                                ' como una zona que cumple, cuando en realidad no existe.
+                                omitirZona = True
+                                framesSinCentro += 1
                             End If
 
                     End Select
 
-                    frame.RevisionCortante.Add(zona)
+                    If Not omitirZona Then frame.RevisionCortante.Add(zona)
                 Next
 
             Next
         Next
 
+        If framesSinCentro > 0 Then
+            Logger.Info("VigaService.CalcularEnvolventeCortante",
+                        $"{framesSinCentro} frame(s) sin zona central: las zonas confinadas Izq/Der cubren todo el vano.")
+        End If
+
     End Sub
+
+    ''' <summary>
+    ''' Punto único de recálculo de cortante tras CUALQUIER cambio del refuerzo transversal
+    ''' (guardar/aplicar, asignación automática, propagación a grupo, copiar-pegar, réplica).
+    ''' Encadena: NumEstribos del Centro → envolvente (Vu del Centro tomado en el borde de las
+    ''' zonas confinadas) → capacidad φVn/Vu → cortante plástico.
+    ''' Si no se pasan beamForces/combinaciones se reutiliza el último contexto conocido,
+    ''' memorizado por CalcularEnvolventeCortante / CalcularCortantePlastico.
+    ''' </summary>
+    Public Sub RecalcularCortanteVigas(vigas As List(Of cViga),
+                                       Optional beamForces As List(Of cCombinacionBeamForce) = Nothing,
+                                       Optional combinaciones As HashSet(Of String) = Nothing,
+                                       Optional incluirPlastico As Boolean = True)
+
+        If vigas Is Nothing OrElse vigas.Count = 0 Then Exit Sub
+
+        Dim bf As List(Of cCombinacionBeamForce) = If(beamForces, _bfCortante)
+        Dim combos As HashSet(Of String) = If(combinaciones, _combosCortante)
+        If combos IsNot Nothing AndAlso combos.Count = 0 Then combos = _combosCortante
+
+        ' 1) La longitud de las ZC cambió → cambia el número de estribos del Centro
+        For Each v In vigas
+            If v Is Nothing Then Continue For
+            RecalcularNumEstribosCentro(v)
+        Next
+
+        ' 2) Envolvente: re-toma el Vu del Centro en el NUEVO límite de las ZC
+        If bf IsNot Nothing AndAlso combos IsNot Nothing AndAlso combos.Count > 0 Then
+            CalcularEnvolventeCortante(vigas, bf, combos)
+        Else
+            Logger.Warning("VigaService.RecalcularCortanteVigas",
+                           "Sin combinaciones de cortante: el Vu de la zona Centro no se pudo re-tomar.")
+        End If
+
+        ' 3) Capacidad con los estribos nuevos
+        CalcularCapacidadCortante(vigas)
+
+        ' 4) Cortante plástico (solo si ya se calculó alguna vez en esta sesión)
+        If incluirPlastico AndAlso bf IsNot Nothing AndAlso
+           _combosPlastico IsNot Nothing AndAlso _combosPlastico.Count > 0 Then
+            CalcularCortantePlastico(vigas, bf, _combosPlastico, _fyFactorPlastico)
+        End If
+
+    End Sub
+
+    ''' <summary>Sobrecarga de conveniencia para una sola viga.</summary>
+    Public Sub RecalcularCortanteViga(viga As cViga,
+                                      Optional beamForces As List(Of cCombinacionBeamForce) = Nothing,
+                                      Optional combinaciones As HashSet(Of String) = Nothing,
+                                      Optional incluirPlastico As Boolean = True)
+
+        If viga Is Nothing Then Exit Sub
+        RecalcularCortanteVigas(New List(Of cViga) From {viga}, beamForces, combinaciones, incluirPlastico)
+
+    End Sub
+
+    ''' <summary>
+    ''' Devuelve True si la zona indicada queda cubierta por el chequeo de cortante plástico
+    ''' (diseño por capacidad, NSR-10 C.21.5.4). Regla del ingeniero: una viga que NO cumple
+    ''' a cortante convencional pero SÍ cumple a cortante plástico no se reporta.
+    '''
+    ''' La zona Centro devuelve False A PROPÓSITO (no es un olvido): el cortante plástico se
+    ''' evalúa únicamente en las zonas de rótula plástica (extremos Izq/Der), donde se
+    ''' desarrollan los Mn de los apoyos. La zona central no tiene contraparte plástica, así
+    ''' que su falla convencional SIEMPRE debe reportarse.
+    '''
+    ''' Único punto de verdad: lo consumen Form_Reporte_Resumen y ReporteRevisionService.
+    ''' </summary>
+    Public Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
+                                                  cp As cResultadoCortantePlasticoFrame) As Boolean
+        If cp Is Nothing Then Return False
+        Select Case pos
+            Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
+            Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
+            Case Else : Return False   ' Centro: sin chequeo plástico → la falla se reporta
+        End Select
+    End Function
 
     Private Function InterpolarCortanteEnEstacion(bfFrame As List(Of cCombinacionBeamForce), targetStation As Double) As Double
 
@@ -974,7 +1085,7 @@ Public Class VigaService
 
                     If zonaCor.Vu > 0 Then
                         zonaCor.Factor = Math.Min(zonaCor.phiVn / zonaCor.Vu, 9.99)
-                        zonaCor.Cumple = zonaCor.Factor >= 0.9
+                        zonaCor.Cumple = zonaCor.Factor >= UMBRAL_CD
                     Else
                         zonaCor.Factor = 9.99
                         zonaCor.Cumple = True
@@ -1015,6 +1126,13 @@ Public Class VigaService
                                         fy_factor As Double)
 
         Const phi As Double = 0.75
+
+        If vigas Is Nothing OrElse beamForces Is Nothing OrElse combinaciones Is Nothing Then Exit Sub
+
+        ' Memorizar el contexto para RecalcularCortanteVigas()
+        _bfCortante = If(_bfCortante, beamForces)
+        _combosPlastico = combinaciones
+        _fyFactorPlastico = fy_factor
 
         Dim lookup = beamForces _
             .Where(Function(r) combinaciones.Contains(r.LoadCaseKey)) _
@@ -1110,7 +1228,7 @@ Public Class VigaService
                         .Vs = Av * fy * sec.d / refIzq.Separacion / 1000.0
                         .phiVn = phi * (.Vc + .Vs)
                         .Factor = If(Vu_dis_izq > 0, Math.Min(.phiVn / Vu_dis_izq, 9.99), 9.99)
-                        .Cumple = .Factor >= 0.9
+                        .Cumple = .Factor >= UMBRAL_CD
                     End If
                 End With
 
@@ -1128,7 +1246,7 @@ Public Class VigaService
                         .Vs = Av * fy * sec.d / refDer.Separacion / 1000.0
                         .phiVn = phi * (.Vc + .Vs)
                         .Factor = If(Vu_dis_der > 0, Math.Min(.phiVn / Vu_dis_der, 9.99), 9.99)
-                        .Cumple = .Factor >= 0.9
+                        .Cumple = .Factor >= UMBRAL_CD
                     End If
                 End With
 
@@ -1590,14 +1708,19 @@ Public Class VigaService
                                        similares As List(Of cViga),
                                        combosCortante As HashSet(Of String))
 
+        If similares Is Nothing OrElse similares.Count = 0 Then Exit Sub
+
         For Each sim In similares
             _CopiarRefuerzoViga(patron, sim)
             CalcularFlexionViga(sim)
-            If combosCortante IsNot Nothing AndAlso combosCortante.Count > 0 Then
-                CalcularCapacidadCortante(New List(Of cViga) From {sim})
-            End If
             sim.RefuerzoDesincronizado = False
         Next
+
+        ' El refuerzo transversal copiado cambia la longitud de las zonas confinadas,
+        ' así que hay que rehacer la ENVOLVENTE (Vu del Centro en el nuevo límite de ZC),
+        ' no solo la capacidad. Antes solo se llamaba CalcularCapacidadCortante() y el Vu
+        ' del Centro de los similares quedaba con el valor de la envolvente anterior.
+        RecalcularCortanteVigas(similares, Nothing, combosCortante)
 
     End Sub
 

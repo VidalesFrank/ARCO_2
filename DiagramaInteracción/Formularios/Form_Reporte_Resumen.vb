@@ -8,6 +8,11 @@ Public Class Form_Reporte_Resumen
     ' ── Datos del modelo ──────────────────────────────────────────────────────
     Public Property Vigas As List(Of cViga)
 
+    ' Punto único de verdad del umbral de cumplimiento: Funciones_00_Varias.UMBRAL_CD (0.90).
+    ' Antes las pestañas/hojas "Resumen Completo" usaban 1.0 y el resto 0.9, así que
+    ' una misma viga con C/D entre 0.90 y 0.99 salía OK en una vista y "Revisar" en otra.
+    Private Const UMBRAL_CD As Double = Funciones_00_Varias.UMBRAL_CD
+
     ' ── Paleta (igual que la app) ─────────────────────────────────────────────
     Private ReadOnly ColorEncabezado As Color = Color.FromArgb(87, 87, 87)
     Private ReadOnly ColorEncabezadoTexto As Color = Color.White
@@ -214,9 +219,9 @@ Public Class Form_Reporte_Resumen
                 Dim cdInf As Double = If(revCen IsNot Nothing AndAlso revCen.ResultadoActual.RatioInf > 0,
                                           revCen.ResultadoActual.RatioInf, -1)
 
-                Dim tieneObs = (cdSupI > 0 AndAlso cdSupI < 0.9) OrElse
-                               (cdSupJ > 0 AndAlso cdSupJ < 0.9) OrElse
-                               (cdInf > 0 AndAlso cdInf < 0.9)
+                Dim tieneObs = (cdSupI > 0 AndAlso cdSupI < UMBRAL_CD) OrElse
+                               (cdSupJ > 0 AndAlso cdSupJ < UMBRAL_CD) OrElse
+                               (cdInf > 0 AndAlso cdInf < UMBRAL_CD)
                 If _chkSoloObs.Checked AndAlso Not tieneObs Then Continue For
 
                 Dim tramoStr As String
@@ -227,9 +232,9 @@ Public Class Form_Reporte_Resumen
                 End If
 
                 Dim obs As New List(Of String)
-                If cdSupI > 0 AndAlso cdSupI < 0.9 Then obs.Add("apoyo I por M(-)")
-                If cdSupJ > 0 AndAlso cdSupJ < 0.9 Then obs.Add("apoyo J por M(-)")
-                If cdInf > 0 AndAlso cdInf < 0.9 Then obs.Add("centro por M(+)")
+                If cdSupI > 0 AndAlso cdSupI < UMBRAL_CD Then obs.Add("apoyo I por M(-)")
+                If cdSupJ > 0 AndAlso cdSupJ < UMBRAL_CD Then obs.Add("apoyo J por M(-)")
+                If cdInf > 0 AndAlso cdInf < UMBRAL_CD Then obs.Add("centro por M(+)")
                 Dim obsStr = If(obs.Count > 0, "En " & String.Join(" y ", obs), "")
 
                 Dim r = dgv.Rows.Add()
@@ -290,7 +295,7 @@ Public Class Form_Reporte_Resumen
 
                 ' Falla "real": alguna zona falla el estándar Y no está cubierta por cortante plástico
                 Dim failReal = frame.RevisionCortante.Any(Function(z)
-                    Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < 0.9 AndAlso
+                    Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
                            Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
                 End Function)
 
@@ -303,12 +308,12 @@ Public Class Form_Reporte_Resumen
                 If failReal Then
                     ' Mostrar la zona con la peor falla real
                     Dim peor = frame.RevisionCortante.Where(Function(z)
-                        Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < 0.9 AndAlso
+                        Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
                                Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
                     End Function).OrderBy(Function(z) z.Factor).First()
                     vuShow = peor.Vu : vnShow = peor.phiVn : factorShow = peor.Factor
                     etiqueta = "Revisar"
-                ElseIf zonaGob.Factor < 0.9 Then
+                ElseIf zonaGob.Factor < UMBRAL_CD Then
                     etiqueta = "OK (Plást.)"
                 Else
                     etiqueta = "OK"
@@ -334,14 +339,29 @@ Public Class Form_Reporte_Resumen
         End If
     End Sub
 
+    ''' Regla convencional-vs-plástico centralizada en VigaService (único punto de verdad).
+    ''' Ver VigaService.CumpleCortantePlastico para el criterio y por qué la zona Centro
+    ''' siempre devuelve False.
     Private Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
                                                     cp As cResultadoCortantePlasticoFrame) As Boolean
-        If cp Is Nothing Then Return False
-        Select Case pos
-            Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
-            Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
-            Case Else : Return False
-        End Select
+        Return VigaService.CumpleCortantePlastico(pos, cp)
+    End Function
+
+    ''' Devuelve True si alguna zona Centro de la viga no alcanza UMBRAL_CD en el chequeo
+    ''' convencional. Se usa en el "Resumen Completo" para impedir que el cortante plástico
+    ''' (que solo cubre las rótulas de los extremos) marque la viga como OK.
+    Private Shared Function FallaZonaCentral(viga As cViga) As Boolean
+        If viga Is Nothing OrElse viga.Frames Is Nothing Then Return False
+        For Each frame In viga.Frames
+            If frame.RevisionCortante Is Nothing Then Continue For
+            For Each z In frame.RevisionCortante
+                If z.Posicion = PosicionTramoViga.Centro AndAlso
+                   z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD Then
+                    Return True
+                End If
+            Next
+        Next
+        Return False
     End Function
 
     Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
@@ -423,9 +443,12 @@ Public Class Form_Reporte_Resumen
                 If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
             Next
             Dim tienePlastico = (fPlas < Double.MaxValue)
+            Dim fallaCentro As Boolean = FallaZonaCentral(viga)
 
-            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= 1.0)
-            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= UMBRAL_CD)
+            ' El cortante plástico (C.21.5.4) solo cubre las rótulas de los extremos: si la
+            ' zona Centro falla el chequeo convencional, no puede "rescatar" a la viga.
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= UMBRAL_CD AndAlso Not fallaCentro)
             Dim cumpleCor = cumpleConv OrElse cumplePlas
 
             Dim fFin As Double
@@ -571,9 +594,9 @@ Public Class Form_Reporte_Resumen
                 End If
 
                 Dim obs As New List(Of String)
-                If cdSupI > 0 AndAlso cdSupI < 0.9 Then obs.Add("apoyo I por M(-)")
-                If cdSupJ > 0 AndAlso cdSupJ < 0.9 Then obs.Add("apoyo J por M(-)")
-                If cdInf > 0 AndAlso cdInf < 0.9 Then obs.Add("centro por M(+)")
+                If cdSupI > 0 AndAlso cdSupI < UMBRAL_CD Then obs.Add("apoyo I por M(-)")
+                If cdSupJ > 0 AndAlso cdSupJ < UMBRAL_CD Then obs.Add("apoyo J por M(-)")
+                If cdInf > 0 AndAlso cdInf < UMBRAL_CD Then obs.Add("centro por M(+)")
                 Dim obsStr = If(obs.Count > 0, "En " & String.Join(" y ", obs), "")
 
                 ws.Cell(fila, 1).Value = viga.Piso
@@ -636,7 +659,7 @@ Public Class Form_Reporte_Resumen
                 End If
 
                 Dim failReal = frame.RevisionCortante.Any(Function(z)
-                    Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < 0.9 AndAlso
+                    Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
                            Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
                 End Function)
 
@@ -646,12 +669,12 @@ Public Class Form_Reporte_Resumen
 
                 If failReal Then
                     Dim peor = frame.RevisionCortante.Where(Function(z)
-                        Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < 0.9 AndAlso
+                        Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
                                Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
                     End Function).OrderBy(Function(z) z.Factor).First()
                     vuShow = peor.Vu : vnShow = peor.phiVn : factorShow = peor.Factor
                     etiqExcel = "NO"
-                ElseIf zonaGob.Factor < 0.9 Then
+                ElseIf zonaGob.Factor < UMBRAL_CD Then
                     etiqExcel = "OK (Plást.)"
                 Else
                     etiqExcel = "SI"
@@ -764,9 +787,11 @@ Public Class Form_Reporte_Resumen
                 If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
             Next
             Dim tienePlastico = (fPlas < Double.MaxValue)
+            Dim fallaCentro As Boolean = FallaZonaCentral(viga)
 
-            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= 1.0)
-            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= UMBRAL_CD)
+            ' Ver nota en CargarResumenCompleto: el plástico no cubre la zona Centro.
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= UMBRAL_CD AndAlso Not fallaCentro)
             Dim cumpleCor = cumpleConv OrElse cumplePlas
 
             Dim fFin As Double
@@ -862,7 +887,7 @@ Public Class Form_Reporte_Resumen
         cell.Style.NumberFormat.Format = "0.00"
         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
 
-        If v >= 0.9 Then
+        If v >= UMBRAL_CD Then
             cell.Style.Fill.BackgroundColor = XLOKFondo
             cell.Style.Font.FontColor = XLOKTexto
         Else
@@ -981,7 +1006,7 @@ Public Class Form_Reporte_Resumen
     End Sub
 
     Private Sub PintarCeldaFactor(cell As DataGridViewCell, factor As Double)
-        If factor >= 0.9 Then
+        If factor >= UMBRAL_CD Then
             cell.Style.BackColor = ColorOK : cell.Style.ForeColor = ColorOKTexto
         Else
             cell.Style.BackColor = ColorMal : cell.Style.ForeColor = ColorMalTexto

@@ -1033,11 +1033,29 @@ Public Class Form_01_PagPilas
         frm.Show()
     End Sub
 
+    Private Sub GraficasResumenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles GraficasResumenToolStripMenuItem.Click
+
+        If Proyecto Is Nothing OrElse Proyecto.Elementos.Pilas Is Nothing OrElse
+           Proyecto.Elementos.Pilas.ListaElementos Is Nothing OrElse
+           Proyecto.Elementos.Pilas.ListaElementos.Count = 0 Then
+            MessageBox.Show("Primero importe y calcule los datos de pilas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim frm As New Form_Graficos_Pilas()
+        frm.Show(Me)
+
+    End Sub
+
     Private _hayCambiosPilas As Boolean = False
     Private _ultimoGuardadoPilas As DateTime = DateTime.Now
     Private _timerAutoSavePilas As New Timer With {.Interval = 60000}
 
     Private Sub Form_01_PagPilas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         Dim itemAyuda As New ToolStripMenuItem("? Tablas ETABS")
         itemAyuda.ForeColor = Color.White
         itemAyuda.BackColor = Color.FromArgb(87, 87, 87)

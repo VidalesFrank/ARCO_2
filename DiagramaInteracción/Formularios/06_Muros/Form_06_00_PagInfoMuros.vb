@@ -230,6 +230,9 @@ Public Class Form_06_00_PagInfoMuros
 
 
     Private Sub Form_06_00_PagInfoMuros_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
+        ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
+        PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
 
         Dim Tabla = Tabla_Info_Seccion
         For i = 0 To Tabla.ColumnCount - 1
