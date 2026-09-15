@@ -36,6 +36,7 @@ Partial Class Form_Graficos
         Me.Boton_Confinamiento = New System.Windows.Forms.Button()
         Me.Boton_Flexo = New System.Windows.Forms.Button()
         Me.Boton_ALR = New System.Windows.Forms.Button()
+        Me.Boton_Exportar = New System.Windows.Forms.Button()
         Me.Panel2 = New System.Windows.Forms.Panel()
         Me.Grafico = New System.Windows.Forms.DataVisualization.Charting.Chart()
         Me.MenuStrip1 = New System.Windows.Forms.MenuStrip()
