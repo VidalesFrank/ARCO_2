@@ -382,6 +382,9 @@
     <Compile Include="Formularios\09_Vigas\Form_Graficos_Vigas.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\11_Nervios\Form_Graficos_Nervios.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\11_Nervios\NervioService.vb" />
     <Compile Include="Formularios\11_Nervios\NervioDiagramaService.vb" />
     <Compile Include="Formularios\11_Nervios\Form_AgrupacionManualNervios.vb">

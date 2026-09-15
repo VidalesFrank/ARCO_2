@@ -124,6 +124,14 @@ Public Class Form_11_Nervios
         AddHandler menuReportes.Click, AddressOf AbrirReportesNervios_Click
         MenuStrip1.Items.Insert(MenuStrip1.Items.IndexOf(Exportar_Zapatas), menuReportes)
 
+        ' Menú Gráficas, aparte de Reportes: ese es un item de un solo clic y
+        ' colgarle un desplegable le cambiaría el comportamiento actual.
+        Dim menuGraficas As New ToolStripMenuItem("Gráficas")
+        menuGraficas.ForeColor = Color.White
+        menuGraficas.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuGraficas.Click, AddressOf AbrirGraficasNervios_Click
+        MenuStrip1.Items.Insert(MenuStrip1.Items.IndexOf(Exportar_Zapatas), menuGraficas)
+
         ConstruirTablasNavegacion()
         SincronizarDesdeProyecto()
     End Sub
@@ -2370,6 +2378,18 @@ Public Class Form_11_Nervios
         Diagrama_Cortante.Image = Nothing
         _cargando = False
         Label1.Text = "Datos eliminados. Use Importar → Importar demandas ETABS..."
+    End Sub
+
+    Private Sub AbrirGraficasNervios_Click(sender As Object, e As EventArgs)
+        Dim nerv = Proyecto.Elementos.Nervios
+        If nerv Is Nothing OrElse nerv.Elementos Is Nothing OrElse nerv.Elementos.Count = 0 Then
+            MessageBox.Show("Primero importe y calcule los nervios.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Dim frm As New Form_Graficos_Nervios()
+        frm.Nervios = nerv
+        frm.Show(Me)
     End Sub
 
     Private Sub AbrirReportesNervios_Click(sender As Object, e As EventArgs)
