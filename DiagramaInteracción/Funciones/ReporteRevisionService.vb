@@ -40,14 +40,10 @@ Public Class ReporteRevisionService
 
     ''' Devuelve True si la zona indicada supera el chequeo de cortante plástico (C.21.5.4).
     ''' Solo aplica para zonas Izquierda/Derecha; la zona Centro no tiene chequeo plástico.
+    ''' Regla centralizada en VigaService (único punto de verdad).
     Private Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
                                                     cp As cResultadoCortantePlasticoFrame) As Boolean
-        If cp Is Nothing Then Return False
-        Select Case pos
-            Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
-            Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
-            Case Else : Return False
-        End Select
+        Return VigaService.CumpleCortantePlastico(pos, cp)
     End Function
 
     Private Shared Function FCD(valor As Double) As String

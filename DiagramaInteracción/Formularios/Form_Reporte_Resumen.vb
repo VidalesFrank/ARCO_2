@@ -334,14 +334,29 @@ Public Class Form_Reporte_Resumen
         End If
     End Sub
 
+    ''' Regla convencional-vs-plástico centralizada en VigaService (único punto de verdad).
+    ''' Ver VigaService.CumpleCortantePlastico para el criterio y por qué la zona Centro
+    ''' siempre devuelve False.
     Private Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
                                                     cp As cResultadoCortantePlasticoFrame) As Boolean
-        If cp Is Nothing Then Return False
-        Select Case pos
-            Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
-            Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
-            Case Else : Return False
-        End Select
+        Return VigaService.CumpleCortantePlastico(pos, cp)
+    End Function
+
+    ''' Devuelve True si alguna zona Centro de la viga no alcanza C/D = 1.0 en el chequeo
+    ''' convencional. Se usa en el "Resumen Completo" para impedir que el cortante plástico
+    ''' (que solo cubre las rótulas de los extremos) marque la viga como OK.
+    Private Shared Function FallaZonaCentral(viga As cViga) As Boolean
+        If viga Is Nothing OrElse viga.Frames Is Nothing Then Return False
+        For Each frame In viga.Frames
+            If frame.RevisionCortante Is Nothing Then Continue For
+            For Each z In frame.RevisionCortante
+                If z.Posicion = PosicionTramoViga.Centro AndAlso
+                   z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < 1.0 Then
+                    Return True
+                End If
+            Next
+        Next
+        Return False
     End Function
 
     Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
@@ -423,9 +438,12 @@ Public Class Form_Reporte_Resumen
                 If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
             Next
             Dim tienePlastico = (fPlas < Double.MaxValue)
+            Dim fallaCentro As Boolean = FallaZonaCentral(viga)
 
             Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= 1.0)
-            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            ' El cortante plástico (C.21.5.4) solo cubre las rótulas de los extremos: si la
+            ' zona Centro falla el chequeo convencional, no puede "rescatar" a la viga.
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0 AndAlso Not fallaCentro)
             Dim cumpleCor = cumpleConv OrElse cumplePlas
 
             Dim fFin As Double
@@ -764,9 +782,11 @@ Public Class Form_Reporte_Resumen
                 If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
             Next
             Dim tienePlastico = (fPlas < Double.MaxValue)
+            Dim fallaCentro As Boolean = FallaZonaCentral(viga)
 
             Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= 1.0)
-            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0)
+            ' Ver nota en CargarResumenCompleto: el plástico no cubre la zona Centro.
+            Dim cumplePlas = (tienePlastico AndAlso fPlas >= 1.0 AndAlso Not fallaCentro)
             Dim cumpleCor = cumpleConv OrElse cumplePlas
 
             Dim fFin As Double
