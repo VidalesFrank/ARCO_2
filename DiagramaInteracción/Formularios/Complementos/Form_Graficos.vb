@@ -11,6 +11,10 @@ Public Class Form_Graficos
     ' -----------------------------------------------------------------------
     ' Paleta corporativa ARCO
     ' -----------------------------------------------------------------------
+    ' Acento de marca ARCO: gris (87,87,87), el mismo de Form_00_PaginaPrincipal.
+    ' ColAzul/ColAzulClaro se conservan solo como colores de DATOS (series del
+    ' gráfico ALR por combinación), no como acento de marca.
+    Private Shared ReadOnly ColAcento As Color = Color.FromArgb(87, 87, 87)
     Private Shared ReadOnly ColAzul As Color = Color.FromArgb(31, 73, 125)
     Private Shared ReadOnly ColAzulClaro As Color = Color.FromArgb(91, 155, 213)
     Private Shared ReadOnly ColVerde As Color = Color.FromArgb(56, 142, 60)
@@ -82,7 +86,7 @@ Public Class Form_Graficos
         Grafico.Titles.Clear()
         Dim t As New Title(titulo)
         t.Font = New Font("Segoe UI", 12.5F, FontStyle.Bold)
-        t.ForeColor = ColAzul
+        t.ForeColor = ColAcento
         t.Docking = Docking.Top
         t.Alignment = ContentAlignment.MiddleCenter
         Grafico.Titles.Add(t)

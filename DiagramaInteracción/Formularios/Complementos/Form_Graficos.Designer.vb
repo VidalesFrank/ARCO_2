@@ -124,11 +124,11 @@ Partial Class Form_Graficos
         '
         Me.Boton_Exportar.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.Boton_Exportar.BackColor = System.Drawing.Color.FromArgb(CType(CType(31, Byte), Integer), CType(CType(73, Byte), Integer), CType(CType(125, Byte), Integer))
-        Me.Boton_Exportar.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(CType(CType(60, Byte), Integer), CType(CType(110, Byte), Integer), CType(CType(180, Byte), Integer))
+        Me.Boton_Exportar.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.Boton_Exportar.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(CType(CType(200, Byte), Integer), CType(CType(200, Byte), Integer), CType(CType(200, Byte), Integer))
         Me.Boton_Exportar.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.Boton_Exportar.Font = New System.Drawing.Font("Segoe UI", 10.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Boton_Exportar.ForeColor = System.Drawing.Color.White
+        Me.Boton_Exportar.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
         Me.Boton_Exportar.Location = New System.Drawing.Point(3, 281)
         Me.Boton_Exportar.Name = "Boton_Exportar"
         Me.Boton_Exportar.Size = New System.Drawing.Size(160, 40)
