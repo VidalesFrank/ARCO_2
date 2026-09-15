@@ -30,7 +30,8 @@ End Class
 ''' </summary>
 Public Class ReporteRevisionService
 
-    Private Const UMBRAL_CD As Double = 0.9
+    ' Punto único de verdad del umbral: Funciones_00_Varias.UMBRAL_CD (0.90).
+    Private Const UMBRAL_CD As Double = Funciones_00_Varias.UMBRAL_CD
 
     Private _numTabla As Integer = 0
 

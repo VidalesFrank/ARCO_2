@@ -4,6 +4,9 @@ Imports ARCO.Funciones_00_Varias
 
 Public Class VigaService
 
+    ' Umbral de cumplimiento C/D: Funciones_00_Varias.UMBRAL_CD (0.90), visible
+    ' aquí por el Imports de arriba. No declarar uno local.
+
     Private ReadOnly _geo As GeometryService
     Public Sub New(geo As GeometryService)
         _geo = geo
@@ -675,12 +678,12 @@ Public Class VigaService
                 ' =========================================
                 If base.AsReqSup > 0 Then
                     base.RatioSup = Math.Min(base.AsProvSup / base.AsReqSup, 9.99)
-                    base.CumpleSuperior = base.AsProvSup >= 0.9 * base.AsReqSup
+                    base.CumpleSuperior = base.AsProvSup >= UMBRAL_CD * base.AsReqSup
                 End If
 
                 If base.AsReqInf > 0 Then
                     base.RatioInf = Math.Min(base.AsProvInf / base.AsReqInf, 9.99)
-                    base.CumpleInferior = base.AsProvInf >= 0.9 * base.AsReqInf
+                    base.CumpleInferior = base.AsProvInf >= UMBRAL_CD * base.AsReqInf
                 End If
 
                 ' =========================================
@@ -691,12 +694,12 @@ Public Class VigaService
 
                 If act.AsReqSup > 0 Then
                     act.RatioSup = Math.Min(act.AsProvSup / act.AsReqSup, 9.99)
-                    act.CumpleSuperior = act.AsProvSup >= 0.9 * act.AsReqSup
+                    act.CumpleSuperior = act.AsProvSup >= UMBRAL_CD * act.AsReqSup
                 End If
 
                 If act.AsReqInf > 0 Then
                     act.RatioInf = Math.Min(act.AsProvInf / act.AsReqInf, 9.99)
-                    act.CumpleInferior = act.AsProvInf >= 0.9 * act.AsReqInf
+                    act.CumpleInferior = act.AsProvInf >= UMBRAL_CD * act.AsReqInf
                 End If
 
                 'Else
@@ -1082,7 +1085,7 @@ Public Class VigaService
 
                     If zonaCor.Vu > 0 Then
                         zonaCor.Factor = Math.Min(zonaCor.phiVn / zonaCor.Vu, 9.99)
-                        zonaCor.Cumple = zonaCor.Factor >= 0.9
+                        zonaCor.Cumple = zonaCor.Factor >= UMBRAL_CD
                     Else
                         zonaCor.Factor = 9.99
                         zonaCor.Cumple = True
@@ -1225,7 +1228,7 @@ Public Class VigaService
                         .Vs = Av * fy * sec.d / refIzq.Separacion / 1000.0
                         .phiVn = phi * (.Vc + .Vs)
                         .Factor = If(Vu_dis_izq > 0, Math.Min(.phiVn / Vu_dis_izq, 9.99), 9.99)
-                        .Cumple = .Factor >= 0.9
+                        .Cumple = .Factor >= UMBRAL_CD
                     End If
                 End With
 
@@ -1243,7 +1246,7 @@ Public Class VigaService
                         .Vs = Av * fy * sec.d / refDer.Separacion / 1000.0
                         .phiVn = phi * (.Vc + .Vs)
                         .Factor = If(Vu_dis_der > 0, Math.Min(.phiVn / Vu_dis_der, 9.99), 9.99)
-                        .Cumple = .Factor >= 0.9
+                        .Cumple = .Factor >= UMBRAL_CD
                     End If
                 End With
 
