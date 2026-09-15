@@ -67,6 +67,20 @@ Public Class PilaVerticalAdaptable
         End Set
     End Property
 
+    ''' <summary>
+    ''' Reparte la altura disponible en PARTES IGUALES entre los controles de la
+    ''' pila, ignorando altos de diseño y mínimos, y sin activar el scroll del
+    ''' contenedor.
+    '''
+    ''' Es el modo adecuado cuando cada control sabe desplazarse por su cuenta
+    ''' — un DataGridView con ScrollBars.Both, por ejemplo. En vez de intentar
+    ''' que quepa todo el contenido, cada bloque recibe su mitad (o su tercio) de
+    ''' la ventana y el usuario se desplaza DENTRO de la tabla que esté mirando.
+    ''' Predecible y sin sorpresas: el reparto no depende de cuántas filas traiga
+    ''' la viga seleccionada.
+    ''' </summary>
+    Public Property RepartoEquitativo As Boolean = False
+
     ''' <summary>Hueco entre el último control de la pila y los controles inferiores.</summary>
     Public Property SeparacionInferiores As Integer
         Get
@@ -170,6 +184,10 @@ Public Class PilaVerticalAdaptable
 
     End Function
 
+    Private Function RepartiendoEnPartesIguales() As Boolean
+        Return RepartoEquitativo AndAlso _elementos.Count > 0
+    End Function
+
     ''' <summary>Captura la maqueta de diseño y hace el primer reparto.</summary>
     Public Sub Activar()
         If _elementos.Count = 0 Then Exit Sub
@@ -206,7 +224,22 @@ Public Class PilaVerticalAdaptable
             Dim alturas(_elementos.Count - 1) As Integer
             Dim necesitaScroll As Boolean = False
 
-            If disponible >= sumaDiseno Then
+            If RepartiendoEnPartesIguales() Then
+                ' Partes iguales: cada bloque recibe la misma fracción de la
+                ' altura disponible y se apoya en su propia barra interna.
+                Dim cuotaIgual As Integer = disponible \ _elementos.Count
+                Dim asignado As Integer = 0
+                For i = 0 To _elementos.Count - 1
+                    If i = _elementos.Count - 1 Then
+                        alturas(i) = disponible - asignado   ' el último absorbe el resto
+                    Else
+                        alturas(i) = cuotaIgual
+                        asignado += cuotaIgual
+                    End If
+                    If alturas(i) < 1 Then alturas(i) = 1
+                Next
+
+            ElseIf disponible >= sumaDiseno Then
                 ' Sobra espacio: el extra se reparte en proporción al diseño, de
                 ' modo que el bloque que era más alto siga siendo el más alto.
                 Dim extra As Integer = disponible - sumaDiseno

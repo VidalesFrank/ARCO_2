@@ -531,10 +531,6 @@ Public Class Form_09_Vigas
         Ref_Transversal.ResumeLayout(False)
         Tabla_Resultados_Cortante.ResumeLayout(False)
 
-        ' Las tablas ya tienen sus filas definitivas: ahora se sabe cuánto alto
-        ' necesita cada bloque de la pestaña Resultados.
-        AjustarAltoResultados()
-
         If viga.Frames.Any(Function(f) f.RevisionCortante.Count > 0) Then
             MostrarResultadosCortante(viga)
         End If
@@ -1676,9 +1672,15 @@ Public Class Form_09_Vigas
             _pilaRefuerzo.Activar()
 
             ' Pestaña Resultados: las dos tablas de revisión.
+            ' Resultados: mitad y mitad. Las dos tablas juntas necesitan ~885 px
+            ' (Flexión 14 filas, Cortante 10) y la pestaña nunca pasa de 840 ni en
+            ' 1080p, así que no hay reparto que las muestre completas. En vez de
+            ' intentarlo, cada una recibe la mitad de la ventana y se desplaza con
+            ' su propia barra interna (ambas tienen ScrollBars.Both).
             _pilaResultados = New PilaVerticalAdaptable(TabPage3)
-            _pilaResultados.Agregar(GroupBox7, altoMinimo:=170)         ' Flexión
-            _pilaResultados.Agregar(GroupBox_Cortante, altoMinimo:=170) ' Cortante
+            _pilaResultados.RepartoEquitativo = True
+            _pilaResultados.Agregar(GroupBox7, altoMinimo:=120)         ' Flexión
+            _pilaResultados.Agregar(GroupBox_Cortante, altoMinimo:=120) ' Cortante
             _pilaResultados.Activar()
 
             ' Columna izquierda: la vista en planta crece con la ventana y el
@@ -1700,37 +1702,6 @@ Public Class Form_09_Vigas
         Catch ex As Exception
             Logger.Error(ex, "Form_09_Vigas.ConfigurarLayoutAdaptable")
         End Try
-
-    End Sub
-
-    ''' <summary>
-    ''' Fija el alto mínimo de los dos bloques de la pestaña Resultados a partir
-    ''' del contenido real de sus tablas, en vez de un valor fijo elegido a ojo.
-    '''
-    ''' Las dos tablas son "verticales": las filas son las magnitudes y las
-    ''' columnas los frames. Flexión tiene 14 filas y Cortante 10, a 28 px cada
-    ''' una más 45 de encabezado: 483 y 371 px respectivamente. Las dos juntas
-    ''' piden ~885 px y la pestaña ofrece 528 a 1366x768, 616 a 1536x816 y 840
-    ''' incluso en 1080p — en ninguna pantalla real caben las dos completas.
-    '''
-    ''' Con el mínimo puesto en el alto real, la pila entra en su modo de scroll:
-    ''' cada tabla conserva su alto completo (se ven TODAS las filas, sin barra
-    ''' vertical dentro de la tabla) y es la pestaña la que se desplaza. Antes,
-    ''' con un mínimo fijo de 170, los dos bloques se repartían ~245 px y en
-    ''' Cortante las últimas filas quedaban fuera.
-    ''' </summary>
-    Private Sub AjustarAltoResultados()
-
-        If _pilaResultados Is Nothing Then Exit Sub
-
-        ' Título y bordes del GroupBox que envuelve cada tabla.
-        Const CHROME_GROUPBOX As Integer = 30
-
-        _pilaResultados.ActualizarAltoMinimo(GroupBox7,
-            PilaVerticalAdaptable.AltoNaturalGrid(Tabla_Resultados_Flexion, CHROME_GROUPBOX))
-
-        _pilaResultados.ActualizarAltoMinimo(GroupBox_Cortante,
-            PilaVerticalAdaptable.AltoNaturalGrid(Tabla_Resultados_Cortante, CHROME_GROUPBOX))
 
     End Sub
 
