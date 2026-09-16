@@ -30,7 +30,12 @@ DiagramaInteracción/          ← proyecto VB.NET principal
     04_Escaleras/
     05_MurosNoEstructurales/
     06_Muros/
+    08_VigasFundacion/
     09_Vigas/                 ← servicios de lógica (VigaService, DiagramaService, GeometryService)
+    10_AnalisisSeccion/
+    11_Nervios/               ← NervioService, NervioDiagramaService
+    Complementos/             ← infraestructura de UI compartida (ver abajo)
+  Servicios/                  ← importación ETABS, transformación de datos, export Excel
     Form_00_PaginaPrincipal.vb
     Form_09_Vigas.vb
     Form_AyudaImportacion.vb
@@ -65,8 +70,14 @@ Cada módulo tiene su propia lista de combinaciones de diseño seleccionadas por
 
 Siempre usar `AreaRefuerzo("#N")` de `Funciones_00_Varias.vb`. Nunca hardcodear.
 
-### Factor de cumplimiento muros
-`Factor >= 0.9` → cumple (igual que vigas).
+### Umbral de cumplimiento — único en todo el programa
+`C/D >= 0.90` cumple. Definición única: **`Funciones_00_Varias.UMBRAL_CD`**.
+Aplica a vigas, columnas, muros, pilas y nervios, y a todas las vistas
+(tablas, resúmenes, planta interactiva, gráficas y reportes .docx/.xlsx).
+Única excepción documentada: los límites de **ALR** (0.30 columnas,
+0.35 muros), que no son C/D sino relaciones de carga axial.
+No introducir umbrales locales: hasta 2026-09-15 convivían 0.9 y 1.0 y el
+mismo elemento salía con veredictos distintos según dónde se mirara.
 
 ---
 
@@ -178,11 +189,19 @@ Tablas: Tabla_Demandas, Ref_Superior, Ref_Inferior, Ref_Transversal, Tabla_Resul
 ## Infraestructura transversal
 
 ### Logger (`Funciones/Logger.vb`)
+**Las firmas reales llevan contexto. No aceptan un solo string:**
 ```vb
-Logger.Info("mensaje")
-Logger.Warning("mensaje")
-Logger.Error("mensaje")
-Logger.Critical("mensaje")
+Logger.Info(contexto As String, mensaje As String)
+Logger.Warning(contexto As String, mensaje As String)
+Logger.Error(ex As Exception, contexto As String, Optional detalleExtra As String = "")
+Logger.Critical(ex As Exception, contexto As String, mensajeUsuario As String)
+```
+`Error` recibe la **excepción** primero, no un mensaje. `Critical` además
+muestra un MessageBox al usuario. Ejemplo:
+```vb
+Catch ex As Exception
+    Logger.Error(ex, "Form_09_Vigas.RedibujarPlanta", nombreViga)
+End Try
 ```
 Escribe a Debug.Print y a archivo en `[AppDir]\Logs\ARCO_yyyy-MM-dd.log`. Thread-safe con SyncLock.
 
@@ -228,3 +247,87 @@ Acceso desde el menú "? Tablas ETABS" en cada módulo. Muestra qué hojas ETABS
 - `step` es palabra reservada. Usar `stepVal` o similar.
 - Los enums son tipos, no strings: `eNumeradores.eDireccion.Y`, no `"Y"`.
 - `RefuerzoSimple` tiene `.Coordenada_X` y `.Coordenada_Y`, no `.X` o `.Y`.
+
+---
+
+## Infraestructura de UI compartida (`Formularios/Complementos/`)
+
+Tres clases reutilizables. Usarlas antes de escribir una nueva.
+
+### `GraficosResumen.vb` — dashboards de gráficas
+Paleta ARCO, `CrearChart`, `EstilarGrafico`, `ExportarImagen`, panel lateral de
+botones, y tres constructores de gráfico: `DibujarBarrasCD` (semáforo C/D con
+línea de umbral), `DibujarBarrasLimiteSuperior` (ALR, menor es mejor) y
+`DibujarBarrasCategorias` (conteos).
+
+Convención: **`ItemCD.Valor < 0` = "sin cálculo"** y el elemento se **omite** del
+gráfico — nunca una barra en cero, que se leería como "no cumple".
+
+Los cinco módulos ya tienen su dashboard: `Form_Graficos` (Columnas),
+`Form_Graficos_Pilas`, `Form_Graficos_Muros`, `Form_Graficos_Vigas` y
+`Form_Graficos_Nervios`. Vigas y Nervios además filtran por piso.
+
+### `PilaVerticalAdaptable.vb` — el formulario se adapta a la pantalla
+Los formularios se diseñaron a 1920×1080+ y en pantallas más bajas el contenido
+quedaba **fuera de alcance, sin scroll**. Reparte la altura de un contenedor
+entre controles apilados, en tres modos (crece / interpola / mínimo + AutoScroll),
+o en partes iguales con `RepartoEquitativo`.
+
+**Trampa crítica:** `Form_Load` corre **antes** de que el formulario se muestre, y
+ahí una `TabPage` todavía reporta su tamaño de **diseño** (p. ej. 917 en vez de
+594). Repartir sobre ese número deja bloques fuera de la vista, y peor: la tabla
+cree que su contenido le cabe y **no saca barra de desplazamiento**. Por eso la
+pila se engancha al `SizeChanged` de su contenedor. Cualquier código de layout que
+lea `ClientSize` en el `Load` tiene este mismo problema.
+
+`AjustarAPantallaConScroll(Me)` es el ajuste mínimo para formularios cuya maqueta
+no es adaptable (los 10 restantes lo usan). Ojo: `AutoScroll` en el **formulario**
+no sirve si hay un `TabControl`/`Panel` con `Dock = Fill` colgando de él — hay que
+activarlo en los contenedores internos, que es lo que hace
+`HabilitarScrollEnContenedores`.
+
+### `GridCopiarPegar.vb` — copiar/pegar en cualquier DataGridView
+`Ctrl+C` copia el rango en TSV (lo que Excel entiende), `Ctrl+V` pega desde el
+portapapeles saltando columnas de solo lectura, `Ctrl+D` rellena hacia abajo, y
+un menú contextual con lo mismo. Soporta decimales y rangos.
+
+No confundir con `ActivarCopiarPegar` de `Form_09_Vigas`: ese copia **una** celda
+y hace `Integer.TryParse` al pegar, así que descarta decimales. Sirve allá porque
+sus grillas son conteos de barras; para cualquier otra cosa usar `GridCopiarPegar`.
+
+---
+
+## Compilar y verificar
+
+```powershell
+$msb = "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
+& $msb PROGRAMA_ARCO.sln /t:Rebuild /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal
+```
+
+**Trampa del `.sln`:** la combinación `Release|Any CPU` **no compila ningún
+proyecto** y aun así devuelve `ExitCode = 0`. Hay que pasar `/p:Platform=x64`.
+Verificar siempre el `LastWriteTime` del `.exe` o buscar la línea
+`Programa_ARCO -> ...` en el log; no confiar solo en el código de salida.
+
+| Solución | Proyecto | Salida |
+|---|---|---|
+| `Release\|x64` (la que se usa) | `Debug\|x64` | `bin\x64\Debug\ARCO.exe` |
+| `Debug\|Any CPU` | `Release\|Any CPU` | `bin\Release\ARCO.exe` |
+| `Release\|Any CPU` | *(no compila)* | — |
+
+**Compilar NO basta en WinForms.** Dos bugs de esta clase llegaron a producción el
+2026-09-15, ambos `NullReferenceException` en el constructor e invisibles para el
+compilador: un control del Designer sin su `New`, y un `Handles X.TextChanged` que
+corre **dentro de `InitializeComponent`** y tocaba una lista aún en `Nothing`.
+
+Verificar **instanciando** los formularios tocados:
+```powershell
+$asm=[Reflection.Assembly]::LoadFrom($exe)
+$f=[Activator]::CreateInstance($asm.GetType("ARCO.Form_XX"))
+```
+El `InnerException.StackTrace` da archivo y línea exactos.
+
+Ojo con `<OptionalField>` + `<OnDeserialized>`: **OnDeserialized solo corre al
+deserializar**, no al hacer `New`. Un campo lista necesita **además** su
+inicializador en línea (`As New List(Of ...)`), porque BinaryFormatter tampoco
+ejecuta inicializadores. Hacen falta los dos.
