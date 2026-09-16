@@ -168,6 +168,7 @@ Public Class Form_Planta_Zapatas
         AddHandler _panel.MouseDown, AddressOf Panel_MouseDown
         AddHandler _panel.MouseMove, AddressOf Panel_MouseMove
         AddHandler _panel.MouseUp, AddressOf Panel_MouseUp
+        AddHandler _panel.MouseDoubleClick, AddressOf Panel_MouseDoubleClick
         AddHandler _panel.MouseEnter, Sub() _panel.Focus()
         AddHandler _panel.Resize, Sub() _panel.Invalidate()
         AddHandler _btnAjustar.Click, Sub() AjustarVista()
@@ -305,6 +306,40 @@ Public Class Form_Planta_Zapatas
                 RaiseEvent ZapataSeleccionada(_zHover)
             End If
         End If
+
+    End Sub
+
+    ''' <summary>
+    ''' Doble clic sobre una zapata: abre la vista de análisis fino
+    ''' (Form_07_Zapata_Detalle). Se toma la zapata bajo el cursor sin depender
+    ''' del hover previo, para funcionar aunque el ratón se haya movido de golpe.
+    ''' </summary>
+    Private Sub Panel_MouseDoubleClick(sender As Object, e As MouseEventArgs)
+
+        If e.Button <> MouseButtons.Left Then Return
+
+        Dim wx As Double = 0, wy As Double = 0
+        S2W(e.X, e.Y, wx, wy)
+
+        Dim z As cZapata = Nothing
+        For Each cand In Dibujables()
+            If Math.Abs(wx - cand.CoordX) <= cand.L_b / 2 AndAlso
+               Math.Abs(wy - cand.CoordY) <= cand.L_h / 2 Then
+                z = cand
+                Exit For
+            End If
+        Next
+
+        If z Is Nothing Then Return
+
+        Try
+            Seleccionada = z
+            _panel.Invalidate()
+            RaiseEvent ZapataSeleccionada(z)
+            Form_07_Zapata_Detalle.Mostrar(z, Me)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_Planta_Zapatas.Panel_MouseDoubleClick", z?.Label_joint)
+        End Try
 
     End Sub
 

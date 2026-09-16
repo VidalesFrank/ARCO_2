@@ -15,6 +15,7 @@ Public Class Form_07_Pag_Zapatas
         AgregarMenuAyudaTablas()
         AgregarMenuPlanta()
         AgregarMenuGraficas()
+        AgregarBotonVerDetalle()
         AgregarPanelPesoEstabilizante()
         RefrescarUIPesoEstabilizante()
     End Sub
@@ -99,6 +100,74 @@ Public Class Form_07_Pag_Zapatas
             Tabla_Elementos.FirstDisplayedScrollingRowIndex = fila.Index
             Exit For
         Next
+
+    End Sub
+
+    ' =====================================================================
+    ' VER DETALLE DE ZAPATA SELECCIONADA
+    ' =====================================================================
+    ' Abre Form_07_Zapata_Detalle sobre la fila que esté marcada en la tabla.
+    ' El detalle también se puede abrir haciendo doble clic sobre una zapata
+    ' en la vista en planta (Form_Planta_Zapatas).
+
+    Private Sub AgregarBotonVerDetalle()
+
+        Dim item As New ToolStripMenuItem("Ver detalle de zapata seleccionada...") With {
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ToolTipText = "Heatmap de presiones, capacidad vs. demanda, envolvente y secciones críticas"
+        }
+        AddHandler item.Click, AddressOf AbrirDetalleZapata_Click
+        Ver_Zapatas.DropDownItems.Add(item)
+
+    End Sub
+
+    Private Sub AbrirDetalleZapata_Click(sender As Object, e As EventArgs)
+
+        Try
+            If Tabla_Elementos Is Nothing OrElse Tabla_Elementos.SelectedRows Is Nothing OrElse
+               Tabla_Elementos.SelectedRows.Count = 0 Then
+                MessageBox.Show("Seleccione una fila en la tabla de zapatas antes de abrir el detalle.",
+                                "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim fila = Tabla_Elementos.SelectedRows(0)
+            If fila Is Nothing OrElse fila.IsNewRow Then
+                MessageBox.Show("La fila seleccionada no corresponde a una zapata.",
+                                "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim etiqueta = Convert.ToString(fila.Cells(0).Value)
+            If String.IsNullOrEmpty(etiqueta) Then
+                MessageBox.Show("La zapata seleccionada no tiene etiqueta.",
+                                "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim zapatas = Proyecto?.Elementos?.Zapatas?.Tipos
+            If zapatas Is Nothing OrElse zapatas.Count = 0 Then
+                MessageBox.Show("No hay zapatas cargadas en el proyecto.",
+                                "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim z = zapatas.FirstOrDefault(Function(x) String.Equals(Convert.ToString(x.Label_joint), etiqueta,
+                                                                     StringComparison.OrdinalIgnoreCase))
+            If z Is Nothing Then
+                MessageBox.Show($"No se encontró la zapata ""{etiqueta}"" en el modelo.",
+                                "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Form_07_Zapata_Detalle.Mostrar(z, Me)
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_07_Pag_Zapatas.AbrirDetalleZapata_Click", "")
+            MessageBox.Show("No se pudo abrir el detalle: " & ex.Message,
+                            "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
 
     End Sub
 

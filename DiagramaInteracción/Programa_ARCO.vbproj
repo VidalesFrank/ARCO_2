@@ -469,6 +469,12 @@
     <Compile Include="Formularios\Form_Graficos_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\07_Zapatas\Form_07_Zapata_Detalle.Designer.vb">
+      <DependentUpon>Form_07_Zapata_Detalle.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Formularios\07_Zapatas\Form_07_Zapata_Detalle.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Form_Derivas.Designer.vb">
       <DependentUpon>Form_Derivas.vb</DependentUpon>
     </Compile>
@@ -715,6 +721,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Formularios\02_Columnas\Form_02_01_02_ResultadosModelo.resx">
       <DependentUpon>Form_02_01_02_ResultadosModelo.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Formularios\07_Zapatas\Form_07_Zapata_Detalle.resx">
+      <DependentUpon>Form_07_Zapata_Detalle.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\02_Columnas\Form_02_01_00_RevisionCortante.resx">
       <DependentUpon>Form_02_01_00_RevisionCortante.vb</DependentUpon>
