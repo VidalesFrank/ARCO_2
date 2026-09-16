@@ -32,8 +32,13 @@ Public Class Proyecto_MNE
     Public Opcion_Barra_Flexion As Integer
 
     ' <OptionalField> permite abrir archivos guardados antes de que este campo existiera.
+    ' El inicializador en línea es imprescindible aparte de OnDeserialized: este último
+    ' SOLO corre al deserializar un .esm, no al hacer New Proyecto_MNE. Sin él, una
+    ' instancia recién creada dejaba la lista en Nothing y Form_05_MurosNoEstructurales
+    ' reventaba en su propio constructor — el Designer asigna T_NPisos.Text = "25", eso
+    ' dispara T_NPisos_TextChanged y el handler consulta .Count antes del Load.
     <System.Runtime.Serialization.OptionalField>
-    Public Lista_Alturas_Pisos As List(Of Single)
+    Public Lista_Alturas_Pisos As New List(Of Single)
 
     Public Lista_Divisorios As New List(Of Divisorio)
     Public Lista_Antepechos As New List(Of Antepecho)

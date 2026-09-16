@@ -265,6 +265,11 @@ Public Class Form_05_MurosNoEstructurales
     End Sub
 
     Private Sub T_NPisos_TextChanged(sender As Object, e As EventArgs) Handles T_NPisos.TextChanged
+        ' Este handler se dispara DENTRO de InitializeComponent, porque el Designer
+        ' asigna T_NPisos.Text. En ese momento el formulario aún no está construido y
+        ' Proyecto puede no estar listo: no dar nada por hecho aquí.
+        If Proyecto Is Nothing OrElse Proyecto.Lista_Alturas_Pisos Is Nothing Then Exit Sub
+
         Dim nPisos As Integer
         If Integer.TryParse(T_NPisos.Text, nPisos) AndAlso nPisos > 0 Then
             ' Si el número de pisos cambia, la lista almacenada queda desactualizada
