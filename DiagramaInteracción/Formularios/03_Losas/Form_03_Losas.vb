@@ -103,59 +103,13 @@ Public Class Form_03_Losas
                 L_Vertical.Text = "Dirección 'B'"
             End If
 
-            If C_D_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 1
-            ElseIf C_C_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 2
-            ElseIf Opcion = 1 And C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 3
-            ElseIf Opcion = 2 And C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 3
-            ElseIf C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 4
-            ElseIf C_C_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 4
-            ElseIf C_D_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 4
-            ElseIf C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 4
-            ElseIf Opcion = 1 And C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 5
-            ElseIf Opcion = 2 And C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 5
-            ElseIf Opcion = 1 And C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 6
-            ElseIf Opcion = 1 And C_D_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 6
-            ElseIf Opcion = 2 And C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 6
-            ElseIf Opcion = 2 And C_D_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 6
-            ElseIf Opcion = 1 And C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 7
-            ElseIf Opcion = 1 And C_D_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 7
-            ElseIf Opcion = 2 And C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 7
-            ElseIf Opcion = 2 And C_D_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 7
-            ElseIf Opcion = 1 And C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 8
-            ElseIf Opcion = 1 And C_C_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 8
-            ElseIf Opcion = 2 And C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 8
-            ElseIf Opcion = 2 And C_C_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 8
-            ElseIf Opcion = 1 And C_D_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 9
-            ElseIf Opcion = 1 And C_C_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_D_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 9
-            ElseIf Opcion = 2 And C_C_L.CheckState = CheckState.Checked And C_D_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_C_B.CheckState = CheckState.Checked Then
-                Caso = 9
-            ElseIf Opcion = 2 And C_C_L.CheckState = CheckState.Checked And C_C_T.CheckState = CheckState.Checked And C_C_R.CheckState = CheckState.Checked And C_D_B.CheckState = CheckState.Checked Then
-                Caso = 9
-            End If
+            ' La tabla de casos vive en LosaService: es lógica pura y está cubierta
+            ' por pruebas. Aquí solo se traduce el estado de las casillas.
+            Caso = LosaService.DeterminarCaso(EstadoBorde(C_C_L, C_D_L),
+                                              EstadoBorde(C_C_T, C_D_T),
+                                              EstadoBorde(C_C_R, C_D_R),
+                                              EstadoBorde(C_C_B, C_D_B),
+                                              ladoCortoEsX:=(Opcion = 2))
 
             Dim Coeficientes_ = Coeficientes(Lna, Lnb, Caso)
             Dim Lista_Titulos = New String(7) {"Ca-", "Cb-", "Ca D", "Cb D", "Ca L", "Cb L", "qa", "qb"}
@@ -184,13 +138,10 @@ Public Class Form_03_Losas
             Dim Carga_Impuesta As Single = Convert.ToSingle(T_C_Impuesta.Text)
             Dim CV As Single = Convert.ToSingle(T_C_Viva.Text)
 
-            Dim Vol_Loseta As Single = e_loseta * (S_L + tw_Nervio) * (S_T + tw_Nervio)
-            Dim Vol_Nervio As Single = tw_Nervio * (S_L + S_T + tw_Nervio) * (H_Nervio - e_loseta)
-
-            Dim Peso_Losa As Single = 24 * (Vol_Loseta + Vol_Nervio) / ((S_L + tw_Nervio) * (S_T + tw_Nervio))
+            Dim Peso_Losa As Single = CSng(LosaService.PesoPropioLosa(e_loseta, H_Nervio, tw_Nervio, S_L, S_T))
 
             Dim CM As Single = Carga_Impuesta + Peso_Losa
-            Dim Cu As Single = 1.2 * CM + 1.6 * CV
+            Dim Cu As Single = CSng(LosaService.CargaUltima(CM, CV))
 
             Proyecto.CM = CM
             Proyecto.CV = CV
@@ -204,15 +155,14 @@ Public Class Form_03_Losas
             End If
 
             '--------------- Momentos en Franja Central -------------
-            Dim Ma_N As Single = Coeficientes_(0) * Cu * Lna ^ 2 * (Sa + tw_Nervio)
-            Dim Mb_N As Single = Coeficientes_(1) * Cu * Lnb ^ 2 * (Sb + tw_Nervio)
-            Dim Ma_P As Single = (Coeficientes_(2) * 1.2 * CM + Coeficientes_(4) * 1.6 * CV) * Lna ^ 2 * (Sa + tw_Nervio)
-            Dim Mb_P As Single = (Coeficientes_(3) * 1.2 * CM + Coeficientes_(5) * 1.6 * CV) * Lnb ^ 2 * (Sb + tw_Nervio)
-            Dim Va As Single = Coeficientes_(6) * Cu * Lna / 2 * (Sa + tw_Nervio)
-            Dim Vb As Single = Coeficientes_(7) * Cu * Lnb / 2 * (Sb + tw_Nervio)
+            Dim dCentral = LosaService.CalcularDemandasFranjaCentral(Coeficientes_, CM, CV,
+                                                                     Lna, Lnb, Sa, Sb, tw_Nervio)
+            Dim dBorde = LosaService.ATercios(dCentral)
 
-            Dim Franja_Central = New Single(5) {Ma_N, Mb_N, Ma_P, Mb_P, Va, Vb}
-            Dim Franja_Borde = New Single(5) {Ma_N / 3, Mb_N / 3, Ma_P / 3, Mb_P / 3, Va / 3, Vb / 3}
+            Dim Franja_Central = New Single(5) {CSng(dCentral.Ma_Neg), CSng(dCentral.Mb_Neg), CSng(dCentral.Ma_Pos),
+                                                CSng(dCentral.Mb_Pos), CSng(dCentral.Va), CSng(dCentral.Vb)}
+            Dim Franja_Borde = New Single(5) {CSng(dBorde.Ma_Neg), CSng(dBorde.Mb_Neg), CSng(dBorde.Ma_Pos),
+                                              CSng(dBorde.Mb_Pos), CSng(dBorde.Va), CSng(dBorde.Vb)}
             Dim Titulos = New String(5) {"Ma- (kN.m)", "Mb- (kN.m)", "Ma+ (kN.m)", "Mb+ (kN.m)", "Va (kN)", "Vb (kN)"}
 
             For i = 0 To 5
@@ -234,6 +184,17 @@ Public Class Form_03_Losas
         End Try
         Me.Cursor = Cursors.Arrow
     End Sub
+
+    ''' <summary>
+    ''' Traduce el par de casillas de un borde al estado que entiende LosaService.
+    ''' Si el usuario no marcó ninguna, queda SinDefinir — igual que antes, cuando
+    ''' ninguna rama de la cadena aplicaba y el caso se quedaba en 0.
+    ''' </summary>
+    Private Function EstadoBorde(continuo As CheckBox, discontinuo As CheckBox) As LosaService.Borde
+        If continuo IsNot Nothing AndAlso continuo.Checked Then Return LosaService.Borde.Continuo
+        If discontinuo IsNot Nothing AndAlso discontinuo.Checked Then Return LosaService.Borde.Discontinuo
+        Return LosaService.Borde.SinDefinir
+    End Function
 
     Public Sub Llenar_Celdas()
         T_e_Loseta.Text = Proyecto.e_losa
