@@ -1,5 +1,10 @@
 Imports DocumentFormat.OpenXml
 Imports DocumentFormat.OpenXml.Wordprocessing
+Imports System.IO
+Imports DocumentFormat.OpenXml.Packaging
+Imports A = DocumentFormat.OpenXml.Drawing
+Imports PIC = DocumentFormat.OpenXml.Drawing.Pictures
+Imports DW = DocumentFormat.OpenXml.Drawing.Wordprocessing
 
 ''' <summary>
 ''' Helpers de bajo nivel para construir el Reporte de Revisión (.docx) con DocumentFormat.OpenXml,
@@ -169,5 +174,96 @@ Public Module ReporteRevisionWordHelpers
 
         Return tbl
     End Function
+
+    ' Contador para dar un Id único a cada imagen insertada en el documento.
+    Private _contadorImagen As Integer = 0
+
+    ' ── Imágenes (gráficos exportados como PNG, insertados directo desde memoria) ──────────────
+    ''' <summary>
+    ''' Inserta una imagen PNG centrada en el documento, con el tamaño (en cm) indicado.
+    ''' No requiere Word instalado: la imagen se embebe como <see cref="ImagePart"/> del propio
+    ''' paquete OpenXml. Cada llamada agrega una parte de imagen nueva al documento.
+    ''' </summary>
+    Public Function ImagenCentrada(mainPart As MainDocumentPart, pngBytes As Byte(), anchoCm As Double, altoCm As Double) As Paragraph
+        If pngBytes Is Nothing OrElse pngBytes.Length = 0 Then Return ParrafoNormal("")
+
+        Dim imagePart As ImagePart = mainPart.AddImagePart(ImagePartType.Png)
+        Using ms As New MemoryStream(pngBytes)
+            imagePart.FeedData(ms)
+        End Using
+        Dim relId As String = mainPart.GetIdOfPart(imagePart)
+
+        _contadorImagen += 1
+        Dim idImagen As UInteger = CUInt(_contadorImagen)
+        Dim nombreImagen As String = "Imagen" & idImagen
+
+        Const EMU_POR_CM As Double = 360000.0
+        Dim cx As Long = CLng(anchoCm * EMU_POR_CM)
+        Dim cy As Long = CLng(altoCm * EMU_POR_CM)
+
+        ' Uri va en GraphicData, no en Picture ni en Graphic: en DocumentFormat.OpenXml 3.x
+        ' solo GraphicData expone esa propiedad. La versión original de este código la
+        ' ponía en los otros dos y no compilaba contra el paquete actual.
+        Dim grafico As New A.Graphic(
+            New A.GraphicData(
+                New PIC.Picture(
+                    New PIC.NonVisualPictureProperties(
+                        New PIC.NonVisualDrawingProperties() With {.Id = 0UI, .Name = nombreImagen},
+                        New PIC.NonVisualPictureDrawingProperties()),
+                    New PIC.BlipFill(
+                        New A.Blip() With {.Embed = relId},
+                        New A.Stretch(New A.FillRectangle())),
+                    New PIC.ShapeProperties(
+                        New A.Transform2D(
+                            New A.Offset() With {.X = 0L, .Y = 0L},
+                            New A.Extents() With {.Cx = cx, .Cy = cy}),
+                        New A.PresetGeometry(New A.AdjustValueList()) With {.Preset = A.ShapeTypeValues.Rectangle})
+                )
+            ) With {.Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"}
+        )
+
+        Dim inline1 As New DW.Inline(
+            New DW.Extent() With {.Cx = cx, .Cy = cy},
+            New DW.EffectExtent() With {.LeftEdge = 0L, .TopEdge = 0L, .RightEdge = 0L, .BottomEdge = 0L},
+            New DW.DocProperties() With {.Id = idImagen, .Name = nombreImagen},
+            New DW.NonVisualGraphicFrameDrawingProperties(New A.GraphicFrameLocks() With {.NoChangeAspect = True}),
+            grafico
+        ) With {.DistanceFromTop = 0UI, .DistanceFromBottom = 0UI, .DistanceFromLeft = 0UI, .DistanceFromRight = 0UI}
+
+        Dim p As New Paragraph()
+        p.Append(New ParagraphProperties(New Justification() With {.Val = JustificationValues.Center}))
+        p.Append(New Run(New Drawing(inline1)))
+        Return p
+    End Function
+
+    ''' <summary>Título de figura ("Figura N. Descripción"), en cursiva y centrado, debajo de la imagen.</summary>
+    Public Function TituloFigura(numero As Integer, descripcion As String) As Paragraph
+        Dim p As New Paragraph()
+        p.Append(New ParagraphProperties(New Justification() With {.Val = JustificationValues.Center}))
+        p.Append(CrearRun("Figura " & numero & ". " & descripcion, cursiva:=True, tamanoMedioPunto:=TAM_TITULO))
+        Return p
+    End Function
+
+    ' ── Encabezado — sustituye el código de proyecto resaltado en amarillo ("xx") ──────────────
+    ''' <summary>
+    ''' Reemplaza el texto "xx" resaltado en amarillo del encabezado (membrete corporativo) por el
+    ''' código de proyecto. Común a todos los reportes que reutilizan la plantilla corporativa
+    ''' (<see cref="ReporteRevisionService"/>, <see cref="InformeEstadoMurosService"/>).
+    ''' </summary>
+    Public Sub ActualizarCodigoEnEncabezado(wordDoc As WordprocessingDocument, codigo As String)
+        If String.IsNullOrWhiteSpace(codigo) Then Return
+        For Each headerPart In wordDoc.MainDocumentPart.HeaderParts
+            For Each r In headerPart.Header.Descendants(Of Run)().ToList()
+                Dim rPr = r.RunProperties
+                If rPr Is Nothing OrElse rPr.Highlight Is Nothing OrElse rPr.Highlight.Val Is Nothing Then Continue For
+                If rPr.Highlight.Val.Value <> HighlightColorValues.Yellow Then Continue For
+                Dim t = r.GetFirstChild(Of Text)()
+                If t IsNot Nothing AndAlso t.Text.Trim() = "xx" Then
+                    t.Text = codigo
+                    rPr.Highlight.Remove()
+                End If
+            Next
+        Next
+    End Sub
 
 End Module

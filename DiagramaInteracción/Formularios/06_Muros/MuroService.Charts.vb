@@ -478,6 +478,7 @@ Partial Public Class MuroService
         MinCoorX = 0
         MaxCoorY = 0
         MinCoorY = 0
+        Rectangulos.Clear() ' evita acumular rectángulos de llamadas anteriores (p. ej. al regenerar el reporte)
 
         For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count() - 1
             Dim Muro_ As Muro = proyecto.Elementos.Muros.Lista_Muros(i)
@@ -513,6 +514,14 @@ Partial Public Class MuroService
                 End If
             End If
         Next
+
+        ' Factor de forma en planta (BL/BT): relación entre la dimensión mayor y la menor del
+        ' rectángulo que envuelve la huella del edificio, a partir de las coordenadas de los muros.
+        Dim Len_X_Edificio As Single = MaxCoorX - MinCoorX
+        Dim Len_Y_Edificio As Single = MaxCoorY - MinCoorY
+        If Len_X_Edificio > 0 AndAlso Len_Y_Edificio > 0 Then
+            proyecto.Elementos.Muros.Factor_Forma = Math.Max(Len_X_Edificio, Len_Y_Edificio) / Math.Min(Len_X_Edificio, Len_Y_Edificio)
+        End If
 
     End Sub
 
@@ -586,6 +595,14 @@ Partial Public Class MuroService
             Dim Coor_Y_Min = 0
             Dim Coor_Y_Max = Coor_Y_Edificio * F_escala
 
+            ' Paleta de espesores generada dinámicamente a partir de los espesores reales del proyecto
+            ' (antes estaba fija a 0.20/0.15/0.12/0.10/0.25 m, valores de un proyecto anterior).
+            Dim EspesoresUnicos As List(Of Single) = Rectangulos.Select(Function(r) CSng(Math.Round(Math.Min(r.Espesor, r.Largo), 2))).Distinct().OrderByDescending(Function(t) t).ToList()
+            Dim ColorPorEspesor As New Dictionary(Of Single, Color)
+            For iEsp = 0 To EspesoresUnicos.Count - 1
+                ColorPorEspesor(EspesoresUnicos(iEsp)) = Colores.ListaColores(iEsp Mod Colores.ListaColores.Count)
+            Next
+
             For Each rectangulo In Rectangulos
                 Dim CoorX_Real As Single = rectangulo.CoorX - Coor_X_Edificio
                 Dim CoorY_Real As Single = Coor_Y_Edificio - (rectangulo.CoorY - MinCoorY)
@@ -596,34 +613,11 @@ Partial Public Class MuroService
                 Dim y_Centro As Single = CoorY_Real * F_escala
                 Dim y As Single = (CoorY_Real - rectangulo.Espesor / 2) * F_escala
 
-                Dim Pencil As Pen
-                Dim Colors As Brush
-
-                If Math.Round(Math.Min(rectangulo.Espesor, rectangulo.Largo), 2) = 0.2 Then
-                    Pencil = Pen_Green
-                    List_tw.Add("0.20")
-                    Colors = Brushes.Green
-                ElseIf Math.Round(Math.Min(rectangulo.Espesor, rectangulo.Largo), 2) = 0.15 Then
-                    Pencil = Pen_Blue
-                    List_tw.Add("0.15")
-                    Colors = Brushes.Blue
-                ElseIf Math.Round(Math.Min(rectangulo.Espesor, rectangulo.Largo), 2) = 0.12 Then
-                    Pencil = Pen_Magenta
-                    List_tw.Add("0.12")
-                    Colors = Brushes.Magenta
-                ElseIf Math.Round(Math.Min(rectangulo.Espesor, rectangulo.Largo), 2) = 0.1 Then
-                    Pencil = Pen_Skyblue
-                    List_tw.Add("0.10")
-                    Colors = Brushes.SkyBlue
-                ElseIf Math.Round(Math.Min(rectangulo.Espesor, rectangulo.Largo), 2) = 0.25 Then
-                    Pencil = Pen_Orangered
-                    List_tw.Add("0.25")
-                    Colors = Brushes.OrangeRed
-                Else
-                    Pencil = Pen_Black
-                    List_tw.Add("Other")
-                    Colors = Brushes.Black
-                End If
+                Dim TwRectangulo As Single = CSng(Math.Round(Math.Min(rectangulo.Espesor, rectangulo.Largo), 2))
+                Dim ColorEspesor As Color = ColorPorEspesor(TwRectangulo)
+                Dim Pencil As Pen = New Pen(ColorEspesor)
+                Dim Colors As Brush = New SolidBrush(ColorEspesor)
+                List_tw.Add(TwRectangulo.ToString("0.00"))
                 g.FillRectangle(Colors, x, y, rectangulo.Largo * F_escala, rectangulo.Espesor * F_escala)
                 g.DrawRectangle(Pencil, x, y, rectangulo.Largo * F_escala, rectangulo.Espesor * F_escala)
 
@@ -642,30 +636,15 @@ Partial Public Class MuroService
 
             Next
 
-            Dim Uniques_Tw As List(Of String) = List_tw.Distinct().ToList()
             H_Leyenda = Coor_Y_Max * 1.1 + 50
 
-            For i = 0 To Uniques_Tw.Count - 1
-                Dim x_1 As Single = W_Leyenda / 4 + (i + 1) * (Figura_Tw.Width / 2 - (60 * Uniques_Tw.Count) / 2) / (Uniques_Tw.Count + 1) + i * 60
+            For iEsp = 0 To EspesoresUnicos.Count - 1
+                Dim x_1 As Single = W_Leyenda / 4 + (iEsp + 1) * (Figura_Tw.Width / 2 - (60 * EspesoresUnicos.Count) / 2) / (EspesoresUnicos.Count + 1) + iEsp * 60
                 Dim y_1 As Single = H_Leyenda
-                Dim Colors As Brush
-
-                If Uniques_Tw(i) = "0.20" Then
-                    Colors = Brushes.Green
-                ElseIf Uniques_Tw(i) = "0.15" Then
-                    Colors = Brushes.Blue
-                ElseIf Uniques_Tw(i) = "0.12" Then
-                    Colors = Brushes.Magenta
-                ElseIf Uniques_Tw(i) = "0.10" Then
-                    Colors = Brushes.SkyBlue
-                ElseIf Uniques_Tw(i) = "0.25" Then
-                    Colors = Brushes.OrangeRed
-                Else
-                    Colors = Brushes.Black
-                End If
+                Dim Colors As Brush = New SolidBrush(ColorPorEspesor(EspesoresUnicos(iEsp)))
 
                 g.FillRectangle(Colors, x_1, y_1, 25, 25)
-                g.DrawString(Convert.ToString("Tw = " + Uniques_Tw(i) + " m"), Letra_16, Brushes.Black, New PointF(x_1 + 25, y_1))
+                g.DrawString(Convert.ToString("Tw = " & EspesoresUnicos(iEsp).ToString("0.00") & " m"), Letra_16, Brushes.Black, New PointF(x_1 + 25, y_1))
             Next
             g.Dispose()
 

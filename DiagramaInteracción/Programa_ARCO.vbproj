@@ -361,10 +361,7 @@
     <Compile Include="Formularios\06_Muros\Form_InfoDesignMuros.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Formularios\06_Muros\R_ReporteInicial.Designer.vb">
-      <DependentUpon>R_ReporteInicial.vb</DependentUpon>
-    </Compile>
-    <Compile Include="Formularios\06_Muros\R_ReporteInicial.vb">
+    <Compile Include="Formularios\06_Muros\Form_InformeEstadoMuros.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\09_Vigas\DiagramaService.vb" />
@@ -672,7 +669,7 @@
     <Compile Include="Funciones\ReporteRevisionWordHelpers.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
     <Compile Include="Funciones\Funciones_Zapatas.vb" />
-    <Compile Include="Funciones\ReporteInicial.vb" />
+    <Compile Include="Funciones\InformeEstadoMurosService.vb" />
     <Compile Include="Microsofts\Office.vb" />
     <Compile Include="Funciones\Diagrama_Interaccion_Rectangular.vb" />
     <Compile Include="Funciones\Funciones_10_AnalisisSeccion.vb" />
@@ -728,9 +725,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\06_Muros\Form_InfoDesignMuros.resx">
       <DependentUpon>Form_InfoDesignMuros.vb</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Formularios\06_Muros\R_ReporteInicial.resx">
-      <DependentUpon>R_ReporteInicial.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Formularios\Complementos\Form_Fuerzas.resx">
       <DependentUpon>Form_Fuerzas.vb</DependentUpon>
