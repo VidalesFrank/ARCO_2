@@ -399,40 +399,13 @@ Public Class Form_Reporte_Zapatas
 
     ' ── HELPERS EXCEL ────────────────────────────────────────────────────────
     Private Sub EscribirEncabezados(ws As IXLWorksheet, fila As Integer, hdrs As String())
-        For i = 0 To hdrs.Length - 1
-            Dim cell = ws.Cell(fila, i + 1)
-            cell.Value = hdrs(i)
-            With cell.Style
-                .Fill.BackgroundColor = XlEncabezado
-                .Font.FontColor = XLColor.White
-                .Font.Bold = True
-                .Font.FontSize = 10
-                .Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-                .Alignment.Vertical = XLAlignmentVerticalValues.Center
-                .Border.OutsideBorder = XLBorderStyleValues.Thin
-                .Border.OutsideBorderColor = XLColor.White
-            End With
-            ws.Row(fila).Height = 20
-        Next
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.EscribirEncabezados(ws, fila, hdrs, tamanoFuente:=10, altoFila:=20)
     End Sub
 
     Private Sub EscribirFactor(cell As IXLCell, valor As Double)
-        If valor <= 0 Then cell.Value = "-" : Return
-        Dim v = Math.Round(Math.Min(valor, 9.99), 2)
-        cell.Value = v
-        cell.Style.NumberFormat.Format = "0.00"
-        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-        If v >= 1.0 Then
-            cell.Style.Fill.BackgroundColor = XlOKFondo
-            cell.Style.Font.FontColor = XlOKTexto
-        ElseIf v >= 0.9 Then
-            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFEB9C")
-            cell.Style.Font.FontColor = XLColor.FromHtml("#9C5700")
-        Else
-            cell.Style.Fill.BackgroundColor = XlMalFondo
-            cell.Style.Font.FontColor = XlMalTexto
-        End If
-        cell.Style.Font.Bold = True
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.EscribirFactor(cell, valor, ReporteHelpers.SinDato.CeroOMenor, umbralOK:=1.0, conBandaAlerta:=True)
     End Sub
 
     Private Sub EscribirCumple(cell As IXLCell, cumple As Boolean)

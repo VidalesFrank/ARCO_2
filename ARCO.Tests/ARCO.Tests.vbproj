@@ -22,17 +22,27 @@
     <OptionStrict>Off</OptionStrict>
     <OptionInfer>On</OptionInfer>
     <OptionExplicit>On</OptionExplicit>
+    <!-- net472 necesita redirecciones: ClosedXML exige System.Memory 4.0.1.2 y
+         el host de pruebas arrastra 4.0.1.1 por sus propias dependencias. -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.6.1" />
     <PackageReference Include="MSTest.TestFramework" Version="3.6.1" />
+    <!-- Versión que espera ClosedXML (ensamblado 4.0.1.2) -->
+    <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
+    <Reference Include="ClosedXML">
+      <HintPath>..\DiagramaInteracción\bin\x64\Debug\ClosedXML.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
     <Reference Include="ARCO">
       <HintPath>..\DiagramaInteracción\bin\x64\Debug\ARCO.exe</HintPath>
       <Private>true</Private>

@@ -380,28 +380,13 @@ Public Class Form_Reporte_Resumen_Muros
     ' ── Helpers ClosedXML ─────────────────────────────────────────────────────
 
     Private Sub EscribirEncabezados(ws As IXLWorksheet, fila As Integer, enc As String())
-        For i = 0 To enc.Length - 1
-            With ws.Cell(fila, i + 1)
-                .Value = enc(i)
-                .Style.Fill.BackgroundColor = XlEncabezado
-                .Style.Font.FontColor = XLColor.White
-                .Style.Font.Bold = True
-                .Style.Font.FontSize = 11
-                .Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-                .Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
-            End With
-        Next
-        ws.Row(fila).Height = 22
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.EscribirEncabezados(ws, fila, enc, conBorde:=False)
     End Sub
 
     Private Sub EscribirFactor(cell As IXLCell, valor As Double)
-        Dim v = Math.Round(Math.Min(valor, 9.99), 2)
-        cell.Value = v
-        cell.Style.NumberFormat.Format = "0.00"
-        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-        cell.Style.Font.Bold = True
-        cell.Style.Fill.BackgroundColor = If(v >= 0.9, XlOKFondo, XlMalFondo)
-        cell.Style.Font.FontColor = If(v >= 0.9, XlOKTexto, XlMalTexto)
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.EscribirFactor(cell, valor)
     End Sub
 
     Private Sub EscribirEstadoXL(cell As IXLCell, estado As String)
@@ -457,11 +442,8 @@ Public Class Form_Reporte_Resumen_Muros
     End Sub
 
     Private Sub AjustarColumnas(ws As IXLWorksheet, numCols As Integer)
-        ws.Columns(1, numCols).AdjustToContents()
-        For c = 1 To numCols
-            If ws.Column(c).Width > 40 Then ws.Column(c).Width = 40
-        Next
-        ws.SheetView.FreezeRows(1)
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.AjustarColumnas(ws, numCols, anchoMaximo:=40)
     End Sub
 
     ' ── Helpers UI ───────────────────────────────────────────────────────────

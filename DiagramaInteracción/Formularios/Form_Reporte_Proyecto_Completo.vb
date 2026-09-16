@@ -532,53 +532,18 @@ Public Class Form_Reporte_Proyecto_Completo
     ' Helpers de formato
     ' =========================================================================
     Private Sub EscribirEncabezados(ws As IXLWorksheet, fila As Integer, encabezados As String())
-        For i = 0 To encabezados.Length - 1
-            Dim cell = ws.Cell(fila, i + 1)
-            cell.Value = encabezados(i)
-            With cell.Style
-                .Fill.BackgroundColor = XlEncabezado
-                .Font.FontColor = XLColor.White
-                .Font.Bold = True
-                .Font.FontSize = 10
-                .Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-                .Alignment.Vertical = XLAlignmentVerticalValues.Center
-                .Border.OutsideBorder = XLBorderStyleValues.Thin
-                .Border.OutsideBorderColor = XLColor.White
-            End With
-            ws.Row(fila).Height = 20
-        Next
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.EscribirEncabezados(ws, fila, encabezados, tamanoFuente:=10, altoFila:=20)
     End Sub
 
     Private Sub EscribirFactor(cell As IXLCell, valor As Double)
-        If valor <= 0 Then
-            cell.Value = "-"
-            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-            Return
-        End If
-        Dim v = Math.Round(Math.Min(valor, 9.99), 2)
-        cell.Value = v
-        cell.Style.NumberFormat.Format = "0.00"
-        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-        If v >= 1.0 Then
-            cell.Style.Fill.BackgroundColor = XlOKFondo
-            cell.Style.Font.FontColor = XlOKTexto
-        ElseIf v >= 0.9 Then
-            cell.Style.Fill.BackgroundColor = XlAlertaFondo
-            cell.Style.Font.FontColor = XlAlertaTexto
-        Else
-            cell.Style.Fill.BackgroundColor = XlMalFondo
-            cell.Style.Font.FontColor = XlMalTexto
-        End If
-        cell.Style.Font.Bold = True
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.EscribirFactor(cell, valor, ReporteHelpers.SinDato.CeroOMenor, umbralOK:=1.0, conBandaAlerta:=True)
     End Sub
 
     Private Sub AgregarBordesTabla(ws As IXLWorksheet, filaIni As Integer, filaFin As Integer, numCols As Integer)
-        If filaFin < filaIni Then Return
-        Dim rango = ws.Range(filaIni, 1, filaFin, numCols)
-        rango.Style.Border.InsideBorder = XLBorderStyleValues.Hair
-        rango.Style.Border.InsideBorderColor = XLColor.FromHtml("#CCCCCC")
-        rango.Style.Border.OutsideBorder = XLBorderStyleValues.Medium
-        rango.Style.Border.OutsideBorderColor = XlEncabezado
+        ' Delega en ReporteHelpers: el cuerpo estaba duplicado en varios reportes.
+        ReporteHelpers.AgregarBordesTabla(ws, filaIni, filaFin, numCols)
     End Sub
 
     ' =========================================================================
