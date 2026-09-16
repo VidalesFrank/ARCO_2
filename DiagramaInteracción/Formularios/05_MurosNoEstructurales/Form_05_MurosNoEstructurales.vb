@@ -44,7 +44,17 @@ Public Class Form_05_MurosNoEstructurales
         P_Imagen_MuroAnalisis.SizeMode = PictureBoxSizeMode.Zoom
         P_ImagenMuros.SizeMode = PictureBoxSizeMode.Zoom
         P_ImagenAntepecho.SizeMode = PictureBoxSizeMode.Zoom
+
+        ' GroupBox13 está anclado Left+Right y su ancho se actualiza DESPUÉS del
+        ' Resize del formulario. Engancharse a su SizeChanged realinea la fila
+        ' superior justo cuando la referencia ya tiene su tamaño real, sin
+        ' depender del orden en que WinForms haga el layout.
+        AddHandler GroupBox13.SizeChanged, Sub() AjustarAnchosResultados()
+        AjustarAnchosResultados()
+
     End Sub
+
+
 
     Private Sub Btn_AlturasPisos_Click(sender As Object, e As EventArgs) Handles Btn_AlturasPisos.Click
         Dim nPisos As Integer
@@ -578,6 +588,45 @@ Public Class Form_05_MurosNoEstructurales
         GroupBox12.Top = topImg
         GroupBox12.Width = anchoImg
         GroupBox12.Height = altoImg
+
+        AjustarAnchosResultados()
+    End Sub
+
+    ''' <summary>
+    ''' Ancho de la fila superior de la pestaña "Resultados".
+    '''
+    ''' Esa pestaña no estaba contemplada en el reacomodo: "Cortante" (GroupBox8)
+    ''' y "Flexión" (GroupBox9) estaban anclados Top+Left, o sea fijos, mientras
+    ''' que las dos tablas de abajo (GroupBox13/14) están ancladas Top+Left+Right
+    ''' y sí se estiran. El resultado era una fila superior que se cortaba en x=877
+    ''' y un hueco muerto hasta el borde derecho.
+    '''
+    ''' Se toma el ancho de las tablas como referencia y se reparte la fila
+    ''' superior en la misma proporción 2:1 que tenía en el diseño.
+    ''' </summary>
+    Private Sub AjustarAnchosResultados()
+
+        Try
+            Const GUTTER As Integer = 14
+
+            ' La referencia es el rectángulo REAL de la tabla de abajo, no un margen
+            ' calculado: sus márgenes de diseño son asimétricos (16 a la izquierda,
+            ' 31 a la derecha) y deducirlos dejaba la fila superior desalineada.
+            Dim izq As Integer = GroupBox13.Left
+            Dim anchoRef As Integer = GroupBox13.Width
+            If anchoRef <= 300 Then Exit Sub
+
+            GroupBox8.Left = izq
+            Dim anchoCortante As Integer = CInt((anchoRef - GUTTER) * 2.0 / 3.0)
+            GroupBox8.Width = anchoCortante
+
+            GroupBox9.Left = GroupBox8.Right + GUTTER
+            GroupBox9.Width = anchoRef - anchoCortante - GUTTER
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_05_MurosNoEstructurales.AjustarAnchosResultados")
+        End Try
+
     End Sub
 
     '-------------- Reporte PDF -------------

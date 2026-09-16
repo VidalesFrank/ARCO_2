@@ -3,6 +3,7 @@ Public Class Form_AlturasPisos
 
     Private ReadOnly dgv As New DataGridView()
     Private ReadOnly lblHnTotal As New Label()
+    Private ReadOnly lblAyuda As New Label()
     Private ReadOnly btnGenerar As New Button()
     Private ReadOnly btnAceptar As New Button()
     Private ReadOnly btnCancelar As New Button()
@@ -32,8 +33,8 @@ Public Class Form_AlturasPisos
         ' Form height adapts to NPisos: DGV rows ≈30px each, header 30px, capped at 360px.
         ' Buttons are always placed 10px below the DGV so they are never cut off.
         Dim dgvH As Integer = Math.Max(80, Math.Min(360, 30 + NPisos * 30))
-        Dim btnY As Integer = 80 + dgvH + 10
-        Me.ClientSize = New Size(296, btnY + 34 + 10)
+        Dim btnY As Integer = 80 + dgvH + 34
+        Me.ClientSize = New Size(360, btnY + 34 + 10)
 
         lblHnTotal.AutoSize = True
         lblHnTotal.Font = New Font("SansSerif", 11, FontStyle.Bold)
@@ -41,7 +42,7 @@ Public Class Form_AlturasPisos
 
         btnGenerar.Text = "Generar uniforme (Hx típica)"
         btnGenerar.Location = New Point(10, 38)
-        btnGenerar.Size = New Size(276, 32)
+        btnGenerar.Size = New Size(340, 32)
         btnGenerar.FlatStyle = FlatStyle.Flat
         btnGenerar.FlatAppearance.BorderSize = 0
         btnGenerar.BackColor = System.Drawing.Color.FromArgb(87, 87, 87)
@@ -50,13 +51,15 @@ Public Class Form_AlturasPisos
         AddHandler btnGenerar.Click, AddressOf BtnGenerar_Click
 
         dgv.Location = New Point(10, 80)
-        dgv.Size = New Size(276, dgvH)
+        dgv.Size = New Size(340, dgvH)
         dgv.AllowUserToAddRows = False
         dgv.AllowUserToDeleteRows = False
         dgv.RowHeadersVisible = False
         dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        dgv.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgv.MultiSelect = False
+        ' Copiar/pegar/rellenar: permite traer una columna de alturas desde Excel
+        ' y pegarla de un golpe, o repetir un valor hacia abajo. Activar() ya deja
+        ' MultiSelect = True y SelectionMode = CellSelect.
+        GridCopiarPegar.Activar(dgv)
         dgv.BackgroundColor = System.Drawing.Color.FromArgb(200, 200, 200)
         dgv.BorderStyle = BorderStyle.Fixed3D
         dgv.Font = New Font("SansSerif", 11, FontStyle.Regular)
@@ -79,9 +82,12 @@ Public Class Form_AlturasPisos
         dgv.Columns.Add(colPiso)
         dgv.Columns.Add(colHw)
         AddHandler dgv.CellEndEdit, AddressOf Dgv_CellEndEdit
+        ' Pegar y rellenar cambian celdas sin pasar por CellEndEdit: el total
+        ' tiene que seguirlos igual.
+        AddHandler dgv.CellValueChanged, AddressOf Dgv_CellEndEdit
 
         btnAceptar.Text = "Aceptar"
-        btnAceptar.Size = New Size(132, 34)
+        btnAceptar.Size = New Size(164, 34)
         btnAceptar.Location = New Point(10, btnY)
         btnAceptar.FlatStyle = FlatStyle.Flat
         btnAceptar.FlatAppearance.BorderSize = 0
@@ -91,8 +97,8 @@ Public Class Form_AlturasPisos
         AddHandler btnAceptar.Click, AddressOf BtnAceptar_Click
 
         btnCancelar.Text = "Cancelar"
-        btnCancelar.Size = New Size(132, 34)
-        btnCancelar.Location = New Point(154, btnY)
+        btnCancelar.Size = New Size(164, 34)
+        btnCancelar.Location = New Point(186, btnY)
         btnCancelar.FlatStyle = FlatStyle.Flat
         btnCancelar.FlatAppearance.BorderSize = 0
         btnCancelar.BackColor = System.Drawing.Color.FromArgb(87, 87, 87)
@@ -100,7 +106,15 @@ Public Class Form_AlturasPisos
         btnCancelar.Font = New Font("SansSerif", 11, FontStyle.Bold)
         AddHandler btnCancelar.Click, Sub() Me.DialogResult = DialogResult.Cancel
 
-        Me.Controls.AddRange({lblHnTotal, btnGenerar, dgv, btnAceptar, btnCancelar})
+        lblAyuda.Text = "Ctrl+C / Ctrl+V / Ctrl+D  ·  clic derecho: más opciones"
+        lblAyuda.AutoSize = False
+        lblAyuda.Size = New Size(340, 20)
+        lblAyuda.Location = New Point(10, 80 + dgvH + 6)
+        lblAyuda.Font = New Font("SansSerif", 8.5F, FontStyle.Regular)
+        lblAyuda.ForeColor = System.Drawing.Color.FromArgb(70, 70, 70)
+        lblAyuda.TextAlign = ContentAlignment.MiddleLeft
+
+        Me.Controls.AddRange({lblHnTotal, btnGenerar, dgv, lblAyuda, btnAceptar, btnCancelar})
     End Sub
 
     Private Sub CargarAlturas(alturasPrevias As List(Of Single))
