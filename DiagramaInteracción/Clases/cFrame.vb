@@ -203,8 +203,8 @@ Public Class cResultadoCortantePlasticoFrame
     ''' Queda Nothing en proyectos guardados antes de esta versión y en vanos
     ''' donde las zonas confinadas se solapan (no hay zona central).
     ''' </summary>
-    ''' Campo y no propiedad: <OptionalField> solo se puede aplicar a campos.
-    ''' Queda Nothing al abrir un .esm anterior; se recalcula al revisar la viga.
+    ' Campo y no propiedad: el atributo OptionalField solo admite campos.
+    ' Queda Nothing al abrir un .esm anterior; se recalcula al revisar la viga.
     <OptionalField> Public ZonaCentro As cRevisionCortantePlasticoZona
 
 End Class

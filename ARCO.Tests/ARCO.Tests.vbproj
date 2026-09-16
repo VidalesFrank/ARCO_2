@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de las funciones de cálculo de ARCO.
+
+    Referencia el ENSAMBLADO ya compilado (ARCO.exe), no el .vbproj. Es
+    deliberado: el proyecto principal usa packages.config y referencias COM
+    (ActiveX) que no se restauran igual bajo el SDK moderno, así que una
+    ProjectReference obligaría a recompilarlo con otra cadena de herramientas.
+    Referenciando el binario, las pruebas se ejecutan contra exactamente lo que
+    se compiló en Visual Studio.
+
+    Esto implica: compilar ARCO primero (Release|x64), después correr las pruebas.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>ARCO.Tests</RootNamespace>
+    <AssemblyName>ARCO.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <PlatformTarget>x64</PlatformTarget>
+    <OptionStrict>Off</OptionStrict>
+    <OptionInfer>On</OptionInfer>
+    <OptionExplicit>On</OptionExplicit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="ARCO">
+      <HintPath>..\DiagramaInteracción\bin\x64\Debug\ARCO.exe</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
