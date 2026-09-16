@@ -97,6 +97,16 @@ Public Class Form_11_Nervios
         End Try
         ' Aplicar renderer ARCO (dropdown oscuro, hover verde)
         MenuStrip1.Renderer = New ARCOMenuRenderer()
+
+        ' Menú "? Tablas ETABS": Nervios importa siete hojas y era el módulo
+        ' que más fácil dejaba perdido al usuario sobre cuáles exportar.
+        Dim itemAyudaTablas As New ToolStripMenuItem("? Tablas ETABS") With {
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ToolTipText = "Qué hojas necesita este módulo y cómo se llaman en E17 y E23"
+        }
+        AddHandler itemAyudaTablas.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Nervios")
+        MenuStrip1.Items.Add(itemAyudaTablas)
         ' Agregar "Datos generales..." al menú Opciones (no está en el Designer para mantenerlo limpio)
         Dim miDatos As New ToolStripMenuItem("Datos generales...")
         AddHandler miDatos.Click, AddressOf DatosGeneralesToolStripMenuItem_Click

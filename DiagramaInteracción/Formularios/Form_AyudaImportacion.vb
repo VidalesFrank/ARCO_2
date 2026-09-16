@@ -56,7 +56,20 @@ Public Class Form_AyudaImportacion
         },
         {
             "Zapatas", New List(Of InfoTabla) From {
-                New InfoTabla("Joint Reactions", "Reacciones en nodos de cimentación", "Joint Reactions", "Joint Reactions")
+                New InfoTabla("Joint Reactions", "Reacciones en nodos de cimentación (P, V, M)", "Joint Reactions", "Joint Reactions"),
+                New InfoTabla("Coordenadas de nodos", "Posición en planta de cada apoyo: sin ella no hay vista en planta ni clasificación de medianeras y esquineras", "Joint Coordinates", "Objects and Elements - Joints", False),
+                New InfoTabla("Ejes estructurales", "Líneas de cuadrícula para ubicar cada zapata en la planta", "Grid Lines", "Grid Definitions - Grid Lines", False)
+            }
+        },
+        {
+            "Nervios", New List(Of InfoTabla) From {
+                New InfoTabla("Joints", "Coordenadas de los nodos", "Joint Coordinates", "Objects and Elements - Joints"),
+                New InfoTabla("Frames", "Conectividad de los elementos", "Connectivity - Frame", "Objects and Elements - Frames"),
+                New InfoTabla("Asignación secciones", "Sección asignada a cada frame", "Frame Assignments - Sections", "Frame Assigns - Sect Prop"),
+                New InfoTabla("Definición secciones", "Dimensiones b x h de las secciones rectangulares", "Frame Sections", "Frame Sec Def - Conc Rect"),
+                New InfoTabla("Materiales concreto", "Resistencia del concreto y demás propiedades", "Material Properties - Concrete", "Mat Prop - Concrete Data"),
+                New InfoTabla("Fuerzas vigas", "M3 y V2 por combinación y estación", "Beam Forces", "Element Forces - Beams"),
+                New InfoTabla("Grillas", "Ejes estructurales. Si no vienen, se pueden definir a mano en el módulo", "Grid Lines", "Grid Definitions - Grid Lines", False)
             }
         }
     }
@@ -100,7 +113,7 @@ Public Class Form_AyudaImportacion
         Dim panelTop As New Panel With {
             .Dock = DockStyle.Top,
             .Height = 52,
-            .BackColor = Color.FromArgb(50, 75, 115)
+            .BackColor = Color.FromArgb(87, 87, 87)
         }
         Dim lblTitulo As New Label With {
             .Text = "  Tablas ETABS requeridas — Módulo: " & _modulo,
@@ -185,7 +198,7 @@ Public Class Form_AyudaImportacion
             .ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
             .Font = New Font("Segoe UI", 8.5)
         }
-        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(50, 75, 115)
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(87, 87, 87)
         dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White
         dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI Semibold", 9, FontStyle.Bold)
         dgv.EnableHeadersVisualStyles = False

@@ -11,6 +11,91 @@ Public Class Form_07_Pag_Zapatas
         ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
         PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         PrepararColumnaTipoApoyo()
+        AgregarMenuAyudaTablas()
+        AgregarMenuPlanta()
+    End Sub
+
+    ''' <summary>
+    ''' Menú "? Tablas ETABS", igual que en Pilas, Columnas, Muros y Vigas.
+    ''' Zapatas ya tenía la ficha de ayuda definida, pero ningún menú la abría.
+    ''' </summary>
+    Private Sub AgregarMenuAyudaTablas()
+
+        Dim itemAyuda As New ToolStripMenuItem("? Tablas ETABS") With {
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ToolTipText = "Qué hojas necesita este módulo y cómo se llaman en E17 y E23"
+        }
+        AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Zapatas")
+        MenuStrip1.Items.Add(itemAyuda)
+    End Sub
+
+    ' =====================================================================
+    ' PLANTA DE CIMENTACIÓN
+    ' =====================================================================
+
+    Private _planta As Form_Planta_Zapatas = Nothing
+
+    ''' <summary>
+    ''' Agrega "Planta de cimentación..." al menú Ver. Es la forma de revisar de
+    ''' un vistazo la clasificación de medianeras y esquineras: sobre la planta
+    ''' se ve enseguida si el programa acertó, cosa que en una tabla de cien
+    ''' filas es imposible.
+    ''' </summary>
+    Private Sub AgregarMenuPlanta()
+
+        Dim item As New ToolStripMenuItem("Planta de cimentación...") With {
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ToolTipText = "Vista en planta con ejes, tipo de apoyo y estado de cada zapata"
+        }
+        AddHandler item.Click, AddressOf AbrirPlanta_Click
+        Ver_Zapatas.DropDownItems.Add(item)
+
+    End Sub
+
+    Private Sub AbrirPlanta_Click(sender As Object, e As EventArgs)
+
+        If Proyecto.Elementos.Zapatas.Tipos Is Nothing OrElse Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
+            MessageBox.Show("Primero importe y calcule las zapatas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        ' Una sola ventana: reabrirla la trae al frente con los datos al día.
+        If _planta IsNot Nothing AndAlso Not _planta.IsDisposed Then
+            _planta.Zapatas = Proyecto.Elementos.Zapatas.Tipos
+            _planta.GridLines = Proyecto.Elementos.Grids.GridLines
+            _planta.Refrescar()
+            _planta.BringToFront()
+            Return
+        End If
+
+        _planta = New Form_Planta_Zapatas() With {
+            .Zapatas = Proyecto.Elementos.Zapatas.Tipos,
+            .GridLines = Proyecto.Elementos.Grids.GridLines
+        }
+        AddHandler _planta.ZapataSeleccionada, AddressOf SeleccionarDesdeLaPlanta
+        _planta.Show(Me)
+
+    End Sub
+
+    ''' <summary>Al hacer clic en la planta, se lleva la tabla a esa fila.</summary>
+    Private Sub SeleccionarDesdeLaPlanta(z As cZapata)
+
+        If z Is Nothing OrElse Tabla_Elementos Is Nothing Then Exit Sub
+
+        For Each fila As DataGridViewRow In Tabla_Elementos.Rows
+            If fila.IsNewRow Then Continue For
+            If Not String.Equals(Convert.ToString(fila.Cells(0).Value),
+                                 Convert.ToString(z.Label_joint), StringComparison.OrdinalIgnoreCase) Then Continue For
+
+            Tabla_Elementos.ClearSelection()
+            fila.Selected = True
+            Tabla_Elementos.FirstDisplayedScrollingRowIndex = fila.Index
+            Exit For
+        Next
+
     End Sub
 
     ' =====================================================================
