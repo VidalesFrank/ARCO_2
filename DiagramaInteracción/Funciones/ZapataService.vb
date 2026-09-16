@@ -212,48 +212,144 @@ Public NotInheritable Class ZapataService
     End Class
 
     ''' <summary>
-    ''' Recorre los resultados ya calculados de la zapata y se queda con el peor
-    ''' C/D. Las cinco revisiones y su capacidad/demanda son las mismas que
-    ''' muestra la tabla de reporte del módulo:
+    ''' Las cuatro relaciones capacidad/demanda de una zapata bajo UNA
+    ''' combinación. Cero significa "esta revisión no aplica en esta
+    ''' combinación" (no hay demanda), no "capacidad infinita".
+    ''' </summary>
+    Public Class FactoresCombinacion
+
+        Public Property Combinacion As String = ""
+
+        ''' <summary>
+        ''' De qué lista viene. Importa porque la capacidad admisible del suelo
+        ''' es distinta en estático y en dinámico.
+        ''' </summary>
+        Public Property EsDinamica As Boolean
+
+        Public Property Suelo As Double
+        Public Property Punzonamiento As Double
+        Public Property Cortante As Double
+        Public Property Flexion As Double
+
+        ''' <summary>Nombre de la revisión que gobierna, o cadena vacía si ninguna aplica.</summary>
+        Public ReadOnly Property Revision As String
+            Get
+                Dim mejor As String = ""
+                Dim menor As Double = Double.MaxValue
+                For Each p In Pares()
+                    If p.Item2 > 0 AndAlso p.Item2 < menor Then
+                        menor = p.Item2
+                        mejor = p.Item1
+                    End If
+                Next
+                Return mejor
+            End Get
+        End Property
+
+        ''' <summary>Menor de las cuatro, ignorando las que no aplican. 0 si ninguna aplica.</summary>
+        Public ReadOnly Property Peor As Double
+            Get
+                Dim menor As Double = Double.MaxValue
+                For Each p In Pares()
+                    If p.Item2 > 0 AndAlso p.Item2 < menor Then menor = p.Item2
+                Next
+                Return If(menor = Double.MaxValue, 0, menor)
+            End Get
+        End Property
+
+        Private Function Pares() As List(Of Tuple(Of String, Double))
+            Return New List(Of Tuple(Of String, Double)) From {
+                Tuple.Create(If(EsDinamica, "Suelo dinámico", "Suelo estático"), Suelo),
+                Tuple.Create("Punzonamiento", Punzonamiento),
+                Tuple.Create("Cortante", Cortante),
+                Tuple.Create("Flexión", Flexion)
+            }
+        End Function
+
+    End Class
+
+    ''' <summary>
+    ''' Las relaciones capacidad/demanda de cada combinación calculada. Son las
+    ''' mismas que arma la tabla de reporte del módulo:
     '''
-    '''   Suelo estático    qAdm_Est / qMax
-    '''   Suelo dinámico    qAdm_Din / qMax
+    '''   Suelo             qAdm / qMax, con la admisible estática o dinámica
+    '''                     según de qué lista venga la combinación
     '''   Punzonamiento     Vc_p / |Vu_p|
     '''   Cortante          el menor de Vc2/max(Vu1,Vu3) y Vc1/max(Vu2,Vu4)
-    '''   Flexión           el menor de rho_colocado / rho_requerido en cada dirección
+    '''   Flexión           el menor de rho colocado / rho requerido en cada dirección
     '''
-    ''' Las revisiones sin demanda (denominador nulo) no se toman en cuenta: un
-    ''' cociente infinito no significa que la zapata esté sobrada, significa que
-    ''' esa revisión no aplica en esa combinación.
+    ''' Una revisión sin demanda queda en 0. Es deliberado: dividir por cero da
+    ''' infinito, y un infinito arrastrado a un mínimo haría creer que la zapata
+    ''' está sobrada cuando lo que pasa es que esa revisión no aplica.
+    '''
+    ''' Una combinación que no aparece en ninguna de las dos listas se trata como
+    ''' estática. Pasa cuando se cambian las listas sin recalcular; usar la
+    ''' admisible menor deja el resultado del lado seguro en vez de omitir la
+    ''' revisión del suelo.
     ''' </summary>
-    Public Shared Function Resumir(z As cZapata) As ResumenZapata
+    Public Shared Function FactoresPorCombinacion(z As cZapata) As List(Of FactoresCombinacion)
 
-        Dim r As New ResumenZapata()
-        If z Is Nothing OrElse z.Resultados Is Nothing OrElse z.Resultados.Count = 0 Then Return r
+        Dim lista As New List(Of FactoresCombinacion)()
+        If z Is Nothing OrElse z.Resultados Is Nothing Then Return lista
 
-        ' Suelo: la admisible depende de si la combinación es estática o dinámica,
-        ' así que hay que mirar de qué lista viene, no solo el resultado.
-        Considerar(r, z, z.Lista_Combinaciones_Estaticas, "Suelo estático", z.qAdm_Est)
-        Considerar(r, z, z.Lista_Combinaciones_Dinamicas, "Suelo dinámico", z.qAdm_Din)
+        Dim dinamicas As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        If z.Lista_Combinaciones_Dinamicas IsNot Nothing Then
+            For Each c In z.Lista_Combinaciones_Dinamicas
+                If Not String.IsNullOrEmpty(c.LoadCase) Then dinamicas.Add(c.LoadCase)
+            Next
+        End If
 
         For Each par In z.Resultados
 
             Dim res = par.Value
             If res Is Nothing Then Continue For
-            r.TieneResultados = True
+
+            Dim f As New FactoresCombinacion() With {
+                .Combinacion = par.Key,
+                .EsDinamica = dinamicas.Contains(par.Key)
+            }
+
+            Dim qAdm As Double = If(f.EsDinamica, z.qAdm_Din, z.qAdm_Est)
+            If qAdm > 0 AndAlso res.qMax > 0 Then f.Suelo = qAdm / res.qMax
 
             Dim vu As Double = Math.Abs(res.Vu_p)
-            If vu > 0 Then Anotar(r, res.Vc_p / vu, "Punzonamiento", par.Key)
+            If vu > 0 Then f.Punzonamiento = res.Vc_p / vu
 
             Dim vuA As Double = Math.Max(res.Vu1_C, res.Vu3_C)
-            If vuA > 0 Then Anotar(r, res.Vc2_C / vuA, "Cortante", par.Key)
-
             Dim vuB As Double = Math.Max(res.Vu2_C, res.Vu4_C)
-            If vuB > 0 Then Anotar(r, res.Vc1_C / vuB, "Cortante", par.Key)
+            Dim cort As Double = Double.MaxValue
+            If vuA > 0 Then cort = Math.Min(cort, res.Vc2_C / vuA)
+            If vuB > 0 Then cort = Math.Min(cort, res.Vc1_C / vuB)
+            If cort <> Double.MaxValue Then f.Cortante = cort
 
-            If res.Rho_1 > 0 Then Anotar(r, z.Rho_L1 / res.Rho_1, "Flexión", par.Key)
-            If res.Rho_2 > 0 Then Anotar(r, z.Rho_L2 / res.Rho_2, "Flexión", par.Key)
+            Dim flex As Double = Double.MaxValue
+            If res.Rho_1 > 0 Then flex = Math.Min(flex, z.Rho_L1 / res.Rho_1)
+            If res.Rho_2 > 0 Then flex = Math.Min(flex, z.Rho_L2 / res.Rho_2)
+            If flex <> Double.MaxValue Then f.Flexion = flex
 
+            lista.Add(f)
+
+        Next
+
+        Return lista
+
+    End Function
+
+    ''' <summary>
+    ''' La peor de todas las revisiones en todas las combinaciones. Es lo que
+    ''' colorea la vista en planta y lo que va al resumen del reporte.
+    ''' </summary>
+    Public Shared Function Resumir(z As cZapata) As ResumenZapata
+
+        Dim r As New ResumenZapata()
+
+        For Each f In FactoresPorCombinacion(z)
+            r.TieneResultados = True
+            Dim peor = f.Peor
+            If peor <= 0 OrElse peor >= r.PeorFactor Then Continue For
+            r.PeorFactor = peor
+            r.Revision = f.Revision
+            r.Combinacion = f.Combinacion
         Next
 
         If r.PeorFactor = Double.MaxValue Then r.PeorFactor = 0
@@ -261,33 +357,5 @@ Public NotInheritable Class ZapataService
         Return r
 
     End Function
-
-    Private Shared Sub Considerar(r As ResumenZapata, z As cZapata,
-                                  combos As List(Of cCombinacionPila),
-                                  revision As String, qAdm As Double)
-
-        If combos Is Nothing OrElse qAdm <= 0 Then Exit Sub
-
-        For Each comb In combos
-            Dim res As ResultadoZapata = Nothing
-            If Not z.Resultados.TryGetValue(comb.LoadCase, res) Then Continue For
-            If res Is Nothing OrElse res.qMax <= 0 Then Continue For
-            r.TieneResultados = True
-            Anotar(r, qAdm / res.qMax, revision, comb.LoadCase)
-        Next
-
-    End Sub
-
-    Private Shared Sub Anotar(r As ResumenZapata, factor As Double,
-                              revision As String, combinacion As String)
-
-        If Double.IsNaN(factor) OrElse Double.IsInfinity(factor) Then Exit Sub
-        If factor >= r.PeorFactor Then Exit Sub
-
-        r.PeorFactor = factor
-        r.Revision = revision
-        r.Combinacion = combinacion
-
-    End Sub
 
 End Class

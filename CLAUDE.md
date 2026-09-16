@@ -186,6 +186,49 @@ Tablas: Tabla_Demandas, Ref_Superior, Ref_Inferior, Ref_Transversal, Tabla_Resul
 
 ---
 
+## Módulo de Zapatas
+
+### Servicio (`Funciones/ZapataService.vb`)
+Toda la lógica que no es UI vive aquí y está cubierta por pruebas:
+- `AlfaS(tipo)` / `PerimetroCritico(b, h, d, tipo)` / `CapacidadPunzonamiento(...)`
+- `ClasificarApoyos(zapatas, tolerancia)` — propone el tipo por posición en planta
+- `FactoresPorCombinacion(z)` / `Resumir(z)` — las relaciones C/D y cuál gobierna
+
+### Tipo de apoyo — NO es opcional
+`eTipoApoyoZapata` (Central / Medianera / Esquinera) gobierna **alfa_s** y el
+**perímetro crítico b0** de NSR-10 C.11.11:
+
+| Tipo | alfa_s | b0 | φVc del caso de referencia* |
+|------|--------|----|------------------------------|
+| Central | 40 | `2(h+b) + 4d` | 1735 kN (100 %) |
+| Medianera | 30 | `(h+d) + 2(b+d/2)` | 1072 kN (62 %) |
+| Esquinera | 20 | `(b+d/2) + (h+d/2)` | 638 kN (37 %) |
+
+\* zapata 2.00×2.00, pedestal 0.40×0.40, d = 0.45 m, fc = 21 MPa.
+
+Se clasifica automáticamente al importar (cuenta en cuántas de las cuatro
+direcciones hay vecinos: 4 → Central, 3 → Medianera, menos → Esquinera) y se
+puede corregir en la columna "Tipo de apoyo" de `Tabla_Elementos`.
+**`TipoApoyoManual = True` blinda la corrección: `ClasificarApoyos` no la pisa.**
+
+Limitación conocida: con una sola línea de columnas (plano degenerado) todas
+salen esquineras. Con dos líneas ya funciona.
+
+### g1..g8, gf, ga, gi, ge son PRESIONES, no factores
+Están en **kN/m²**: presión de contacto en las esquinas de la zapata (g1..g4),
+en el perímetro de punzonamiento (g5..g8) y en las secciones críticas de
+cortante (`*_C`, a d de la cara) y flexión (`*_F`, en la cara del pedestal).
+
+Nunca pasarlas por `ReporteHelpers.EscribirFactor` ni `AsignarCD`: esos recortan
+en 9.99 y aplican el semáforo de C/D. Usar `EscribirValor` / `AsignarValor`.
+Una presión negativa es **tracción** bajo la zapata — hay que verla, no ocultarla.
+
+### Hojas ETABS
+`Joint Reactions` (obligatoria) + nodos y ejes (opcionales, pero sin ellas no hay
+planta ni clasificación automática). Ver `Form_AyudaImportacion`, módulo "Zapatas".
+
+---
+
 ## Infraestructura transversal
 
 ### Logger (`Funciones/Logger.vb`)

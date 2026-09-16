@@ -245,4 +245,63 @@ Public Class ReporteHelpersTests
         Assert.AreEqual(ReporteHelpers.XlMalFondo, mal.Style.Fill.BackgroundColor)
     End Sub
 
+    ' =====================================================================
+    ' EscribirValor
+    ' =====================================================================
+
+    ''' <summary>
+    ''' La diferencia con EscribirFactor: un factor se recorta en 9.99, una
+    ''' magnitud fisica no. Es exactamente el error que tenia el reporte de
+    ''' Zapatas — las presiones de contacto salian todas escritas como 9.99.
+    ''' </summary>
+    <TestMethod>
+    Public Sub EscribirValor_NoRecortaEn999()
+        Dim c = _ws.Cell(1, 1)
+        ReporteHelpers.EscribirValor(c, 183.47)
+        Assert.AreEqual(183.47, c.GetDouble(), 0.0001)
+    End Sub
+
+    ''' <summary>El contraste: el mismo numero por EscribirFactor si se recorta.</summary>
+    <TestMethod>
+    Public Sub EscribirValor_ContrastaConEscribirFactor()
+        Dim v = _ws.Cell(1, 1)
+        ReporteHelpers.EscribirValor(v, 183.47)
+
+        Dim f = _ws.Cell(2, 1)
+        ReporteHelpers.EscribirFactor(f, 183.47)
+
+        Assert.AreEqual(183.47, v.GetDouble(), 0.0001, "valor fisico")
+        Assert.AreEqual(9.99, f.GetDouble(), 0.0001, "factor recortado")
+    End Sub
+
+    <TestMethod>
+    Public Sub EscribirValor_ResaltaElNegativoCuandoSePide()
+        Dim c = _ws.Cell(1, 1)
+        ReporteHelpers.EscribirValor(c, -12.5, resaltarNegativo:=True)
+        Assert.AreEqual(-12.5, c.GetDouble(), 0.0001)
+        Assert.AreEqual(ReporteHelpers.XlAlertaFondo, c.Style.Fill.BackgroundColor)
+    End Sub
+
+    <TestMethod>
+    Public Sub EscribirValor_SinPedirlo_ElNegativoVaSinResaltar()
+        Dim c = _ws.Cell(1, 1)
+        ReporteHelpers.EscribirValor(c, -12.5)
+        Assert.AreEqual(-12.5, c.GetDouble(), 0.0001)
+        Assert.AreNotEqual(ReporteHelpers.XlAlertaFondo, c.Style.Fill.BackgroundColor)
+    End Sub
+
+    <TestMethod>
+    Public Sub EscribirValor_AplicaElFormatoPedido()
+        Dim c = _ws.Cell(1, 1)
+        ReporteHelpers.EscribirValor(c, 1234.5, formato:="#,##0")
+        Assert.AreEqual("#,##0", c.Style.NumberFormat.Format)
+    End Sub
+
+    <TestMethod>
+    Public Sub EscribirValor_NoNumerico_EscribeGuion()
+        Dim c = _ws.Cell(1, 1)
+        ReporteHelpers.EscribirValor(c, Double.NaN)
+        Assert.AreEqual("-", c.GetString())
+    End Sub
+
 End Class

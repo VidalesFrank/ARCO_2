@@ -99,6 +99,44 @@ Public NotInheritable Class ReporteHelpers
     End Sub
 
     ' -----------------------------------------------------------------------
+    ' Celda de valor físico (presión, fuerza, momento...)
+    ' -----------------------------------------------------------------------
+    ''' <summary>
+    ''' Un número con unidades, escrito tal cual. NO es <see cref="EscribirFactor"/>:
+    ''' un factor C/D se recorta en 9.99 porque por encima de eso da igual cuánto
+    ''' sobre, pero una presión de 180 kN/m2 recortada a 9.99 es sencillamente un
+    ''' dato falso. Si el reporte muestra una magnitud física, va por aquí.
+    ''' </summary>
+    ''' <param name="resaltarNegativo">
+    ''' True pinta en ámbar los valores negativos. En presiones de contacto un
+    ''' valor negativo significa tracción bajo la zapata — es justo lo que hay
+    ''' que ver, no algo que esconder.
+    ''' </param>
+    Public Shared Sub EscribirValor(cell As IXLCell, valor As Double,
+                                    Optional formato As String = "0.00",
+                                    Optional resaltarNegativo As Boolean = False)
+
+        If cell Is Nothing Then Exit Sub
+
+        If Double.IsNaN(valor) OrElse Double.IsInfinity(valor) Then
+            cell.Value = "-"
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            Exit Sub
+        End If
+
+        cell.Value = valor
+        cell.Style.NumberFormat.Format = formato
+        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+
+        If resaltarNegativo AndAlso valor < 0 Then
+            cell.Style.Fill.BackgroundColor = XlAlertaFondo
+            cell.Style.Font.FontColor = XlAlertaTexto
+            cell.Style.Font.Bold = True
+        End If
+
+    End Sub
+
+    ' -----------------------------------------------------------------------
     ' Fila de encabezados
     ' -----------------------------------------------------------------------
     ''' <param name="conBorde">

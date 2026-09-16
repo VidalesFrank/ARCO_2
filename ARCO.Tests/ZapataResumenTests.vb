@@ -228,4 +228,100 @@ Public Class ZapataResumenTests
         Assert.AreEqual("EST3", r.Combinacion)
     End Sub
 
+    ' =====================================================================
+    ' FactoresPorCombinacion
+    ' =====================================================================
+
+    ''' <summary>Una fila por combinacion calculada, no por combinacion listada.</summary>
+    <TestMethod>
+    Public Sub Factores_UnaFilaPorCombinacionCalculada()
+        Dim f = ZapataService.FactoresPorCombinacion(ZapataHolgada())
+        Assert.AreEqual(2, f.Count)
+        CollectionAssert.AreEquivalent(New String() {"EST1", "DIN1"},
+                                       f.Select(Function(x) x.Combinacion).ToArray())
+    End Sub
+
+    ''' <summary>
+    ''' Marca cuales vienen de la lista dinamica. De ahi sale que use una
+    ''' admisible u otra, y es lo que muestra la columna "Tipo" del reporte.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Factores_MarcaLasDinamicas()
+        Dim f = ZapataService.FactoresPorCombinacion(ZapataHolgada())
+        Assert.IsFalse(f.First(Function(x) x.Combinacion = "EST1").EsDinamica)
+        Assert.IsTrue(f.First(Function(x) x.Combinacion = "DIN1").EsDinamica)
+    End Sub
+
+    ''' <summary>
+    ''' Una combinacion que no esta en ninguna de las dos listas se trata como
+    ''' estatica: la admisible menor deja el resultado del lado seguro en vez de
+    ''' omitir la revision del suelo.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Factores_CombinacionHuerfana_SeTrataComoEstatica()
+        Dim z = ZapataHolgada()
+        z.Resultados("HUERFANA") = ResultadoHolgado(100)
+
+        Dim f = ZapataService.FactoresPorCombinacion(z).First(Function(x) x.Combinacion = "HUERFANA")
+
+        Assert.IsFalse(f.EsDinamica)
+        Assert.AreEqual(2.0, f.Suelo, 0.0001, "200/100, la admisible estatica")
+    End Sub
+
+    ''' <summary>Cada revision con su propio cociente, no un solo numero mezclado.</summary>
+    <TestMethod>
+    Public Sub Factores_CadaRevisionPorSeparado()
+        Dim z = ZapataHolgada()
+        z.Resultados("EST1").Vc_p = 400        ' punz 0.80
+        z.Resultados("EST1").Vc2_C = 150       ' cort 1.50
+        z.Resultados("EST1").Rho_1 = 0.008     ' flex 0.50
+
+        Dim f = ZapataService.FactoresPorCombinacion(z).First(Function(x) x.Combinacion = "EST1")
+
+        Assert.AreEqual(2.0, f.Suelo, 0.0001, "suelo")
+        Assert.AreEqual(0.8, f.Punzonamiento, 0.0001, "punzonamiento")
+        Assert.AreEqual(1.5, f.Cortante, 0.0001, "cortante")
+        Assert.AreEqual(0.5, f.Flexion, 0.0001, "flexion")
+        Assert.AreEqual(0.5, f.Peor, 0.0001, "peor")
+        Assert.AreEqual("Flexion", f.Revision.Replace(ChrW(243), "o"), "gobierna")
+    End Sub
+
+    ''' <summary>
+    ''' Cero es "no aplica", y por eso no puede ganar el minimo: si contara, una
+    ''' revision ausente se reportaria como la peor de todas.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Factores_ElCeroNoGanaElMinimo()
+        Dim z = ZapataHolgada()
+        z.Resultados("EST1").Vu_p = 0          ' punzonamiento no aplica
+
+        Dim f = ZapataService.FactoresPorCombinacion(z).First(Function(x) x.Combinacion = "EST1")
+
+        Assert.AreEqual(0.0, f.Punzonamiento, 0.0001, "queda en cero")
+        Assert.AreEqual(2.0, f.Peor, 0.0001, "pero no gobierna")
+        Assert.AreNotEqual("Punzonamiento", f.Revision)
+    End Sub
+
+    ''' <summary>Sin ninguna revision aplicable, Peor es 0 y no hay quien gobierne.</summary>
+    <TestMethod>
+    Public Sub Factores_SinNingunaRevisionAplicable()
+        Dim f As New ZapataService.FactoresCombinacion()
+        Assert.AreEqual(0.0, f.Peor, 0.0001)
+        Assert.AreEqual("", f.Revision)
+    End Sub
+
+    ''' <summary>El nombre de la revision de suelo cambia con el tipo de combinacion.</summary>
+    <TestMethod>
+    Public Sub Factores_ElNombreDelSueloDistingueEstaticoDeDinamico()
+        Dim z = ZapataHolgada()
+        z.Resultados("EST1").qMax = 400        ' suelo estatico 0.50, gobierna
+        z.Resultados("DIN1").qMax = 600        ' suelo dinamico 0.50, gobierna
+
+        Dim f = ZapataService.FactoresPorCombinacion(z)
+        Assert.AreEqual("Suelo estatico",
+                        f.First(Function(x) x.Combinacion = "EST1").Revision.Replace(ChrW(225), "a"))
+        Assert.AreEqual("Suelo dinamico",
+                        f.First(Function(x) x.Combinacion = "DIN1").Revision.Replace(ChrW(225), "a"))
+    End Sub
+
 End Class

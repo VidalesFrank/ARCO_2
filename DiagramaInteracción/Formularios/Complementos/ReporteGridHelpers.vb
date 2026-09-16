@@ -179,6 +179,37 @@ Public NotInheritable Class ReporteGridHelpers
     End Sub
 
     ' -----------------------------------------------------------------------
+    ' Celda de valor físico (presión, fuerza, momento...)
+    ' -----------------------------------------------------------------------
+    ''' <summary>
+    ''' Contraparte en pantalla de <see cref="ReporteHelpers.EscribirValor"/>.
+    ''' Un número con unidades no lleva semáforo de C/D: 180 kN/m2 no es "bueno"
+    ''' ni "malo" por sí solo, solo comparado con su admisible.
+    ''' </summary>
+    ''' <param name="resaltarNegativo">
+    ''' Ámbar para los negativos. En presiones de contacto significan tracción.
+    ''' </param>
+    Public Shared Sub AsignarValor(cell As DataGridViewCell, valor As Double,
+                                   Optional decimales As Integer = 2,
+                                   Optional resaltarNegativo As Boolean = False)
+
+        If cell Is Nothing Then Exit Sub
+
+        If Double.IsNaN(valor) OrElse Double.IsInfinity(valor) Then
+            cell.Value = "—"
+            Exit Sub
+        End If
+
+        cell.Value = Math.Round(valor, decimales).ToString("F" & decimales)
+
+        If resaltarNegativo AndAlso valor < 0 Then
+            cell.Style.BackColor = ColorAlerta
+            cell.Style.ForeColor = ColorAlertaTexto
+        End If
+
+    End Sub
+
+    ' -----------------------------------------------------------------------
     ' Celda de estado
     ' -----------------------------------------------------------------------
     Public Shared Sub AsignarEstado(cell As DataGridViewCell, texto As String,

@@ -220,4 +220,56 @@ Public Class ReporteGridHelpersTests
         Assert.AreEqual(ReporteGridHelpers.ColorAlertaTexto, c.Style.ForeColor)
     End Sub
 
+    ' =====================================================================
+    ' AsignarValor
+    ' =====================================================================
+
+    ''' <summary>
+    ''' Una magnitud fisica no se recorta ni lleva semaforo. Antes el reporte de
+    ''' Zapatas pasaba las presiones de contacto por AsignarCD, que las pintaba
+    ''' verdes siempre porque cualquier presion supera el umbral de C/D.
+    ''' </summary>
+    <TestMethod>
+    Public Sub AsignarValor_EscribeElNumeroSinRecortarlo()
+        Dim c = CeldaSuelta()
+        ReporteGridHelpers.AsignarValor(c, 183.47)
+        Assert.AreEqual("183.47", Convert.ToString(c.Value))
+        Assert.AreEqual(Color.Empty, c.Style.BackColor, "no debe llevar semaforo")
+    End Sub
+
+    <TestMethod>
+    Public Sub AsignarValor_RespetaLosDecimalesPedidos()
+        Dim c = CeldaSuelta()
+        ReporteGridHelpers.AsignarValor(c, 183.4567, decimales:=3)
+        Assert.AreEqual("183.457", Convert.ToString(c.Value))
+    End Sub
+
+    ''' <summary>Una presion negativa es traccion bajo la zapata: se resalta, no se esconde.</summary>
+    <TestMethod>
+    Public Sub AsignarValor_ResaltaElNegativoCuandoSePide()
+        Dim c = CeldaSuelta()
+        ReporteGridHelpers.AsignarValor(c, -12.5, resaltarNegativo:=True)
+        Assert.AreEqual("-12.50", Convert.ToString(c.Value))
+        Assert.AreEqual(ReporteGridHelpers.ColorAlerta, c.Style.BackColor)
+    End Sub
+
+    <TestMethod>
+    Public Sub AsignarValor_SinPedirlo_ElNegativoVaSinResaltar()
+        Dim c = CeldaSuelta()
+        ReporteGridHelpers.AsignarValor(c, -12.5)
+        Assert.AreEqual("-12.50", Convert.ToString(c.Value))
+        Assert.AreEqual(Color.Empty, c.Style.BackColor)
+    End Sub
+
+    <TestMethod>
+    Public Sub AsignarValor_NoNumerico_EscribeGuion()
+        Dim c1 = CeldaSuelta()
+        ReporteGridHelpers.AsignarValor(c1, Double.NaN)
+        Assert.AreEqual(ChrW(8212), Convert.ToChar(Convert.ToString(c1.Value)))
+
+        Dim c2 = CeldaSuelta()
+        ReporteGridHelpers.AsignarValor(c2, Double.PositiveInfinity)
+        Assert.AreEqual(ChrW(8212), Convert.ToChar(Convert.ToString(c2.Value)))
+    End Sub
+
 End Class
