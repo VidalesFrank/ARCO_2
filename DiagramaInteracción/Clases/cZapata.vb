@@ -50,6 +50,31 @@ Public Class cZapata
     Public Property PesoPropio As Double
     Public Property NumeroJoint As String
 
+    '----------------------
+    ' Posición en la cimentación
+    '----------------------
+    ''' <summary>
+    ''' Central, Medianera o Esquinera. Determina el perímetro crítico de
+    ''' punzonamiento y el factor alfa_s (NSR-10 C.11.11). Campo, no propiedad,
+    ''' porque OptionalField no admite propiedades.
+    ''' Los proyectos guardados antes de esta versión abren como Central, que es
+    ''' lo que el programa asumía para todas — ver OnDeserialized.
+    ''' </summary>
+    <OptionalField> Public TipoApoyo As eTipoApoyoZapata = eTipoApoyoZapata.Central
+
+    ''' <summary>
+    ''' True cuando el ingeniero fijó el tipo a mano. La clasificación
+    ''' automática por geometría no lo sobrescribe: un voladizo, una junta de
+    ''' dilatación o una zapata combinada rompen la inferencia y la corrección
+    ''' manual tiene que sobrevivir a un recálculo.
+    ''' </summary>
+    <OptionalField> Public TipoApoyoManual As Boolean = False
+
+    ''' <summary>Coordenadas del nodo en planta (m). Vienen de la hoja de Joints.</summary>
+    <OptionalField> Public CoordX As Double
+    <OptionalField> Public CoordY As Double
+    <OptionalField> Public TieneCoordenadas As Boolean = False
+
     ' Combinaciones provenientes de ETABS
     Public Lista_Combinaciones_Estaticas As New List(Of cCombinacionPila)
     Public Lista_Combinaciones_Dinamicas As New List(Of cCombinacionPila)
@@ -63,6 +88,9 @@ Public Class cZapata
         If Lista_Combinaciones_Estaticas Is Nothing Then Lista_Combinaciones_Estaticas = New List(Of cCombinacionPila)
         If Lista_Combinaciones_Dinamicas Is Nothing Then Lista_Combinaciones_Dinamicas = New List(Of cCombinacionPila)
         If Resultados Is Nothing Then Resultados = New Dictionary(Of String, ResultadoZapata)
+        ' TipoApoyo = Central por defecto en archivos anteriores: es exactamente
+        ' lo que el cálculo asumía antes, así que abrir un proyecto viejo no
+        ' cambia ningún resultado hasta que se clasifique o se marque a mano.
     End Sub
 
 End Class

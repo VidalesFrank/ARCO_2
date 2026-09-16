@@ -148,4 +148,21 @@ Public Class eNumeradores
     End Enum
 
 
+
+    ''' <summary>
+    ''' Posición de una zapata dentro del contorno de la cimentación. Define el
+    ''' perímetro crítico de punzonamiento y el factor alfa_s de NSR-10 C.11.11:
+    ''' el perímetro es cerrado en una zapata central, y abierto en las de borde,
+    ''' donde el cono de falla no puede desarrollarse hacia afuera del edificio.
+    '''
+    '''   Central     4 lados, alfa_s = 40
+    '''   Medianera   3 lados, alfa_s = 30
+    '''   Esquinera   2 lados, alfa_s = 20
+    ''' </summary>
+    Public Enum eTipoApoyoZapata
+        Central = 0
+        Medianera = 1
+        Esquinera = 2
+    End Enum
+
 End Class

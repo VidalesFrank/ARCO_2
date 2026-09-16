@@ -10,7 +10,117 @@ Public Class Form_07_Pag_Zapatas
         ' Ajusta la ventana al monitor y habilita scroll vertical: la maqueta
         ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
         PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
+        PrepararColumnaTipoApoyo()
     End Sub
+
+    ' =====================================================================
+    ' TIPO DE APOYO — columna editable
+    ' =====================================================================
+    ' El punzonamiento depende de si la zapata es central, medianera o
+    ' esquinera. El programa lo propone por geometría, pero el ingeniero manda:
+    ' un voladizo, una junta de dilatación o una zapata combinada rompen la
+    ' inferencia, y lo que se marque a mano no se vuelve a sobrescribir.
+
+    Private Const COL_TIPO_APOYO As String = "ColTipoApoyo"
+    Private _actualizandoTipoApoyo As Boolean = False
+
+    Private Sub PrepararColumnaTipoApoyo()
+
+        If Tabla_Elementos Is Nothing Then Exit Sub
+        If Tabla_Elementos.Columns.Contains(COL_TIPO_APOYO) Then Exit Sub
+
+        Dim col As New DataGridViewComboBoxColumn() With {
+            .Name = COL_TIPO_APOYO,
+            .HeaderText = "Tipo de apoyo",
+            .Width = 130,
+            .FlatStyle = FlatStyle.Flat,
+            .DropDownWidth = 130
+        }
+        col.Items.AddRange(ZapataService.NombreTipo(eTipoApoyoZapata.Central),
+                           ZapataService.NombreTipo(eTipoApoyoZapata.Medianera),
+                           ZapataService.NombreTipo(eTipoApoyoZapata.Esquinera))
+
+        Tabla_Elementos.Columns.Add(col)
+
+    End Sub
+
+    ''' <summary>Refleja en la tabla el tipo que tiene cada zapata en el modelo.</summary>
+    Private Sub ActualizarColumnaTipoApoyo()
+
+        If Tabla_Elementos Is Nothing OrElse Not Tabla_Elementos.Columns.Contains(COL_TIPO_APOYO) Then Exit Sub
+
+        Dim zapatas = Proyecto.Elementos.Zapatas.Tipos
+        If zapatas Is Nothing Then Exit Sub
+
+        _actualizandoTipoApoyo = True
+        Try
+            For Each fila As DataGridViewRow In Tabla_Elementos.Rows
+                If fila.IsNewRow Then Continue For
+                Dim etiqueta = Convert.ToString(fila.Cells(0).Value)
+                Dim z = zapatas.FirstOrDefault(Function(x) String.Equals(Convert.ToString(x.Label_joint), etiqueta,
+                                                                         StringComparison.OrdinalIgnoreCase))
+                If z Is Nothing Then Continue For
+
+                fila.Cells(COL_TIPO_APOYO).Value = ZapataService.NombreTipo(z.TipoApoyo)
+
+                ' Marca visual: lo fijado a mano se distingue de lo propuesto.
+                If z.TipoApoyoManual Then
+                    fila.Cells(COL_TIPO_APOYO).Style.ForeColor = ReporteGridHelpers.ColorEncabezado
+                    fila.Cells(COL_TIPO_APOYO).Style.Font = ReporteGridHelpers.FuenteNegrita
+                    fila.Cells(COL_TIPO_APOYO).ToolTipText = "Fijado manualmente: la clasificación automática no lo cambia."
+                Else
+                    fila.Cells(COL_TIPO_APOYO).ToolTipText = "Propuesto por la posición en planta. Puede corregirse."
+                End If
+            Next
+        Finally
+            _actualizandoTipoApoyo = False
+        End Try
+
+    End Sub
+
+    Private Sub Tabla_Elementos_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) _
+        Handles Tabla_Elementos.CellValueChanged
+
+        If _actualizandoTipoApoyo Then Exit Sub
+        If e.RowIndex < 0 Then Exit Sub
+        If Not Tabla_Elementos.Columns.Contains(COL_TIPO_APOYO) Then Exit Sub
+        If e.ColumnIndex <> Tabla_Elementos.Columns(COL_TIPO_APOYO).Index Then Exit Sub
+
+        Dim fila = Tabla_Elementos.Rows(e.RowIndex)
+        Dim etiqueta = Convert.ToString(fila.Cells(0).Value)
+        Dim zapatas = Proyecto.Elementos.Zapatas.Tipos
+        If zapatas Is Nothing Then Exit Sub
+
+        Dim z = zapatas.FirstOrDefault(Function(x) String.Equals(Convert.ToString(x.Label_joint), etiqueta,
+                                                                 StringComparison.OrdinalIgnoreCase))
+        If z Is Nothing Then Exit Sub
+
+        Select Case Convert.ToString(fila.Cells(COL_TIPO_APOYO).Value)
+            Case "Esquinera" : z.TipoApoyo = eTipoApoyoZapata.Esquinera
+            Case "Medianera" : z.TipoApoyo = eTipoApoyoZapata.Medianera
+            Case Else : z.TipoApoyo = eTipoApoyoZapata.Central
+        End Select
+
+        z.TipoApoyoManual = True
+        _hayCambiosZapatas = True
+        ActualizarColumnaTipoApoyo()
+
+    End Sub
+
+    ''' <summary>
+    ''' Un ComboBox dentro de una grilla no confirma el valor hasta que la celda
+    ''' pierde el foco. Esto hace que el cambio se registre al instante.
+    ''' </summary>
+    Private Sub Tabla_Elementos_CurrentCellDirtyStateChanged(sender As Object, e As EventArgs) _
+        Handles Tabla_Elementos.CurrentCellDirtyStateChanged
+
+        If Tabla_Elementos.IsCurrentCellDirty AndAlso
+           TypeOf Tabla_Elementos.CurrentCell Is DataGridViewComboBoxCell Then
+            Tabla_Elementos.CommitEdit(DataGridViewDataErrorContexts.Commit)
+        End If
+
+    End Sub
+
 
     Private Sub ImportarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarDemandasToolStripMenuItem.Click
 
@@ -28,9 +138,41 @@ Public Class Form_07_Pag_Zapatas
                 Try
                     ' Leer cada hoja
 
+                    Dim hojas = ObtenerHojasExcel(path)
+
                     Proyecto.Elementos.Zapatas.Tabla_JointReactions = LeerHojaExcel(path, "Joint Reactions")
 
-                    MsgBox("Importación completada correctamente.", MsgBoxStyle.Information)
+                    ' Coordenadas y ejes: opcionales, pero sin ellas no hay planta
+                    ' ni clasificación automática de medianeras y esquineras.
+                    Dim faltantes As New List(Of String)
+
+                    Dim hJoints = ResolverNombreHoja(hojas, "Objects and Elements - Joints", "Joint Coordinates")
+                    If Not String.IsNullOrEmpty(hJoints) Then
+                        Proyecto.Elementos.Joints = DataTableToJoints(LeerHojaExcel(path, hJoints))
+                    Else
+                        faltantes.Add("• Coordenadas de nodos  (""Objects and Elements - Joints"" en E23, ""Joint Coordinates"" en E17)")
+                    End If
+
+                    Dim hGrids = ResolverNombreHoja(hojas, "Grid Definitions - Grid Lines", "Grid Lines")
+                    If Not String.IsNullOrEmpty(hGrids) Then
+                        Proyecto.Elementos.Grids.GridLines = DataTableToGridLines(LeerHojaExcel(path, hGrids))
+                    Else
+                        faltantes.Add("• Ejes estructurales  (""Grid Definitions - Grid Lines"" o ""Grid Lines"")")
+                    End If
+
+                    If faltantes.Count = 0 Then
+                        MsgBox("Importación completada correctamente.", MsgBoxStyle.Information)
+                    Else
+                        MessageBox.Show(
+                            "Las reacciones se importaron bien, pero el archivo no trae:" & vbCrLf & vbCrLf &
+                            String.Join(vbCrLf, faltantes) & vbCrLf & vbCrLf &
+                            "Sin esas hojas no se puede dibujar la vista en planta ni clasificar " &
+                            "automáticamente qué zapatas son medianeras o esquineras; todas quedarán " &
+                            "como centrales y habrá que marcarlas a mano." & vbCrLf & vbCrLf &
+                            "Para incluirlas, re-exporte desde ETABS agregándolas en Table Options. " &
+                            "Vea el menú ""? Tablas ETABS"".",
+                            "Importación incompleta", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    End If
 
                     Proyecto.Elementos.Zapatas.Reactions = DataTableToReactions(Proyecto.Elementos.Zapatas.Tabla_JointReactions)
 
@@ -122,6 +264,10 @@ Public Class Form_07_Pag_Zapatas
             Seccion.FD_E = Convert.ToDouble(FD_E.Text)
             Seccion.FD_D = Convert.ToDouble(FD_D.Text)
 
+            ' Coordenadas del nodo, si se importaron. Sin ellas la zapata no se
+            ' puede ubicar en planta ni clasificar automáticamente.
+            AsignarCoordenadas(Seccion)
+
             Proyecto.Elementos.Zapatas.Tipos.Add(Seccion)
 
             Tabla_Elementos.Rows.Add(Seccion.Label_joint,
@@ -137,6 +283,71 @@ Public Class Form_07_Pag_Zapatas
 
         Next
 
+        ' Con todas las zapatas creadas ya se puede ver el conjunto y proponer
+        ' cuáles son medianeras y esquineras.
+        ClasificarYAvisar()
+
+    End Sub
+
+    ''' <summary>
+    ''' Copia a la zapata las coordenadas en planta de su nodo. El vínculo es el
+    ''' JointLabel de "Joint Reactions" contra el ElementLabel de la hoja de
+    ''' nodos; en ETABS son la misma etiqueta.
+    ''' </summary>
+    Private Sub AsignarCoordenadas(z As cZapata)
+
+        Dim joints = Proyecto.Elementos.Joints
+        If joints Is Nothing OrElse joints.Count = 0 Then Exit Sub
+
+        Dim j = joints.FirstOrDefault(Function(x) String.Equals(Convert.ToString(x.ElementLabel).Trim(),
+                                                                Convert.ToString(z.Label_joint).Trim(),
+                                                                StringComparison.OrdinalIgnoreCase))
+        If j Is Nothing Then Exit Sub
+
+        z.CoordX = j.GlobalX
+        z.CoordY = j.GlobalY
+        z.TieneCoordenadas = True
+
+    End Sub
+
+    ''' <summary>
+    ''' Propone el tipo de apoyo de cada zapata y avisa del resultado. Lo que el
+    ''' ingeniero haya marcado a mano no se toca.
+    ''' </summary>
+    Private Sub ClasificarYAvisar()
+
+        Dim zapatas = Proyecto.Elementos.Zapatas.Tipos
+        If zapatas Is Nothing OrElse zapatas.Count = 0 Then Exit Sub
+
+        Dim conCoord = zapatas.Where(Function(z) z.TieneCoordenadas).Count
+        If conCoord = 0 Then
+            Logger.Warning("Form_07_Pag_Zapatas.ClasificarYAvisar",
+                           "Ninguna zapata tiene coordenadas: no se pudo clasificar el tipo de apoyo.")
+            Exit Sub
+        End If
+
+        ZapataService.ClasificarApoyos(zapatas)
+        ActualizarColumnaTipoApoyo()
+
+        Dim nEsq = zapatas.Where(Function(z) z.TipoApoyo = eTipoApoyoZapata.Esquinera).Count
+        Dim nMed = zapatas.Where(Function(z) z.TipoApoyo = eTipoApoyoZapata.Medianera).Count
+        Dim nCen = zapatas.Where(Function(z) z.TipoApoyo = eTipoApoyoZapata.Central).Count
+
+        Logger.Info("Form_07_Pag_Zapatas.ClasificarYAvisar",
+                    $"Clasificadas {conCoord} de {zapatas.Count}: {nCen} centrales, {nMed} medianeras, {nEsq} esquineras.")
+
+        If nEsq + nMed > 0 Then
+            MessageBox.Show(
+                $"Se clasificaron {conCoord} zapatas por su posición en planta:" & vbCrLf & vbCrLf &
+                $"    Centrales    {nCen}" & vbCrLf &
+                $"    Medianeras   {nMed}" & vbCrLf &
+                $"    Esquineras   {nEsq}" & vbCrLf & vbCrLf &
+                "El punzonamiento de las medianeras y esquineras se revisa con perímetro " &
+                "crítico abierto, que es menor: su capacidad baja respecto a una central." & vbCrLf & vbCrLf &
+                "Revise la columna ""Tipo de apoyo"" y corrija a mano las que la geometría no " &
+                "acierte (voladizos, juntas, zapatas combinadas).",
+                "Clasificación de apoyos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
 
     End Sub
 

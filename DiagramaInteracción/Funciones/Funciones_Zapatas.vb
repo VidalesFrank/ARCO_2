@@ -232,15 +232,17 @@ Public Module Funciones_Zapatas
 
         Dim Vu As Double = (P - g_prom * (b + d) * (h + d)) * FD
 
-        Dim betha As Double = Math.Max(h, b) / Math.Min(h, b)
-        Dim bo As Double = 2 * (h + b) + 4 * d
-        Dim alpha_s = 40
+        ' El perímetro crítico y alfa_s dependen de dónde esté la zapata: en una
+        ' medianera o una esquinera el cono de falla no puede desarrollarse hacia
+        ' afuera del edificio, así que el perímetro es abierto (NSR-10 C.11.11).
+        ' Antes esto estaba fijo en los valores de zapata central, lo que
+        ' sobreestimaba la capacidad de todas las zapatas del borde.
+        Dim cap = ZapataService.CapacidadPunzonamiento(z.fc, b, h, d, z.TipoApoyo)
+        Dim vc_1 As Double = cap.Vc1
+        Dim vc_2 As Double = cap.Vc2
+        Dim vc_3 As Double = cap.Vc3
 
-        Dim vc_1 As Double = 0.75 * 0.17 * Math.Sqrt(z.fc) * (1 + 2 / betha) * bo * d * 1000
-        Dim vc_2 As Double = 0.75 * 0.083 * (alpha_s * d / bo + 2) * Math.Sqrt(z.fc) * bo * d * 1000
-        Dim vc_3 As Double = 0.75 * 0.33 * Math.Sqrt(z.fc) * bo * d * 1000
-
-        Dim Vc As Double = {vc_1, vc_2, vc_3}.Min()
+        Dim Vc As Double = cap.Vc
 
         Dim cumple = (Math.Abs(Vu) <= Vc)
 
