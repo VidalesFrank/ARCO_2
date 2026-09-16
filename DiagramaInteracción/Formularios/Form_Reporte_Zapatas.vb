@@ -192,6 +192,7 @@ Public Class Form_Reporte_Zapatas
         Col(dgv, "qAdmE", "qAdm Est. [kN/m²]", 100)
         Col(dgv, "qAdmD", "qAdm Din. [kN/m²]", 100)
         Col(dgv, "Capacidad", "Capacidad", 90)
+        Col(dgv, "Excent", "Excentricidad", 110)
         Col(dgv, "Punz", "Punzonamiento", 110)
         Col(dgv, "Cortante", "Cortante", 90)
         Col(dgv, "Flexion", "Flexión", 80)
@@ -232,7 +233,7 @@ Public Class Form_Reporte_Zapatas
             If mostradas Mod 2 = 0 Then row.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
 
             If Not resumen.TieneResultados Then
-                For Each k In {"Capacidad", "Punz", "Cortante", "Flexion", "PeorCD", "Gobierna", "General"}
+                For Each k In {"Capacidad", "Excent", "Punz", "Cortante", "Flexion", "PeorCD", "Gobierna", "General"}
                     ReporteGridHelpers.AsignarEstado(row.Cells(k), "Sin calcular",
                                                      ReporteGridHelpers.ColorAlerta,
                                                      ReporteGridHelpers.ColorAlertaTexto)
@@ -242,6 +243,7 @@ Public Class Form_Reporte_Zapatas
 
             Dim vals = z.Resultados.Values.Where(Function(res) res IsNot Nothing).ToList()
             AsignarOk(row.Cells("Capacidad"), vals.All(Function(res) res.CumpleCapacidad))
+            AsignarOk(row.Cells("Excent"), vals.All(Function(res) res.CumpleExcentricidad))
             AsignarOk(row.Cells("Punz"), vals.All(Function(res) res.CumplePunzonamiento))
             AsignarOk(row.Cells("Cortante"), vals.All(Function(res) res.CumpleCortante_1 AndAlso res.CumpleCortante_2 AndAlso
                                                                     res.CumpleCortante_3 AndAlso res.CumpleCortante_4))
@@ -275,6 +277,10 @@ Public Class Form_Reporte_Zapatas
         Col(dgv, "qMin", "qMín [kN/m²]", 100)
         Col(dgv, "CDSuelo", "C/D suelo", 85)
         Col(dgv, "Cap", "Capacidad", 90)
+        Col(dgv, "ex", "ex [m]", 80)
+        Col(dgv, "ey", "ey [m]", 80)
+        Col(dgv, "CDExc", "C/D exc.", 85)
+        Col(dgv, "Exc", "Excentricidad", 110)
         Col(dgv, "qPunz", "q media perím. punz. [kN/m²]", 150)
         Col(dgv, "CDPunz", "C/D punz.", 85)
         Col(dgv, "Punz", "Punzonamiento", 110)
@@ -319,11 +325,15 @@ Public Class Form_Reporte_Zapatas
                 ReporteGridHelpers.AsignarValor(row.Cells("qFlex"), MaximoAbs(res.gf_F, res.ga_F, res.gi_F, res.ge_F), resaltarNegativo:=True)
 
                 AsignarCD(row.Cells("CDSuelo"), If(f Is Nothing, 0, f.Suelo))
+                ReporteGridHelpers.AsignarValor(row.Cells("ex"), res.ex, resaltarNegativo:=False)
+                ReporteGridHelpers.AsignarValor(row.Cells("ey"), res.ey, resaltarNegativo:=False)
+                AsignarCD(row.Cells("CDExc"), If(f Is Nothing, 0, f.Excentricidad))
                 AsignarCD(row.Cells("CDPunz"), If(f Is Nothing, 0, f.Punzonamiento))
                 AsignarCD(row.Cells("CDCort"), If(f Is Nothing, 0, f.Cortante))
                 AsignarCD(row.Cells("CDFlex"), If(f Is Nothing, 0, f.Flexion))
 
                 AsignarOk(row.Cells("Cap"), res.CumpleCapacidad)
+                AsignarOk(row.Cells("Exc"), res.CumpleExcentricidad)
                 AsignarOk(row.Cells("Punz"), res.CumplePunzonamiento)
                 AsignarOk(row.Cells("Cort"), res.CumpleCortante_1 AndAlso res.CumpleCortante_2 AndAlso
                                              res.CumpleCortante_3 AndAlso res.CumpleCortante_4)
@@ -405,7 +415,7 @@ Public Class Form_Reporte_Zapatas
 
         Dim hdrs = {"Zapata", "Nodo", "Tipo de apoyo", "L_b (m)", "L_h (m)", "e (m)", "b (m)", "h (m)",
                     "fc (MPa)", "qAdm Est. (kN/m2)", "qAdm Din. (kN/m2)",
-                    "Capacidad", "Punzonamiento", "Cortante", "Flexion",
+                    "Capacidad", "Excentricidad", "Punzonamiento", "Cortante", "Flexion",
                     "Peor C/D", "Gobierna", "General"}
         ReporteHelpers.EscribirEncabezados(ws, 1, hdrs, tamanoFuente:=10, altoFila:=20)
 
@@ -431,15 +441,16 @@ Public Class Form_Reporte_Zapatas
             If resumen.TieneResultados Then
                 Dim vals = z.Resultados.Values.Where(Function(r) r IsNot Nothing).ToList()
                 EscribirCumple(ws.Cell(fila, 12), vals.All(Function(r) r.CumpleCapacidad))
-                EscribirCumple(ws.Cell(fila, 13), vals.All(Function(r) r.CumplePunzonamiento))
-                EscribirCumple(ws.Cell(fila, 14), vals.All(Function(r) r.CumpleCortante_1 AndAlso r.CumpleCortante_2 AndAlso
+                EscribirCumple(ws.Cell(fila, 13), vals.All(Function(r) r.CumpleExcentricidad))
+                EscribirCumple(ws.Cell(fila, 14), vals.All(Function(r) r.CumplePunzonamiento))
+                EscribirCumple(ws.Cell(fila, 15), vals.All(Function(r) r.CumpleCortante_1 AndAlso r.CumpleCortante_2 AndAlso
                                                                       r.CumpleCortante_3 AndAlso r.CumpleCortante_4))
-                EscribirCumple(ws.Cell(fila, 15), vals.All(Function(r) r.Cumple_L1 AndAlso r.Cumple_L2))
-                ReporteHelpers.EscribirFactor(ws.Cell(fila, 16), resumen.PeorFactor, ReporteHelpers.SinDato.CeroOMenor)
-                ws.Cell(fila, 17).Value = resumen.Revision
-                EscribirCumple(ws.Cell(fila, 18), vals.All(Function(r) r.CumpleGeneral))
+                EscribirCumple(ws.Cell(fila, 16), vals.All(Function(r) r.Cumple_L1 AndAlso r.Cumple_L2))
+                ReporteHelpers.EscribirFactor(ws.Cell(fila, 17), resumen.PeorFactor, ReporteHelpers.SinDato.CeroOMenor)
+                ws.Cell(fila, 18).Value = resumen.Revision
+                EscribirCumple(ws.Cell(fila, 19), vals.All(Function(r) r.CumpleGeneral))
             Else
-                For c = 12 To 18
+                For c = 12 To 19
                     ReporteHelpers.EscribirEstado(ws.Cell(fila, c), "Sin calcular",
                                                   ReporteHelpers.XlAlertaFondo, ReporteHelpers.XlAlertaTexto)
                 Next
@@ -462,6 +473,7 @@ Public Class Form_Reporte_Zapatas
 
         Dim hdrs = {"Zapata", "Combinacion", "Tipo",
                     "qMax (kN/m2)", "qMin (kN/m2)", "C/D suelo", "Capacidad",
+                    "ex (m)", "ey (m)", "C/D exc.", "Excentricidad",
                     "q media perim. punz. (kN/m2)", "C/D punz.", "Punzonamiento",
                     "q seccion cortante (kN/m2)", "C/D cortante", "Cortante",
                     "q cara pedestal (kN/m2)", "C/D flexion", "Flexion", "General"}
@@ -494,20 +506,27 @@ Public Class Form_Reporte_Zapatas
                 ReporteHelpers.EscribirFactor(ws.Cell(fila, 6), If(f Is Nothing, 0, f.Suelo), ReporteHelpers.SinDato.CeroOMenor)
                 EscribirCumple(ws.Cell(fila, 7), res.CumpleCapacidad)
 
-                ReporteHelpers.EscribirValor(ws.Cell(fila, 8), Promedio(res.g5, res.g6, res.g7, res.g8), resaltarNegativo:=True)
-                ReporteHelpers.EscribirFactor(ws.Cell(fila, 9), If(f Is Nothing, 0, f.Punzonamiento), ReporteHelpers.SinDato.CeroOMenor)
-                EscribirCumple(ws.Cell(fila, 10), res.CumplePunzonamiento)
+                ' Excentricidad: valor firmado sirve para saber hacia dónde se
+                ' corre la resultante; el chequeo se hace sobre |e|.
+                ReporteHelpers.EscribirValor(ws.Cell(fila, 8), res.ex)
+                ReporteHelpers.EscribirValor(ws.Cell(fila, 9), res.ey)
+                ReporteHelpers.EscribirFactor(ws.Cell(fila, 10), If(f Is Nothing, 0, f.Excentricidad), ReporteHelpers.SinDato.CeroOMenor)
+                EscribirCumple(ws.Cell(fila, 11), res.CumpleExcentricidad)
 
-                ReporteHelpers.EscribirValor(ws.Cell(fila, 11), MaximoAbs(res.gf_C, res.ga_C, res.gi_C, res.ge_C), resaltarNegativo:=True)
-                ReporteHelpers.EscribirFactor(ws.Cell(fila, 12), If(f Is Nothing, 0, f.Cortante), ReporteHelpers.SinDato.CeroOMenor)
-                EscribirCumple(ws.Cell(fila, 13), res.CumpleCortante_1 AndAlso res.CumpleCortante_2 AndAlso
+                ReporteHelpers.EscribirValor(ws.Cell(fila, 12), Promedio(res.g5, res.g6, res.g7, res.g8), resaltarNegativo:=True)
+                ReporteHelpers.EscribirFactor(ws.Cell(fila, 13), If(f Is Nothing, 0, f.Punzonamiento), ReporteHelpers.SinDato.CeroOMenor)
+                EscribirCumple(ws.Cell(fila, 14), res.CumplePunzonamiento)
+
+                ReporteHelpers.EscribirValor(ws.Cell(fila, 15), MaximoAbs(res.gf_C, res.ga_C, res.gi_C, res.ge_C), resaltarNegativo:=True)
+                ReporteHelpers.EscribirFactor(ws.Cell(fila, 16), If(f Is Nothing, 0, f.Cortante), ReporteHelpers.SinDato.CeroOMenor)
+                EscribirCumple(ws.Cell(fila, 17), res.CumpleCortante_1 AndAlso res.CumpleCortante_2 AndAlso
                                                   res.CumpleCortante_3 AndAlso res.CumpleCortante_4)
 
-                ReporteHelpers.EscribirValor(ws.Cell(fila, 14), MaximoAbs(res.gf_F, res.ga_F, res.gi_F, res.ge_F), resaltarNegativo:=True)
-                ReporteHelpers.EscribirFactor(ws.Cell(fila, 15), If(f Is Nothing, 0, f.Flexion), ReporteHelpers.SinDato.CeroOMenor)
-                EscribirCumple(ws.Cell(fila, 16), res.Cumple_L1 AndAlso res.Cumple_L2)
+                ReporteHelpers.EscribirValor(ws.Cell(fila, 18), MaximoAbs(res.gf_F, res.ga_F, res.gi_F, res.ge_F), resaltarNegativo:=True)
+                ReporteHelpers.EscribirFactor(ws.Cell(fila, 19), If(f Is Nothing, 0, f.Flexion), ReporteHelpers.SinDato.CeroOMenor)
+                EscribirCumple(ws.Cell(fila, 20), res.Cumple_L1 AndAlso res.Cumple_L2)
 
-                EscribirCumple(ws.Cell(fila, 17), res.CumpleGeneral)
+                EscribirCumple(ws.Cell(fila, 21), res.CumpleGeneral)
 
                 ReporteHelpers.EstilarFilaDatos(ws, fila, hdrs.Length, fila Mod 2 = 0, columnasIzquierda:=3)
                 fila += 1

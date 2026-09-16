@@ -171,6 +171,62 @@ Public NotInheritable Class ZapataService
 
     End Function
 
+    ' =====================================================================
+    ' Pesos estabilizantes
+    ' =====================================================================
+
+    ''' <summary>
+    ''' Los tres pesos verticales que suman al P reactivo cuando el proyecto
+    ''' activa el peso estabilizante. Van en kN.
+    ''' </summary>
+    Public Class PesosEstabilizantes
+
+        Public Property W_Zapata As Double
+        Public Property W_Pedestal As Double
+        Public Property W_Suelo As Double
+
+        Public ReadOnly Property Total As Double
+            Get
+                Return W_Zapata + W_Pedestal + W_Suelo
+            End Get
+        End Property
+
+    End Class
+
+    ''' <summary>
+    ''' Peso propio de la zapata, del pedestal y del suelo por encima de la
+    ''' zapata, siguiendo el criterio típico del cálculo manual:
+    '''
+    '''   W_zapata   = L_b · L_h · e · γ_concreto
+    '''   W_pedestal = b · h · (Df − e) · γ_concreto
+    '''   W_suelo    = (L_b · L_h − b · h) · (Df − e) · γ_suelo
+    '''
+    ''' Df es la profundidad desde el terreno hasta el fondo de la zapata, así
+    ''' (Df − e) es la altura de material que hay entre la cara superior de la
+    ''' zapata y el terreno. Ese volumen se reparte entre el pedestal (dentro
+    ''' del pedestal) y el suelo (fuera del pedestal, dentro de la huella de la
+    ''' zapata). Con Df ≤ e el peso extra es solo el de la zapata.
+    ''' </summary>
+    Public Shared Function CalcularPesosEstabilizantes(z As cZapata) As PesosEstabilizantes
+
+        Dim p As New PesosEstabilizantes()
+        If z Is Nothing Then Return p
+
+        Dim gc As Double = If(z.gammaConcreto > 0, z.gammaConcreto, 24.0)
+        Dim gs As Double = If(z.gammaSuelo > 0, z.gammaSuelo, 0.0)
+        Dim alturaSobreZapata As Double = Math.Max(0, z.Df - z.e)
+        Dim huellaZapata As Double = Math.Max(0, z.L_b * z.L_h)
+        Dim huellaPedestal As Double = Math.Max(0, z.b * z.h)
+        Dim huellaSuelo As Double = Math.Max(0, huellaZapata - huellaPedestal)
+
+        p.W_Zapata = huellaZapata * z.e * gc
+        p.W_Pedestal = huellaPedestal * alturaSobreZapata * gc
+        p.W_Suelo = huellaSuelo * alturaSobreZapata * gs
+
+        Return p
+
+    End Function
+
     ''' <summary>Etiqueta legible, para tablas y reportes.</summary>
     Public Shared Function NombreTipo(tipo As eTipoApoyoZapata) As String
         Select Case tipo
@@ -212,7 +268,7 @@ Public NotInheritable Class ZapataService
     End Class
 
     ''' <summary>
-    ''' Las cuatro relaciones capacidad/demanda de una zapata bajo UNA
+    ''' Las cinco relaciones capacidad/demanda de una zapata bajo UNA
     ''' combinación. Cero significa "esta revisión no aplica en esta
     ''' combinación" (no hay demanda), no "capacidad infinita".
     ''' </summary>
@@ -222,11 +278,13 @@ Public NotInheritable Class ZapataService
 
         ''' <summary>
         ''' De qué lista viene. Importa porque la capacidad admisible del suelo
-        ''' es distinta en estático y en dinámico.
+        ''' es distinta en estático y en dinámico, y el límite de excentricidad
+        ''' también.
         ''' </summary>
         Public Property EsDinamica As Boolean
 
         Public Property Suelo As Double
+        Public Property Excentricidad As Double
         Public Property Punzonamiento As Double
         Public Property Cortante As Double
         Public Property Flexion As Double
@@ -246,7 +304,7 @@ Public NotInheritable Class ZapataService
             End Get
         End Property
 
-        ''' <summary>Menor de las cuatro, ignorando las que no aplican. 0 si ninguna aplica.</summary>
+        ''' <summary>Menor de las cinco, ignorando las que no aplican. 0 si ninguna aplica.</summary>
         Public ReadOnly Property Peor As Double
             Get
                 Dim menor As Double = Double.MaxValue
@@ -260,6 +318,7 @@ Public NotInheritable Class ZapataService
         Private Function Pares() As List(Of Tuple(Of String, Double))
             Return New List(Of Tuple(Of String, Double)) From {
                 Tuple.Create(If(EsDinamica, "Suelo dinámico", "Suelo estático"), Suelo),
+                Tuple.Create("Excentricidad", Excentricidad),
                 Tuple.Create("Punzonamiento", Punzonamiento),
                 Tuple.Create("Cortante", Cortante),
                 Tuple.Create("Flexión", Flexion)
@@ -311,6 +370,19 @@ Public NotInheritable Class ZapataService
 
             Dim qAdm As Double = If(f.EsDinamica, z.qAdm_Din, z.qAdm_Est)
             If qAdm > 0 AndAlso res.qMax > 0 Then f.Suelo = qAdm / res.qMax
+
+            ' Excentricidad: menor de los dos cocientes por dirección. Solo
+            ' aplica si ex/ey se calcularon (P > 0 y límites > 0). Cuando la
+            ' excentricidad en una dirección es prácticamente nula, esa dirección
+            ' no aporta al mínimo (queda holgada, no se cuela como cero).
+            Dim exc As Double = Double.MaxValue
+            If res.Lim_x_usado > 0 AndAlso Math.Abs(res.ex) > 0.000000001 Then
+                exc = Math.Min(exc, res.Lim_x_usado / Math.Abs(res.ex))
+            End If
+            If res.Lim_y_usado > 0 AndAlso Math.Abs(res.ey) > 0.000000001 Then
+                exc = Math.Min(exc, res.Lim_y_usado / Math.Abs(res.ey))
+            End If
+            If exc <> Double.MaxValue Then f.Excentricidad = exc
 
             Dim vu As Double = Math.Abs(res.Vu_p)
             If vu > 0 Then f.Punzonamiento = res.Vc_p / vu

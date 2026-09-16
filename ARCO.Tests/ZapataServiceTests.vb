@@ -359,4 +359,192 @@ Public Class ZapataServiceTests
         Assert.IsFalse(z.TieneCoordenadas)
     End Sub
 
+    ' =====================================================================
+    ' Peso estabilizante (zapata + pedestal + suelo)
+    ' =====================================================================
+    ' El peso se suma al P para revisar suelo y excentricidad SOLO cuando el
+    ' proyecto lo activa. Se usan las fórmulas típicas del cálculo manual:
+    '
+    '   W_zapata   = L_b · L_h · e · γ_concreto
+    '   W_pedestal = b · h · (Df − e) · γ_concreto
+    '   W_suelo    = (L_b · L_h − b · h) · (Df − e) · γ_suelo
+    '
+    ' Caso de referencia (2×2, pedestal 0.4×0.4, e=0.5, Df=1.5, γc=24, γs=18):
+    '   W_zapata   = 2·2·0.5·24         = 48 kN
+    '   W_pedestal = 0.4·0.4·1.0·24     = 3.84 kN
+    '   W_suelo    = (4 − 0.16)·1.0·18  = 69.12 kN
+    '   Total                            = 120.96 kN
+
+    Private Shared Function ZapataConDesplante() As cZapata
+        Return New cZapata() With {
+            .L_b = 2.0, .L_h = 2.0, .e = 0.5, .b = 0.4, .h = 0.4,
+            .Df = 1.5, .gammaConcreto = 24.0, .gammaSuelo = 18.0
+        }
+    End Function
+
+    <TestMethod>
+    Public Sub Pesos_LosTresComponentesDelCasoDeReferencia()
+        Dim p = ZapataService.CalcularPesosEstabilizantes(ZapataConDesplante())
+        Assert.AreEqual(48.0, p.W_Zapata, 0.01, "zapata")
+        Assert.AreEqual(3.84, p.W_Pedestal, 0.01, "pedestal")
+        Assert.AreEqual(69.12, p.W_Suelo, 0.01, "suelo (huella descontando pedestal)")
+        Assert.AreEqual(120.96, p.Total, 0.01, "total")
+    End Sub
+
+    ''' <summary>
+    ''' Sin desplante mayor que el espesor, no hay pedestal ni suelo por encima
+    ''' de la cara superior de la zapata: solo pesa la zapata. Es el caso de una
+    ''' zapata al ras.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Pesos_DfIgualAEspesor_SoloPesaLaZapata()
+        Dim z = ZapataConDesplante() : z.Df = z.e
+        Dim p = ZapataService.CalcularPesosEstabilizantes(z)
+        Assert.AreEqual(48.0, p.W_Zapata, 0.01)
+        Assert.AreEqual(0.0, p.W_Pedestal, 0.001)
+        Assert.AreEqual(0.0, p.W_Suelo, 0.001)
+    End Sub
+
+    ''' <summary>
+    ''' Un Df más chico que el espesor no puede dar peso negativo — pasa cuando
+    ''' se importa una zapata a la que no se le puso desplante.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Pesos_DfMenorQueEspesor_PesoDePedestalYSueloNoNegativo()
+        Dim z = ZapataConDesplante() : z.Df = 0.1
+        Dim p = ZapataService.CalcularPesosEstabilizantes(z)
+        Assert.IsTrue(p.W_Pedestal >= 0)
+        Assert.IsTrue(p.W_Suelo >= 0)
+    End Sub
+
+    <TestMethod>
+    Public Sub Pesos_ZapataNula_NoRevienta()
+        Dim p = ZapataService.CalcularPesosEstabilizantes(Nothing)
+        Assert.AreEqual(0.0, p.Total, 0.001)
+    End Sub
+
+    ''' <summary>
+    ''' Un proyecto viejo llega con gammaConcreto = 0 en el .esm: al deserializar
+    ''' se corrige a 24. Sin este arreglo, activar el peso estabilizante daría
+    ''' W_zapata = 0 y W_pedestal = 0.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Pesos_GammaConcretoCeroSeReparaConDefault()
+        Dim z = ZapataConDesplante() : z.gammaConcreto = 0
+        Dim p = ZapataService.CalcularPesosEstabilizantes(z)
+        Assert.AreEqual(48.0, p.W_Zapata, 0.01, "usa el default de 24 cuando el campo es 0")
+    End Sub
+
+    ' =====================================================================
+    ' EvaluarZapata con peso estabilizante
+    ' =====================================================================
+    ' El peso estabilizante debe SUBIR el P que ven la revisión de suelo y la
+    ' de excentricidad, y no debe afectar punzonamiento/cortante/flexión.
+
+    Private Shared Function ZapataParaEvaluar() As cZapata
+        Return New cZapata() With {
+            .L_b = 2.0, .L_h = 2.0, .e = 0.5, .rec = 0.075, .d = 0.425,
+            .b = 0.4, .h = 0.4,
+            .Df = 1.5, .gammaConcreto = 24.0, .gammaSuelo = 18.0,
+            .fc = 21.0, .fy = 420.0,
+            .qAdm_Est = 200.0, .qAdm_Din = 300.0,
+            .Rho_L1 = 0.003, .Rho_L2 = 0.003,
+            .TipoApoyo = eTipoApoyoZapata.Central
+        }
+    End Function
+
+    <TestMethod>
+    Public Sub EvaluarZapata_ConPesoEstabilizante_SumaAlPEfectivo()
+        Dim z = ZapataParaEvaluar()
+        Dim P As Double = 500 : Dim My As Double = 200
+
+        Dim resSin = Funciones_Zapatas.EvaluarZapata(z, P, 0, My, "EST", usarPesoEstabilizante:=False)
+        Dim resCon = Funciones_Zapatas.EvaluarZapata(z, P, 0, My, "EST", usarPesoEstabilizante:=True)
+
+        Assert.AreEqual(500.0, resSin.P_Efectivo, 0.01, "sin peso, P efectivo = P")
+        Assert.AreEqual(500.0 + 120.96, resCon.P_Efectivo, 0.05, "con peso, P efectivo = P + pesos")
+        Assert.IsFalse(resSin.UsoPesoEstabilizante)
+        Assert.IsTrue(resCon.UsoPesoEstabilizante)
+    End Sub
+
+    <TestMethod>
+    Public Sub EvaluarZapata_PesoEstabilizante_BajaLaExcentricidad()
+        Dim z = ZapataParaEvaluar()
+        Dim P As Double = 500 : Dim My As Double = 200   ' ex = My/P
+
+        Dim resSin = Funciones_Zapatas.EvaluarZapata(z, P, 0, My, "EST", usarPesoEstabilizante:=False)
+        Dim resCon = Funciones_Zapatas.EvaluarZapata(z, P, 0, My, "EST", usarPesoEstabilizante:=True)
+
+        Assert.AreEqual(200.0 / 500.0, resSin.ex, 0.0001, "ex sin peso")
+        Assert.AreEqual(200.0 / (500.0 + 120.96), resCon.ex, 0.0001, "ex con peso: baja porque P efectivo sube")
+        Assert.IsTrue(Math.Abs(resCon.ex) < Math.Abs(resSin.ex), "el peso reduce |ex|")
+    End Sub
+
+    <TestMethod>
+    Public Sub EvaluarZapata_PesoEstabilizante_NoTocaPunzonamiento()
+        Dim z = ZapataParaEvaluar()
+        Dim P As Double = 500
+
+        Dim resSin = Funciones_Zapatas.EvaluarZapata(z, P, 0, 100, "EST", usarPesoEstabilizante:=False)
+        Dim resCon = Funciones_Zapatas.EvaluarZapata(z, P, 0, 100, "EST", usarPesoEstabilizante:=True)
+
+        ' Vu depende de P reactivo, no de P efectivo. Un cambio de flag no debe
+        ' inflar la demanda de punzonamiento — sería del lado inseguro.
+        Assert.AreEqual(resSin.Vu_p, resCon.Vu_p, 0.01,
+                        "Vu de punzonamiento debe seguir dependiendo solo del P reactivo")
+        Assert.AreEqual(resSin.Vc_p, resCon.Vc_p, 0.01, "y Vc tampoco cambia")
+    End Sub
+
+    ' =====================================================================
+    ' Excentricidad como quinta revisión
+    ' =====================================================================
+    ' L/6 en estático (regla del núcleo central), L/N en dinámico (por defecto
+    ' L/4). Se aplica sobre |e|.
+
+    <TestMethod>
+    Public Sub Excentricidad_Estatica_LimiteEsLPor6()
+        Dim z = ZapataParaEvaluar()
+        Dim res = Funciones_Zapatas.EvaluarZapata(z, 1000, 0, 200, "EST")
+        ' L_b = 2.0 → L_b/6 = 0.3333, ex = 200/1000 = 0.20 → cumple (con margen)
+        Assert.AreEqual(2.0 / 6.0, res.Lim_x_usado, 0.0001, "estático usa L/6")
+        Assert.IsTrue(res.CumpleExcentricidad, "0.20 < 0.333, cumple")
+    End Sub
+
+    <TestMethod>
+    Public Sub Excentricidad_Dinamica_LimiteEsLPorN()
+        Dim z = ZapataParaEvaluar()
+        Dim res = Funciones_Zapatas.EvaluarZapata(z, 1000, 0, 200, "DIN",
+                                                  limiteDinamicoN:=4.0)
+        ' L_b = 2.0 → L_b/4 = 0.5, ex = 0.20 → cumple
+        Assert.AreEqual(2.0 / 4.0, res.Lim_x_usado, 0.0001, "dinámico usa L/N")
+        Assert.IsTrue(res.CumpleExcentricidad)
+    End Sub
+
+    <TestMethod>
+    Public Sub Excentricidad_LibraEnDinamicoLoQueFallariaEnEstatico()
+        Dim z = ZapataParaEvaluar()
+        ' ex = 400/1000 = 0.40 → falla L/6 (0.333), cumple L/3 (0.667)
+        Dim resEst = Funciones_Zapatas.EvaluarZapata(z, 1000, 0, 400, "EST")
+        Dim resDin = Funciones_Zapatas.EvaluarZapata(z, 1000, 0, 400, "DIN",
+                                                     limiteDinamicoN:=3.0)
+        Assert.IsFalse(resEst.CumpleExcentricidad, "no cumple L/6 en estático")
+        Assert.IsTrue(resDin.CumpleExcentricidad, "cumple L/3 en dinámico")
+    End Sub
+
+    ''' <summary>
+    ''' La excentricidad se cuela como quinta revisión en FactoresPorCombinacion
+    ''' y en Resumir: si es la peor, gobierna.
+    ''' </summary>
+    <TestMethod>
+    Public Sub Excentricidad_ApareceComoRevisionEnFactoresYResumen()
+        Dim z = ZapataParaEvaluar()
+        z.Lista_Combinaciones_Estaticas.Add(New cCombinacionPila() With {.LoadCase = "EST1"})
+        z.Resultados("EST1") = Funciones_Zapatas.EvaluarZapata(z, 1000, 0, 250, "EST")
+
+        Dim f = ZapataService.FactoresPorCombinacion(z).First()
+        ' ex = 250/1000 = 0.25, lim = 0.333, C/D = 0.333/0.25 = 1.333
+        Assert.AreEqual(1.333, f.Excentricidad, 0.01, "C/D de excentricidad")
+        Assert.IsTrue(f.Peor >= 0.001, "hay algún factor")
+    End Sub
+
 End Class

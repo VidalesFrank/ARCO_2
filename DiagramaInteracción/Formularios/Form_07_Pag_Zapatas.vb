@@ -11,8 +11,11 @@ Public Class Form_07_Pag_Zapatas
         ' de este formulario tiene Y y altos fijos y no cabe en pantallas bajas.
         PilaVerticalAdaptable.AjustarAPantallaConScroll(Me)
         PrepararColumnaTipoApoyo()
+        PrepararColumnasDesplanteYConcreto()
         AgregarMenuAyudaTablas()
         AgregarMenuPlanta()
+        AgregarPanelPesoEstabilizante()
+        RefrescarUIPesoEstabilizante()
     End Sub
 
     ''' <summary>
@@ -96,6 +99,127 @@ Public Class Form_07_Pag_Zapatas
             Exit For
         Next
 
+    End Sub
+
+    ' =====================================================================
+    ' PESO ESTABILIZANTE Y LÍMITE DE EXCENTRICIDAD DINÁMICA
+    ' =====================================================================
+    ' Ambos parámetros son de proyecto: se aplican a todas las zapatas.
+    ' Peso estabilizante = W_zapata + W_pedestal + W_suelo, se suma al P para
+    ' revisar suelo y excentricidad. Punzonamiento, cortante y flexión NO lo
+    ' usan.
+    ' Límite excentricidad dinámica: por norma estático fijo en L/6; en sismo
+    ' se admite relajar hasta L/N (típico L/4 o L/3). Editable acá.
+
+    Private _chkPesoEstabilizante As CheckBox
+    Private _numLimExcDin As NumericUpDown
+
+    Private Sub AgregarPanelPesoEstabilizante()
+
+        If Panel3 Is Nothing Then Exit Sub
+
+        Dim grp As New GroupBox() With {
+            .Location = New Point(423, 510),
+            .Size = New Size(296, 130),
+            .Text = "Peso estabilizante y excentricidad",
+            .Font = New Font("Microsoft Sans Serif", 10.0!, FontStyle.Bold),
+            .ForeColor = Color.White
+        }
+
+        _chkPesoEstabilizante = New CheckBox() With {
+            .Location = New Point(15, 30),
+            .Size = New Size(265, 40),
+            .Text = "Considerar peso zapata + pedestal + suelo",
+            .Font = New Font("Microsoft Sans Serif", 9.0!, FontStyle.Regular),
+            .ForeColor = Color.White,
+            .AutoSize = False
+        }
+        AddHandler _chkPesoEstabilizante.CheckedChanged, AddressOf ChkPesoEstabilizante_CheckedChanged
+
+        Dim lbl As New Label() With {
+            .Location = New Point(15, 80),
+            .Size = New Size(210, 24),
+            .Text = "Excentricidad dinámica: L/",
+            .Font = New Font("Microsoft Sans Serif", 9.0!, FontStyle.Regular),
+            .ForeColor = Color.White,
+            .TextAlign = ContentAlignment.MiddleLeft
+        }
+
+        _numLimExcDin = New NumericUpDown() With {
+            .Location = New Point(220, 78),
+            .Size = New Size(60, 26),
+            .Font = New Font("Arial", 10.0!, FontStyle.Regular),
+            .Minimum = 2D,
+            .Maximum = 10D,
+            .DecimalPlaces = 0,
+            .Value = 4D,
+            .TextAlign = HorizontalAlignment.Center
+        }
+        AddHandler _numLimExcDin.ValueChanged, AddressOf NumLimExcDin_ValueChanged
+
+        grp.Controls.Add(_chkPesoEstabilizante)
+        grp.Controls.Add(lbl)
+        grp.Controls.Add(_numLimExcDin)
+        Panel3.Controls.Add(grp)
+
+    End Sub
+
+    ''' <summary>
+    ''' Refresca las dos entradas con lo que tenga el proyecto. Se llama al abrir
+    ''' el formulario y también al abrir un .esm para reflejar lo guardado.
+    ''' </summary>
+    Private Sub RefrescarUIPesoEstabilizante()
+        If _chkPesoEstabilizante Is Nothing Then Exit Sub
+        If Proyecto Is Nothing OrElse Proyecto.Elementos Is Nothing OrElse Proyecto.Elementos.Zapatas Is Nothing Then Exit Sub
+
+        _chkPesoEstabilizante.Checked = Proyecto.Elementos.Zapatas.UsarPesoEstabilizante
+        Dim n As Double = Proyecto.Elementos.Zapatas.LimiteExcentricidadDinamicaN
+        If n < 2 Then n = 4
+        If n > 10 Then n = 10
+        _numLimExcDin.Value = CDec(Math.Round(n))
+    End Sub
+
+    Private Sub ChkPesoEstabilizante_CheckedChanged(sender As Object, e As EventArgs)
+        If Proyecto?.Elementos?.Zapatas Is Nothing Then Exit Sub
+        Proyecto.Elementos.Zapatas.UsarPesoEstabilizante = _chkPesoEstabilizante.Checked
+        _hayCambiosZapatas = True
+    End Sub
+
+    Private Sub NumLimExcDin_ValueChanged(sender As Object, e As EventArgs)
+        If Proyecto?.Elementos?.Zapatas Is Nothing Then Exit Sub
+        Proyecto.Elementos.Zapatas.LimiteExcentricidadDinamicaN = CDbl(_numLimExcDin.Value)
+        _hayCambiosZapatas = True
+    End Sub
+
+    ' =====================================================================
+    ' Columnas Df (profundidad de desplante) y γ_concreto en Tabla_Elementos
+    ' =====================================================================
+
+    Private Const COL_DF As String = "ColDf"
+    Private Const COL_GCONC As String = "ColGammaConcreto"
+
+    Private Sub PrepararColumnasDesplanteYConcreto()
+        If Tabla_Elementos Is Nothing Then Exit Sub
+
+        If Not Tabla_Elementos.Columns.Contains(COL_DF) Then
+            Dim colDf As New DataGridViewTextBoxColumn() With {
+                .Name = COL_DF,
+                .HeaderText = "Df (m)",
+                .Width = 80,
+                .DefaultCellStyle = New DataGridViewCellStyle() With {.Alignment = DataGridViewContentAlignment.MiddleCenter}
+            }
+            Tabla_Elementos.Columns.Add(colDf)
+        End If
+
+        If Not Tabla_Elementos.Columns.Contains(COL_GCONC) Then
+            Dim colG As New DataGridViewTextBoxColumn() With {
+                .Name = COL_GCONC,
+                .HeaderText = "γ concreto (kN/m³)",
+                .Width = 110,
+                .DefaultCellStyle = New DataGridViewCellStyle() With {.Alignment = DataGridViewContentAlignment.MiddleCenter}
+            }
+            Tabla_Elementos.Columns.Add(colG)
+        End If
     End Sub
 
     ' =====================================================================
@@ -346,6 +470,12 @@ Public Class Form_07_Pag_Zapatas
             Seccion.qAdm_Din = Convert.ToDouble(EadmDin.Text)
             Seccion.gammaSuelo = 18
 
+            ' Df predeterminado en 1.5 m: cimentación superficial típica en
+            ' Colombia. El usuario lo ajusta por fila en la tabla si es distinto.
+            ' gammaConcreto en 24 kN/m³ por convención.
+            Seccion.Df = 1.5
+            Seccion.gammaConcreto = 24.0
+
             Seccion.FD_E = Convert.ToDouble(FD_E.Text)
             Seccion.FD_D = Convert.ToDouble(FD_D.Text)
 
@@ -355,7 +485,7 @@ Public Class Form_07_Pag_Zapatas
 
             Proyecto.Elementos.Zapatas.Tipos.Add(Seccion)
 
-            Tabla_Elementos.Rows.Add(Seccion.Label_joint,
+            Dim idx As Integer = Tabla_Elementos.Rows.Add(Seccion.Label_joint,
                                     Seccion.Nombre,
                                     Seccion.b,
                                     Seccion.h,
@@ -365,6 +495,12 @@ Public Class Form_07_Pag_Zapatas
                                     r1.Diametro, r1.AreaBarra, r1.Cantidad,
                                     r2.Diametro, r2.AreaBarra, r2.Cantidad,
                                     Seccion.fc)
+            If Tabla_Elementos.Columns.Contains(COL_DF) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_DF).Value = Seccion.Df
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_GCONC) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_GCONC).Value = Seccion.gammaConcreto
+            End If
 
         Next
 
@@ -464,6 +600,22 @@ Public Class Form_07_Pag_Zapatas
             Elemento.L_h = Convert.ToDouble(Tabla_Elementos.Rows(i).Cells(6).Value)
             Elemento.fc = Convert.ToDouble(Tabla_Elementos.Rows(i).Cells(13).Value)
 
+            ' Df y γ_concreto: si el usuario dejó la celda vacía o texto no
+            ' numérico, se mantiene el valor que ya tenía la zapata (default o
+            ' importado). Sin esto un espacio en blanco tumbaría el cálculo.
+            If Tabla_Elementos.Columns.Contains(COL_DF) Then
+                Dim vDf As Double
+                If Double.TryParse(Convert.ToString(Tabla_Elementos.Rows(i).Cells(COL_DF).Value), vDf) Then
+                    Elemento.Df = vDf
+                End If
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_GCONC) Then
+                Dim vG As Double
+                If Double.TryParse(Convert.ToString(Tabla_Elementos.Rows(i).Cells(COL_GCONC).Value), vG) AndAlso vG > 0 Then
+                    Elemento.gammaConcreto = vG
+                End If
+            End If
+
             Elemento.Refuerzos.Clear()
 
             Dim Num_Barra_L2 As String = Tabla_Elementos.Rows(i).Cells(7).Value
@@ -540,6 +692,9 @@ Public Class Form_07_Pag_Zapatas
             Dim F_Momento As Double = Double.MaxValue
             Dim Check_Momento As Boolean = True
 
+            Dim usarPeso As Boolean = Proyecto.Elementos.Zapatas.UsarPesoEstabilizante
+            Dim limDinN As Double = Proyecto.Elementos.Zapatas.LimiteExcentricidadDinamicaN
+
             For Each comb In combosValidos_Estatica
 
                 Dim P As Double = comb.FZ
@@ -547,7 +702,7 @@ Public Class Form_07_Pag_Zapatas
                 Dim My As Double = comb.MY
                 Dim Op_Comb As String = "EST"
 
-                Dim res As ResultadoZapata = Funciones_Zapatas.EvaluarZapata(Elemento, P, Mx, My, Op_Comb)
+                Dim res As ResultadoZapata = Funciones_Zapatas.EvaluarZapata(Elemento, P, Mx, My, Op_Comb, usarPeso, limDinN)
 
                 Elemento.Resultados(comb.LoadCase) = res
 
@@ -646,7 +801,7 @@ Public Class Form_07_Pag_Zapatas
                 Dim My As Double = comb.MY
                 Dim Op_Comb As String = "DIN"
 
-                Dim res As ResultadoZapata = Funciones_Zapatas.EvaluarZapata(Elemento, P, Mx, My, Op_Comb)
+                Dim res As ResultadoZapata = Funciones_Zapatas.EvaluarZapata(Elemento, P, Mx, My, Op_Comb, usarPeso, limDinN)
 
                 Elemento.Resultados(comb.LoadCase) = res
 
@@ -792,7 +947,7 @@ Public Class Form_07_Pag_Zapatas
         For Each z In Proyecto.Elementos.Zapatas.Tipos
             Dim r1 = z.Refuerzos.FirstOrDefault(Function(r) r.Direccion = eDireccionRefuerzo.L2)
             Dim r2 = z.Refuerzos.FirstOrDefault(Function(r) r.Direccion = eDireccionRefuerzo.L1)
-            Tabla_Elementos.Rows.Add(
+            Dim idx As Integer = Tabla_Elementos.Rows.Add(
                 z.Label_joint, z.Nombre,
                 z.b, z.h, z.e, z.L_b, z.L_h,
                 If(r1 IsNot Nothing, r1.Diametro, ""),
@@ -802,6 +957,12 @@ Public Class Form_07_Pag_Zapatas
                 If(r2 IsNot Nothing, r2.AreaBarra, 0.0),
                 If(r2 IsNot Nothing, r2.Cantidad, 0.0),
                 z.fc)
+            If Tabla_Elementos.Columns.Contains(COL_DF) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_DF).Value = z.Df
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_GCONC) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_GCONC).Value = z.gammaConcreto
+            End If
         Next
     End Sub
 
@@ -811,6 +972,7 @@ Public Class Form_07_Pag_Zapatas
     ''' </summary>
     Public Sub RefrescarDesdeProyecto()
         Proyecto = Form_00_PaginaPrincipal.proyecto
+        RefrescarUIPesoEstabilizante()
         If Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then Return
         PopularTablaElementos()
         If Proyecto.Elementos.Zapatas.Reactions.Count > 0 Then

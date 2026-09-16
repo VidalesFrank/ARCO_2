@@ -13,19 +13,42 @@ Public Module Funciones_Zapatas
                               P As Double,
                               Mx As Double,
                               My As Double,
-                                  Op_Comb As String) As ResultadoZapata
+                                  Op_Comb As String,
+                                  Optional usarPesoEstabilizante As Boolean = False,
+                                  Optional limiteDinamicoN As Double = 4.0) As ResultadoZapata
 
         Dim R As New ResultadoZapata
 
         '-----------------------------
-        ' 1. Capacidad del suelo
+        ' 0. Peso estabilizante (opcional)
+        '-----------------------------
+        ' Los pesos de zapata, pedestal y suelo suman al P reactivo SOLO para
+        ' revisiones que ven la reacción total contra el terreno (suelo y
+        ' excentricidad). Punzonamiento, cortante y flexión trabajan con la
+        ' carga que baja del pedestal: incluir el peso propio ahí daría del lado
+        ' inseguro (Vu inflado sin capacidad extra).
+        Dim pesos = ZapataService.CalcularPesosEstabilizantes(z)
+        R.W_Zapata = pesos.W_Zapata
+        R.W_Pedestal = pesos.W_Pedestal
+        R.W_Suelo = pesos.W_Suelo
+        R.UsoPesoEstabilizante = usarPesoEstabilizante
+
+        Dim P_efectivo As Double = P
+        If usarPesoEstabilizante Then P_efectivo += pesos.Total
+        R.P_Efectivo = P_efectivo
+        R.P_Reactivo = P
+        R.Mx_Entrada = Mx
+        R.My_Entrada = My
+
+        '-----------------------------
+        ' 1. Capacidad del suelo (con P efectivo)
         '-----------------------------
         Dim g_Adm As Double = z.qAdm_Est
         If Op_Comb = "DIN" Then
             g_Adm = z.qAdm_Din
         End If
 
-        Dim resCap = VerificarCapacidadSuelo(z, P, Mx, My, g_Adm)
+        Dim resCap = VerificarCapacidadSuelo(z, P_efectivo, Mx, My, g_Adm)
         R.CumpleCapacidad = resCap.Cumple
         R.qMax = resCap.qMax
         R.qMin = resCap.qMin
@@ -35,7 +58,24 @@ Public Module Funciones_Zapatas
         R.g4 = resCap.g4
 
         '-----------------------------
-        ' 2. Punzonamiento
+        ' 2. Excentricidad (con P efectivo, quinta revisión)
+        '-----------------------------
+        Dim tipoComb As TipoCombinacion = If(Op_Comb = "DIN",
+                                             TipoCombinacion.ServicioDinamica,
+                                             TipoCombinacion.ServicioEstatica)
+        Dim resExc = VerificacionExcentricidad(z, P_efectivo, Mx, My, tipoComb, limiteDinamicoN)
+        If Not Double.IsNaN(resExc.ex) Then R.ex = resExc.ex
+        If Not Double.IsNaN(resExc.ey) Then R.ey = resExc.ey
+        If Not Double.IsNaN(resExc.LimX) Then R.Lim_x_base = resExc.LimX
+        If Not Double.IsNaN(resExc.LimY) Then R.Lim_y_base = resExc.LimY
+        If Not Double.IsNaN(resExc.LimX_Usado) Then R.Lim_x_usado = resExc.LimX_Usado
+        If Not Double.IsNaN(resExc.LimY_Usado) Then R.Lim_y_usado = resExc.LimY_Usado
+        R.CumpleExcentricidad_X = resExc.CumpleX
+        R.CumpleExcentricidad_Y = resExc.CumpleY
+        R.CumpleExcentricidad = resExc.Cumple
+
+        '-----------------------------
+        ' 3. Punzonamiento (con P reactivo)
         '-----------------------------
         Dim resPun = VerificarPunzonamiento(z, P, Mx, My)
         R.CumplePunzonamiento = resPun.Cumple
@@ -50,7 +90,7 @@ Public Module Funciones_Zapatas
         R.g8 = resPun.g8
 
         '-----------------------------
-        ' 3. Cortante
+        ' 4. Cortante (con P reactivo)
         '-----------------------------
         Dim resCort = VerificarCortante(z, P, Mx, My)
         R.CumpleCortante_1 = resCort.Cumple_1
@@ -73,7 +113,7 @@ Public Module Funciones_Zapatas
         R.gj_C = resCort.gj
 
         '-----------------------------
-        ' 4. Flexión
+        ' 5. Flexión (con P reactivo)
         '-----------------------------
         Dim resFlex = VerificarFlexion(z, P, Mx, My)
         R.Mu_1 = resFlex.Mu_1
@@ -96,6 +136,7 @@ Public Module Funciones_Zapatas
         '-----------------------------
         R.CumpleGeneral =
         R.CumpleCapacidad And
+        R.CumpleExcentricidad And
         R.CumplePunzonamiento And
         R.CumpleCortante_1 And R.CumpleCortante_2 And R.CumpleCortante_3 And R.CumpleCortante_4 And
         R.Cumple_L1 And R.Cumple_L2
@@ -142,12 +183,20 @@ Public Module Funciones_Zapatas
     End Function
 
 
+    ''' <summary>
+    ''' Excentricidad de la resultante sobre la zapata. |e| ≤ L/6 en estático
+    ''' (regla del núcleo central: no hay tracción bajo la zapata) y |e| ≤ L/N
+    ''' en dinámico, donde N lo fija el proyecto (típicos 4 o 3).
+    '''
+    ''' Se llama con el P ya afectado por el peso estabilizante si el proyecto
+    ''' lo activó: el peso baja la excentricidad porque agranda el denominador.
+    ''' </summary>
     Public Function VerificacionExcentricidad(z As cZapata,
                                          P As Double,
                                          Mx As Double,
                                          My As Double,
                                          tipo As TipoCombinacion,
-                                         Optional factorDinamico As Double = 1.5) _
+                                         Optional limiteDinamicoN As Double = 4.0) _
     As (ex As Double,
         ey As Double,
         LimX As Double,
@@ -168,26 +217,25 @@ Public Module Funciones_Zapatas
         Dim ey As Double = Mx / P
         Dim ex As Double = My / P
 
-        ' Límites base (estáticos)
+        ' Límite base: L/6 en el eje corto y en el largo. Es el borde del núcleo
+        ' central de una sección rectangular, donde qMin cae a cero.
         Dim Lim_x_base As Double = z.L_b / 6.0
         Dim Lim_y_base As Double = z.L_h / 6.0
 
-        ' Determinar límites efectivos según tipo de combinación
+        ' En dinámico se admite salirse del núcleo hasta L/N. N viene del proyecto.
         Dim Lim_x_usado As Double = Lim_x_base
         Dim Lim_y_usado As Double = Lim_y_base
 
         If tipo = TipoCombinacion.ServicioDinamica Then
-            ' aplicar factor dinámico (configurable)
-            Lim_x_usado = Lim_x_base * factorDinamico
-            Lim_y_usado = Lim_y_base * factorDinamico
+            Dim n As Double = If(limiteDinamicoN > 0, limiteDinamicoN, 4.0)
+            Lim_x_usado = z.L_b / n
+            Lim_y_usado = z.L_h / n
         End If
 
-        ' Comprobaciones
         Dim cumpleX As Boolean = (Math.Abs(ex) <= Lim_x_usado)
         Dim cumpleY As Boolean = (Math.Abs(ey) <= Lim_y_usado)
         Dim cumple As Boolean = (cumpleX AndAlso cumpleY)
 
-        ' Mensaje explicativo
         Dim msg As New System.Text.StringBuilder()
         msg.AppendLine($"ex = {ex:F4} m  (L_b/6 = {Lim_x_base:F4} m; usado = {Lim_x_usado:F4} m)")
         msg.AppendLine($"ey = {ey:F4} m  (L_h/6 = {Lim_y_base:F4} m; usado = {Lim_y_usado:F4} m)")

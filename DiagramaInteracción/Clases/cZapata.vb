@@ -40,6 +40,20 @@ Public Class cZapata
     Public Property FD_E As Double
     Public Property FD_D As Double
 
+    ''' <summary>
+    ''' Profundidad de desplante desde el terreno hasta el fondo de la zapata (m).
+    ''' Determina la altura de suelo y de pedestal por encima de la cara superior
+    ''' de la zapata cuando se considera peso estabilizante.
+    ''' </summary>
+    <OptionalField> Public Df As Double
+
+    ''' <summary>
+    ''' Peso específico del concreto (kN/m³) para el peso de zapata y pedestal.
+    ''' Por defecto 24, se corrige en OnDeserialized cuando el archivo viene sin
+    ''' este campo.
+    ''' </summary>
+    <OptionalField> Public gammaConcreto As Double = 24.0
+
     '----------------------
     ' Acero suministrado
     '----------------------
@@ -91,6 +105,11 @@ Public Class cZapata
         ' TipoApoyo = Central por defecto en archivos anteriores: es exactamente
         ' lo que el cálculo asumía antes, así que abrir un proyecto viejo no
         ' cambia ningún resultado hasta que se clasifique o se marque a mano.
+        ' gammaConcreto = 24 kN/m³ si el archivo no lo trae: BinaryFormatter no
+        ' aplica el inicializador en línea al deserializar, así que hay que
+        ' repararlo aquí. Sin esto, activar peso estabilizante en un proyecto
+        ' viejo daría W_zapata = 0.
+        If gammaConcreto <= 0 Then gammaConcreto = 24.0
     End Sub
 
 End Class
