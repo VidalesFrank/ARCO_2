@@ -14,8 +14,6 @@ Public Class Form_Reporte_Proyecto_Completo
     Private ReadOnly XlOKTexto As XLColor = XLColor.FromHtml("#006100")
     Private ReadOnly XlMalFondo As XLColor = XLColor.FromHtml("#FFC7CE")
     Private ReadOnly XlMalTexto As XLColor = XLColor.FromHtml("#9C0006")
-    Private ReadOnly XlAlertaFondo As XLColor = XLColor.FromHtml("#FFEB9C")
-    Private ReadOnly XlAlertaTexto As XLColor = XLColor.FromHtml("#9C5700")
     Private ReadOnly XlFilaPar As XLColor = XLColor.FromHtml("#F0F4FA")
 
     ' ── Referencia al proyecto ────────────────────────────────────────────────

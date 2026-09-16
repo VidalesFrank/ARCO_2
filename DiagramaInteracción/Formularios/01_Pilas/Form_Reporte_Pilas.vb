@@ -229,30 +229,13 @@ Public Class Form_Reporte_Pilas
     ' ── HELPERS ───────────────────────────────────────────────────────────────
 
     Private Sub EstilarGrid(dgv As DataGridView)
-        dgv.ReadOnly = True
-        dgv.AllowUserToAddRows = False
-        dgv.RowHeadersVisible = False
-        dgv.BorderStyle = BorderStyle.None
-        dgv.GridColor = Color.FromArgb(220, 220, 220)
-        dgv.BackgroundColor = Color.White
-        dgv.ColumnHeadersDefaultCellStyle.BackColor = ColorEncabezado
-        dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White
-        dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 9.5, FontStyle.Bold)
-        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-        dgv.ColumnHeadersHeight = 34
-        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 9.5)
-        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-        dgv.EnableHeadersVisualStyles = False
-        dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgv.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.EstilarGrid(dgv, ReporteGridHelpers.EstiloGrid.Compacto)
     End Sub
 
     Private Sub Col(dgv As DataGridView, name As String, header As String, width As Integer)
-        Dim c As New DataGridViewTextBoxColumn() With {
-            .Name = name, .HeaderText = header, .Width = width,
-            .SortMode = DataGridViewColumnSortMode.NotSortable
-        }
-        dgv.Columns.Add(c)
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AgregarColumna(dgv, name, header, width, ordenable:=False)
     End Sub
 
     Private Sub AsignarFactor(cell As DataGridViewCell, valor As Double)
@@ -272,9 +255,8 @@ Public Class Form_Reporte_Pilas
     End Sub
 
     Private Sub AsignarOk(cell As DataGridViewCell, cumple As Boolean)
-        cell.Value = If(cumple, "Ok", "Revisar")
-        cell.Style.BackColor = If(cumple, ColorOK, ColorMal)
-        cell.Style.ForeColor = If(cumple, ColorOKTexto, ColorMalTexto)
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AsignarEstado(cell, cumple)
     End Sub
 
     ' ── EXPORTAR EXCEL ───────────────────────────────────────────────────────

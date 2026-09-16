@@ -188,6 +188,40 @@ Public NotInheritable Class ReporteHelpers
     End Sub
 
     ' -----------------------------------------------------------------------
+    ' Fila de datos: alternado y alineación
+    ' -----------------------------------------------------------------------
+    ''' <param name="columnasIzquierda">
+    ''' Cuántas columnas de la izquierda se alinean a la izquierda en vez de al
+    ''' centro: son las de texto (piso, elemento, tramo). Vigas de Fundación
+    ''' usaba 2; Nervios y el Resumen de Vigas, 3.
+    ''' </param>
+    ''' <remarks>
+    ''' El fondo alternado solo se aplica si la celda no tiene ya uno propio, para
+    ''' no pisar el semáforo de las columnas de C/D.
+    ''' </remarks>
+    Public Shared Sub EstilarFilaDatos(ws As IXLWorksheet, fila As Integer,
+                                       numCols As Integer, esPar As Boolean,
+                                       Optional columnasIzquierda As Integer = 3,
+                                       Optional altoFila As Double = 18)
+
+        If ws Is Nothing Then Exit Sub
+
+        ws.Row(fila).Height = altoFila
+
+        For col As Integer = 1 To numCols
+            Dim cell = ws.Cell(fila, col)
+            If esPar AndAlso cell.Style.Fill.BackgroundColor = XLColor.NoColor Then
+                cell.Style.Fill.BackgroundColor = XlFilaPar
+            End If
+            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
+            If col <= columnasIzquierda Then
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
+            End If
+        Next
+
+    End Sub
+
+    ' -----------------------------------------------------------------------
     ' Bordes del bloque de datos
     ' -----------------------------------------------------------------------
     Public Shared Sub AgregarBordesTabla(ws As IXLWorksheet,

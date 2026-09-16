@@ -15,7 +15,6 @@ Public Class Form_Reporte_Resumen
 
     ' ── Paleta (igual que la app) ─────────────────────────────────────────────
     Private ReadOnly ColorEncabezado As Color = Color.FromArgb(87, 87, 87)
-    Private ReadOnly ColorEncabezadoTexto As Color = Color.White
     Private ReadOnly ColorOK As Color = ColorTranslator.FromHtml("#C6EFCE")
     Private ReadOnly ColorOKTexto As Color = ColorTranslator.FromHtml("#006100")
     Private ReadOnly ColorMal As Color = ColorTranslator.FromHtml("#FFC7CE")
@@ -24,14 +23,6 @@ Public Class Form_Reporte_Resumen
     Private ReadOnly ColorAlertaTexto As Color = ColorTranslator.FromHtml("#9C5700")
 
     ' Colores ClosedXML equivalentes
-    Private ReadOnly XlEncabezado As XLColor = XLColor.FromHtml("#575757")
-    Private ReadOnly XlOKFondo As XLColor = XLColor.FromHtml("#C6EFCE")
-    Private ReadOnly XlOKTexto As XLColor = XLColor.FromHtml("#006100")
-    Private ReadOnly XlMalFondo As XLColor = XLColor.FromHtml("#FFC7CE")
-    Private ReadOnly XlMalTexto As XLColor = XLColor.FromHtml("#9C0006")
-    Private ReadOnly XlAlertaFondo As XLColor = XLColor.FromHtml("#FFEB9C")
-    Private ReadOnly XlAlertaTexto As XLColor = XLColor.FromHtml("#9C5700")
-    Private ReadOnly XlFilaPar As XLColor = XLColor.FromHtml("#F8F8F8")
 
     ' ── Grids ─────────────────────────────────────────────────────────────────
     Private WithEvents DgvFlexion As New DataGridView()
@@ -697,8 +688,8 @@ Public Class Form_Reporte_Resumen
                 ws.Cell(fila, 7).Value = etiqExcel
                 ws.Cell(fila, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
                 ws.Cell(fila, 7).Style.Font.Bold = True
-                ws.Cell(fila, 7).Style.Fill.BackgroundColor = If(cumple, XLOKFondo, XLMalFondo)
-                ws.Cell(fila, 7).Style.Font.FontColor = If(cumple, XLOKTexto, XLMalTexto)
+                ws.Cell(fila, 7).Style.Fill.BackgroundColor = If(cumple, ReporteHelpers.XlOKFondo, ReporteHelpers.XlMalFondo)
+                ws.Cell(fila, 7).Style.Font.FontColor = If(cumple, ReporteHelpers.XlOKTexto, ReporteHelpers.XlMalTexto)
                 EstilarFilaDatos(ws, fila, enc.Length, fila Mod 2 = 1)
                 fila += 1
 
@@ -827,31 +818,31 @@ Public Class Form_Reporte_Resumen
 
             ' Col 8 — Flexión
             If Not tieneRef Then
-                EscribirEstado(ws.Cell(fila, 8), "Sin ref.", XLAlertaFondo, XLAlertaTexto)
+                EscribirEstado(ws.Cell(fila, 8), "Sin ref.", ReporteHelpers.XlAlertaFondo, ReporteHelpers.XlAlertaTexto)
             ElseIf cumpleFlex Then
-                EscribirEstado(ws.Cell(fila, 8), "OK", XLOKFondo, XLOKTexto)
+                EscribirEstado(ws.Cell(fila, 8), "OK", ReporteHelpers.XlOKFondo, ReporteHelpers.XlOKTexto)
             Else
-                EscribirEstado(ws.Cell(fila, 8), "Revisar", XLMalFondo, XLMalTexto)
+                EscribirEstado(ws.Cell(fila, 8), "Revisar", ReporteHelpers.XlMalFondo, ReporteHelpers.XlMalTexto)
             End If
 
             ' Col 9 — Cortante
             If fFin = Double.MaxValue Then
-                EscribirEstado(ws.Cell(fila, 9), "Sin datos", XLAlertaFondo, XLAlertaTexto)
+                EscribirEstado(ws.Cell(fila, 9), "Sin datos", ReporteHelpers.XlAlertaFondo, ReporteHelpers.XlAlertaTexto)
             ElseIf cumpleCor Then
-                EscribirEstado(ws.Cell(fila, 9), "OK", XLOKFondo, XLOKTexto)
+                EscribirEstado(ws.Cell(fila, 9), "OK", ReporteHelpers.XlOKFondo, ReporteHelpers.XlOKTexto)
             Else
-                EscribirEstado(ws.Cell(fila, 9), "Revisar", XLMalFondo, XLMalTexto)
+                EscribirEstado(ws.Cell(fila, 9), "Revisar", ReporteHelpers.XlMalFondo, ReporteHelpers.XlMalTexto)
             End If
 
             ' Col 10 — Estado general
             Dim ok = tieneRef AndAlso cumpleFlex AndAlso tieneCor AndAlso cumpleCor
             Dim pendiente = Not tieneRef OrElse Not tieneCor
             If ok Then
-                EscribirEstado(ws.Cell(fila, 10), "OK", XLOKFondo, XLOKTexto)
+                EscribirEstado(ws.Cell(fila, 10), "OK", ReporteHelpers.XlOKFondo, ReporteHelpers.XlOKTexto)
             ElseIf pendiente Then
-                EscribirEstado(ws.Cell(fila, 10), "Pendiente", XLAlertaFondo, XLAlertaTexto)
+                EscribirEstado(ws.Cell(fila, 10), "Pendiente", ReporteHelpers.XlAlertaFondo, ReporteHelpers.XlAlertaTexto)
             Else
-                EscribirEstado(ws.Cell(fila, 10), "Revisar", XLMalFondo, XLMalTexto)
+                EscribirEstado(ws.Cell(fila, 10), "Revisar", ReporteHelpers.XlMalFondo, ReporteHelpers.XlMalTexto)
             End If
 
             EstilarFilaDatos(ws, fila, encabezados.Length, fila Mod 2 = 1)
@@ -883,11 +874,11 @@ Public Class Form_Reporte_Resumen
         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
         cell.Style.Font.Bold = True
         If cumple Then
-            cell.Style.Fill.BackgroundColor = XLOKFondo
-            cell.Style.Font.FontColor = XLOKTexto
+            cell.Style.Fill.BackgroundColor = ReporteHelpers.XlOKFondo
+            cell.Style.Font.FontColor = ReporteHelpers.XlOKTexto
         Else
-            cell.Style.Fill.BackgroundColor = XLMalFondo
-            cell.Style.Font.FontColor = XLMalTexto
+            cell.Style.Fill.BackgroundColor = ReporteHelpers.XlMalFondo
+            cell.Style.Font.FontColor = ReporteHelpers.XlMalTexto
         End If
     End Sub
 
@@ -897,18 +888,8 @@ Public Class Form_Reporte_Resumen
     End Sub
 
     Private Sub EstilarFilaDatos(ws As IXLWorksheet, fila As Integer, numCols As Integer, esPar As Boolean)
-        Dim row = ws.Row(fila)
-        row.Height = 18
-        For col = 1 To numCols
-            Dim cell = ws.Cell(fila, col)
-            If esPar AndAlso cell.Style.Fill.BackgroundColor = XLColor.NoColor Then
-                cell.Style.Fill.BackgroundColor = XlFilaPar
-            End If
-            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
-            If col <= 3 Then
-                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
-            End If
-        Next
+        ' Delega en los helpers compartidos de reporte.
+        ReporteHelpers.EstilarFilaDatos(ws, fila, numCols, esPar, columnasIzquierda:=3)
     End Sub
 
     Private Sub AgregarBordesTabla(ws As IXLWorksheet, filaIni As Integer, filaFin As Integer, numCols As Integer)
@@ -926,40 +907,13 @@ Public Class Form_Reporte_Resumen
     ' =========================================================================
 
     Private Sub EstilarGrid(dgv As DataGridView)
-        dgv.AllowUserToAddRows = False
-        dgv.ReadOnly = True
-        dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgv.MultiSelect = False
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
-        dgv.RowHeadersVisible = False
-        dgv.BackgroundColor = Color.White
-        dgv.BorderStyle = BorderStyle.None
-        dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
-        dgv.GridColor = Color.FromArgb(210, 210, 210)
-        dgv.ColumnHeadersHeight = 42
-        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
-        dgv.RowTemplate.Height = 28
-        dgv.EnableHeadersVisualStyles = False
-
-        With dgv.ColumnHeadersDefaultCellStyle
-            .BackColor = ColorEncabezado
-            .ForeColor = ColorEncabezadoTexto
-            .Font = New Font("Segoe UI", 10, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        With dgv.DefaultCellStyle
-            .BackColor = Color.White
-            .ForeColor = Color.Black
-            .SelectionBackColor = Color.FromArgb(200, 225, 255)
-            .SelectionForeColor = Color.Black
-            .Font = New Font("Segoe UI", 10)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.EstilarGrid(dgv)
     End Sub
 
     Private Sub AgregarColumna(dgv As DataGridView, nombre As String, header As String, ancho As Integer)
-        dgv.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = nombre, .HeaderText = header, .Width = ancho})
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AgregarColumna(dgv, nombre, header, ancho)
     End Sub
 
     Private Sub AsignarFactorCelda(cell As DataGridViewCell, factor As Double)
@@ -981,9 +935,8 @@ Public Class Form_Reporte_Resumen
     End Sub
 
     Private Sub AplicarEstado(cell As DataGridViewCell, texto As String, fondo As Color, textoColor As Color)
-        cell.Value = texto
-        cell.Style.BackColor = fondo
-        cell.Style.ForeColor = textoColor
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AsignarEstado(cell, texto, fondo, textoColor)
     End Sub
 
     Private Function NombreReporte(viga As cViga) As String

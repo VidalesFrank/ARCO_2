@@ -14,7 +14,6 @@ Public Class Form_Reporte_Zapatas
     Private ReadOnly ColorMal As Color = ColorTranslator.FromHtml("#FFC7CE")
     Private ReadOnly ColorMalTexto As Color = ColorTranslator.FromHtml("#9C0006")
 
-    Private ReadOnly _fontBold As New Font("Segoe UI", 9.5, FontStyle.Bold)
 
     Private ReadOnly XlEncabezado As XLColor = XLColor.FromHtml("#575757")
     Private ReadOnly XlOKFondo As XLColor = XLColor.FromHtml("#C6EFCE")
@@ -93,10 +92,6 @@ Public Class Form_Reporte_Zapatas
         Me.Controls.Add(barra)
     End Sub
 
-    Protected Overrides Sub Dispose(disposing As Boolean)
-        If disposing Then _fontBold.Dispose()
-        MyBase.Dispose(disposing)
-    End Sub
 
     ' =========================================================================
     Private Sub CargarTodo()
@@ -353,31 +348,13 @@ Public Class Form_Reporte_Zapatas
 
     ' ── HELPERS GRID ─────────────────────────────────────────────────────────
     Private Sub EstilarGrid(dgv As DataGridView)
-        dgv.ReadOnly = True
-        dgv.AllowUserToAddRows = False
-        dgv.RowHeadersVisible = False
-        dgv.BorderStyle = BorderStyle.None
-        dgv.GridColor = Color.FromArgb(220, 220, 220)
-        dgv.BackgroundColor = Color.White
-        dgv.ColumnHeadersDefaultCellStyle.BackColor = ColorEncabezado
-        dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White
-        dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 9.5, FontStyle.Bold)
-        dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-        dgv.ColumnHeadersHeight = 34
-        dgv.DefaultCellStyle.Font = New Font("Segoe UI", 9.5)
-        dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-        dgv.EnableHeadersVisualStyles = False
-        dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgv.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
-        dgv.RowTemplate.Height = 26
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.EstilarGrid(dgv, ReporteGridHelpers.EstiloGrid.Compacto, altoFila:=26)
     End Sub
 
     Private Sub Col(dgv As DataGridView, name As String, header As String, width As Integer)
-        Dim c As New DataGridViewTextBoxColumn() With {
-            .Name = name, .HeaderText = header, .Width = width,
-            .SortMode = DataGridViewColumnSortMode.NotSortable
-        }
-        dgv.Columns.Add(c)
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AgregarColumna(dgv, name, header, width, ordenable:=False)
     End Sub
 
     Private Sub AsignarFactor(cell As DataGridViewCell, valor As Double)
@@ -391,10 +368,8 @@ Public Class Form_Reporte_Zapatas
     End Sub
 
     Private Sub AsignarOk(cell As DataGridViewCell, cumple As Boolean)
-        cell.Value = If(cumple, "Cumple", "No cumple")
-        cell.Style.BackColor = If(cumple, ColorOK, ColorMal)
-        cell.Style.ForeColor = If(cumple, ColorOKTexto, ColorMalTexto)
-        cell.Style.Font = _fontBold
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AsignarEstado(cell, cumple, "Cumple", "No cumple", negrita:=True)
     End Sub
 
     ' ── HELPERS EXCEL ────────────────────────────────────────────────────────

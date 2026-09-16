@@ -512,6 +512,7 @@
     <Compile Include="Formularios\Complementos\PilaVerticalAdaptable.vb" />
     <Compile Include="Formularios\Complementos\GridCopiarPegar.vb" />
     <Compile Include="Formularios\Complementos\ReporteHelpers.vb" />
+    <Compile Include="Formularios\Complementos\ReporteGridHelpers.vb" />
     <Compile Include="Formularios\Complementos\GraficosResumen.vb" />
     <Compile Include="Formularios\Complementos\Form_ALR.Designer.vb">
       <DependentUpon>Form_ALR.vb</DependentUpon>

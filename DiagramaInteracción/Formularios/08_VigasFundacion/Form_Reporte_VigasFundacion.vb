@@ -14,19 +14,16 @@ Public Class Form_Reporte_VigasFundacion
 
     ' ── Paleta WinForms ───────────────────────────────────────────────────────
     Private ReadOnly ColorEncabezado    As Color = Color.FromArgb(87, 87, 87)
-    Private ReadOnly ColorEncabezadoTxt As Color = Color.White
     Private ReadOnly ColorOK            As Color = ColorTranslator.FromHtml("#C6EFCE")
     Private ReadOnly ColorOKTxt         As Color = ColorTranslator.FromHtml("#006100")
     Private ReadOnly ColorMal           As Color = ColorTranslator.FromHtml("#FFC7CE")
     Private ReadOnly ColorMalTxt        As Color = ColorTranslator.FromHtml("#9C0006")
 
     ' ── Paleta ClosedXML ──────────────────────────────────────────────────────
-    Private ReadOnly XlEncabezado As XLColor = XLColor.FromHtml("#575757")
     Private ReadOnly XlOKFondo    As XLColor = XLColor.FromHtml("#C6EFCE")
     Private ReadOnly XlOKTexto    As XLColor = XLColor.FromHtml("#006100")
     Private ReadOnly XlMalFondo   As XLColor = XLColor.FromHtml("#FFC7CE")
     Private ReadOnly XlMalTexto   As XLColor = XLColor.FromHtml("#9C0006")
-    Private ReadOnly XlFilaPar    As XLColor = XLColor.FromHtml("#F8F8F8")
 
     ' ── Controles ─────────────────────────────────────────────────────────────
     Private WithEvents DgvDI      As New DataGridView()
@@ -354,50 +351,18 @@ Public Class Form_Reporte_VigasFundacion
     ' =========================================================================
 
     Private Sub EstilarGrid(dgv As DataGridView)
-        dgv.AllowUserToAddRows = False
-        dgv.ReadOnly           = True
-        dgv.SelectionMode      = DataGridViewSelectionMode.FullRowSelect
-        dgv.MultiSelect        = False
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
-        dgv.RowHeadersVisible  = False
-        dgv.BackgroundColor    = Color.White
-        dgv.BorderStyle        = BorderStyle.None
-        dgv.CellBorderStyle    = DataGridViewCellBorderStyle.SingleHorizontal
-        dgv.GridColor          = Color.FromArgb(210, 210, 210)
-        dgv.ColumnHeadersHeight = 42
-        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
-        dgv.RowTemplate.Height = 28
-        dgv.EnableHeadersVisualStyles = False
-        With dgv.ColumnHeadersDefaultCellStyle
-            .BackColor  = ColorEncabezado
-            .ForeColor  = ColorEncabezadoTxt
-            .Font       = New Font("Segoe UI", 10, FontStyle.Bold)
-            .Alignment  = DataGridViewContentAlignment.MiddleCenter
-        End With
-        With dgv.DefaultCellStyle
-            .BackColor          = Color.White
-            .ForeColor          = Color.Black
-            .SelectionBackColor = Color.FromArgb(200, 225, 255)
-            .SelectionForeColor = Color.Black
-            .Font               = New Font("Segoe UI", 10)
-            .Alignment          = DataGridViewContentAlignment.MiddleCenter
-        End With
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.EstilarGrid(dgv)
     End Sub
 
     Private Sub AgregarColumna(dgv As DataGridView, nombre As String, header As String, ancho As Integer)
-        dgv.Columns.Add(New DataGridViewTextBoxColumn() With {
-            .Name = nombre, .HeaderText = header, .Width = ancho})
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AgregarColumna(dgv, nombre, header, ancho)
     End Sub
 
     Private Sub AsignarCD(cell As DataGridViewCell, cd As Double)
-        Dim v As Double = Math.Round(Math.Min(cd, 9.99), 2)
-        cell.Value = v.ToString("F2")
-        If cd >= 0.9 Then
-            cell.Style.BackColor = ColorOK  : cell.Style.ForeColor = ColorOKTxt
-        Else
-            cell.Style.BackColor = ColorMal : cell.Style.ForeColor = ColorMalTxt
-        End If
-        cell.Style.Font = New Font("Segoe UI", 10, FontStyle.Bold)
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AsignarCD(cell, cd, negrita:=True)
     End Sub
 
     Private Sub AsignarEstado(cell As DataGridViewCell, cumple As Boolean)
@@ -429,16 +394,8 @@ Public Class Form_Reporte_VigasFundacion
 
     Private Sub EstilarFilaDatos(ws As IXLWorksheet, fila As Integer,
                                   numCols As Integer, esPar As Boolean)
-        Dim row = ws.Row(fila)
-        row.Height = 18
-        For col As Integer = 1 To numCols
-            Dim cell = ws.Cell(fila, col)
-            If esPar AndAlso cell.Style.Fill.BackgroundColor = XLColor.NoColor Then
-                cell.Style.Fill.BackgroundColor = XlFilaPar
-            End If
-            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
-            If col <= 2 Then cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
-        Next
+        ' Delega en los helpers compartidos de reporte.
+        ReporteHelpers.EstilarFilaDatos(ws, fila, numCols, esPar, columnasIzquierda:=2)
     End Sub
 
     Private Sub AgregarBordesTabla(ws As IXLWorksheet,

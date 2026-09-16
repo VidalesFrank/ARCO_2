@@ -13,21 +13,16 @@ Public Class Form_Reporte_Resumen_Nervios
 
     ' ── Paleta ────────────────────────────────────────────────────────────────
     Private ReadOnly ColorEncabezado As Color = Color.FromArgb(87, 87, 87)
-    Private ReadOnly ColorEncabezadoTexto As Color = Color.White
     Private ReadOnly ColorOK As Color = ColorTranslator.FromHtml("#C6EFCE")
     Private ReadOnly ColorOKTexto As Color = ColorTranslator.FromHtml("#006100")
     Private ReadOnly ColorMal As Color = ColorTranslator.FromHtml("#FFC7CE")
     Private ReadOnly ColorMalTexto As Color = ColorTranslator.FromHtml("#9C0006")
-    Private ReadOnly ColorAlerta As Color = ColorTranslator.FromHtml("#FFEB9C")
-    Private ReadOnly ColorAlertaTexto As Color = ColorTranslator.FromHtml("#9C5700")
 
     ' Colores ClosedXML
-    Private ReadOnly XlEncabezado As XLColor = XLColor.FromHtml("#575757")
     Private ReadOnly XlOKFondo As XLColor = XLColor.FromHtml("#C6EFCE")
     Private ReadOnly XlOKTexto As XLColor = XLColor.FromHtml("#006100")
     Private ReadOnly XlMalFondo As XLColor = XLColor.FromHtml("#FFC7CE")
     Private ReadOnly XlMalTexto As XLColor = XLColor.FromHtml("#9C0006")
-    Private ReadOnly XlFilaPar As XLColor = XLColor.FromHtml("#F8F8F8")
 
     ' ── Grids ─────────────────────────────────────────────────────────────────
     Private WithEvents DgvFlexion As New DataGridView()
@@ -423,53 +418,18 @@ Public Class Form_Reporte_Resumen_Nervios
     ' ── UI helpers ────────────────────────────────────────────────────────────
 
     Private Sub EstilarGrid(dgv As DataGridView)
-        dgv.AllowUserToAddRows = False
-        dgv.ReadOnly = True
-        dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgv.MultiSelect = False
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
-        dgv.RowHeadersVisible = False
-        dgv.BackgroundColor = Color.White
-        dgv.BorderStyle = BorderStyle.None
-        dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
-        dgv.GridColor = Color.FromArgb(210, 210, 210)
-        dgv.ColumnHeadersHeight = 42
-        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
-        dgv.RowTemplate.Height = 28
-        dgv.EnableHeadersVisualStyles = False
-        With dgv.ColumnHeadersDefaultCellStyle
-            .BackColor = ColorEncabezado
-            .ForeColor = ColorEncabezadoTexto
-            .Font = New Font("Segoe UI", 10, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-        With dgv.DefaultCellStyle
-            .BackColor = Color.White
-            .ForeColor = Color.Black
-            .SelectionBackColor = Color.FromArgb(200, 225, 255)
-            .SelectionForeColor = Color.Black
-            .Font = New Font("Segoe UI", 10)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.EstilarGrid(dgv)
     End Sub
 
     Private Sub AgregarColumna(dgv As DataGridView, nombre As String, header As String, ancho As Integer)
-        dgv.Columns.Add(New DataGridViewTextBoxColumn() With {
-            .Name = nombre, .HeaderText = header, .Width = ancho})
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AgregarColumna(dgv, nombre, header, ancho)
     End Sub
 
     Private Sub AsignarCD(cell As DataGridViewCell, cd As Double)
-        If cd <= 0 OrElse cd = Double.MaxValue Then
-            cell.Value = "—"
-            Return
-        End If
-        Dim v = Math.Round(Math.Min(cd, 9.99), 2)
-        cell.Value = v.ToString("F2")
-        If cd >= 0.9 Then
-            cell.Style.BackColor = ColorOK  : cell.Style.ForeColor = ColorOKTexto
-        Else
-            cell.Style.BackColor = ColorMal : cell.Style.ForeColor = ColorMalTexto
-        End If
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AsignarCD(cell, cd, guionSinDato:=True)
     End Sub
 
     ' ── ClosedXML helpers ─────────────────────────────────────────────────────
@@ -490,16 +450,8 @@ Public Class Form_Reporte_Resumen_Nervios
     End Sub
 
     Private Sub EstilarFilaDatos(ws As IXLWorksheet, fila As Integer, numCols As Integer, esPar As Boolean)
-        Dim row = ws.Row(fila)
-        row.Height = 18
-        For col = 1 To numCols
-            Dim cell = ws.Cell(fila, col)
-            If esPar AndAlso cell.Style.Fill.BackgroundColor = XLColor.NoColor Then
-                cell.Style.Fill.BackgroundColor = XlFilaPar
-            End If
-            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
-            If col <= 3 Then cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
-        Next
+        ' Delega en los helpers compartidos de reporte.
+        ReporteHelpers.EstilarFilaDatos(ws, fila, numCols, esPar, columnasIzquierda:=3)
     End Sub
 
     Private Sub AgregarBordesTabla(ws As IXLWorksheet, filaIni As Integer, filaFin As Integer, numCols As Integer)

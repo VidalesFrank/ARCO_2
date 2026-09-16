@@ -449,24 +449,8 @@ Public Class Form_Reporte_Resumen_Muros
     ' ── Helpers UI ───────────────────────────────────────────────────────────
 
     Private Sub EstilarGrid(dgv As DataGridView)
-        dgv.AllowUserToAddRows = False : dgv.ReadOnly = True
-        dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect : dgv.MultiSelect = False
-        dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
-        dgv.RowHeadersVisible = False : dgv.BackgroundColor = Color.White
-        dgv.BorderStyle = BorderStyle.None : dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
-        dgv.GridColor = Color.FromArgb(210, 210, 210)
-        dgv.ColumnHeadersHeight = 42 : dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
-        dgv.RowTemplate.Height = 28 : dgv.EnableHeadersVisualStyles = False
-        With dgv.ColumnHeadersDefaultCellStyle
-            .BackColor = ColorEncabezado : .ForeColor = Color.White
-            .Font = New Font("Segoe UI", 10, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-        With dgv.DefaultCellStyle
-            .BackColor = Color.White : .ForeColor = Color.Black
-            .SelectionBackColor = Color.FromArgb(200, 225, 255) : .SelectionForeColor = Color.Black
-            .Font = New Font("Segoe UI", 10) : .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.EstilarGrid(dgv)
     End Sub
 
     Private Sub ACol(dgv As DataGridView, nombre As String, header As String, ancho As Integer)
@@ -481,7 +465,8 @@ Public Class Form_Reporte_Resumen_Muros
     End Sub
 
     Private Sub AplicarEstado(cell As DataGridViewCell, texto As String, fondo As Color, textoColor As Color)
-        cell.Value = texto : cell.Style.BackColor = fondo : cell.Style.ForeColor = textoColor
+        ' Delega en los helpers compartidos de reporte.
+        ReporteGridHelpers.AsignarEstado(cell, texto, fondo, textoColor)
     End Sub
 
 End Class
