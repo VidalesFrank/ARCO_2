@@ -89,6 +89,23 @@ Public Class cZapata
     <OptionalField> Public CoordY As Double
     <OptionalField> Public TieneCoordenadas As Boolean = False
 
+    ''' <summary>
+    ''' Nombre del grupo al que pertenece la zapata (ej. "Z1", "Z2"). Vacío o
+    ''' Nothing significa que no está agrupada. Dentro de un grupo, todas las
+    ''' zapatas comparten geometría/materiales/refuerzo tomados de la que tiene
+    ''' EsPatron = True; cada apoyo mantiene sus propias combinaciones y sus
+    ''' propios Resultados.
+    ''' </summary>
+    <OptionalField> Public Grupo As String = ""
+
+    ''' <summary>
+    ''' Marca la zapata patrón dentro de su grupo. Solo una por grupo debería
+    ''' estar activa; ZapataService.AsegurarPatronPorGrupo se encarga de
+    ''' garantizar exclusividad y de proponer un fallback cuando no hay ninguna
+    ''' marcada.
+    ''' </summary>
+    <OptionalField> Public EsPatron As Boolean = False
+
     ' Combinaciones provenientes de ETABS
     Public Lista_Combinaciones_Estaticas As New List(Of cCombinacionPila)
     Public Lista_Combinaciones_Dinamicas As New List(Of cCombinacionPila)
@@ -110,6 +127,7 @@ Public Class cZapata
         ' repararlo aquí. Sin esto, activar peso estabilizante en un proyecto
         ' viejo daría W_zapata = 0.
         If gammaConcreto <= 0 Then gammaConcreto = 24.0
+        If Grupo Is Nothing Then Grupo = ""
     End Sub
 
 End Class

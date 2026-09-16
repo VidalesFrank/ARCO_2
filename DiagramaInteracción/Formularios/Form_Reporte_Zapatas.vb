@@ -34,9 +34,15 @@ Public Class Form_Reporte_Zapatas
     Private WithEvents DgvDetalle As New DataGridView()
     Private _tabs As TabControl
     Private _chkSoloObs As CheckBox
+    Private _cmbVista As ComboBox
     Private _lblConteo As Label
 
     Private ReadOnly _proyecto As Proyecto
+
+    Private Enum ModoResumen
+        PorApoyo = 0
+        PorGrupo = 1
+    End Enum
 
     ' =========================================================================
     Public Shared Sub Mostrar(proyecto As Proyecto)
@@ -117,8 +123,28 @@ Public Class Form_Reporte_Zapatas
         AddHandler _chkSoloObs.CheckedChanged, Sub(s, ev) CargarTodo()
         barra.Controls.Add(_chkSoloObs)
 
+        Dim lblVista As New Label() With {
+            .Text = "Vista:",
+            .Location = New Point(520, 18),
+            .AutoSize = True,
+            .Font = New Font("Segoe UI", 10)
+        }
+        barra.Controls.Add(lblVista)
+
+        _cmbVista = New ComboBox() With {
+            .Location = New Point(575, 15),
+            .Width = 200,
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .Font = New Font("Segoe UI", 10)
+        }
+        _cmbVista.Items.Add("Por apoyo individual")
+        _cmbVista.Items.Add("Por grupo (patrón + hijas)")
+        _cmbVista.SelectedIndex = 0
+        AddHandler _cmbVista.SelectedIndexChanged, Sub(s, ev) CargarTodo()
+        barra.Controls.Add(_cmbVista)
+
         _lblConteo = New Label() With {
-            .Location = New Point(540, 18),
+            .Location = New Point(795, 18),
             .AutoSize = True,
             .ForeColor = ReporteGridHelpers.ColorEncabezado,
             .Font = New Font("Segoe UI", 9.5!)
@@ -139,8 +165,116 @@ Public Class Form_Reporte_Zapatas
         Dim tipos = _proyecto.Elementos.Zapatas.Tipos
         If tipos Is Nothing OrElse tipos.Count = 0 Then Return
 
-        CargarResumen(tipos)
+        If ModoSeleccionado() = ModoResumen.PorGrupo Then
+            CargarResumenPorGrupo(tipos)
+        Else
+            CargarResumen(tipos)
+        End If
         CargarDetalle(tipos)
+
+    End Sub
+
+    Private Function ModoSeleccionado() As ModoResumen
+        If _cmbVista Is Nothing Then Return ModoResumen.PorApoyo
+        Return If(_cmbVista.SelectedIndex = 1, ModoResumen.PorGrupo, ModoResumen.PorApoyo)
+    End Function
+
+    ''' <summary>
+    ''' Resumen "por grupo": una fila por grupo, con la peor zapata del grupo.
+    ''' Las zapatas sin grupo se muestran como grupo "(sin agrupar)" al final.
+    ''' </summary>
+    Private Sub CargarResumenPorGrupo(tipos As List(Of cZapata))
+
+        Dim dgv = DgvResumen
+        dgv.SuspendLayout()
+        dgv.Columns.Clear() : dgv.Rows.Clear()
+
+        Col(dgv, "Grupo", "Grupo", 90)
+        Col(dgv, "Cantidad", "N° apoyos", 80)
+        Col(dgv, "Patron", "Patrón", 90)
+        Col(dgv, "Lb", "L_b [m]", 70)
+        Col(dgv, "Lh", "L_h [m]", 70)
+        Col(dgv, "e", "e [m]", 60)
+        Col(dgv, "fc", "fc [MPa]", 70)
+        Col(dgv, "PeorApoyo", "Apoyo crítico", 100)
+        Col(dgv, "PeorCD", "Peor C/D", 80)
+        Col(dgv, "Gobierna", "Gobierna", 120)
+        Col(dgv, "Combo", "Combinación", 140)
+        Col(dgv, "Estado", "Estado", 90)
+
+        Dim mostradas As Integer = 0
+        Dim conObs As Integer = 0
+
+        ' Grupos declarados + una fila por cada zapata sin grupo (marcadas
+        ' como grupo "(sin agrupar)"): así ninguna zapata desaparece del
+        ' resumen simplemente por no haberse agrupado.
+        Dim gruposDict = ZapataService.AgruparZapatas(tipos)
+        Dim sueltas = tipos.Where(Function(z) String.IsNullOrWhiteSpace(z.Grupo)).ToList()
+
+        For Each kv In gruposDict
+            Dim resGrupo = ZapataService.ResumirGrupo(kv.Key, kv.Value)
+            AgregarFilaGrupo(dgv, resGrupo, mostradas, conObs, esSuelta:=False)
+        Next
+
+        For Each z In sueltas
+            Dim resGrupo As New ZapataService.ResumenGrupo() With {
+                .Grupo = "(sin agrupar)",
+                .Patron = z,
+                .Cantidad = 1
+            }
+            Dim rz = ZapataService.Resumir(z)
+            resGrupo.TieneResultados = rz.TieneResultados
+            resGrupo.PeorFactor = rz.PeorFactor
+            resGrupo.PeorZapata = z
+            resGrupo.Revision = rz.Revision
+            resGrupo.Combinacion = rz.Combinacion
+            AgregarFilaGrupo(dgv, resGrupo, mostradas, conObs, esSuelta:=True)
+        Next
+
+        dgv.ResumeLayout(True)
+
+        _lblConteo.Text = $"{gruposDict.Count} grupos + {sueltas.Count} sueltas   |   {conObs} con observaciones   |   {mostradas} en pantalla"
+
+    End Sub
+
+    Private Sub AgregarFilaGrupo(dgv As DataGridView, resGrupo As ZapataService.ResumenGrupo,
+                                  ByRef mostradas As Integer, ByRef conObs As Integer,
+                                  esSuelta As Boolean)
+
+        Dim tieneObs As Boolean = Not resGrupo.TieneResultados OrElse Not resGrupo.Cumple
+        If tieneObs Then conObs += 1
+        If _chkSoloObs.Checked AndAlso Not tieneObs Then Return
+
+        Dim row = dgv.Rows(dgv.Rows.Add())
+        mostradas += 1
+
+        row.Cells("Grupo").Value = resGrupo.Grupo
+        row.Cells("Cantidad").Value = resGrupo.Cantidad
+        row.Cells("Patron").Value = If(resGrupo.Patron IsNot Nothing, resGrupo.Patron.Label_joint, "")
+
+        If resGrupo.Patron IsNot Nothing Then
+            ReporteGridHelpers.AsignarValor(row.Cells("Lb"), resGrupo.Patron.L_b)
+            ReporteGridHelpers.AsignarValor(row.Cells("Lh"), resGrupo.Patron.L_h)
+            ReporteGridHelpers.AsignarValor(row.Cells("e"), resGrupo.Patron.e)
+            row.Cells("fc").Value = resGrupo.Patron.fc
+        End If
+
+        If mostradas Mod 2 = 0 Then row.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
+
+        If Not resGrupo.TieneResultados Then
+            For Each k In {"PeorApoyo", "PeorCD", "Gobierna", "Combo", "Estado"}
+                ReporteGridHelpers.AsignarEstado(row.Cells(k), "Sin calcular",
+                                                 ReporteGridHelpers.ColorAlerta,
+                                                 ReporteGridHelpers.ColorAlertaTexto)
+            Next
+            Return
+        End If
+
+        row.Cells("PeorApoyo").Value = If(resGrupo.PeorZapata IsNot Nothing, resGrupo.PeorZapata.Label_joint, "")
+        ReporteGridHelpers.AsignarCD(row.Cells("PeorCD"), resGrupo.PeorFactor, negrita:=True)
+        row.Cells("Gobierna").Value = resGrupo.Revision
+        row.Cells("Combo").Value = resGrupo.Combinacion
+        AsignarOk(row.Cells("Estado"), resGrupo.Cumple)
 
     End Sub
 
@@ -391,6 +525,12 @@ Public Class Form_Reporte_Zapatas
             Dim tipos = _proyecto.Elementos.Zapatas.Tipos
             Using wb As New XLWorkbook()
                 ExportarHojaResumen(wb, tipos)
+                ' Cuando hay grupos definidos, se agrega la hoja de resumen
+                ' por grupo. Si no hay ninguna zapata agrupada, se omite para
+                ' no ensuciar el archivo con una hoja vacía.
+                If tipos.Any(Function(z) Not String.IsNullOrWhiteSpace(z.Grupo)) Then
+                    ExportarHojaResumenPorGrupo(wb, tipos)
+                End If
                 ExportarHojaDetalle(wb, tipos)
                 wb.SaveAs(dlg.FileName)
             End Using
@@ -405,6 +545,74 @@ Public Class Form_Reporte_Zapatas
             Logger.Error(ex, "Form_Reporte_Zapatas.BtnExportar_Click")
             MessageBox.Show("Error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Una fila por grupo: patrón, cantidad de apoyos, apoyo crítico, peor C/D
+    ''' y revisión que gobierna. Las zapatas sin grupo van al final como
+    ''' "(sin agrupar)" para que ninguna se pierda.
+    ''' </summary>
+    Private Sub ExportarHojaResumenPorGrupo(wb As XLWorkbook, tipos As List(Of cZapata))
+
+        Dim ws = wb.Worksheets.Add("Resumen por grupo")
+        ws.ShowGridLines = False
+
+        Dim hdrs = {"Grupo", "N° apoyos", "Patron", "L_b (m)", "L_h (m)", "e (m)",
+                    "fc (MPa)", "Apoyo critico", "Peor C/D", "Gobierna",
+                    "Combinacion", "Estado"}
+        ReporteHelpers.EscribirEncabezados(ws, 1, hdrs, tamanoFuente:=10, altoFila:=20)
+
+        Dim fila As Integer = 2
+        Dim escribirFila As Action(Of ZapataService.ResumenGrupo) =
+            Sub(rg As ZapataService.ResumenGrupo)
+                ws.Cell(fila, 1).Value = rg.Grupo
+                ws.Cell(fila, 2).Value = rg.Cantidad
+                ws.Cell(fila, 3).Value = If(rg.Patron IsNot Nothing, rg.Patron.Label_joint, "")
+                If rg.Patron IsNot Nothing Then
+                    ReporteHelpers.EscribirValor(ws.Cell(fila, 4), rg.Patron.L_b)
+                    ReporteHelpers.EscribirValor(ws.Cell(fila, 5), rg.Patron.L_h)
+                    ReporteHelpers.EscribirValor(ws.Cell(fila, 6), rg.Patron.e)
+                    ws.Cell(fila, 7).Value = rg.Patron.fc
+                End If
+                If rg.TieneResultados Then
+                    ws.Cell(fila, 8).Value = If(rg.PeorZapata IsNot Nothing, rg.PeorZapata.Label_joint, "")
+                    ReporteHelpers.EscribirFactor(ws.Cell(fila, 9), rg.PeorFactor, ReporteHelpers.SinDato.CeroOMenor)
+                    ws.Cell(fila, 10).Value = rg.Revision
+                    ws.Cell(fila, 11).Value = rg.Combinacion
+                    EscribirCumple(ws.Cell(fila, 12), rg.Cumple)
+                Else
+                    For c As Integer = 8 To 12
+                        ReporteHelpers.EscribirEstado(ws.Cell(fila, c), "Sin calcular",
+                                                      ReporteHelpers.XlAlertaFondo,
+                                                      ReporteHelpers.XlAlertaTexto)
+                    Next
+                End If
+                ReporteHelpers.EstilarFilaDatos(ws, fila, hdrs.Length, fila Mod 2 = 0, columnasIzquierda:=3)
+                fila += 1
+            End Sub
+
+        For Each kv In ZapataService.AgruparZapatas(tipos)
+            escribirFila(ZapataService.ResumirGrupo(kv.Key, kv.Value))
+        Next
+
+        For Each z In tipos.Where(Function(x) String.IsNullOrWhiteSpace(x.Grupo))
+            Dim rg As New ZapataService.ResumenGrupo() With {
+                .Grupo = "(sin agrupar)",
+                .Patron = z,
+                .Cantidad = 1
+            }
+            Dim rz = ZapataService.Resumir(z)
+            rg.TieneResultados = rz.TieneResultados
+            rg.PeorFactor = rz.PeorFactor
+            rg.PeorZapata = z
+            rg.Revision = rz.Revision
+            rg.Combinacion = rz.Combinacion
+            escribirFila(rg)
+        Next
+
+        ReporteHelpers.AgregarBordesTabla(ws, 1, fila - 1, hdrs.Length)
+        ReporteHelpers.AjustarColumnas(ws, hdrs.Length, anchoMaximo:=22)
 
     End Sub
 

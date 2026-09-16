@@ -53,6 +53,10 @@ Public Class Form_07_Pag_Zapatas
             Tabla_Elementos.Columns(COL_DF).FillWeight = 55
         If Tabla_Elementos.Columns.Contains(COL_GCONC) Then _
             Tabla_Elementos.Columns(COL_GCONC).FillWeight = 75
+        If Tabla_Elementos.Columns.Contains(COL_GRUPO) Then _
+            Tabla_Elementos.Columns(COL_GRUPO).FillWeight = 55
+        If Tabla_Elementos.Columns.Contains(COL_PATRON) Then _
+            Tabla_Elementos.Columns(COL_PATRON).FillWeight = 45
 
     End Sub
 
@@ -140,21 +144,75 @@ Public Class Form_07_Pag_Zapatas
     End Sub
 
     ' =====================================================================
-    ' VER DETALLE DE ZAPATA SELECCIONADA
+    ' GRÁFICAS RESUMEN
     ' =====================================================================
-    ' Abre Form_07_Zapata_Detalle sobre la fila que esté marcada en la tabla.
-    ' El detalle también se puede abrir haciendo doble clic sobre una zapata
-    ' en la vista en planta (Form_Planta_Zapatas).
+    ' Dashboard con las 5 revisiones C/D (peor global, suelo, excentricidad,
+    ' punzonamiento, cortante+flexión) y dos conteos (tipo de apoyo y
+    ' cumple/no cumple). Comparte la infraestructura de GraficosResumen con
+    ' los otros cinco módulos.
 
-    Private Sub AgregarBotonVerDetalle()
+    ''' <summary>
+    ''' Agrega "Gráficas resumen..." al menú Ver. Se registra como método aparte
+    ''' de AgregarMenuPlanta para minimizar el roce con otros cambios al menú.
+    ''' </summary>
+    Private Sub AgregarMenuGraficas()
 
-        Dim item As New ToolStripMenuItem("Ver detalle de zapata seleccionada...") With {
+        Dim item As New ToolStripMenuItem("Gráficas resumen...") With {
             .ForeColor = Color.White,
             .BackColor = Color.FromArgb(87, 87, 87),
-            .ToolTipText = "Heatmap de presiones, capacidad vs. demanda, envolvente y secciones críticas"
+            .ToolTipText = "Barras C/D por revisión y conteos"
         }
-        AddHandler item.Click, AddressOf AbrirDetalleZapata_Click
+        AddHandler item.Click, AddressOf AbrirGraficas_Click
         Ver_Zapatas.DropDownItems.Add(item)
+
+    End Sub
+
+    Private Sub AbrirGraficas_Click(sender As Object, e As EventArgs)
+
+        If Proyecto Is Nothing OrElse Proyecto.Elementos Is Nothing OrElse
+           Proyecto.Elementos.Zapatas Is Nothing OrElse
+           Proyecto.Elementos.Zapatas.Tipos Is Nothing OrElse
+           Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
+            MessageBox.Show("Primero calcule las zapatas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Try
+            Dim f As New Form_Graficos_Zapatas() With {
+                .Zapatas = Proyecto.Elementos.Zapatas.Tipos
+            }
+            f.Show(Me)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_07_Pag_Zapatas.AbrirGraficas_Click")
+            MessageBox.Show("No se pudo abrir la ventana de gráficas." & vbCrLf & ex.Message,
+                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        End Try
+
+    End Sub
+
+    ' =====================================================================
+    ' VER DETALLE DE UNA ZAPATA (Form_07_Zapata_Detalle)
+    ' =====================================================================
+    ''' <summary>
+    ''' Agrega al menú Ver el item que abre la vista de análisis fino de la
+    ''' zapata seleccionada en Tabla_Elementos: presiones, capacidad vs demanda,
+    ''' envolvente por combinación y secciones críticas. Método independiente
+    ''' para minimizar el roce con otras integraciones del mismo menú.
+    ''' </summary>
+    Private Sub AgregarBotonVerDetalle()
+
+        Try
+            Dim item As New ToolStripMenuItem("Ver detalle de zapata seleccionada...") With {
+                .ForeColor = Color.White,
+                .BackColor = Color.FromArgb(87, 87, 87),
+                .ToolTipText = "Presiones bajo la zapata, capacidad vs demanda, envolvente y secciones críticas"
+            }
+            AddHandler item.Click, AddressOf AbrirDetalleZapata_Click
+            Ver_Zapatas.DropDownItems.Add(item)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_07_Pag_Zapatas.AgregarBotonVerDetalle", "")
+        End Try
 
     End Sub
 
@@ -203,54 +261,6 @@ Public Class Form_07_Pag_Zapatas
             Logger.Error(ex, "Form_07_Pag_Zapatas.AbrirDetalleZapata_Click", "")
             MessageBox.Show("No se pudo abrir el detalle: " & ex.Message,
                             "Detalle de zapata", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-
-    End Sub
-
-    ' =====================================================================
-    ' GRÁFICAS RESUMEN
-    ' =====================================================================
-    ' Dashboard con las 5 revisiones C/D (peor global, suelo, excentricidad,
-    ' punzonamiento, cortante+flexión) y dos conteos (tipo de apoyo y
-    ' cumple/no cumple). Comparte la infraestructura de GraficosResumen con
-    ' los otros cinco módulos.
-
-    ''' <summary>
-    ''' Agrega "Gráficas resumen..." al menú Ver. Se registra como método aparte
-    ''' de AgregarMenuPlanta para minimizar el roce con otros cambios al menú.
-    ''' </summary>
-    Private Sub AgregarMenuGraficas()
-
-        Dim item As New ToolStripMenuItem("Gráficas resumen...") With {
-            .ForeColor = Color.White,
-            .BackColor = Color.FromArgb(87, 87, 87),
-            .ToolTipText = "Barras C/D por revisión y conteos"
-        }
-        AddHandler item.Click, AddressOf AbrirGraficas_Click
-        Ver_Zapatas.DropDownItems.Add(item)
-
-    End Sub
-
-    Private Sub AbrirGraficas_Click(sender As Object, e As EventArgs)
-
-        If Proyecto Is Nothing OrElse Proyecto.Elementos Is Nothing OrElse
-           Proyecto.Elementos.Zapatas Is Nothing OrElse
-           Proyecto.Elementos.Zapatas.Tipos Is Nothing OrElse
-           Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
-            MessageBox.Show("Primero calcule las zapatas.",
-                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Try
-            Dim f As New Form_Graficos_Zapatas() With {
-                .Zapatas = Proyecto.Elementos.Zapatas.Tipos
-            }
-            f.Show(Me)
-        Catch ex As Exception
-            Logger.Error(ex, "Form_07_Pag_Zapatas.AbrirGraficas_Click")
-            MessageBox.Show("No se pudo abrir la ventana de gráficas." & vbCrLf & ex.Message,
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Warning)
         End Try
 
     End Sub
@@ -399,6 +409,8 @@ Public Class Form_07_Pag_Zapatas
 
     Private Const COL_DF As String = "ColDf"
     Private Const COL_GCONC As String = "ColGammaConcreto"
+    Private Const COL_GRUPO As String = "ColGrupo"
+    Private Const COL_PATRON As String = "ColPatron"
 
     Private Sub PrepararColumnasDesplanteYConcreto()
         If Tabla_Elementos Is Nothing Then Exit Sub
@@ -422,6 +434,109 @@ Public Class Form_07_Pag_Zapatas
             }
             Tabla_Elementos.Columns.Add(colG)
         End If
+
+        ' Columna Grupo: el usuario escribe un nombre (ej. "Z1"). Las zapatas
+        ' con el mismo nombre comparten geometría/refuerzo con la que esté
+        ' marcada como patrón en la columna siguiente.
+        If Not Tabla_Elementos.Columns.Contains(COL_GRUPO) Then
+            Dim colGr As New DataGridViewTextBoxColumn() With {
+                .Name = COL_GRUPO,
+                .HeaderText = "Grupo",
+                .Width = 80,
+                .DefaultCellStyle = New DataGridViewCellStyle() With {.Alignment = DataGridViewContentAlignment.MiddleCenter}
+            }
+            Tabla_Elementos.Columns.Add(colGr)
+        End If
+
+        ' Columna Patrón: checkbox. Al marcar, se desmarcan las demás del mismo
+        ' grupo (exclusividad) — se maneja en CellValueChanged más abajo.
+        If Not Tabla_Elementos.Columns.Contains(COL_PATRON) Then
+            Dim colP As New DataGridViewCheckBoxColumn() With {
+                .Name = COL_PATRON,
+                .HeaderText = "Patrón",
+                .Width = 60,
+                .DefaultCellStyle = New DataGridViewCellStyle() With {.Alignment = DataGridViewContentAlignment.MiddleCenter}
+            }
+            Tabla_Elementos.Columns.Add(colP)
+        End If
+    End Sub
+
+    ' =====================================================================
+    ' Propagación patrón → hijas al calcular
+    ' =====================================================================
+    ' Justo antes de Calcular, cada grupo elige su patrón (o la primera fila
+    ' si nadie está marcado) y copia SUS celdas de geometría/materiales/
+    ' refuerzo/Df/γ_c a las celdas de las demás filas del grupo. Así el bucle
+    ' que sigue lee valores ya sincronizados sin tener que conocer el
+    ' concepto de grupo. Columnas que NO se copian: 0 Label_joint, 1 Nombre,
+    ' Tipo de apoyo (depende de la posición), Grupo y Patrón.
+
+    Private Shared ReadOnly _colsCopiablesPatron() As Integer = {
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
+    }
+    Private Shared ReadOnly _colsCopiablesPatronNombradas() As String = {
+        COL_DF, COL_GCONC
+    }
+
+    Private Sub PropagarPatronEnTabla()
+
+        If Tabla_Elementos Is Nothing OrElse Tabla_Elementos.Rows.Count = 0 Then Exit Sub
+        If Not Tabla_Elementos.Columns.Contains(COL_GRUPO) Then Exit Sub
+
+        ' 1) Agrupar índices de fila por grupo (ignorando filas sin grupo).
+        Dim grupos As New Dictionary(Of String, List(Of Integer))(StringComparer.OrdinalIgnoreCase)
+        For i As Integer = 0 To Tabla_Elementos.Rows.Count - 1
+            Dim fila = Tabla_Elementos.Rows(i)
+            If fila.IsNewRow Then Continue For
+            Dim gTxt = Convert.ToString(fila.Cells(COL_GRUPO).Value)
+            If String.IsNullOrWhiteSpace(gTxt) Then Continue For
+            gTxt = gTxt.Trim()
+            If Not grupos.ContainsKey(gTxt) Then grupos(gTxt) = New List(Of Integer)
+            grupos(gTxt).Add(i)
+        Next
+
+        _actualizandoTipoApoyo = True   ' reusa el guardián para evitar reentradas
+        Try
+            For Each kv In grupos
+                If kv.Value.Count < 2 Then Continue For  ' grupo de una sola: nada que sincronizar
+
+                ' 2) Buscar la patrón: la marcada, o la primera si no hay ninguna.
+                Dim idxPatron As Integer = -1
+                For Each idx In kv.Value
+                    If CBool(If(Tabla_Elementos.Rows(idx).Cells(COL_PATRON).Value, False)) Then
+                        idxPatron = idx
+                        Exit For
+                    End If
+                Next
+                If idxPatron < 0 Then
+                    idxPatron = kv.Value.First()
+                    Tabla_Elementos.Rows(idxPatron).Cells(COL_PATRON).Value = True
+                End If
+
+                ' 3) Copiar celdas de la patrón a cada hija.
+                Dim filaPatron = Tabla_Elementos.Rows(idxPatron)
+                For Each idxHija In kv.Value
+                    If idxHija = idxPatron Then Continue For
+                    Dim filaHija = Tabla_Elementos.Rows(idxHija)
+
+                    For Each c As Integer In _colsCopiablesPatron
+                        If c < Tabla_Elementos.Columns.Count Then
+                            filaHija.Cells(c).Value = filaPatron.Cells(c).Value
+                        End If
+                    Next
+                    For Each nom In _colsCopiablesPatronNombradas
+                        If Tabla_Elementos.Columns.Contains(nom) Then
+                            filaHija.Cells(nom).Value = filaPatron.Cells(nom).Value
+                        End If
+                    Next
+                    ' Además, forzamos EsPatron=False para las hijas
+                    filaHija.Cells(COL_PATRON).Value = False
+                Next
+            Next
+        Finally
+            _actualizandoTipoApoyo = False
+        End Try
+
     End Sub
 
     ' =====================================================================
@@ -494,6 +609,35 @@ Public Class Form_07_Pag_Zapatas
 
         If _actualizandoTipoApoyo Then Exit Sub
         If e.RowIndex < 0 Then Exit Sub
+
+        ' Marcar patrón: garantizar exclusividad dentro del grupo. Se hace
+        ' aquí para que el usuario vea el cambio al instante, sin esperar a
+        ' Ejecutar/Calcular.
+        If Tabla_Elementos.Columns.Contains(COL_PATRON) AndAlso
+           e.ColumnIndex = Tabla_Elementos.Columns(COL_PATRON).Index Then
+            Dim filaP = Tabla_Elementos.Rows(e.RowIndex)
+            Dim marcada As Boolean = CBool(If(filaP.Cells(COL_PATRON).Value, False))
+            If marcada Then
+                Dim grupoP As String = Convert.ToString(filaP.Cells(COL_GRUPO).Value)
+                If Not String.IsNullOrWhiteSpace(grupoP) Then
+                    _actualizandoTipoApoyo = True
+                    Try
+                        For Each otra As DataGridViewRow In Tabla_Elementos.Rows
+                            If otra.IsNewRow OrElse otra.Index = filaP.Index Then Continue For
+                            Dim gOtra As String = Convert.ToString(otra.Cells(COL_GRUPO).Value)
+                            If String.Equals(gOtra, grupoP, StringComparison.OrdinalIgnoreCase) Then
+                                otra.Cells(COL_PATRON).Value = False
+                            End If
+                        Next
+                    Finally
+                        _actualizandoTipoApoyo = False
+                    End Try
+                End If
+            End If
+            _hayCambiosZapatas = True
+            Return
+        End If
+
         If Not Tabla_Elementos.Columns.Contains(COL_TIPO_APOYO) Then Exit Sub
         If e.ColumnIndex <> Tabla_Elementos.Columns(COL_TIPO_APOYO).Index Then Exit Sub
 
@@ -703,6 +847,14 @@ Public Class Form_07_Pag_Zapatas
             If Tabla_Elementos.Columns.Contains(COL_GCONC) Then
                 Tabla_Elementos.Rows(idx).Cells(COL_GCONC).Value = Seccion.gammaConcreto
             End If
+            ' Grupo y Patrón se inicializan vacíos: agrupar es una decisión
+            ' explícita del ingeniero, no algo que se infiera.
+            If Tabla_Elementos.Columns.Contains(COL_GRUPO) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_GRUPO).Value = ""
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_PATRON) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_PATRON).Value = False
+            End If
 
         Next
 
@@ -779,6 +931,12 @@ Public Class Form_07_Pag_Zapatas
         TablaResultados.Rows.Clear()
         Tabla_Reporte.Rows.Clear()
 
+        ' Antes de calcular, propaga la geometría, materiales y refuerzo de la
+        ' zapata patrón a todas las hijas de cada grupo. Esto se hace en la
+        ' tabla para que el bucle de lectura que sigue no tenga que enterarse
+        ' del concepto de grupo.
+        PropagarPatronEnTabla()
+
         Dim combsEst = New HashSet(Of String)(Proyecto.Elementos.Zapatas.Lista_Combinaciones_Estaticas.Select(Function(c) NormalizarClaveCombo(c)))
         Dim combsDin = New HashSet(Of String)(Proyecto.Elementos.Zapatas.Lista_Combinaciones_Dinamicas.Select(Function(c) NormalizarClaveCombo(c)))
         Dim fontBold As New Font("Segoe UI", 9, FontStyle.Bold)
@@ -816,6 +974,16 @@ Public Class Form_07_Pag_Zapatas
                 If Double.TryParse(Convert.ToString(Tabla_Elementos.Rows(i).Cells(COL_GCONC).Value), vG) AndAlso vG > 0 Then
                     Elemento.gammaConcreto = vG
                 End If
+            End If
+
+            ' Grupo y Patrón: se leen de la tabla. La sincronización
+            ' (copiar geometría del patrón a las hijas) se hace UNA sola vez
+            ' fuera del loop, después de recorrer toda la tabla.
+            If Tabla_Elementos.Columns.Contains(COL_GRUPO) Then
+                Elemento.Grupo = If(Convert.ToString(Tabla_Elementos.Rows(i).Cells(COL_GRUPO).Value), "").Trim()
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_PATRON) Then
+                Elemento.EsPatron = CBool(If(Tabla_Elementos.Rows(i).Cells(COL_PATRON).Value, False))
             End If
 
             Elemento.Refuerzos.Clear()
@@ -1164,6 +1332,12 @@ Public Class Form_07_Pag_Zapatas
             End If
             If Tabla_Elementos.Columns.Contains(COL_GCONC) Then
                 Tabla_Elementos.Rows(idx).Cells(COL_GCONC).Value = z.gammaConcreto
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_GRUPO) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_GRUPO).Value = If(z.Grupo, "")
+            End If
+            If Tabla_Elementos.Columns.Contains(COL_PATRON) Then
+                Tabla_Elementos.Rows(idx).Cells(COL_PATRON).Value = z.EsPatron
             End If
         Next
     End Sub

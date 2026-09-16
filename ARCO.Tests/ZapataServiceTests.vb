@@ -547,4 +547,172 @@ Public Class ZapataServiceTests
         Assert.IsTrue(f.Peor >= 0.001, "hay algún factor")
     End Sub
 
+    ' =====================================================================
+    ' Grupos de zapatas — patrón + hijas comparten geometría
+    ' =====================================================================
+
+    ''' <summary>Crea una zapata con propiedades particulares para verificar cambios.</summary>
+    Private Shared Function ZapataDeReferencia(nombre As String, grupo As String) As cZapata
+        Dim z = ZapataParaEvaluar()
+        z.Label_joint = nombre
+        z.Nombre = nombre
+        z.Grupo = grupo
+        Return z
+    End Function
+
+    <TestMethod>
+    Public Sub Agrupar_SoloIncluyeLasQueTienenGrupo()
+        Dim zapatas = New List(Of cZapata) From {
+            ZapataDeReferencia("A", "Z1"),
+            ZapataDeReferencia("B", "Z1"),
+            ZapataDeReferencia("C", "Z2"),
+            ZapataDeReferencia("D", "")
+        }
+        Dim grupos = ZapataService.AgruparZapatas(zapatas)
+        Assert.AreEqual(2, grupos.Count, "solo Z1 y Z2, la sin grupo se omite")
+        Assert.AreEqual(2, grupos("Z1").Count)
+        Assert.AreEqual(1, grupos("Z2").Count)
+    End Sub
+
+    <TestMethod>
+    Public Sub PatronDelGrupo_DevuelveLaMarcada()
+        Dim a = ZapataDeReferencia("A", "Z1")
+        Dim b = ZapataDeReferencia("B", "Z1") : b.EsPatron = True
+        Dim c = ZapataDeReferencia("C", "Z1")
+        Dim patron = ZapataService.PatronDelGrupo(New cZapata() {a, b, c})
+        Assert.AreSame(b, patron)
+    End Sub
+
+    ''' <summary>
+    ''' Si nadie está marcado, el fallback es la primera por Label_joint.
+    ''' Se elige un orden estable (alfabético) en vez del orden de inserción
+    ''' para que la vista sea la misma sin importar cómo se ordene la tabla.
+    ''' </summary>
+    <TestMethod>
+    Public Sub PatronDelGrupo_FallbackAlfabetico()
+        Dim c = ZapataDeReferencia("C", "Z1")
+        Dim a = ZapataDeReferencia("A", "Z1")
+        Dim b = ZapataDeReferencia("B", "Z1")
+        Dim patron = ZapataService.PatronDelGrupo(New cZapata() {c, a, b})
+        Assert.AreSame(a, patron, "debe elegir 'A' aunque no vino primero")
+    End Sub
+
+    <TestMethod>
+    Public Sub AsegurarPatron_MarcaUnaSiNoHay()
+        Dim zapatas = New List(Of cZapata) From {
+            ZapataDeReferencia("A", "Z1"),
+            ZapataDeReferencia("B", "Z1")
+        }
+        Dim cambios = ZapataService.AsegurarPatronPorGrupo(zapatas)
+        Assert.AreEqual(1, cambios)
+        Assert.IsTrue(zapatas.Any(Function(z) z.EsPatron), "debería quedar una marcada")
+        Assert.AreEqual(1, zapatas.Where(Function(z) z.EsPatron).Count(), "exactamente una")
+    End Sub
+
+    <TestMethod>
+    Public Sub AsegurarPatron_DesmarcaLasExtraSiVarias()
+        Dim a = ZapataDeReferencia("A", "Z1") : a.EsPatron = True
+        Dim b = ZapataDeReferencia("B", "Z1") : b.EsPatron = True
+        Dim c = ZapataDeReferencia("C", "Z1") : c.EsPatron = True
+        Dim zapatas = New List(Of cZapata) From {a, b, c}
+        ZapataService.AsegurarPatronPorGrupo(zapatas)
+        Assert.AreEqual(1, zapatas.Where(Function(z) z.EsPatron).Count(), "solo una queda")
+    End Sub
+
+    ''' <summary>
+    ''' EsPatron marcado sobre una zapata SIN grupo es un estado inválido; se
+    ''' limpia. Pasa cuando el usuario primero marca y después vacía el nombre
+    ''' del grupo.
+    ''' </summary>
+    <TestMethod>
+    Public Sub AsegurarPatron_LimpiaMarcaEnZapatasSinGrupo()
+        Dim suelta = ZapataDeReferencia("X", "") : suelta.EsPatron = True
+        Dim zapatas = New List(Of cZapata) From {suelta}
+        ZapataService.AsegurarPatronPorGrupo(zapatas)
+        Assert.IsFalse(suelta.EsPatron)
+    End Sub
+
+    <TestMethod>
+    Public Sub SincronizarConPatron_CopiaGeometriaYRefuerzo()
+        Dim patron = ZapataDeReferencia("P", "Z1")
+        patron.L_b = 2.5 : patron.L_h = 3.0 : patron.e = 0.6 : patron.d = 0.525
+        patron.b = 0.5 : patron.h = 0.5
+        patron.fc = 28 : patron.fy = 420
+        patron.Rho_L1 = 0.005 : patron.Rho_L2 = 0.006
+        patron.Df = 2.0 : patron.gammaConcreto = 25.0
+
+        Dim hija = ZapataDeReferencia("H", "Z1")
+        hija.L_b = 1.0   ' distinta a propósito
+        hija.CoordX = 5.5 : hija.CoordY = 3.3 : hija.TieneCoordenadas = True
+
+        ZapataService.SincronizarConPatron(hija, patron)
+
+        Assert.AreEqual(2.5, hija.L_b, 0.001, "L_b se copia")
+        Assert.AreEqual(3.0, hija.L_h, 0.001)
+        Assert.AreEqual(0.6, hija.e, 0.001)
+        Assert.AreEqual(28, hija.fc, 0.001, "fc se copia")
+        Assert.AreEqual(0.005, hija.Rho_L1, 0.0001)
+        Assert.AreEqual(2.0, hija.Df, 0.001)
+        Assert.AreEqual(25.0, hija.gammaConcreto, 0.001)
+        Assert.AreEqual(5.5, hija.CoordX, 0.001, "coords no se tocan")
+        Assert.IsTrue(hija.TieneCoordenadas, "TieneCoordenadas se preserva")
+    End Sub
+
+    ''' <summary>
+    ''' El caso central del feature: cada apoyo del grupo se evalúa con SUS
+    ''' propias combinaciones aunque comparta geometría con la patrón.
+    ''' </summary>
+    <TestMethod>
+    Public Sub SincronizarTodosLosGrupos_MantieneCombinacionesYResultadosPorApoyo()
+        Dim patron = ZapataDeReferencia("P", "Z1") : patron.EsPatron = True
+        patron.L_b = 2.0 : patron.L_h = 2.0
+        patron.Lista_Combinaciones_Estaticas.Add(New cCombinacionPila() With {.LoadCase = "COMB_P"})
+        patron.Resultados("COMB_P") = New ResultadoZapata() With {.qMax = 100}
+
+        Dim hija = ZapataDeReferencia("H", "Z1")
+        hija.L_b = 999   ' distinta a propósito, para que la sincronización se note
+        hija.Lista_Combinaciones_Estaticas.Add(New cCombinacionPila() With {.LoadCase = "COMB_H"})
+        hija.Resultados("COMB_H") = New ResultadoZapata() With {.qMax = 250}
+
+        ZapataService.SincronizarTodosLosGrupos(New List(Of cZapata) From {patron, hija})
+
+        Assert.AreEqual(2.0, hija.L_b, 0.001, "geometría sincronizada")
+        Assert.AreEqual(1, hija.Lista_Combinaciones_Estaticas.Count, "combinación propia intacta")
+        Assert.AreEqual("COMB_H", hija.Lista_Combinaciones_Estaticas.First().LoadCase)
+        Assert.AreEqual(250.0, hija.Resultados("COMB_H").qMax, 0.001, "resultados propios intactos")
+        Assert.IsFalse(hija.Resultados.ContainsKey("COMB_P"), "no se contaminan resultados de la patrón")
+    End Sub
+
+    <TestMethod>
+    Public Sub ResumirGrupo_ElijeElPeorEntreLosApoyos()
+        Dim a = ZapataDeReferencia("A", "Z1") : a.EsPatron = True
+        a.Lista_Combinaciones_Estaticas.Add(New cCombinacionPila() With {.LoadCase = "C1"})
+        a.Resultados("C1") = New ResultadoZapata() With {
+            .qMax = 100, .Vu_p = 500, .Vc_p = 1000,
+            .Vu1_C = 100, .Vu3_C = 100, .Vc2_C = 200,
+            .Vu2_C = 100, .Vu4_C = 100, .Vc1_C = 200,
+            .Rho_1 = 0.002, .Rho_2 = 0.002
+        }
+        a.qAdm_Est = 200 : a.Rho_L1 = 0.004 : a.Rho_L2 = 0.004
+
+        Dim b = ZapataDeReferencia("B", "Z1")
+        b.Lista_Combinaciones_Estaticas.Add(New cCombinacionPila() With {.LoadCase = "C1"})
+        b.Resultados("C1") = New ResultadoZapata() With {
+            .qMax = 400, .Vu_p = 500, .Vc_p = 1000,
+            .Vu1_C = 100, .Vu3_C = 100, .Vc2_C = 200,
+            .Vu2_C = 100, .Vu4_C = 100, .Vc1_C = 200,
+            .Rho_1 = 0.002, .Rho_2 = 0.002
+        }
+        b.qAdm_Est = 200 : b.Rho_L1 = 0.004 : b.Rho_L2 = 0.004
+        ' A: 200/100 = 2.00. B: 200/400 = 0.50. Gobierna B.
+
+        Dim r = ZapataService.ResumirGrupo("Z1", New List(Of cZapata) From {a, b})
+
+        Assert.IsTrue(r.TieneResultados)
+        Assert.AreEqual(2, r.Cantidad)
+        Assert.AreEqual(0.5, r.PeorFactor, 0.001, "peor factor del grupo")
+        Assert.AreSame(b, r.PeorZapata, "apoyo que gobierna")
+        Assert.IsFalse(r.Cumple, "0.50 no cumple")
+    End Sub
+
 End Class

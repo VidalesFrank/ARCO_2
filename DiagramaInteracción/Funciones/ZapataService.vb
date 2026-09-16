@@ -227,6 +227,192 @@ Public NotInheritable Class ZapataService
 
     End Function
 
+    ' =====================================================================
+    ' Grupos de zapatas (patrón + hijas)
+    ' =====================================================================
+
+    ''' <summary>
+    ''' El nombre del grupo, normalizado (recortado y sin distinguir mayúsculas
+    ''' en los casos degenerados). Cadena vacía = zapata suelta, no agrupada.
+    ''' </summary>
+    Public Shared Function ClaveGrupo(z As cZapata) As String
+        If z Is Nothing OrElse String.IsNullOrWhiteSpace(z.Grupo) Then Return ""
+        Return z.Grupo.Trim()
+    End Function
+
+    ''' <summary>
+    ''' Zapatas agrupadas por el string "Grupo". Las que tienen grupo vacío no
+    ''' aparecen: se manejan como apoyos sueltos.
+    ''' </summary>
+    Public Shared Function AgruparZapatas(zapatas As List(Of cZapata)) _
+                                          As Dictionary(Of String, List(Of cZapata))
+
+        Dim res As New Dictionary(Of String, List(Of cZapata))(StringComparer.OrdinalIgnoreCase)
+        If zapatas Is Nothing Then Return res
+
+        For Each z In zapatas
+            Dim clave = ClaveGrupo(z)
+            If clave.Length = 0 Then Continue For
+            If Not res.ContainsKey(clave) Then res(clave) = New List(Of cZapata)()
+            res(clave).Add(z)
+        Next
+
+        Return res
+
+    End Function
+
+    ''' <summary>
+    ''' Devuelve la zapata patrón del grupo. Si nadie está marcado como patrón,
+    ''' se toma la primera por Label_joint (orden alfabético) como convención
+    ''' estable, así el usuario ve siempre la misma sin importar cómo se
+    ''' ordene la tabla.
+    ''' </summary>
+    Public Shared Function PatronDelGrupo(zapatasDelGrupo As IEnumerable(Of cZapata)) As cZapata
+
+        If zapatasDelGrupo Is Nothing Then Return Nothing
+        Dim lista = zapatasDelGrupo.Where(Function(z) z IsNot Nothing).ToList()
+        If lista.Count = 0 Then Return Nothing
+
+        Dim marcada = lista.FirstOrDefault(Function(z) z.EsPatron)
+        If marcada IsNot Nothing Then Return marcada
+
+        Return lista.OrderBy(Function(z) If(z.Label_joint, "")).First()
+
+    End Function
+
+    ''' <summary>
+    ''' Después de que el usuario mueve zapatas entre grupos, asegura que cada
+    ''' grupo tenga EXACTAMENTE una patrón. Si un grupo tiene varias marcadas,
+    ''' se conserva la primera y se desmarca el resto; si no tiene ninguna, se
+    ''' marca la primera por Label_joint. Devuelve la cantidad de cambios que
+    ''' hizo, útil para saber si conviene refrescar la UI.
+    ''' </summary>
+    Public Shared Function AsegurarPatronPorGrupo(zapatas As List(Of cZapata)) As Integer
+
+        If zapatas Is Nothing Then Return 0
+
+        Dim cambios As Integer = 0
+        Dim grupos = AgruparZapatas(zapatas)
+
+        For Each kv In grupos
+            Dim marcadas = kv.Value.Where(Function(z) z.EsPatron).ToList()
+
+            If marcadas.Count = 0 Then
+                Dim primera = PatronDelGrupo(kv.Value)
+                If primera IsNot Nothing AndAlso Not primera.EsPatron Then
+                    primera.EsPatron = True
+                    cambios += 1
+                End If
+            ElseIf marcadas.Count > 1 Then
+                ' Deja solo la primera marcada; el resto queda como hija
+                For i As Integer = 1 To marcadas.Count - 1
+                    marcadas(i).EsPatron = False
+                    cambios += 1
+                Next
+            End If
+        Next
+
+        ' Zapatas sueltas (sin grupo) no deberían quedar marcadas como patrón:
+        ' EsPatron sin grupo es un estado sin sentido. Se limpia.
+        For Each z In zapatas
+            If ClaveGrupo(z).Length = 0 AndAlso z.EsPatron Then
+                z.EsPatron = False
+                cambios += 1
+            End If
+        Next
+
+        Return cambios
+
+    End Function
+
+    ''' <summary>
+    ''' Copia de la zapata patrón a la hija los campos que definen "cómo es" la
+    ''' zapata: geometría, pedestal, materiales, refuerzo, profundidad de
+    ''' desplante, pesos específicos, capacidad admisible y factores. Se
+    ''' preservan sin tocar: Label_joint, Nombre, coordenadas, tipo de apoyo
+    ''' (que depende de la posición y puede diferir dentro del grupo),
+    ''' combinaciones y Resultados.
+    ''' </summary>
+    Public Shared Sub SincronizarConPatron(hija As cZapata, patron As cZapata)
+
+        If hija Is Nothing OrElse patron Is Nothing OrElse hija Is patron Then Exit Sub
+
+        ' Geometría zapata
+        hija.L_b = patron.L_b
+        hija.L_h = patron.L_h
+        hija.e = patron.e
+        hija.rec = patron.rec
+        hija.d = patron.d
+
+        ' Pedestal
+        hija.b = patron.b
+        hija.h = patron.h
+
+        ' Materiales
+        hija.fc = patron.fc
+        hija.fy = patron.fy
+
+        ' Suelo y factores
+        hija.qAdm_Est = patron.qAdm_Est
+        hija.qAdm_Din = patron.qAdm_Din
+        hija.gammaSuelo = patron.gammaSuelo
+        hija.mu = patron.mu
+        hija.FD_E = patron.FD_E
+        hija.FD_D = patron.FD_D
+
+        ' Peso estabilizante
+        hija.Df = patron.Df
+        hija.gammaConcreto = patron.gammaConcreto
+
+        ' Cuantías y refuerzo
+        hija.Rho_L1 = patron.Rho_L1
+        hija.Rho_L2 = patron.Rho_L2
+
+        If patron.Refuerzos Is Nothing Then
+            hija.Refuerzos = New List(Of cRefuerzo)
+        Else
+            hija.Refuerzos = New List(Of cRefuerzo)
+            For Each r In patron.Refuerzos
+                If r Is Nothing Then Continue For
+                hija.Refuerzos.Add(New cRefuerzo With {
+                    .Direccion = r.Direccion,
+                    .Tipo = r.Tipo,
+                    .Diametro = r.Diametro,
+                    .Diametro_mm = r.Diametro_mm,
+                    .AreaBarra = r.AreaBarra,
+                    .Cantidad = r.Cantidad,
+                    .Espaciamiento = r.Espaciamiento
+                })
+            Next
+        End If
+
+    End Sub
+
+    ''' <summary>
+    ''' Sincroniza todas las hijas de todos los grupos con su patrón, previa
+    ''' llamada a AsegurarPatronPorGrupo para que ninguna quede huérfana.
+    ''' Devuelve cuántas hijas fueron actualizadas.
+    ''' </summary>
+    Public Shared Function SincronizarTodosLosGrupos(zapatas As List(Of cZapata)) As Integer
+
+        If zapatas Is Nothing Then Return 0
+
+        AsegurarPatronPorGrupo(zapatas)
+
+        Dim n As Integer = 0
+        For Each kv In AgruparZapatas(zapatas)
+            Dim patron = PatronDelGrupo(kv.Value)
+            If patron Is Nothing Then Continue For
+            For Each hija In kv.Value
+                If hija Is patron Then Continue For
+                SincronizarConPatron(hija, patron)
+                n += 1
+            Next
+        Next
+        Return n
+
+    End Function
+
     ''' <summary>Etiqueta legible, para tablas y reportes.</summary>
     Public Shared Function NombreTipo(tipo As eTipoApoyoZapata) As String
         Select Case tipo
@@ -422,6 +608,64 @@ Public NotInheritable Class ZapataService
             r.PeorFactor = peor
             r.Revision = f.Revision
             r.Combinacion = f.Combinacion
+        Next
+
+        If r.PeorFactor = Double.MaxValue Then r.PeorFactor = 0
+
+        Return r
+
+    End Function
+
+    ' =====================================================================
+    ' Resumen por grupo
+    ' =====================================================================
+
+    ''' <summary>
+    ''' El peor factor entre todos los apoyos de un grupo. Sirve para el modo
+    ''' "una fila por grupo" del reporte: el grupo cumple si su peor apoyo
+    ''' cumple.
+    ''' </summary>
+    Public Class ResumenGrupo
+
+        Public Property Grupo As String = ""
+        Public Property Patron As cZapata
+        Public Property Cantidad As Integer
+        Public Property PeorZapata As cZapata
+        Public Property PeorFactor As Double = Double.MaxValue
+        Public Property Revision As String = ""
+        Public Property Combinacion As String = ""
+        Public Property TieneResultados As Boolean
+
+        Public ReadOnly Property Cumple As Boolean
+            Get
+                Return TieneResultados AndAlso PeorFactor >= Funciones_00_Varias.UMBRAL_CD
+            End Get
+        End Property
+
+    End Class
+
+    ''' <summary>
+    ''' Recorre las zapatas del grupo y encuentra la de peor C/D, guardando qué
+    ''' revisión y combinación gobiernan. Es lo que va en el modo "por grupo"
+    ''' del reporte.
+    ''' </summary>
+    Public Shared Function ResumirGrupo(grupo As String, zapatasDelGrupo As List(Of cZapata)) As ResumenGrupo
+
+        Dim r As New ResumenGrupo() With {.Grupo = grupo}
+        If zapatasDelGrupo Is Nothing OrElse zapatasDelGrupo.Count = 0 Then Return r
+
+        r.Cantidad = zapatasDelGrupo.Count
+        r.Patron = PatronDelGrupo(zapatasDelGrupo)
+
+        For Each z In zapatasDelGrupo
+            Dim res = Resumir(z)
+            If Not res.TieneResultados Then Continue For
+            r.TieneResultados = True
+            If res.PeorFactor <= 0 OrElse res.PeorFactor >= r.PeorFactor Then Continue For
+            r.PeorFactor = res.PeorFactor
+            r.PeorZapata = z
+            r.Revision = res.Revision
+            r.Combinacion = res.Combinacion
         Next
 
         If r.PeorFactor = Double.MaxValue Then r.PeorFactor = 0
