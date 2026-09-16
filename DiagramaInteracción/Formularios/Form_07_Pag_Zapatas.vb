@@ -18,6 +18,42 @@ Public Class Form_07_Pag_Zapatas
         AgregarBotonVerDetalle()
         AgregarPanelPesoEstabilizante()
         RefrescarUIPesoEstabilizante()
+        AjustarAnchoTablaElementos()
+    End Sub
+
+    ''' <summary>
+    ''' Con 17 columnas a 125 px cada una la tabla necesita ~2100 px, mucho más
+    ''' que el Panel2 (~1238 px), y aparecía una barra horizontal. Se pone en
+    ''' Fill con pesos por columna para que se repartan el ancho disponible:
+    ''' los textos (etiqueta, nombre, tipo de apoyo) ganan más peso, los números
+    ''' cortos (diámetros, cantidades, fc) van con menos.
+    ''' </summary>
+    Private Sub AjustarAnchoTablaElementos()
+
+        If Tabla_Elementos Is Nothing Then Exit Sub
+        If Tabla_Elementos.Columns.Count = 0 Then Exit Sub
+
+        Tabla_Elementos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        Tabla_Elementos.RowHeadersWidth = 30
+
+        ' Índices originales del Designer:
+        ' 0 Label, 1 Nombre, 2 b, 3 h, 4 e, 5 L_b, 6 L_h,
+        ' 7 Ref_L1_Diam, 8 Ref_L1_Area, 9 Ref_L1_Cant,
+        ' 10 Ref_L2_Diam, 11 Ref_L2_Area, 12 Ref_L2_Cant, 13 fc
+        Dim pesosBase() As Integer = {90, 90, 60, 60, 60, 65, 65,
+                                       60, 65, 65, 60, 65, 65, 60}
+        For i As Integer = 0 To Math.Min(pesosBase.Length, Tabla_Elementos.Columns.Count) - 1
+            Tabla_Elementos.Columns(i).FillWeight = pesosBase(i)
+        Next
+
+        ' Columnas agregadas en runtime
+        If Tabla_Elementos.Columns.Contains(COL_TIPO_APOYO) Then _
+            Tabla_Elementos.Columns(COL_TIPO_APOYO).FillWeight = 95
+        If Tabla_Elementos.Columns.Contains(COL_DF) Then _
+            Tabla_Elementos.Columns(COL_DF).FillWeight = 55
+        If Tabla_Elementos.Columns.Contains(COL_GCONC) Then _
+            Tabla_Elementos.Columns(COL_GCONC).FillWeight = 75
+
     End Sub
 
     ''' <summary>
@@ -236,36 +272,65 @@ Public Class Form_07_Pag_Zapatas
 
         If Panel3 Is Nothing Then Exit Sub
 
+        ' Reorganización de la columna derecha con separación uniforme de 12 px
+        ' vertical, X a 10 px de la columna izquierda, y top alineado con
+        ' GroupBox2 (que es la referencia visual de la columna izquierda).
+        Const gapVer As Integer = 12
+        Dim xColDer As Integer = 423
+        Dim yTop As Integer = 86
+        If GroupBox2 IsNot Nothing Then
+            xColDer = GroupBox2.Right + 10
+            yTop = GroupBox2.Top
+        End If
+        Dim y As Integer = yTop
+        For Each g In {GroupBox4, GroupBox8, GroupBox1, GroupBox7}
+            If g Is Nothing Then Continue For
+            g.Location = New Point(xColDer, y)
+            y = g.Bottom + gapVer
+        Next
+        Dim yBase As Integer = If(GroupBox7 IsNot Nothing, GroupBox7.Bottom + gapVer, y)
+
+        ' Ancho y estilo tomados del GroupBox7 para que el grupo quede
+        ' visualmente idéntico al resto de la columna derecha (296 px en el
+        ' Designer, pero se lee dinámicamente por si se cambia el maestro).
+        Dim wCol As Integer = If(GroupBox7 IsNot Nothing, GroupBox7.Width, 296)
+
         Dim grp As New GroupBox() With {
-            .Location = New Point(423, 510),
-            .Size = New Size(296, 130),
-            .Text = "Peso estabilizante y excentricidad",
-            .Font = New Font("Microsoft Sans Serif", 10.0!, FontStyle.Bold),
+            .Location = New Point(xColDer, yBase),
+            .Size = New Size(wCol, 140),
+            .Text = "Condiciones adicionales",
+            .Font = New Font("Microsoft Sans Serif", 11.0!, FontStyle.Bold),
             .ForeColor = Color.White
         }
 
+        ' Checkbox en dos líneas para que quepa el texto completo dentro del
+        ' ancho del grupo. Altura 52 px porque a 9.5 pt cada línea ocupa ~16 px
+        ' y el "cuadrito" del checkbox roba ~4 px arriba y abajo; con 42 se
+        ' cortaba la segunda línea y "suelo" quedaba invisible.
         _chkPesoEstabilizante = New CheckBox() With {
-            .Location = New Point(15, 30),
-            .Size = New Size(265, 40),
-            .Text = "Considerar peso zapata + pedestal + suelo",
-            .Font = New Font("Microsoft Sans Serif", 9.0!, FontStyle.Regular),
+            .Location = New Point(12, 26),
+            .Size = New Size(wCol - 24, 52),
+            .Text = "Considerar peso zapata + pedestal +" & vbCrLf & "suelo",
+            .Font = New Font("Microsoft Sans Serif", 9.5!, FontStyle.Regular),
             .ForeColor = Color.White,
-            .AutoSize = False
+            .AutoSize = False,
+            .TextAlign = ContentAlignment.MiddleLeft
         }
         AddHandler _chkPesoEstabilizante.CheckedChanged, AddressOf ChkPesoEstabilizante_CheckedChanged
 
+        ' Etiqueta y NumericUpDown pegados: antes había ~170 px entre el texto
+        ' y el control (por copiar el patrón de FD_D con label ancho), lo que
+        ' se veía desconectado. Ahora Label auto-anchable + control adyacente.
         Dim lbl As New Label() With {
-            .Location = New Point(15, 80),
-            .Size = New Size(210, 24),
-            .Text = "Excentricidad dinámica: L/",
-            .Font = New Font("Microsoft Sans Serif", 9.0!, FontStyle.Regular),
-            .ForeColor = Color.White,
-            .TextAlign = ContentAlignment.MiddleLeft
+            .Location = New Point(12, 92),
+            .AutoSize = True,
+            .Text = "Excentricidad dinámica: L /",
+            .Font = New Font("Microsoft Sans Serif", 9.5!, FontStyle.Regular),
+            .ForeColor = Color.White
         }
 
         _numLimExcDin = New NumericUpDown() With {
-            .Location = New Point(220, 78),
-            .Size = New Size(60, 26),
+            .Size = New Size(58, 27),
             .Font = New Font("Arial", 10.0!, FontStyle.Regular),
             .Minimum = 2D,
             .Maximum = 10D,
@@ -274,11 +339,30 @@ Public Class Form_07_Pag_Zapatas
             .TextAlign = HorizontalAlignment.Center
         }
         AddHandler _numLimExcDin.ValueChanged, AddressOf NumLimExcDin_ValueChanged
+        ' La posición X del selector se decide DESPUÉS de que se sepa el ancho
+        ' real de la etiqueta (AutoSize la mide al agregarla al grupo).
+        _numLimExcDin.Location = New Point(0, 80)  ' Y aprox; X se corrige tras Controls.Add
 
         grp.Controls.Add(_chkPesoEstabilizante)
         grp.Controls.Add(lbl)
         grp.Controls.Add(_numLimExcDin)
         Panel3.Controls.Add(grp)
+
+        ' Ya con el Label agregado se conoce su ancho real: se pega el
+        ' selector a 6 px del final del texto.
+        _numLimExcDin.Location = New Point(lbl.Right + 6, lbl.Top - 2)
+
+        ' El botón "Ejecutar" del Designer (Button2) estaba en (448, 533), que
+        ' quedaba encima del grupo de peso estabilizante. Se recoloca justo
+        ' debajo de este grupo, alineado con la columna derecha, para que el
+        ' flujo Materiales → Factores → Peso → Ejecutar quede en orden. El
+        ' botón "Calcular" (Button1 en Panel4, docked al fondo del formulario)
+        ' no se toca: es el paso final que corre el cálculo sobre toda la tabla.
+        If Button2 IsNot Nothing Then
+            Button2.Location = New Point(xColDer, grp.Bottom + 12)
+            Button2.Size = New Size(wCol, 50)
+            Button2.BringToFront()
+        End If
 
     End Sub
 
