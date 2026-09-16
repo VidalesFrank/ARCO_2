@@ -14,6 +14,7 @@ Public Class Form_07_Pag_Zapatas
         PrepararColumnasDesplanteYConcreto()
         AgregarMenuAyudaTablas()
         AgregarMenuPlanta()
+        AgregarMenuGraficas()
         AgregarPanelPesoEstabilizante()
         RefrescarUIPesoEstabilizante()
     End Sub
@@ -98,6 +99,54 @@ Public Class Form_07_Pag_Zapatas
             Tabla_Elementos.FirstDisplayedScrollingRowIndex = fila.Index
             Exit For
         Next
+
+    End Sub
+
+    ' =====================================================================
+    ' GRÁFICAS RESUMEN
+    ' =====================================================================
+    ' Dashboard con las 5 revisiones C/D (peor global, suelo, excentricidad,
+    ' punzonamiento, cortante+flexión) y dos conteos (tipo de apoyo y
+    ' cumple/no cumple). Comparte la infraestructura de GraficosResumen con
+    ' los otros cinco módulos.
+
+    ''' <summary>
+    ''' Agrega "Gráficas resumen..." al menú Ver. Se registra como método aparte
+    ''' de AgregarMenuPlanta para minimizar el roce con otros cambios al menú.
+    ''' </summary>
+    Private Sub AgregarMenuGraficas()
+
+        Dim item As New ToolStripMenuItem("Gráficas resumen...") With {
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ToolTipText = "Barras C/D por revisión y conteos"
+        }
+        AddHandler item.Click, AddressOf AbrirGraficas_Click
+        Ver_Zapatas.DropDownItems.Add(item)
+
+    End Sub
+
+    Private Sub AbrirGraficas_Click(sender As Object, e As EventArgs)
+
+        If Proyecto Is Nothing OrElse Proyecto.Elementos Is Nothing OrElse
+           Proyecto.Elementos.Zapatas Is Nothing OrElse
+           Proyecto.Elementos.Zapatas.Tipos Is Nothing OrElse
+           Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
+            MessageBox.Show("Primero calcule las zapatas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Try
+            Dim f As New Form_Graficos_Zapatas() With {
+                .Zapatas = Proyecto.Elementos.Zapatas.Tipos
+            }
+            f.Show(Me)
+        Catch ex As Exception
+            Logger.Error(ex, "Form_07_Pag_Zapatas.AbrirGraficas_Click")
+            MessageBox.Show("No se pudo abrir la ventana de gráficas." & vbCrLf & ex.Message,
+                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        End Try
 
     End Sub
 

@@ -466,6 +466,9 @@
     <Compile Include="Formularios\Form_Reporte_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Form_Graficos_Zapatas.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Form_Derivas.Designer.vb">
       <DependentUpon>Form_Derivas.vb</DependentUpon>
     </Compile>
