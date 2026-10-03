@@ -259,7 +259,9 @@ Public Class GeometryService
         ' Recolectar todos los joints de la viga
         Dim allJoints As New List(Of cJoint)
         For Each frame In viga.Frames
-            Dim ji, jj As cJoint
+            ' Parámetros de salida de TryGetValue (ByRef): asignación explícita a Nothing para silenciar BC42030.
+            Dim ji As cJoint = Nothing
+            Dim jj As cJoint = Nothing
             If joints.TryGetValue(frame.JointI, ji) Then allJoints.Add(ji)
             If joints.TryGetValue(frame.JointJ, jj) Then allJoints.Add(jj)
         Next

@@ -57,6 +57,8 @@ Public Class Form_09_Vigas
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
 
+        If Not PreflightValidador.HayVigasImportadas(Proyecto) Then Return
+
         Try
             '    ' 1. Cargar datos (si aplica)
 
@@ -167,9 +169,11 @@ Public Class Form_09_Vigas
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End If
 
-            _vigaService.designVigas(vigas, Proyecto.Elementos.Vigas.Joints)
+            _vigaService.designVigas(vigas, Proyecto.Elementos.Vigas.Joints, Proyecto.Elementos.Vigas.Recubrimiento)
 
-            _vigaService.AsignarRefuerzoTransversalAutomatico(vigas)
+            ' Preserva estribos ajustados manualmente. Solo aplica prediseño a los frames
+            ' cuyo RefuerzoTransversal esté vacío (típicamente la primera pasada tras importar).
+            _vigaService.AsignarRefuerzoTransversalAutomatico(vigas, sobrescribir:=False)
 
             If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
                 _vigaService.CalcularEnvolventeCortante(vigas,
@@ -403,7 +407,9 @@ Public Class Form_09_Vigas
     End Sub
 
     ''' Actualiza solo las fuerzas de vigas (BeamForces) desde un nuevo Excel de ETABS,
-    ''' sin modificar Joints, Frames, secciones, agrupaciones ni refuerzo asignado.
+    ''' sin modificar Joints, Frames, agrupaciones ni refuerzo asignado.
+    ''' Si el Excel incluye las hojas de asignación de sección, detecta cambios de
+    ''' dimensión por frame y ofrece al usuario aplicarlos.
     Private Sub ActualizarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ActualizarDemandasToolStripMenuItem.Click
 
         If Proyecto.Elementos.Vigas.Frames Is Nothing OrElse Proyecto.Elementos.Vigas.Frames.Count = 0 Then
@@ -428,9 +434,55 @@ Public Class Form_09_Vigas
             Dim posibleTruncamiento As Boolean = False
             Dim nuevasForces = CargarBeamForcesDesdeExcel(path, hBeamForces, posibleTruncamiento)
 
-            ' Actualizar solo BeamForces — Joints/Frames/Grupos/Refuerzo intactos
+            ' ── Cambios de sección: intentar cargar las 3 hojas necesarias ─────────
+            Dim aplicarSecciones As Boolean = False
+            Dim advertirFaltaSecciones As Boolean = False
+            Dim dataAsigFrame As DataTable = Nothing
+            Dim dataFrameSec As DataTable = Nothing
+            Dim dataMatConcrete As DataTable = Nothing
+            Dim cambios As List(Of Form_ConfirmarCambiosSeccion.CambioSeccion) = Nothing
+
+            Dim nombreHojaAsig = HojaSiExiste(hojas, "Frame Assigns - Sect Prop", "Frame Assignments - Sections")
+            Dim nombreHojaSec = HojaSiExiste(hojas, "Frame Sec Def - Conc Rect", "Frame Sections")
+            Dim nombreHojaMat = HojaSiExiste(hojas, "Mat Prop - Concrete Data", "Material Properties - Concrete")
+
+            If nombreHojaAsig Is Nothing OrElse nombreHojaSec Is Nothing OrElse nombreHojaMat Is Nothing Then
+                advertirFaltaSecciones = True
+            Else
+                dataAsigFrame = LeerHojaExcel(path, nombreHojaAsig)
+                dataFrameSec = LeerHojaExcel(path, nombreHojaSec)
+                dataMatConcrete = LeerHojaExcel(path, nombreHojaMat)
+                cambios = DetectarCambiosSeccion(Proyecto.Elementos.Vigas.Frames, dataAsigFrame, dataFrameSec)
+            End If
+
+            Me.Cursor = Cursors.Arrow
+
+            ' ── Interacción con el usuario según lo detectado ──────────────────────
+            If advertirFaltaSecciones Then
+                MessageBox.Show(
+                    "El Excel no contiene las hojas de asignación de secciones — solo se actualizarán las fuerzas." & vbCrLf & vbCrLf &
+                    "Si querés incluir cambios de dimensión de vigas, re-exportá desde ETABS incluyendo:" & vbCrLf &
+                    "  • Frame Assigns - Sect Prop  (o 'Frame Assignments - Sections')" & vbCrLf &
+                    "  • Frame Sec Def - Conc Rect  (o 'Frame Sections')" & vbCrLf &
+                    "  • Mat Prop - Concrete Data   (o 'Material Properties - Concrete')",
+                    "Solo se actualizarán fuerzas", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            ElseIf cambios IsNot Nothing AndAlso cambios.Count > 0 Then
+                Dim accion = Form_ConfirmarCambiosSeccion.Mostrar(cambios)
+                If accion = Form_ConfirmarCambiosSeccion.AccionActualizacion.Cancelar Then
+                    Return   ' aborta toda la operación — no se toca nada
+                End If
+                aplicarSecciones = (accion = Form_ConfirmarCambiosSeccion.AccionActualizacion.AplicarTodo)
+            End If
+
+            Me.Cursor = Cursors.WaitCursor
+
+            ' ── Commit: fuerzas siempre; secciones solo si el usuario aceptó ──────
             Proyecto.Elementos.Vigas.BeamForces = nuevasForces
             Proyecto.Elementos.Vigas.Tabla_BeamForces = Nothing
+
+            If aplicarSecciones Then
+                DataTableToAsignFrame(Proyecto.Elementos.Vigas.Frames, dataAsigFrame, dataFrameSec, dataMatConcrete)
+            End If
 
             ' Reconstruir lista de combinaciones desde los nuevos datos
             Dim nuevasCombos = nuevasForces.Select(Function(r) r.LoadCaseKey) _
@@ -468,8 +520,13 @@ Public Class Form_09_Vigas
 
             HayCambios = True
 
+            Dim resumen As String = "Fuerzas actualizadas correctamente."
+            If aplicarSecciones Then
+                resumen &= vbCrLf & $"Secciones actualizadas: {cambios.Count} frame(s)."
+            End If
+
             Dim resp = MessageBox.Show(
-                "Fuerzas actualizadas correctamente." & vbCrLf & vbCrLf &
+                resumen & vbCrLf & vbCrLf &
                 "¿Desea recalcular ahora con las demandas actualizadas?" & vbCrLf &
                 "(Equivale a presionar 'Procesar'. El refuerzo asignado y los grupos se conservan.)",
                 "Actualizar Demandas", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
@@ -485,6 +542,80 @@ Public Class Form_09_Vigas
         End Try
 
     End Sub
+
+    ''' Devuelve el primer nombre de hoja que exista en la lista (case-insensitive),
+    ''' o Nothing si ningún candidato aparece. Usar cuando la hoja es opcional
+    ''' (a diferencia de ResolverNombreHoja, que devuelve el primer candidato aunque
+    ''' no exista, ideal para hojas obligatorias que fallarían al leerse).
+    Private Shared Function HojaSiExiste(hojas As List(Of String), ParamArray candidatos As String()) As String
+        For Each cand In candidatos
+            Dim match = hojas.FirstOrDefault(Function(h) h.TrimEnd("$"c).Equals(cand, StringComparison.OrdinalIgnoreCase))
+            If match IsNot Nothing Then Return match.TrimEnd("$"c)
+        Next
+        Return Nothing
+    End Function
+
+    ''' Compara las secciones actuales de cada frame contra las que resultarían de
+    ''' aplicar las nuevas hojas de asignación. Devuelve solo los frames con
+    ''' diferencia en b, h o nombre de sección (ignora fc/material puros para no
+    ''' saturar el diálogo — igual se recalcularán al aplicar).
+    Private Shared Function DetectarCambiosSeccion(frames As List(Of cFrame),
+                                                   dtAsig As DataTable,
+                                                   dtSec As DataTable) As List(Of Form_ConfirmarCambiosSeccion.CambioSeccion)
+
+        Dim resultado As New List(Of Form_ConfirmarCambiosSeccion.CambioSeccion)()
+
+        ' Diccionario Story|Label → secName
+        Dim dicAsig As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In dtAsig.Rows
+            Dim story = row("Story").ToString().Trim()
+            Dim label = row("Label").ToString().Trim()
+            Dim secName = row("Section Property").ToString().Trim()
+            Dim key = story & "|" & label
+            If Not dicAsig.ContainsKey(key) Then dicAsig(key) = secName
+        Next
+
+        ' Diccionario secName → (b, h)
+        Dim dicSec As New Dictionary(Of String, (b As Double, h As Double))(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In dtSec.Rows
+            Dim name = row("Name").ToString().Trim()
+            Dim h As Double = CDbl(row("Depth"))
+            Dim b As Double = CDbl(row("Width"))
+            If Not dicSec.ContainsKey(name) Then dicSec(name) = (b, h)
+        Next
+
+        ' Recorrer solo frames tipo viga (label empieza con "B"), en el orden actual
+        For Each frame In frames
+            If Not frame.ObjectLabel.StartsWith("B", StringComparison.OrdinalIgnoreCase) Then Continue For
+            If frame.Section Is Nothing Then Continue For
+
+            Dim key = frame.Story.Trim() & "|" & frame.ObjectLabel.Trim()
+            If Not dicAsig.ContainsKey(key) Then Continue For
+
+            Dim secNameNuevo = dicAsig(key)
+            If Not dicSec.ContainsKey(secNameNuevo) Then Continue For
+
+            Dim geoNueva = dicSec(secNameNuevo)
+            Dim bAntes = frame.Section.b
+            Dim hAntes = frame.Section.h
+            Dim secAntes = frame.Section.Nombre
+
+            Dim cambioNombre = Not String.Equals(secAntes, secNameNuevo, StringComparison.OrdinalIgnoreCase)
+            Dim cambioB = Math.Abs(bAntes - geoNueva.b) > 0.005   ' 5 mm de tolerancia
+            Dim cambioH = Math.Abs(hAntes - geoNueva.h) > 0.005
+
+            If cambioNombre OrElse cambioB OrElse cambioH Then
+                resultado.Add(New Form_ConfirmarCambiosSeccion.CambioSeccion With {
+                    .Piso = frame.Story,
+                    .Viga = frame.ObjectLabel,
+                    .SeccionAntes = $"{secAntes}  ({bAntes * 100:0}×{hAntes * 100:0} cm)",
+                    .SeccionDespues = $"{secNameNuevo}  ({geoNueva.b * 100:0}×{geoNueva.h * 100:0} cm)"
+                })
+            End If
+        Next
+
+        Return resultado
+    End Function
 
     Private Sub CargarVigaCompleta(viga As cViga)
 
@@ -830,6 +961,12 @@ Public Class Form_09_Vigas
         OpcionesToolStripMenuItem.DropDownItems.Add(menuAgrupacion)
 
         OpcionesToolStripMenuItem.DropDownItems.Add(New ToolStripSeparator())
+
+        Dim menuDatosGenerales As New ToolStripMenuItem("Datos Generales (Recubrimiento)...")
+        menuDatosGenerales.ForeColor = Color.White
+        menuDatosGenerales.BackColor = Color.FromArgb(87, 87, 87)
+        AddHandler menuDatosGenerales.Click, AddressOf ConfigurarDatosGenerales
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuDatosGenerales)
 
         Dim menuPrefijo As New ToolStripMenuItem("Prefijo de Nombre de Viga...")
         menuPrefijo.ForeColor = Color.White
@@ -1355,6 +1492,49 @@ Public Class Form_09_Vigas
     End Sub
 
     ' =========================================================================
+    ' DATOS GENERALES — recubrimiento global del módulo
+    ' =========================================================================
+    ' Análogo al diálogo de nervios: 0 cm = usar el valor por sección ETABS.
+
+    Private Sub ConfigurarDatosGenerales(sender As Object, e As EventArgs)
+        If Proyecto Is Nothing Then Return
+
+        Dim vigasMod = Proyecto.Elementos.Vigas
+        Dim recActual As Double = If(vigasMod.Recubrimiento > 0, vigasMod.Recubrimiento * 100, 5.0)
+
+        Dim prompt = $"Recubrimiento (cm):{vbCrLf}(Valor actual: {recActual:F1} cm   |   0 = usar valor de sección ETABS)"
+        Dim respuesta = InputBox(prompt, "Datos generales — Módulo Vigas", recActual.ToString("F1"))
+        If String.IsNullOrWhiteSpace(respuesta) Then Return
+
+        Dim recCm As Double = 0
+        If Not Double.TryParse(respuesta.Replace(",", "."),
+                               Globalization.NumberStyles.Any,
+                               Globalization.CultureInfo.InvariantCulture, recCm) Then
+            MessageBox.Show("Valor no válido. Ingrese un número.", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        vigasMod.Recubrimiento = Math.Max(0, recCm / 100.0)  ' m
+        HayCambios = True
+
+        ' Propagar a las secciones cargadas y recalcular en caliente si ya hay vigas.
+        ' RecalcularRevisionTodo NO recalcula AsReq (solo re-sincroniza AsProv y
+        ' relaciona C/D). AsReq lo produce DesignFrame → DesignZona, así que hay
+        ' que llamar designVigas explícitamente para que d = h - r se propague.
+        If _vigas IsNot Nothing AndAlso _vigas.Count > 0 AndAlso Proyecto.Elementos.Vigas.Joints IsNot Nothing Then
+            _vigaService.designVigas(_vigas, Proyecto.Elementos.Vigas.Joints, vigasMod.Recubrimiento)
+            RecalcularRevisionTodo(silencioso:=True)
+            If _vigaActual IsNot Nothing Then CargarVigaCompleta(_vigaActual)
+        End If
+
+        Dim msg = If(vigasMod.Recubrimiento > 0,
+                     $"Recubrimiento global ajustado a {vigasMod.Recubrimiento * 100:F1} cm.",
+                     "Recubrimiento global eliminado. Se usará el valor de la sección ETABS al recalcular.")
+        MessageBox.Show(msg, "Datos generales", MessageBoxButtons.OK, MessageBoxIcon.Information)
+    End Sub
+
+    ' =========================================================================
     ' EJES ESTRUCTURALES — EDITOR MANUAL Y ACTUALIZACIÓN DE NOMBRES
     ' =========================================================================
 
@@ -1507,6 +1687,36 @@ Public Class Form_09_Vigas
 
         If labelsAgregar.Count = 0 AndAlso labelsQuitar.Count = 0 Then Return
 
+        ' Confirmar retiro de frames desde otras vigas del piso.
+        ' Antes se hacía silenciosamente y el usuario no se enteraba de que otra viga
+        ' quedaba desmembrada; peor si eran varias, quedaban duplicados y no cuadraba nada.
+        Dim mapaFuentes As New Dictionary(Of cViga, List(Of String))
+        For Each label In labelsAgregar
+            Dim srcViga = _vigas.FirstOrDefault(
+                Function(v) v IsNot _vigaActual AndAlso
+                            v.Piso.Equals(piso, StringComparison.OrdinalIgnoreCase) AndAlso
+                            v.Frames.Any(Function(f) f.ObjectLabel = label))
+            If srcViga Is Nothing Then Continue For
+            If Not mapaFuentes.ContainsKey(srcViga) Then mapaFuentes(srcViga) = New List(Of String)()
+            mapaFuentes(srcViga).Add(label)
+        Next
+
+        If mapaFuentes.Count > 0 Then
+            Dim sb As New System.Text.StringBuilder()
+            sb.AppendLine($"Los siguientes frames pertenecen a otra(s) viga(s) del piso {piso}.")
+            sb.AppendLine($"Para agruparlos en {_vigaActual.NombreDisplay} deben retirarse de:")
+            sb.AppendLine()
+            For Each kvp In mapaFuentes
+                sb.AppendLine($"  • {kvp.Key.NombreDisplay} — retira: {String.Join(", ", kvp.Value)}")
+            Next
+            sb.AppendLine()
+            sb.Append("¿Continuar? (No cancela toda la agrupación para evitar duplicados.)")
+
+            Dim res = MessageBox.Show(sb.ToString(), "Confirmar agrupación manual",
+                                       MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+            If res <> DialogResult.Yes Then Return
+        End If
+
         ' Mover frames desde otras vigas hacia la viga actual (mismo piso solamente)
         For Each label In labelsAgregar
             Dim srcViga = _vigas.FirstOrDefault(
@@ -1597,7 +1807,9 @@ Public Class Form_09_Vigas
 
         _vigaService.CalcularEnvolventesVigas(vigas, Proyecto.Elementos.Vigas.BeamForces, combsDesign)
         _vigaService.designVigas(vigas, Proyecto.Elementos.Vigas.Joints)
-        _vigaService.AsignarRefuerzoTransversalAutomatico(vigas)
+        ' Después de re-agrupar, preservar los estribos ya ajustados por el usuario.
+        ' Solo los frames sin RefuerzoTransversal reciben el prediseño.
+        _vigaService.AsignarRefuerzoTransversalAutomatico(vigas, sobrescribir:=False)
 
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
             Dim combsCortante = New HashSet(Of String)(
@@ -2410,6 +2622,10 @@ Public Class Form_09_Vigas
                 dgv.Rows(4).Cells(colBase).Value = Math.Round(res.AsReqSup, 0)
                 dgv.Rows(5).Cells(colBase).Value = Math.Round(res.AsReqInf, 0)
 
+                Dim rhoMaxSec = VigaService.RhoMaxViga(frame.Section.fc, frame.Section.fy)
+                MarcarNivelCuantia(dgv.Rows(4).Cells(colBase), res.RhoReqSup, rhoMaxSec, res.SobreRhoMaxSup, res.RhoExcesivoSup)
+                MarcarNivelCuantia(dgv.Rows(5).Cells(colBase), res.RhoReqInf, rhoMaxSec, res.SobreRhoMaxInf, res.RhoExcesivoInf)
+
                 colBase += 1
 
             Next
@@ -2459,6 +2675,8 @@ Public Class Form_09_Vigas
         Dim viga = TryCast(Lista_Vigas.SelectedItem, cViga)
         If viga Is Nothing Then Return
         viga.NombrePlano = Nombre_Viga.Text.Trim()
+        viga.NombreManualEditado = Not String.IsNullOrWhiteSpace(Nombre_Viga.Text)
+        HayCambios = True
     End Sub
 
     ' Devuelve el nombre para reportes: NombrePlano si el usuario lo definió, si no Nombre.
@@ -3012,7 +3230,8 @@ Public Class Form_09_Vigas
 
             For Each sim In vigas.Where(
                 Function(v) Not v.EsPatronGrupo AndAlso v.GrupoReplicaID = grupo.ID)
-                sim.NombrePlano = patron.NombrePlano
+                ' Similares con nombre editado a mano por el usuario no se sobrescriben.
+                If Not sim.NombreManualEditado Then sim.NombrePlano = patron.NombrePlano
                 sim.EjeParalelo = patron.EjeParalelo
             Next
         Next
@@ -3158,6 +3377,35 @@ Public Class Form_09_Vigas
             cell.Style.ForeColor = ColorTranslator.FromHtml("#9C0006")
         End If
 
+    End Sub
+
+    ''' <summary>
+    ''' Coloreo escalado segun la cuantia requerida en la zona:
+    '''   rho excesivo   -> rojo intenso (NSR-10 C.21.5.2.1)
+    '''   rho sobre max  -> amarillo (NSR-10 C.10.3.5)
+    '''   caso normal    -> sin alerta
+    ''' El tooltip incluye los valores numericos concretos para que el usuario
+    ''' pueda cuantificar el sobrepaso.
+    ''' </summary>
+    Private Sub MarcarNivelCuantia(cell As DataGridViewCell, rhoReq As Double, rhoMax As Double,
+                                    sobreMax As Boolean, excesivo As Boolean)
+        If excesivo Then
+            cell.Style.BackColor = ColorTranslator.FromHtml("#C00000")   ' rojo intenso
+            cell.Style.ForeColor = ColorTranslator.FromHtml("#FFFFFF")
+            cell.Style.Font = New Font(cell.OwningRow.DataGridView.DefaultCellStyle.Font, FontStyle.Bold)
+            cell.ToolTipText = $"Cuantía excesiva (NSR-10 C.21.5.2.1)." & vbCrLf &
+                               $"ρ requerido = {rhoReq * 100:F2} %  >  2.50 % (ρ máx absoluto)." & vbCrLf &
+                               $"ρ_max NSR-10 C.10.3.5 para esta sección = {rhoMax * 100:F2} %." & vbCrLf &
+                               $"Aumentar sección o fc."
+        ElseIf sobreMax Then
+            cell.Style.BackColor = ColorTranslator.FromHtml("#FFEB9C")   ' amarillo alerta
+            cell.Style.ForeColor = ColorTranslator.FromHtml("#9C5700")
+            cell.ToolTipText = $"Cuantía mayor a la máxima (NSR-10 C.10.3.5)." & vbCrLf &
+                               $"ρ requerido = {rhoReq * 100:F2} %  >  ρ_max = {rhoMax * 100:F2} %." & vbCrLf &
+                               $"Aumentar sección o fc."
+        Else
+            cell.ToolTipText = ""
+        End If
     End Sub
 
     Private Sub SaveAs_Pilas_Click(sender As Object, e As EventArgs) Handles SaveAs_Pilas.Click

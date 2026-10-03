@@ -6,6 +6,10 @@ Public Class cViga
     Public Property Nombre As String
     Public Property Name_Beam As String
     Public Property NombrePlano As String = ""
+    ''' True cuando el usuario tipeó el nombre en el TextBox. Bloquea la sobreescritura
+    ''' por GenerarNombresPlano / PropagateNombresGrupo.
+    <OptionalField>
+    Public NombreManualEditado As Boolean = False
     ''' Eje estructural paralelo a la viga (el que la viga "sigue"), ej. "B", "3".
     ''' Asignado automáticamente por GeometryService.AsignarEjesParalelosAVigas().
     Public Property EjeParalelo As String = ""

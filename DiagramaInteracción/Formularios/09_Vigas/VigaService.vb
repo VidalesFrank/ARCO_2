@@ -12,6 +12,54 @@ Public Class VigaService
         _geo = geo
     End Sub
 
+    ' ═══════════════════════════════════════════════════════════════════════════
+    '  Cuantías NSR-10 para el chequeo de "cuantía > máxima"
+    ' ═══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Límite absoluto de cuantía para vigas de pórticos DES/DMO
+    ''' (NSR-10 C.21.5.2.1). Por encima de este valor la ductilidad y el
+    ''' confinamiento están comprometidos aunque εt ≥ 0.005.
+    ''' </summary>
+    Public Const RhoExcesivoViga As Double = 0.025
+
+    ''' <summary>
+    ''' Cuantía máxima permitida por NSR-10 C.10.3.5 para sección controlada por
+    ''' tracción (εt ≥ 0.005): ρ_max = 0.85·β1·(fc/fy)·(0.003/0.008). β1 según
+    ''' C.10.2.7.3. fc y fy en MPa. Retorna la cuantía adimensional.
+    ''' </summary>
+    Public Shared Function RhoMaxViga(fc As Double, fy As Double) As Double
+        If fc <= 0 OrElse fy <= 0 Then Return 0
+        Dim beta1 As Double
+        If fc <= 28 Then
+            beta1 = 0.85
+        Else
+            beta1 = Math.Max(0.65, 0.85 - 0.05 * (fc - 28) / 7.0)
+        End If
+        Return 0.85 * beta1 * (fc / fy) * (0.003 / 0.008)
+    End Function
+
+    ''' <summary>
+    ''' Cuantía requerida a partir del área en mm² y dimensiones b, d en m.
+    ''' </summary>
+    Public Shared Function RhoRequerido(As_mm2 As Double, b_m As Double, d_m As Double) As Double
+        If b_m <= 0 OrElse d_m <= 0 Then Return 0
+        Return As_mm2 / (b_m * d_m * 1000000.0)
+    End Function
+
+    ''' <summary>
+    ''' Aplica el recubrimiento global (m) a la sección de cada frame. Si
+    ''' recG ≤ 0 no hace nada (se conserva el valor de la sección ETABS).
+    ''' </summary>
+    Public Sub AplicarRecubrimientoGlobal(vigas As List(Of cViga), recG As Double)
+        If vigas Is Nothing OrElse recG <= 0 Then Return
+        For Each viga In vigas
+            For Each frame In viga.Frames
+                If frame.Section IsNot Nothing Then frame.Section.recubrimiento = recG
+            Next
+        Next
+    End Sub
+
 
     Function GenerarVigas(frames As List(Of cFrame),
                       joints As Dictionary(Of String, cJoint)) _
@@ -52,8 +100,9 @@ Public Class VigaService
 
                     'If viga.Frames.Any(Function(fv) CompartenJoint(fv, f)) AndAlso
                     '                                SonColineales(f, viga.Direccion, joints, tol) Then
-                    If viga.Frames.Any(Function(fv) (_geo.CompartenJoint(fv, f) OrElse _geo.SonContinuos(fv, f, joints, tol)) AndAlso
-                                    _geo.EstanEnLaMismaLinea(fv, f, joints, tol_col)) AndAlso
+                    ' SonContinuos y EstanEnLaMismaLinea son Shared: se llaman por el tipo (BC42025).
+                    If viga.Frames.Any(Function(fv) (_geo.CompartenJoint(fv, f) OrElse GeometryService.SonContinuos(fv, f, joints, tol)) AndAlso
+                                    GeometryService.EstanEnLaMismaLinea(fv, f, joints, tol_col)) AndAlso
                                 _geo.SonColineales(f, viga.Direccion, joints, tol_col) Then
                         viga.Frames.Add(f)
                         framesPendientes.Remove(f)
@@ -113,9 +162,11 @@ Public Class VigaService
 
                 If bfFrame.Count = 0 Then Continue For
 
-                Dim estaciones As List(Of Double)
-                Dim envMax As List(Of Double)
-                Dim envMin As List(Of Double)
+                ' Parámetros de salida (ByRef): las reasigna ConstruirEnvolventeAnalisis.
+                ' Asignación explícita a Nothing para silenciar BC42030.
+                Dim estaciones As List(Of Double) = Nothing
+                Dim envMax As List(Of Double) = Nothing
+                Dim envMin As List(Of Double) = Nothing
 
                 ConstruirEnvolventeAnalisis(bfFrame, estaciones, envMax, envMin)
 
@@ -375,10 +426,15 @@ Public Class VigaService
     End Sub
 
     Public Sub designVigas(vigas As List(Of cViga),
-                           joints As List(Of cJoint))
+                           joints As List(Of cJoint),
+                           Optional recubrimientoGlobal As Double = 0)
 
         Dim jointsDict As Dictionary(Of String, cJoint) =
         joints.ToDictionary(Function(j) j.ElementLabel)
+
+        ' Aplicar recubrimiento global del módulo (si el usuario lo definió).
+        ' Debe hacerse ANTES de DesignFrame: éste usa sec.d = h - recubrimiento.
+        AplicarRecubrimientoGlobal(vigas, recubrimientoGlobal)
 
         For Each viga In vigas
             For Each frame In viga.Frames
@@ -449,6 +505,27 @@ Public Class VigaService
         ' 🔹 Acero requerido
         res.AsReqSup = rho_neg * b * d * 1000000.0
         res.AsReqInf = rho_pos * b * d * 1000000.0
+
+        ' 🔹 Cuantía requerida absoluta (antes del recorte de CalcularRho).
+        ' CalcularRho puede devolver rho_temp o rho_design (menores) para acero
+        ' mínimo/amplificación, pero para el chequeo de cuantía debemos comparar
+        ' la exigencia REAL del momento, no la ya recortada.
+        Dim rhoMax = RhoMaxViga(fc, fy)
+        Dim rho_neg_bruto As Double = 0
+        Dim rho_pos_bruto As Double = 0
+        If denominador > 0 Then
+            Dim term_neg = Math.Max(0, 1 - (2 * Mu_neg / denominador))
+            rho_neg_bruto = factorComun * (1 - Math.Sqrt(term_neg))
+            Dim term_pos = Math.Max(0, 1 - (2 * Mu_pos / denominador))
+            rho_pos_bruto = factorComun * (1 - Math.Sqrt(term_pos))
+        End If
+        res.RhoReqSup = rho_neg_bruto
+        res.RhoReqInf = rho_pos_bruto
+        res.SobreRhoMaxSup = rhoMax > 0 AndAlso rho_neg_bruto > rhoMax
+        res.SobreRhoMaxInf = rhoMax > 0 AndAlso rho_pos_bruto > rhoMax
+        ' Cuantía excesiva NSR-10 C.21.5.2.1: ρ > 0.025 (2.5 %).
+        res.RhoExcesivoSup = rho_neg_bruto > RhoExcesivoViga
+        res.RhoExcesivoInf = rho_pos_bruto > RhoExcesivoViga
 
     End Sub
 
@@ -935,30 +1012,8 @@ Public Class VigaService
 
     End Sub
 
-    ''' <summary>
-    ''' Devuelve True si la zona indicada queda cubierta por el chequeo de cortante plástico
-    ''' (diseño por capacidad, NSR-10 C.21.5.4). Regla del ingeniero: una viga que NO cumple
-    ''' a cortante convencional pero SÍ cumple a cortante plástico no se reporta.
-    '''
-    ''' Las tres zonas tienen contraparte plástica. Ve es constante a lo largo del vano
-    ''' — nace de los Mn de los apoyos — así que el centro también recibe demanda por
-    ''' capacidad; lo único que decae hacia el centro es la componente gravitacional.
-    ''' ZonaCentro queda Nothing (y esto devuelve False) en dos casos legítimos: proyectos
-    ''' guardados antes de que se calculara, y vanos donde las zonas confinadas se solapan
-    ''' y no existe tramo central.
-    '''
-    ''' Único punto de verdad: lo consumen Form_Reporte_Resumen y ReporteRevisionService.
-    ''' </summary>
-    Public Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
-                                                  cp As cResultadoCortantePlasticoFrame) As Boolean
-        If cp Is Nothing Then Return False
-        Select Case pos
-            Case PosicionTramoViga.Izquierda : Return cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.Cumple
-            Case PosicionTramoViga.Derecha : Return cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.Cumple
-            Case PosicionTramoViga.Centro : Return cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.Cumple
-            Case Else : Return False
-        End Select
-    End Function
+    ' CumpleCortantePlastico eliminado: la regla oficial ahora es la envolvente
+    ' C/D (Def) zona-a-zona (VigaService.CDDefZona / EvaluarCDDefFrame).
 
     Private Function InterpolarCortanteEnEstacion(bfFrame As List(Of cCombinacionBeamForce), targetStation As Double) As Double
 
@@ -1416,10 +1471,19 @@ Public Class VigaService
     ' Zonas confinadas (Izq / Der): 2H desde el apoyo, sep = d/4.
     '   Ramas: 2 si b ≤ 0.45 m, 3 si b > 0.45 m.
     ' Zona central (Centro): sep = d/2, siempre 2 ramas.
-    Public Sub AsignarRefuerzoTransversalAutomatico(vigas As List(Of cViga))
+    ''' <param name="sobrescribir">
+    ''' True (default): borra y reasigna el prediseño en todos los frames.
+    ''' False: preserva los frames que ya tienen refuerzo transversal (ajuste manual del
+    ''' usuario) y solo aplica el prediseño a los frames vacíos. Usar False después de
+    ''' re-agrupaciones para no reventar los estribos que el usuario ya calibró.
+    ''' </param>
+    Public Sub AsignarRefuerzoTransversalAutomatico(vigas As List(Of cViga),
+                                                     Optional sobrescribir As Boolean = True)
 
         For Each viga In vigas
             For Each frame In viga.Frames
+
+                If Not sobrescribir AndAlso frame.RefuerzoTransversal.Count > 0 Then Continue For
 
                 Dim sec = frame.Section
                 Dim b As Double = sec.b
@@ -1561,6 +1625,9 @@ Public Class VigaService
             Dim asignados As New Dictionary(Of String, Integer)()
 
             For Each viga In grupo
+                ' Vigas con nombre editado a mano por el usuario no se re-generan.
+                If viga.NombreManualEditado Then Continue For
+
                 viga.NombrePlano = ""
                 If String.IsNullOrEmpty(viga.EjeParalelo) Then Continue For
 
@@ -1907,6 +1974,242 @@ Public Class VigaService
             nuevo.Barras(kvp.Key) = kvp.Value
         Next
         Return nuevo
+    End Function
+
+    ' ═════════════════════════════════════════════════════════════════════════
+    ' C/D DEFINITIVO — envolvente convencional + plástico, zona a zona
+    ' ═════════════════════════════════════════════════════════════════════════
+    ' Regla ingenieril (unificada, aplica a todos los reportes de cortante):
+    '   Para cada zona (Izq/Centro/Der) se compara el chequeo convencional
+    '   contra el plástico (C.21.5.4) DE LA MISMA POSICION:
+    '     - Cumplen ambos              → C/D = min(típ, plás), estado Cumple
+    '     - Cumple solo típico         → C/D = típ,             estado Cumple
+    '     - Cumple solo plástico       → C/D = plás,            estado CumplePlastico
+    '     - No cumple ninguno          → C/D = max(típ, plás),  estado NoCumple
+    '     - Sin plástico (o phiVn=0)   → C/D = típ,             estado deriva del típ
+    '   El C/D del frame es el mínimo de C/D_Def entre sus zonas.
+    '   La zona gobernante es la de C/D_Def mínimo.
+
+    Public Enum EstadoEnvolventeCortante
+        SinDatos = 0
+        Cumple = 1
+        CumplePlastico = 2
+        NoCumple = 3
+    End Enum
+
+    Public Structure ResultadoCDDefZona
+        Public Posicion As PosicionTramoViga
+        Public CD_Tipico As Double
+        Public CD_Plastico As Double
+        Public CD_Def As Double
+        Public Vu_Tipico As Double
+        Public phiVn_Tipico As Double
+        Public Vu_Plastico As Double
+        Public phiVn_Plastico As Double
+        Public Estado As EstadoEnvolventeCortante
+        Public TienePlastico As Boolean
+
+        ''' <summary>
+        ''' Vu del modo que produjo el C/D (Def). Útil para reportes de una sola
+        ''' pareja Vu/φVn (Word, tabla ejecutiva) donde no cabe todo el detalle.
+        ''' </summary>
+        Public ReadOnly Property Vu_Def As Double
+            Get
+                If Not TienePlastico Then Return Vu_Tipico
+                If CD_Def = CD_Plastico AndAlso (CD_Def <> CD_Tipico OrElse Vu_Tipico = 0) Then Return Vu_Plastico
+                Return Vu_Tipico
+            End Get
+        End Property
+
+        Public ReadOnly Property phiVn_Def As Double
+            Get
+                If Not TienePlastico Then Return phiVn_Tipico
+                If CD_Def = CD_Plastico AndAlso (CD_Def <> CD_Tipico OrElse phiVn_Tipico = 0) Then Return phiVn_Plastico
+                Return phiVn_Tipico
+            End Get
+        End Property
+    End Structure
+
+    ''' <summary>
+    ''' Regla de envolvente C/D (Def) para una zona. Ambas entradas pueden ser
+    ''' Nothing o tener phiVn = 0 (sin datos). Ver comentario del bloque.
+    ''' </summary>
+    Public Shared Function CDDefZona(zTipica As cRevisionCortanteZona,
+                                     zPlastica As cRevisionCortantePlasticoZona,
+                                     Optional umbral As Double = UMBRAL_CD) As ResultadoCDDefZona
+
+        Dim r As ResultadoCDDefZona
+        Dim tieneTip = (zTipica IsNot Nothing AndAlso zTipica.phiVn > 0 AndAlso zTipica.Factor > 0)
+        Dim tienePla = (zPlastica IsNot Nothing AndAlso zPlastica.phiVn > 0 AndAlso zPlastica.Factor > 0)
+
+        If tieneTip Then
+            r.Posicion = zTipica.Posicion
+            r.CD_Tipico = zTipica.Factor
+            r.Vu_Tipico = zTipica.Vu
+            r.phiVn_Tipico = zTipica.phiVn
+        ElseIf tienePla Then
+            r.Posicion = zPlastica.Posicion
+        End If
+
+        If tienePla Then
+            r.CD_Plastico = zPlastica.Factor
+            r.Vu_Plastico = zPlastica.Vu_diseno
+            r.phiVn_Plastico = zPlastica.phiVn
+            r.TienePlastico = True
+        End If
+
+        Dim cumpleTip = tieneTip AndAlso zTipica.Factor >= umbral
+        Dim cumplePla = tienePla AndAlso zPlastica.Factor >= umbral
+
+        If Not tieneTip AndAlso Not tienePla Then
+            r.Estado = EstadoEnvolventeCortante.SinDatos
+            r.CD_Def = 0
+        ElseIf Not tienePla Then
+            ' Sin plástico: gobierna típico
+            r.CD_Def = r.CD_Tipico
+            r.Estado = If(cumpleTip, EstadoEnvolventeCortante.Cumple, EstadoEnvolventeCortante.NoCumple)
+        ElseIf Not tieneTip Then
+            ' Solo plástico
+            r.CD_Def = r.CD_Plastico
+            r.Estado = If(cumplePla, EstadoEnvolventeCortante.CumplePlastico, EstadoEnvolventeCortante.NoCumple)
+        ElseIf cumpleTip AndAlso cumplePla Then
+            r.CD_Def = Math.Min(r.CD_Tipico, r.CD_Plastico)
+            r.Estado = EstadoEnvolventeCortante.Cumple
+        ElseIf cumpleTip Then
+            r.CD_Def = r.CD_Tipico
+            r.Estado = EstadoEnvolventeCortante.Cumple
+        ElseIf cumplePla Then
+            r.CD_Def = r.CD_Plastico
+            r.Estado = EstadoEnvolventeCortante.CumplePlastico
+        Else
+            ' Ninguno cumple: mayor de los dos (menos malo, transparente para el usuario)
+            r.CD_Def = Math.Max(r.CD_Tipico, r.CD_Plastico)
+            r.Estado = EstadoEnvolventeCortante.NoCumple
+        End If
+
+        Return r
+    End Function
+
+    Public Structure ResultadoCDDefFrame
+        Public ZonaGobernante As ResultadoCDDefZona
+        Public Zonas As List(Of ResultadoCDDefZona)
+        Public CD_Def As Double
+        Public Estado As EstadoEnvolventeCortante  ' Etiqueta del frame (peor caso ingenieril)
+    End Structure
+
+    ''' <summary>
+    ''' Evalúa el C/D (Def) por zona y devuelve la zona gobernante (menor C/D_Def)
+    ''' junto con la etiqueta agregada del frame.
+    '''  - "Revisar"    si alguna zona no cumple ni por plástico
+    '''  - "OK (Plást.)" si al menos una zona se rescató con plástico y ninguna quedó en Revisar
+    '''  - "OK"         si todas cumplen sin ayuda del plástico
+    ''' </summary>
+    Public Shared Function EvaluarCDDefFrame(frame As cFrame,
+                                             Optional umbral As Double = UMBRAL_CD) As ResultadoCDDefFrame
+        Dim res As ResultadoCDDefFrame
+        res.Zonas = New List(Of ResultadoCDDefZona)()
+
+        If frame Is Nothing OrElse frame.RevisionCortante Is Nothing OrElse frame.RevisionCortante.Count = 0 Then
+            res.Estado = EstadoEnvolventeCortante.SinDatos
+            Return res
+        End If
+
+        Dim cp = frame.CortantePlastico
+        For Each zTip In frame.RevisionCortante
+            Dim zPla As cRevisionCortantePlasticoZona = Nothing
+            If cp IsNot Nothing Then
+                Select Case zTip.Posicion
+                    Case PosicionTramoViga.Izquierda : zPla = cp.ZonaIzq
+                    Case PosicionTramoViga.Derecha : zPla = cp.ZonaDer
+                    Case PosicionTramoViga.Centro : zPla = cp.ZonaCentro
+                End Select
+            End If
+            res.Zonas.Add(CDDefZona(zTip, zPla, umbral))
+        Next
+
+        ' También considerar zonas plásticas sin contraparte convencional (caso raro
+        ' pero legítimo: sección donde solo se evaluó por capacidad).
+        If cp IsNot Nothing Then
+            Dim posicionesTipicas = frame.RevisionCortante.Select(Function(z) z.Posicion).ToHashSet()
+            Dim extras = New (PosicionTramoViga, cRevisionCortantePlasticoZona)() {
+                (PosicionTramoViga.Izquierda, cp.ZonaIzq),
+                (PosicionTramoViga.Derecha, cp.ZonaDer),
+                (PosicionTramoViga.Centro, cp.ZonaCentro)
+            }
+            For Each ex In extras
+                If ex.Item2 IsNot Nothing AndAlso ex.Item2.phiVn > 0 AndAlso Not posicionesTipicas.Contains(ex.Item1) Then
+                    res.Zonas.Add(CDDefZona(Nothing, ex.Item2, umbral))
+                End If
+            Next
+        End If
+
+        Dim conDatos = res.Zonas.Where(Function(z) z.Estado <> EstadoEnvolventeCortante.SinDatos).ToList()
+        If conDatos.Count = 0 Then
+            res.Estado = EstadoEnvolventeCortante.SinDatos
+            Return res
+        End If
+
+        res.ZonaGobernante = conDatos.OrderBy(Function(z) z.CD_Def).First()
+        res.CD_Def = res.ZonaGobernante.CD_Def
+
+        If conDatos.Any(Function(z) z.Estado = EstadoEnvolventeCortante.NoCumple) Then
+            res.Estado = EstadoEnvolventeCortante.NoCumple
+        ElseIf conDatos.Any(Function(z) z.Estado = EstadoEnvolventeCortante.CumplePlastico) Then
+            res.Estado = EstadoEnvolventeCortante.CumplePlastico
+        Else
+            res.Estado = EstadoEnvolventeCortante.Cumple
+        End If
+
+        Return res
+    End Function
+
+    ''' <summary>
+    ''' Envolvente para la viga: mínimo C/D (Def) sobre todos sus frames. La
+    ''' etiqueta agregada sigue el mismo criterio que para el frame.
+    ''' </summary>
+    Public Shared Function EvaluarCDDefViga(viga As cViga,
+                                            Optional umbral As Double = UMBRAL_CD) As ResultadoCDDefFrame
+        Dim res As ResultadoCDDefFrame
+        res.Zonas = New List(Of ResultadoCDDefZona)()
+
+        If viga Is Nothing OrElse viga.Frames Is Nothing OrElse viga.Frames.Count = 0 Then
+            res.Estado = EstadoEnvolventeCortante.SinDatos
+            Return res
+        End If
+
+        Dim porFrame = viga.Frames.Select(Function(f) EvaluarCDDefFrame(f, umbral)).
+                                   Where(Function(r) r.Estado <> EstadoEnvolventeCortante.SinDatos).ToList()
+        If porFrame.Count = 0 Then
+            res.Estado = EstadoEnvolventeCortante.SinDatos
+            Return res
+        End If
+
+        Dim gobFrame = porFrame.OrderBy(Function(r) r.CD_Def).First()
+        res.CD_Def = gobFrame.CD_Def
+        res.ZonaGobernante = gobFrame.ZonaGobernante
+        res.Zonas = porFrame.SelectMany(Function(r) r.Zonas).ToList()
+
+        If porFrame.Any(Function(r) r.Estado = EstadoEnvolventeCortante.NoCumple) Then
+            res.Estado = EstadoEnvolventeCortante.NoCumple
+        ElseIf porFrame.Any(Function(r) r.Estado = EstadoEnvolventeCortante.CumplePlastico) Then
+            res.Estado = EstadoEnvolventeCortante.CumplePlastico
+        Else
+            res.Estado = EstadoEnvolventeCortante.Cumple
+        End If
+
+        Return res
+    End Function
+
+    ''' <summary>
+    ''' "Izq" / "Cen" / "Der" — para columnas y reportes.
+    ''' </summary>
+    Public Shared Function EtiquetaZona(pos As PosicionTramoViga) As String
+        Select Case pos
+            Case PosicionTramoViga.Izquierda : Return "Izq"
+            Case PosicionTramoViga.Centro : Return "Cen"
+            Case PosicionTramoViga.Derecha : Return "Der"
+            Case Else : Return "-"
+        End Select
     End Function
 
 End Class

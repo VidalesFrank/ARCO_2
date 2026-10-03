@@ -57,6 +57,9 @@ Public Class cVigas
     ' "DMO" → fy×1.0  |  "DES" → fy×1.25
     Public Property NivelDisipacion As String = "DMO"
 
+    ' Recubrimiento global del módulo — m. 0 = usar valor por sección ETABS.
+    <OptionalField> Public Recubrimiento As Double
+
     ''' Prefijo para los nombres automáticos de viga: "V", "Viga", "VIGA", etc.
     Public Property PrefijoNombreViga As String = "V"
 

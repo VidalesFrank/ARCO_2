@@ -112,6 +112,22 @@ Public Class cResultadoFlexion
     Public Property CumpleSuperior As Boolean
     Public Property CumpleInferior As Boolean
 
+    ' Cuantía requerida vs cuantía máxima (NSR-10 C.10.3.5 — sección
+    ' controlada por tracción con εt ≥ 0.005). True = sección sobrerreforzada
+    ' y las dimensiones o fc deben aumentarse.
+    <OptionalField> Public SobreRhoMaxSup As Boolean
+    <OptionalField> Public SobreRhoMaxInf As Boolean
+
+    ' Cuantía requerida absoluta ρ = As / (b·d), sin recorte por rho_temp / rho_design.
+    ' Se guarda para mostrarla en tooltip y comparar contra los umbrales.
+    <OptionalField> Public RhoReqSup As Double
+    <OptionalField> Public RhoReqInf As Double
+
+    ' ρ > 0.025 — cuantía excesiva por NSR-10 C.21.5.2.1 (pórticos DES/DMO).
+    ' Ductilidad y confinamiento comprometidos aunque εt ≥ 0.005.
+    <OptionalField> Public RhoExcesivoSup As Boolean
+    <OptionalField> Public RhoExcesivoInf As Boolean
+
 End Class
 
 <Serializable>
@@ -195,6 +211,8 @@ Public Class cResultadoCortantePlasticoFrame
     Public Property ZonaIzq As New cRevisionCortantePlasticoZona
     Public Property ZonaDer As New cRevisionCortantePlasticoZona
 
+    ' Campo y no propiedad: el atributo OptionalField solo admite campos.
+    ' Queda Nothing al abrir un .esm anterior; se recalcula al revisar la viga.
     ''' <summary>
     ''' Zona central. Ve es CONSTANTE a lo largo del vano — nace de los momentos
     ''' plasticos de los extremos — mientras que la componente gravitacional se
@@ -203,8 +221,6 @@ Public Class cResultadoCortantePlasticoFrame
     ''' Queda Nothing en proyectos guardados antes de esta versión y en vanos
     ''' donde las zonas confinadas se solapan (no hay zona central).
     ''' </summary>
-    ' Campo y no propiedad: el atributo OptionalField solo admite campos.
-    ' Queda Nothing al abrir un .esm anterior; se recalcula al revisar la viga.
     <OptionalField> Public ZonaCentro As cRevisionCortantePlasticoZona
 
 End Class

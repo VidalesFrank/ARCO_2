@@ -168,38 +168,9 @@ Public Class CalculoTests
     ' =====================================================================
     ' Regla de negocio: rescate por cortante plástico
     ' =====================================================================
-    ' Una viga que NO cumple a cortante convencional pero SÍ a plástico no se
-    ' reporta. Desde 2026-09-15 aplica a las TRES zonas, también al Centro.
-
-    <TestMethod>
-    Public Sub CumpleCortantePlastico_SinResultado_DevuelveFalse()
-        Assert.IsFalse(VigaService.CumpleCortantePlastico(eNumeradores.PosicionTramoViga.Izquierda, Nothing))
-    End Sub
-
-    <TestMethod>
-    Public Sub CumpleCortantePlastico_RespondePorZona()
-        Dim cp As New cResultadoCortantePlasticoFrame()
-        cp.ZonaIzq.Cumple = True
-        cp.ZonaDer.Cumple = False
-        cp.ZonaCentro = New cRevisionCortantePlasticoZona() With {.Cumple = True}
-
-        Assert.IsTrue(VigaService.CumpleCortantePlastico(eNumeradores.PosicionTramoViga.Izquierda, cp), "Izq")
-        Assert.IsFalse(VigaService.CumpleCortantePlastico(eNumeradores.PosicionTramoViga.Derecha, cp), "Der")
-        Assert.IsTrue(VigaService.CumpleCortantePlastico(eNumeradores.PosicionTramoViga.Centro, cp), "Centro")
-    End Sub
-
-    ''' <summary>
-    ''' ZonaCentro queda Nothing en dos casos legítimos: proyectos guardados
-    ''' antes de que se calculara, y vanos donde las zonas confinadas se
-    ''' solapan. En ambos el centro NO está rescatado.
-    ''' </summary>
-    <TestMethod>
-    Public Sub CumpleCortantePlastico_CentroSinCalcular_DevuelveFalse()
-        Dim cp As New cResultadoCortantePlasticoFrame()
-        cp.ZonaCentro = Nothing
-        Assert.IsFalse(VigaService.CumpleCortantePlastico(eNumeradores.PosicionTramoViga.Centro, cp))
-    End Sub
-
+    ' Reglas históricas de "CumpleCortantePlastico" reemplazadas por la
+    ' envolvente unificada C/D (Def). Cobertura de esa lógica en
+    ' CDDefCortanteTests (que abarca los mismos casos y muchos más).
     ' =====================================================================
     ' Helpers de reflexión
     ' =====================================================================

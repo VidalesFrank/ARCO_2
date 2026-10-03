@@ -149,39 +149,20 @@ Public Class Form_Graficos_Vigas
     End Function
 
     ' -----------------------------------------------------------------------
-    ' Regla convencional-vs-plástico.
-    '
-    ' NOTA: la versión centralizada de este criterio vive en
-    ' VigaService.CumpleCortantePlastico (rama fix/vigas-cortante-zona-central).
-    ' Cuando esa rama esté en main, reemplazar el cuerpo de FactorEfectivoZona
-    ' por una llamada a ese helper en vez de repetir la lógica aquí.
-    '
-    ' Las tres zonas tienen contraparte plástica: Ve es constante a lo largo del
-    ' vano, así que el centro también recibe demanda por capacidad.
+    ' Envolvente C/D (Def) para la zona: delega en VigaService.CDDefZona, la
+    ' regla oficial unificada de todos los reportes de vigas.
     ' -----------------------------------------------------------------------
     Private Function FactorEfectivoZona(zona As cRevisionCortanteZona,
                                         cp As cResultadoCortantePlasticoFrame) As Double
-
-        Dim conv As Double = zona.Factor
-        If cp Is Nothing Then Return conv
-
-        Select Case zona.Posicion
-            Case PosicionTramoViga.Izquierda
-                If cp.ZonaIzq IsNot Nothing AndAlso cp.ZonaIzq.phiVn > 0 Then
-                    Return Math.Max(conv, cp.ZonaIzq.Factor)
-                End If
-            Case PosicionTramoViga.Derecha
-                If cp.ZonaDer IsNot Nothing AndAlso cp.ZonaDer.phiVn > 0 Then
-                    Return Math.Max(conv, cp.ZonaDer.Factor)
-                End If
-            Case PosicionTramoViga.Centro
-                If cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.phiVn > 0 Then
-                    Return Math.Max(conv, cp.ZonaCentro.Factor)
-                End If
-        End Select
-
-        Return conv
-
+        Dim zPla As cRevisionCortantePlasticoZona = Nothing
+        If cp IsNot Nothing Then
+            Select Case zona.Posicion
+                Case PosicionTramoViga.Izquierda : zPla = cp.ZonaIzq
+                Case PosicionTramoViga.Derecha : zPla = cp.ZonaDer
+                Case PosicionTramoViga.Centro : zPla = cp.ZonaCentro
+            End Select
+        End If
+        Return VigaService.CDDefZona(zona, zPla).CD_Def
     End Function
 
     ' -----------------------------------------------------------------------
