@@ -142,6 +142,13 @@ Public Class Form_11_01_Resultados
     Private _cargando As Boolean = False
 
     Private Sub CargarTabla()
+        ' CmbPiso.SelectedIndex = 0 en InitUI dispara SelectedIndexChanged ANTES de
+        ' que el caller setee Proyecto. Sin esta guardia, NRE en el constructor.
+        If Proyecto Is Nothing OrElse Proyecto.Elementos Is Nothing OrElse
+           Proyecto.Elementos.Nervios Is Nothing OrElse Proyecto.Elementos.Nervios.Elementos Is Nothing Then
+            Return
+        End If
+
         Tabla.Rows.Clear()
 
         Dim pisoFiltro = If(CmbPiso.SelectedItem?.ToString() = "Todos", "", CmbPiso.SelectedItem?.ToString())

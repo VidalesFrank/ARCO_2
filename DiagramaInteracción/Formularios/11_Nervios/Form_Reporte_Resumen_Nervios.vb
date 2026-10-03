@@ -336,14 +336,16 @@ Public Class Form_Reporte_Resumen_Nervios
                 ws.Cell(fila, 1).Value  = nerv.Piso
                 ws.Cell(fila, 2).Value  = NombreNervio(nerv)
                 ws.Cell(fila, 3).Value  = TramoLabel(fn)
-                ws.Cell(fila, 4).Value  = If(fn.As_Prov_Sup_I > 0, CObj(Math.Round(fn.As_Prov_Sup_I, 2)), "-")
-                ws.Cell(fila, 5).Value  = If(fn.As_Req_Sup_I  > 0, CObj(Math.Round(fn.As_Req_Sup_I,  2)), "-")
+                ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+                ' If(cond, CObj(Double), "-") devuelve Object → InvalidCastException al asignar.
+                If fn.As_Prov_Sup_I > 0 Then ws.Cell(fila, 4).Value = Math.Round(fn.As_Prov_Sup_I, 2) Else ws.Cell(fila, 4).Value = "-"
+                If fn.As_Req_Sup_I  > 0 Then ws.Cell(fila, 5).Value = Math.Round(fn.As_Req_Sup_I,  2) Else ws.Cell(fila, 5).Value = "-"
                 If cdI > 0 Then EscribirFactor(ws.Cell(fila, 6), cdI)  Else ws.Cell(fila, 6).Value  = "-"
-                ws.Cell(fila, 7).Value  = If(fn.As_Prov_Inf_C > 0, CObj(Math.Round(fn.As_Prov_Inf_C, 2)), "-")
-                ws.Cell(fila, 8).Value  = If(fn.As_Req_Inf_C  > 0, CObj(Math.Round(fn.As_Req_Inf_C,  2)), "-")
+                If fn.As_Prov_Inf_C > 0 Then ws.Cell(fila, 7).Value = Math.Round(fn.As_Prov_Inf_C, 2) Else ws.Cell(fila, 7).Value = "-"
+                If fn.As_Req_Inf_C  > 0 Then ws.Cell(fila, 8).Value = Math.Round(fn.As_Req_Inf_C,  2) Else ws.Cell(fila, 8).Value = "-"
                 If cdC > 0 Then EscribirFactor(ws.Cell(fila, 9), cdC)  Else ws.Cell(fila, 9).Value  = "-"
-                ws.Cell(fila, 10).Value = If(fn.As_Prov_Sup_D > 0, CObj(Math.Round(fn.As_Prov_Sup_D, 2)), "-")
-                ws.Cell(fila, 11).Value = If(fn.As_Req_Sup_D  > 0, CObj(Math.Round(fn.As_Req_Sup_D,  2)), "-")
+                If fn.As_Prov_Sup_D > 0 Then ws.Cell(fila, 10).Value = Math.Round(fn.As_Prov_Sup_D, 2) Else ws.Cell(fila, 10).Value = "-"
+                If fn.As_Req_Sup_D  > 0 Then ws.Cell(fila, 11).Value = Math.Round(fn.As_Req_Sup_D,  2) Else ws.Cell(fila, 11).Value = "-"
                 If cdD > 0 Then EscribirFactor(ws.Cell(fila, 12), cdD) Else ws.Cell(fila, 12).Value = "-"
                 ws.Cell(fila, 13).Value = If(obs.Count > 0, "En " & String.Join(" y ", obs), "")
                 ws.Cell(fila, 13).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
@@ -381,10 +383,10 @@ Public Class Form_Reporte_Resumen_Nervios
                 ws.Cell(fila, 2).Value  = NombreNervio(nerv)
                 ws.Cell(fila, 3).Value  = TramoLabel(fn)
                 ws.Cell(fila, 4).Value  = Math.Round(fn.Vu_I, 2)
-                ws.Cell(fila, 5).Value  = If(fn.PhiVn_I > 0, CObj(Math.Round(fn.PhiVn_I, 2)), "-")
+                If fn.PhiVn_I > 0 Then ws.Cell(fila, 5).Value = Math.Round(fn.PhiVn_I, 2) Else ws.Cell(fila, 5).Value = "-"
                 If fn.PhiVn_I > 0 Then EscribirFactor(ws.Cell(fila, 6), cdI) Else ws.Cell(fila, 6).Value = "-"
                 ws.Cell(fila, 7).Value  = Math.Round(fn.Vu_D, 2)
-                ws.Cell(fila, 8).Value  = If(fn.PhiVn_D > 0, CObj(Math.Round(fn.PhiVn_D, 2)), "-")
+                If fn.PhiVn_D > 0 Then ws.Cell(fila, 8).Value = Math.Round(fn.PhiVn_D, 2) Else ws.Cell(fila, 8).Value = "-"
                 If fn.PhiVn_D > 0 Then EscribirFactor(ws.Cell(fila, 9), cdD) Else ws.Cell(fila, 9).Value = "-"
                 EscribirEstado(ws.Cell(fila, 10), If(cumple, "OK", "Revisar"),
                                If(cumple, XlOKFondo, XlMalFondo),
