@@ -93,6 +93,10 @@ Public NotInheritable Class LosaService
             DeterminarCaso = 9
         End If
 
+        ' Fallback explícito: si ninguna combinación aplica, DeterminarCaso queda en 0 (default).
+        ' Return explícito para silenciar BC42353 sin cambiar la semántica.
+        Return DeterminarCaso
+
     End Function
 
     ''' <summary>
