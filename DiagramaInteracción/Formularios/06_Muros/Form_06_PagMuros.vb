@@ -676,11 +676,13 @@ Public Class Form_06_PagMuros
                         End If
                     Next
 
-                    Dim Muro_ = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Tabla.Rows(i).Cells(Col_Label).Value)
+                    ' Copia local: evita BC42324 (captura de la variable de iteración por la lambda).
+                    Dim iLoc = i
+                    Dim Muro_ = proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = Tabla.Rows(iLoc).Cells(Col_Label).Value)
 
                     Dim Seccion = Nothing
                     If Muro_ IsNot Nothing Then
-                        Seccion = Muro_.Lista_Secciones.Find(Function(p) p.Piso = Tabla.Rows(i).Cells(Col_Piso).Value)
+                        Seccion = Muro_.Lista_Secciones.Find(Function(p) p.Piso = Tabla.Rows(iLoc).Cells(Col_Piso).Value)
                     End If
 
                     If Muro_ IsNot Nothing And Seccion IsNot Nothing Then
@@ -816,7 +818,9 @@ Public Class Form_06_PagMuros
             Dim muros_ConRef = Proyecto_1.Elementos.Muros.Lista_Muros.FindAll(Function(muro) muro.Lista_Secciones(0).AsH_Col > 0)
 
             For i = 0 To muros_SinRef.Count() - 1
-                Dim Muro = muros_ConRef.Find(Function(p) p.Name = muros_SinRef(i).Name)
+                ' Copia local: evita BC42324 (captura de la variable de iteración por la lambda).
+                Dim iLoc = i
+                Dim Muro = muros_ConRef.Find(Function(p) p.Name = muros_SinRef(iLoc).Name)
 
                 If Muro IsNot Nothing Then
                     Dim index = proyecto.Elementos.Muros.Lista_Muros.FindIndex(Function(p) p.Name = Muro.Name)
@@ -862,9 +866,9 @@ Public Class Form_06_PagMuros
                             proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Planos = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Lw_Model
                             proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).fc = Convert.ToSingle(Mid(Tabla.Rows(j).Cells(Col_Material).Value, 1, 2))
                             If Convert.ToSingle(Tabla.Rows(j).Cells(2).Value) > 10 Then
-                                proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = "Y"
+                                proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = eNumeradores.eDireccion.Y
                             Else
-                                proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = "X"
+                                proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Direccion_Muro = eNumeradores.eDireccion.X
                             End If
                             proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones(Np).Altura = Convert.ToSingle(Tabla.Rows(j).Cells(15).Value)
 
@@ -902,7 +906,7 @@ Public Class Form_06_PagMuros
 
         Dim Comb_Sismo As String
         Dim Comb_G As String
-        Dim Comb_D As String
+        ' Comb_D eliminada (BC42024): solo se usa en las líneas comentadas 920 y 935.
 
         For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
             Dim seccionMenorZ As SeccionMuro = proyecto.Elementos.Muros.Lista_Muros(i).Lista_Secciones.OrderBy(Function(seccion) seccion.Coor_Z_Bot).First()
@@ -969,10 +973,12 @@ Public Class Form_06_PagMuros
         Dim Paso_X As Boolean = False
 
         For i = 2 To List_X.Count() - 1
-            If List_X(i).Porc_Vs / List_X(i - 1).Porc_Vs > 0.75 And Paso_X = False Then
-                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(i).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+            ' Copia local: evita BC42324 (captura de la variable de iteración por la lambda).
+            Dim iLoc = i
+            If List_X(iLoc).Porc_Vs / List_X(iLoc - 1).Porc_Vs > 0.75 And Paso_X = False Then
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(iLoc).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
             Else
-                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(i).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_X(iLoc).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
                 Paso_X = True
             End If
         Next
@@ -982,10 +988,12 @@ Public Class Form_06_PagMuros
         Dim Paso_Y As Boolean = False
 
         For i = 2 To List_Y.Count() - 1
-            If List_Y(i).Porc_Vs / List_Y(i - 1).Porc_Vs > 0.75 And Paso_Y = False Then
-                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(i).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
+            ' Copia local: evita BC42324 (captura de la variable de iteración por la lambda).
+            Dim iLoc = i
+            If List_Y(iLoc).Porc_Vs / List_Y(iLoc - 1).Porc_Vs > 0.75 And Paso_Y = False Then
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(iLoc).Name).TipoMuro = eNumeradores.eTipoMuro.Protagonico
             Else
-                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(i).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
+                proyecto.Elementos.Muros.Lista_Muros.Find(Function(p) p.Name = List_Y(iLoc).Name).TipoMuro = eNumeradores.eTipoMuro.Complemento
                 Paso_Y = True
             End If
         Next
