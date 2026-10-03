@@ -311,8 +311,9 @@ Public Class Form_07_Zapata_Detalle
             Return
         End If
 
-        ' Rectángulo escalado de la zapata en pantalla, con margen para leyenda.
-        Dim margL As Single = 40, margT As Single = 30, margR As Single = 70, margB As Single = 40
+        ' Área disponible del panel, dejando margen para la leyenda a la derecha
+        ' y las etiquetas de eje.
+        Dim margL As Single = 40, margT As Single = 30, margR As Single = 80, margB As Single = 40
         Dim availW As Single = Math.Max(50, _pnlPresiones.Width - margL - margR)
         Dim availH As Single = Math.Max(50, _pnlPresiones.Height - margT - margB)
         Dim escala As Single = CSng(Math.Min(availW / _zapata.L_b, availH / _zapata.L_h))
@@ -321,93 +322,134 @@ Public Class Form_07_Zapata_Detalle
         Dim x0 As Single = margL + (availW - wPx) / 2
         Dim y0 As Single = margT + (availH - hPx) / 2
 
-        ' Para una zapata rígida bajo axial + biaxial la distribución de presión
-        ' es un plano, así que basta interpolar bilinealmente los cuatro valores
-        ' de esquina ya calculados (g1..g4). Así el mapa coincide exactamente
-        ' con qMin, qMax y con lo que muestra la tabla — sin depender de una
-        ' fórmula paramétrica que sería fácil equivocar.
+        ' --------------------------------------------------------------------
+        ' Transformada Mundo → Pantalla.
+        ' Mundo: origen en el centro de la zapata, +X hacia la derecha, +Y hacia
+        '        arriba, unidades metros. Coincide con la convención de la
+        '        fórmula (g1 en (+X,+Y), g2 en (+X,-Y), g3 en (-X,-Y), g4 en (-X,+Y))
+        '        y con los ejes globales de ETABS mirando la planta desde arriba.
+        ' Pantalla: origen arriba-izquierda, +X derecha, +Y hacia abajo. Se invierte
+        '        el eje Y en la transformada.
+        ' Todos los puntos que se dibujan pasan por W2S — ninguna posición se
+        ' calcula "a mano" para evitar desfases entre elementos.
+        ' --------------------------------------------------------------------
+        Dim cx As Single = x0 + wPx / 2
+        Dim cy As Single = y0 + hPx / 2
+        Dim W2S As Func(Of Double, Double, PointF) =
+            Function(wx, wy) New PointF(cx + CSng(wx * escala),
+                                        cy - CSng(wy * escala))
+
+        Dim halfB As Double = _zapata.L_b / 2.0
+        Dim halfH As Double = _zapata.L_h / 2.0
+
+        ' Esquinas de la zapata en coords locales, mapeadas a los g_i por la fórmula.
+        Dim eTR As PointF = W2S(+halfB, +halfH)   ' g1 (+Mx, +My)
+        Dim eBR As PointF = W2S(+halfB, -halfH)   ' g2 (-Mx, +My)
+        Dim eBL As PointF = W2S(-halfB, -halfH)   ' g3 (-Mx, -My)
+        Dim eTL As PointF = W2S(-halfB, +halfH)   ' g4 (+Mx, -My)
+
         Dim qMin As Double = res.qMin
         Dim qMax As Double = res.qMax
-        Dim rango As Double = qMax - qMin
-        If rango < 0.0001 Then rango = 1.0
 
-        Dim usarHeat As Boolean = _rdoHeatmap.Checked
-
-        If usarHeat Then
+        ' --------------------------------------------------------------------
+        ' 1. Heatmap o cuadrícula, rellenando el rectángulo de la zapata.
+        ' --------------------------------------------------------------------
+        If _rdoHeatmap.Checked Then
             DibujarHeatmap(g, x0, y0, wPx, hPx, res, qMin, qMax)
         Else
             DibujarGrilla(g, x0, y0, wPx, hPx, res, qMin, qMax)
         End If
 
-        ' Contorno de la zapata
+        ' --------------------------------------------------------------------
+        ' 2. Contorno de la zapata (polígono cerrado con las 4 esquinas locales)
+        ' --------------------------------------------------------------------
         Using pen As New Pen(Color.FromArgb(60, 60, 60), 1.5F)
-            g.DrawRectangle(pen, x0, y0, wPx, hPx)
+            g.DrawPolygon(pen, {eTL, eTR, eBR, eBL})
         End Using
 
-        ' Diagnóstico visual: si el rango entre esquinas es despreciable, se
-        ' hace explícito en el dibujo por qué no se ve variación. Antes el
-        ' usuario tenía que ir al panel lateral a mirar Mx y My.
+        ' --------------------------------------------------------------------
+        ' 3. Aviso "sin gradiente apreciable". Umbral relativo (0.5 % de la
+        '    presión promedio) y ubicado arriba, fuera de la huella.
+        ' --------------------------------------------------------------------
+        Dim qProm As Double = (res.g1 + res.g2 + res.g3 + res.g4) / 4.0
         Dim rangoEsq As Double = Math.Max(res.g1, Math.Max(res.g2, Math.Max(res.g3, res.g4))) -
                                  Math.Min(res.g1, Math.Min(res.g2, Math.Min(res.g3, res.g4)))
-        If rangoEsq < 0.5 Then
-            Using fBig As New Font("Segoe UI", 12, FontStyle.Bold),
-                  bBg As New SolidBrush(Color.FromArgb(230, 255, 255, 200)),
-                  bTxt As New SolidBrush(Color.FromArgb(140, 40, 20)),
-                  sf As New StringFormat() With {
-                      .Alignment = StringAlignment.Center,
-                      .LineAlignment = StringAlignment.Center
-                  }
-                Dim msg As String = $"Sin gradiente en esta combinación" & vbCrLf &
-                                    $"Mx = {res.Mx_Entrada:F2}  |  My = {res.My_Entrada:F2} kN·m" & vbCrLf &
-                                    $"q ≈ {res.qMax:F1} kN/m² en toda la huella"
-                Dim rect As New RectangleF(x0 + 8, y0 + hPx / 2 - 40, wPx - 16, 80)
-                g.FillRectangle(bBg, rect)
-                Using penBox As New Pen(Color.FromArgb(180, 130, 50), 1.2F)
-                    g.DrawRectangle(penBox, rect.X, rect.Y, rect.Width, rect.Height)
-                End Using
-                g.DrawString(msg, fBig, bTxt, rect, sf)
+        If rangoEsq < 0.005 * Math.Max(1.0, Math.Abs(qProm)) Then
+            Using fNota As New Font("Segoe UI", 8.5!, FontStyle.Italic),
+                  bNota As New SolidBrush(Color.FromArgb(140, 90, 40))
+                Dim msg As String = $"Sin gradiente apreciable — Mx = {res.Mx_Entrada:F2}, My = {res.My_Entrada:F2} kN·m"
+                g.DrawString(msg, fNota, bNota, margL, 6)
             End Using
         End If
 
-        ' Pedestal como referencia
+        ' --------------------------------------------------------------------
+        ' 4. Pedestal centrado en el origen local.
+        ' --------------------------------------------------------------------
         If _zapata.b > 0 AndAlso _zapata.h > 0 Then
-            Dim wp As Single = CSng(_zapata.b * escala)
-            Dim hp As Single = CSng(_zapata.h * escala)
-            Dim xp As Single = x0 + (wPx - wp) / 2
-            Dim yp As Single = y0 + (hPx - hp) / 2
+            Dim pTL As PointF = W2S(-_zapata.b / 2.0, +_zapata.h / 2.0)
+            Dim pBR As PointF = W2S(+_zapata.b / 2.0, -_zapata.h / 2.0)
             Using bp As New SolidBrush(Color.FromArgb(90, 60, 60, 60)),
                   pp As New Pen(Color.FromArgb(50, 50, 50), 1.2F)
-                g.FillRectangle(bp, xp, yp, wp, hp)
-                g.DrawRectangle(pp, xp, yp, wp, hp)
+                g.FillRectangle(bp, pTL.X, pTL.Y, pBR.X - pTL.X, pBR.Y - pTL.Y)
+                g.DrawRectangle(pp, pTL.X, pTL.Y, pBR.X - pTL.X, pBR.Y - pTL.Y)
             End Using
         End If
 
-        ' Etiquetas de las esquinas con presión — la convención de gᵢ viene de
-        ' la fórmula (ver InterpolarQ para el detalle): g1 TR, g2 BR, g3 BL, g4 TL.
-        Using f As New Font("Segoe UI", 8, FontStyle.Bold),
-              b As New SolidBrush(Color.Black),
-              bWhite As New SolidBrush(Color.FromArgb(220, 255, 255, 255))
-            DibujarEtiquetaEsquina(g, f, b, bWhite, x0 - 2, y0 - 2, $"g4 = {res.g4:F1}", True, True)
-            DibujarEtiquetaEsquina(g, f, b, bWhite, x0 + wPx + 2, y0 - 2, $"g1 = {res.g1:F1}", False, True)
-            DibujarEtiquetaEsquina(g, f, b, bWhite, x0 + wPx + 2, y0 + hPx + 2, $"g2 = {res.g2:F1}", False, False)
-            DibujarEtiquetaEsquina(g, f, b, bWhite, x0 - 2, y0 + hPx + 2, $"g3 = {res.g3:F1}", True, False)
+        ' --------------------------------------------------------------------
+        ' 5. Etiquetas de las esquinas: cada g_i sale sobre la esquina que le
+        '    corresponde por la fórmula. Presiones negativas en rojo con (T).
+        ' --------------------------------------------------------------------
+        Using bWhite As New SolidBrush(Color.FromArgb(220, 255, 255, 255))
+            DibujarEtiquetaEsquina(g, bWhite, eTL, "g4", res.g4, alaIzquierda:=True, arriba:=True)
+            DibujarEtiquetaEsquina(g, bWhite, eTR, "g1", res.g1, alaIzquierda:=False, arriba:=True)
+            DibujarEtiquetaEsquina(g, bWhite, eBR, "g2", res.g2, alaIzquierda:=False, arriba:=False)
+            DibujarEtiquetaEsquina(g, bWhite, eBL, "g3", res.g3, alaIzquierda:=True, arriba:=False)
         End Using
 
-        ' Escala vertical (leyenda)
-        DibujarLeyendaHeatmap(g, x0 + wPx + 10, y0, hPx, qMin, qMax)
+        ' --------------------------------------------------------------------
+        ' 6. Ejes con flechas y sentido del incremento de presión.
+        '    +X y +Y coinciden con los ejes globales de ETABS. Se dibujan las
+        '    dos líneas punteadas por los ejes locales y una flecha corta al
+        '    final de cada uno, para que el lector no tenga que adivinar hacia
+        '    dónde crece cada eje.
+        ' --------------------------------------------------------------------
+        Dim oScr As PointF = W2S(0, 0)
+        Dim tipX As PointF = W2S(+halfB, 0)
+        Dim tipY As PointF = W2S(0, +halfH)
+        Dim finX As PointF = W2S(-halfB, 0)
+        Dim finY As PointF = W2S(0, -halfH)
 
-        ' Ejes locales
-        Using penEje As New Pen(Color.DarkGray, 1),
-              fEje As New Font("Segoe UI", 8, FontStyle.Italic),
-              bEje As New SolidBrush(Color.DarkGray)
-            Dim ex As Single = x0 + wPx / 2
-            Dim ey As Single = y0 + hPx / 2
+        Using penEje As New Pen(Color.DarkGray, 1)
             penEje.DashStyle = DashStyle.Dot
-            g.DrawLine(penEje, x0, ey, x0 + wPx, ey)
-            g.DrawLine(penEje, ex, y0, ex, y0 + hPx)
-            g.DrawString("X (L_b)", fEje, bEje, x0 + wPx + 14, y0 + hPx + 20)
-            g.DrawString("Y (L_h)", fEje, bEje, x0 - 32, y0 - 18)
+            g.DrawLine(penEje, finX, tipX)
+            g.DrawLine(penEje, finY, tipY)
         End Using
+
+        Using penFlecha As New Pen(Color.FromArgb(80, 80, 80), 1.5F),
+              fEje As New Font("Segoe UI", 8.5!, FontStyle.Bold),
+              bEje As New SolidBrush(Color.FromArgb(60, 60, 60))
+            penFlecha.CustomEndCap = New Drawing2D.AdjustableArrowCap(4, 5)
+            ' Flecha X (hacia +X, más allá del borde derecho)
+            Dim xArrIni As PointF = W2S(+halfB - 0.15 * _zapata.L_b, 0)
+            Dim xArrFin As PointF = New PointF(tipX.X + 14, tipX.Y)
+            g.DrawLine(penFlecha, xArrIni, xArrFin)
+            g.DrawString("+X (b)", fEje, bEje, xArrFin.X + 2, xArrFin.Y - 7)
+            ' Flecha Y (hacia +Y, más allá del borde superior)
+            Dim yArrIni As PointF = W2S(0, +halfH - 0.15 * _zapata.L_h)
+            Dim yArrFin As PointF = New PointF(tipY.X, tipY.Y - 14)
+            g.DrawLine(penFlecha, yArrIni, yArrFin)
+            g.DrawString("+Y (h)", fEje, bEje, yArrFin.X - 20, yArrFin.Y - 14)
+        End Using
+
+        ' Marcador del origen — punto pequeño en el centro
+        Using bOrig As New SolidBrush(Color.FromArgb(60, 60, 60))
+            g.FillEllipse(bOrig, oScr.X - 2.5F, oScr.Y - 2.5F, 5, 5)
+        End Using
+
+        ' --------------------------------------------------------------------
+        ' 7. Leyenda vertical con la escala de color.
+        ' --------------------------------------------------------------------
+        DibujarLeyendaHeatmap(g, eTR.X + 20, y0, hPx, qMin, qMax)
 
     End Sub
 
@@ -488,59 +530,107 @@ Public Class Form_07_Zapata_Detalle
 
     End Sub
 
-    ''' <summary>Gradiente azul → verde → amarillo → rojo. Tracción (&lt;0) en magenta.</summary>
+    ''' <summary>
+    ''' Mapeo de presión a color en dos regímenes:
+    '''  • Todo compresión (qMin ≥ 0): gradiente cálido azul→verde→amarillo→rojo
+    '''    normalizado entre qMin y qMax, así se ve el detalle del gradiente aun
+    '''    cuando la variación es pequeña respecto a la presión media.
+    '''  • Con tracción (qMin &lt; 0): escala divergente anclada en 0. La compresión
+    '''    va blanco→amarillo→rojo, la tracción blanco→celeste→azul intenso,
+    '''    normalizada a max(|qMin|, |qMax|) para que el cero siempre esté en el
+    '''    color neutro. Así el signo se reconoce sin mirar la leyenda.
+    ''' </summary>
     Private Shared Function ColorPresion(q As Double, qMin As Double, qMax As Double) As Color
 
-        If q < 0 Then
-            ' Tracción intensa. VB.NET es case-insensitive: r y R en la misma
-            ' función son el mismo nombre, así que este canal se llama distinto.
-            Dim t As Double = Math.Min(1.0, Math.Abs(q) / Math.Max(0.001, Math.Abs(qMin)))
-            Dim rojo As Integer = 200 + CInt(55 * t)
-            Return Color.FromArgb(255, rojo, 40, 200 - CInt(120 * t))
+        If qMin < 0 Then
+            ' Régimen divergente centrado en 0.
+            Dim norm As Double = Math.Max(Math.Abs(qMin), Math.Abs(qMax))
+            If norm < 0.0001 Then Return Color.White
+            Dim t As Double = Math.Max(-1.0, Math.Min(1.0, q / norm))
+
+            Dim Rd As Integer, Gd As Integer, Bd As Integer
+            If t >= 0 Then
+                ' Compresión: blanco → amarillo → rojo intenso
+                If t < 0.5 Then
+                    Dim s As Double = t / 0.5
+                    Rd = 255
+                    Gd = CInt(255 - (255 - 220) * s)  ' 255 → 220
+                    Bd = CInt(240 - (240 - 60) * s)   ' 240 → 60
+                Else
+                    Dim s As Double = (t - 0.5) / 0.5
+                    Rd = CInt(255 - (255 - 200) * s)  ' 255 → 200
+                    Gd = CInt(220 - (220 - 20) * s)   ' 220 → 20
+                    Bd = CInt(60 - 60 * s)            ' 60 → 0
+                End If
+            Else
+                ' Tracción: blanco → celeste → azul intenso (uplift)
+                Dim s As Double = Math.Min(1.0, -t)
+                If s < 0.5 Then
+                    Dim u As Double = s / 0.5
+                    Rd = CInt(255 - (255 - 180) * u)  ' 255 → 180
+                    Gd = CInt(255 - (255 - 220) * u)  ' 255 → 220
+                    Bd = 255                          ' se mantiene 255
+                Else
+                    Dim u As Double = (s - 0.5) / 0.5
+                    Rd = CInt(180 - (180 - 20) * u)   ' 180 → 20
+                    Gd = CInt(220 - (220 - 60) * u)   ' 220 → 60
+                    Bd = CInt(255 - (255 - 180) * u)  ' 255 → 180
+                End If
+            End If
+            Return Color.FromArgb(255,
+                                  Math.Max(0, Math.Min(255, Rd)),
+                                  Math.Max(0, Math.Min(255, Gd)),
+                                  Math.Max(0, Math.Min(255, Bd)))
         End If
 
-        ' Base del gradiente: cuando toda la zapata está en compresión, el azul
-        ' arranca en qMin real. Cuando hay tracción (qMin < 0), la parte positiva
-        ' del gradiente arranca en 0 y la negativa se pinta con la rama magenta
-        ' de arriba.
-        Dim baseQ As Double = Math.Max(0.0, qMin)
-        Dim rango As Double = qMax - baseQ
+        ' Régimen todo compresión: gradiente cálido normalizado al rango real.
+        Dim rango As Double = qMax - qMin
         If rango < 0.0001 Then Return Color.FromArgb(255, 120, 220, 120)
-
-        Dim frac As Double = Math.Max(0, Math.Min(1, (q - baseQ) / rango))
+        Dim frac As Double = Math.Max(0, Math.Min(1, (q - qMin) / rango))
 
         Dim R As Integer, G As Integer, B As Integer
         If frac < 0.33 Then
-            Dim t As Double = frac / 0.33
-            R = CInt(30 + (60 - 30) * t)
-            G = CInt(100 + (200 - 100) * t)
-            B = CInt(220 - (220 - 90) * t)
+            Dim tt As Double = frac / 0.33
+            R = CInt(30 + (60 - 30) * tt)
+            G = CInt(100 + (200 - 100) * tt)
+            B = CInt(220 - (220 - 90) * tt)
         ElseIf frac < 0.66 Then
-            Dim t As Double = (frac - 0.33) / 0.33
-            R = CInt(60 + (240 - 60) * t)
-            G = CInt(200 + (220 - 200) * t)
-            B = CInt(90 - 60 * t)
+            Dim tt As Double = (frac - 0.33) / 0.33
+            R = CInt(60 + (240 - 60) * tt)
+            G = CInt(200 + (220 - 200) * tt)
+            B = CInt(90 - 60 * tt)
         Else
-            Dim t As Double = (frac - 0.66) / 0.34
-            R = CInt(240 + (215 - 240) * t)
-            G = CInt(220 - (220 - 40) * t)
-            B = CInt(30 - 30 * t)
+            Dim tt As Double = (frac - 0.66) / 0.34
+            R = CInt(240 + (215 - 240) * tt)
+            G = CInt(220 - (220 - 40) * tt)
+            B = CInt(30 - 30 * tt)
         End If
-        R = Math.Max(0, Math.Min(255, R))
-        G = Math.Max(0, Math.Min(255, G))
-        B = Math.Max(0, Math.Min(255, B))
-        Return Color.FromArgb(255, R, G, B)
+        Return Color.FromArgb(255,
+                              Math.Max(0, Math.Min(255, R)),
+                              Math.Max(0, Math.Min(255, G)),
+                              Math.Max(0, Math.Min(255, B)))
 
     End Function
 
+    ''' <summary>
+    ''' Barra de leyenda vertical. Recorre el rango real (qMin puede ser negativo)
+    ''' y, si el rango cruza 0, dibuja una marca horizontal etiquetada "0" en la
+    ''' altura correspondiente. Así el usuario reconoce a simple vista dónde
+    ''' termina la tracción y empieza la compresión.
+    ''' </summary>
     Private Sub DibujarLeyendaHeatmap(g As Graphics, x As Single, y As Single, alto As Single,
                                        qMin As Double, qMax As Double)
         Dim ancho As Single = 18
         Dim pasos As Integer = 60
         Dim dyLoc As Single = alto / pasos
+        Dim qTop As Double = qMax
+        Dim qBot As Double = qMin
+        Dim rango As Double = qTop - qBot
+        If rango < 0.0001 Then rango = 1.0
+
         For k As Integer = 0 To pasos - 1
             Dim frac As Double = 1.0 - k / CDbl(pasos - 1)
-            Dim q As Double = Math.Max(0, qMin) + frac * (qMax - Math.Max(0, qMin))
+            Dim q As Double = qBot + frac * (qTop - qBot)
             Using b As New SolidBrush(ColorPresion(q, qMin, qMax))
                 g.FillRectangle(b, x, y + k * dyLoc, ancho, dyLoc + 0.5F)
             End Using
@@ -550,20 +640,41 @@ Public Class Form_07_Zapata_Detalle
         End Using
         Using f As New Font("Segoe UI", 7.5F),
               b As New SolidBrush(Color.Black)
-            g.DrawString($"{qMax:F1}", f, b, x + ancho + 3, y - 4)
-            g.DrawString($"{Math.Max(0, qMin):F1}", f, b, x + ancho + 3, y + alto - 8)
+            g.DrawString($"{qTop:F1}", f, b, x + ancho + 3, y - 4)
+            g.DrawString($"{qBot:F1}", f, b, x + ancho + 3, y + alto - 8)
             g.DrawString("kN/m²", f, b, x - 5, y + alto + 4)
+            ' Marca del cero cuando la escala cruza tracción/compresión.
+            If qMin < 0 AndAlso qMax > 0 Then
+                Dim frac0 As Double = (qTop - 0.0) / rango
+                Dim y0 As Single = y + CSng(frac0 * alto)
+                Using penZero As New Pen(Color.Black, 1.2F)
+                    g.DrawLine(penZero, x - 3, y0, x + ancho + 3, y0)
+                End Using
+                g.DrawString("0", f, b, x + ancho + 3, y0 - 6)
+            End If
         End Using
     End Sub
 
-    Private Sub DibujarEtiquetaEsquina(g As Graphics, f As Font, b As Brush, bg As Brush,
-                                        x As Single, y As Single, txt As String,
+    ''' <summary>
+    ''' Etiqueta de esquina. Recibe la posición de la esquina en pantalla
+    ''' (calculada por W2S sobre las coords locales) y decide si el texto
+    ''' se pinta hacia arriba/abajo/izq/der para que caiga por fuera de la huella.
+    ''' </summary>
+    Private Sub DibujarEtiquetaEsquina(g As Graphics, bg As Brush, esquina As PointF,
+                                        nombre As String, valor As Double,
                                         alaIzquierda As Boolean, arriba As Boolean)
-        Dim sz As SizeF = g.MeasureString(txt, f)
-        Dim rx As Single = If(alaIzquierda, x - sz.Width - 3, x)
-        Dim ry As Single = If(arriba, y - sz.Height - 2, y + 2)
-        g.FillRectangle(bg, rx, ry, sz.Width + 4, sz.Height + 2)
-        g.DrawString(txt, f, b, rx + 2, ry + 1)
+        Dim traccion As Boolean = (valor < 0)
+        Dim txt As String = If(traccion,
+                               $"{nombre} = {valor:F1} (T)",
+                               $"{nombre} = {valor:F1}")
+        Using f As New Font("Segoe UI", 8, FontStyle.Bold),
+              b As New SolidBrush(If(traccion, Color.FromArgb(180, 0, 0), Color.Black))
+            Dim sz As SizeF = g.MeasureString(txt, f)
+            Dim rx As Single = If(alaIzquierda, esquina.X - sz.Width - 5, esquina.X + 3)
+            Dim ry As Single = If(arriba, esquina.Y - sz.Height - 3, esquina.Y + 3)
+            g.FillRectangle(bg, rx, ry, sz.Width + 4, sz.Height + 2)
+            g.DrawString(txt, f, b, rx + 2, ry + 1)
+        End Using
     End Sub
 
     Private Sub RellenarInfoPresiones(res As ResultadoZapata)
@@ -607,6 +718,23 @@ Public Class Form_07_Zapata_Detalle
                                Math.Min(res.g1, Math.Min(res.g2, Math.Min(res.g3, res.g4)))
         Dim colRango As Color = If(rangoG < 0.5, Color.Gray, ColorARCO)
         addLbl($"Rango esquinas = {rangoG:F2} kN/m²", fBold, colRango)
+
+        ' Contribución de cada término al gradiente. Descompone la fórmula para
+        ' que sea inmediato ver qué domina: si ΔMx y ΔMy salen chicos frente a
+        ' P/A, el mapa parecerá plano por más que Mx/My no sean cero.
+        Dim L1 As Double = _zapata.L_b   ' dimensión en X
+        Dim L2 As Double = _zapata.L_h   ' dimensión en Y
+        Dim area As Double = If(L1 > 0 AndAlso L2 > 0, L1 * L2, 0)
+        If area > 0 Then
+            Dim pMedia As Double = res.P_Efectivo / area
+            Dim dMx As Double = 6.0 * res.Mx_Entrada / (L1 * L2 * L2)     ' aporte a borde en Y
+            Dim dMy As Double = 6.0 * res.My_Entrada / (L2 * L1 * L1)     ' aporte a borde en X
+            y += 4
+            addLbl("Descomposición del gradiente", fTit, ColorARCO)
+            addLbl($"P/A    = {pMedia:F2} kN/m²", fBod, Color.Black)
+            addLbl($"±6Mx/(b·h²) = ±{Math.Abs(dMx):F2}", fBod, Color.Black)
+            addLbl($"±6My/(h·b²) = ±{Math.Abs(dMy):F2}", fBod, Color.Black)
+        End If
 
         y += 8
         addLbl("Presiones bajo la zapata", fTit, ColorARCO)
@@ -1031,92 +1159,134 @@ Public Class Form_07_Zapata_Detalle
         Dim x0 As Single = margen + (availW - wPx) / 2
         Dim y0 As Single = margen + (availH - hPx) / 2
 
-        ' Zapata
+        ' Misma transformada Mundo → Pantalla que en el tab de presiones. Todos
+        ' los elementos (zapata, pedestal, perímetro de punzonamiento, secciones
+        ' de cortante y de flexión) se definen en coords locales metros y luego
+        ' se mapean a píxeles con W2S — así ningún lado queda "corrido" respecto
+        ' a otro por aritmética manual.
+        Dim cx As Single = x0 + wPx / 2
+        Dim cy As Single = y0 + hPx / 2
+        Dim W2S As Func(Of Double, Double, PointF) =
+            Function(wx, wy) New PointF(cx + CSng(wx * escala),
+                                        cy - CSng(wy * escala))
+
+        Dim Lb2 As Double = _zapata.L_b / 2.0
+        Dim Lh2 As Double = _zapata.L_h / 2.0
+        Dim b2 As Double = _zapata.b / 2.0
+        Dim h2 As Double = _zapata.h / 2.0
+        Dim d As Double = _zapata.d
+        Dim d2 As Double = d / 2.0
+
+        ' Zapata (huella)
+        Dim zTL As PointF = W2S(-Lb2, +Lh2)
+        Dim zBR As PointF = W2S(+Lb2, -Lh2)
         Using bZap As New SolidBrush(Color.FromArgb(30, 120, 170, 220)),
               penZap As New Pen(Color.FromArgb(40, 90, 140), 1.5F)
-            g.FillRectangle(bZap, x0, y0, wPx, hPx)
-            g.DrawRectangle(penZap, x0, y0, wPx, hPx)
+            g.FillRectangle(bZap, zTL.X, zTL.Y, zBR.X - zTL.X, zBR.Y - zTL.Y)
+            g.DrawRectangle(penZap, zTL.X, zTL.Y, zBR.X - zTL.X, zBR.Y - zTL.Y)
         End Using
 
         ' Pedestal
-        Dim bPx As Single = CSng(_zapata.b * escala)
-        Dim hpPx As Single = CSng(_zapata.h * escala)
-        Dim xp As Single = x0 + (wPx - bPx) / 2
-        Dim yp As Single = y0 + (hPx - hpPx) / 2
+        Dim pTL As PointF = W2S(-b2, +h2)
+        Dim pBR As PointF = W2S(+b2, -h2)
         Using bp As New SolidBrush(Color.FromArgb(150, 70, 70, 70)),
               penp As New Pen(Color.FromArgb(30, 30, 30), 1.2F)
-            g.FillRectangle(bp, xp, yp, bPx, hpPx)
-            g.DrawRectangle(penp, xp, yp, bPx, hpPx)
+            g.FillRectangle(bp, pTL.X, pTL.Y, pBR.X - pTL.X, pBR.Y - pTL.Y)
+            g.DrawRectangle(penp, pTL.X, pTL.Y, pBR.X - pTL.X, pBR.Y - pTL.Y)
         End Using
 
-        Dim dPx As Single = CSng(_zapata.d * escala)
-        Dim dMedPx As Single = dPx / 2
-
-        ' Perímetro de punzonamiento (líneas magenta a d/2 del pedestal)
+        ' Perímetro de punzonamiento — a d/2 del pedestal
+        ' Central: rectángulo cerrado
+        ' Medianera: se abre el borde libre (asumido = borde IZQUIERDO -X, es decir el
+        '            que da al exterior; los otros 3 lados llevan reacción del suelo)
+        ' Esquinera: solo 2 lados (los interiores) — asumido esquina superior-izquierda
+        Dim ppTL As PointF = W2S(-(b2 + d2), +(h2 + d2))
+        Dim ppTR As PointF = W2S(+(b2 + d2), +(h2 + d2))
+        Dim ppBR As PointF = W2S(+(b2 + d2), -(h2 + d2))
+        Dim ppBL As PointF = W2S(-(b2 + d2), -(h2 + d2))
         Using penPz As New Pen(Color.FromArgb(200, 40, 160), 2)
             penPz.DashStyle = DashStyle.Dash
-            Dim xL As Single = xp - dMedPx
-            Dim xR As Single = xp + bPx + dMedPx
-            Dim yT As Single = yp - dMedPx
-            Dim yB As Single = yp + hpPx + dMedPx
-
             Select Case _zapata.TipoApoyo
                 Case eTipoApoyoZapata.Central
-                    g.DrawLine(penPz, xL, yT, xR, yT)
-                    g.DrawLine(penPz, xR, yT, xR, yB)
-                    g.DrawLine(penPz, xR, yB, xL, yB)
-                    g.DrawLine(penPz, xL, yB, xL, yT)
+                    g.DrawPolygon(penPz, {ppTL, ppTR, ppBR, ppBL})
                 Case eTipoApoyoZapata.Medianera
-                    ' Se toma el borde derecho como interior: se abre el lado izquierdo
-                    g.DrawLine(penPz, xp, yT, xR, yT)
-                    g.DrawLine(penPz, xR, yT, xR, yB)
-                    g.DrawLine(penPz, xR, yB, xp, yB)
+                    ' Cierra por arriba, derecha y abajo; abre el borde izquierdo
+                    Dim ppTLopen As PointF = W2S(-b2, +(h2 + d2))
+                    Dim ppBLopen As PointF = W2S(-b2, -(h2 + d2))
+                    g.DrawLine(penPz, ppTLopen, ppTR)
+                    g.DrawLine(penPz, ppTR, ppBR)
+                    g.DrawLine(penPz, ppBR, ppBLopen)
                 Case eTipoApoyoZapata.Esquinera
-                    ' Solo dos lados: derecha y abajo, como esquina superior-izquierda
-                    g.DrawLine(penPz, xp + bPx / 2, yp, xR, yp)
-                    g.DrawLine(penPz, xR, yp, xR, yp + hpPx / 2)
+                    ' Solo los dos lados interiores (derecha y abajo, esquina superior-izq)
+                    Dim aTop As PointF = W2S(-b2, +(h2 + d2))
+                    Dim aRig As PointF = W2S(+(b2 + d2), +h2)
+                    g.DrawLine(penPz, aTop, ppTR)
+                    g.DrawLine(penPz, ppTR, aRig)
             End Select
         End Using
 
-        ' Secciones críticas de cortante (a d de la cara)
+        ' Secciones críticas de cortante — a d de la cara del pedestal.
+        ' Cada línea abarca todo el borde perpendicular de la zapata.
         Using penCr As New Pen(Color.FromArgb(230, 120, 20), 2.2F)
-            Dim xIzq As Single = xp - dPx
-            Dim xDer As Single = xp + bPx + dPx
-            Dim yArr As Single = yp - dPx
-            Dim yAba As Single = yp + hpPx + dPx
-            If xIzq > x0 Then g.DrawLine(penCr, xIzq, y0, xIzq, y0 + hPx)
-            If xDer < x0 + wPx Then g.DrawLine(penCr, xDer, y0, xDer, y0 + hPx)
-            If yArr > y0 Then g.DrawLine(penCr, x0, yArr, x0 + wPx, yArr)
-            If yAba < y0 + hPx Then g.DrawLine(penCr, x0, yAba, x0 + wPx, yAba)
+            Dim xR As Double = +(b2 + d)   ' línea vertical (crítica del ala derecha, Vu_1)
+            Dim xL As Double = -(b2 + d)   ' línea vertical (crítica del ala izquierda, Vu_3)
+            Dim yT As Double = +(h2 + d)   ' línea horizontal (crítica del ala superior, Vu_4)
+            Dim yB As Double = -(h2 + d)   ' línea horizontal (crítica del ala inferior, Vu_2)
+            If xR < Lb2 Then g.DrawLine(penCr, W2S(xR, +Lh2), W2S(xR, -Lh2))
+            If -xL < Lb2 Then g.DrawLine(penCr, W2S(xL, +Lh2), W2S(xL, -Lh2))
+            If yT < Lh2 Then g.DrawLine(penCr, W2S(-Lb2, yT), W2S(+Lb2, yT))
+            If -yB < Lh2 Then g.DrawLine(penCr, W2S(-Lb2, yB), W2S(+Lb2, yB))
         End Using
 
-        ' Secciones de flexión (en la cara del pedestal)
+        ' Secciones de flexión — en la cara del pedestal.
         Using penFx As New Pen(Color.FromArgb(30, 150, 60), 2.2F)
-            g.DrawLine(penFx, xp, y0, xp, y0 + hPx)
-            g.DrawLine(penFx, xp + bPx, y0, xp + bPx, y0 + hPx)
-            g.DrawLine(penFx, x0, yp, x0 + wPx, yp)
-            g.DrawLine(penFx, x0, yp + hpPx, x0 + wPx, yp + hpPx)
+            g.DrawLine(penFx, W2S(-b2, +Lh2), W2S(-b2, -Lh2))
+            g.DrawLine(penFx, W2S(+b2, +Lh2), W2S(+b2, -Lh2))
+            g.DrawLine(penFx, W2S(-Lb2, +h2), W2S(+Lb2, +h2))
+            g.DrawLine(penFx, W2S(-Lb2, -h2), W2S(+Lb2, -h2))
         End Using
 
-        ' Etiquetas con Vu, Mu de la combinación
+        ' Etiquetas con Vu / Mu.
+        ' Convención de VerificarCortante:
+        '   Vu_1 = ala derecha (+X)   → sección crítica x = +b/2+d
+        '   Vu_2 = ala inferior (-Y)  → sección crítica y = -h/2-d
+        '   Vu_3 = ala izquierda (-X) → sección crítica x = -b/2-d
+        '   Vu_4 = ala superior (+Y)  → sección crítica y = +h/2+d
+        ' Convención de VerificarFlexion:
+        '   Mu_1 = ala derecha (+X)   → cara del pedestal x = +b/2
+        '   Mu_2 = ala inferior (-Y)  → cara del pedestal y = -h/2
         If res IsNot Nothing Then
-            Using f As New Font("Segoe UI", 8.5!, FontStyle.Bold),
-                  bNaranja As New SolidBrush(Color.FromArgb(180, 90, 10)),
+            Using bNaranja As New SolidBrush(Color.FromArgb(180, 90, 10)),
                   bVerde As New SolidBrush(Color.FromArgb(20, 110, 40)),
                   bPunz As New SolidBrush(Color.FromArgb(160, 20, 130)),
-                  bFondo As New SolidBrush(Color.FromArgb(230, 255, 255, 255))
-                ' Vu de cortante (4 lados)
-                DibujarEtiqueta(g, f, bNaranja, bFondo, x0 - 40, y0 + hPx / 2, $"Vu4 = {res.Vu4_C:F0}")
-                DibujarEtiqueta(g, f, bNaranja, bFondo, x0 + wPx + 6, y0 + hPx / 2, $"Vu2 = {res.Vu2_C:F0}")
-                DibujarEtiqueta(g, f, bNaranja, bFondo, x0 + wPx / 2 - 40, y0 - 18, $"Vu1 = {res.Vu1_C:F0}")
-                DibujarEtiqueta(g, f, bNaranja, bFondo, x0 + wPx / 2 - 40, y0 + hPx + 4, $"Vu3 = {res.Vu3_C:F0}")
-                ' Mu flexión
-                DibujarEtiqueta(g, f, bVerde, bFondo, xp + bPx + 4, y0 + 6, $"Mu2 = {res.Mu_2:F1}")
-                DibujarEtiqueta(g, f, bVerde, bFondo, x0 + 4, yp + hpPx + 4, $"Mu1 = {res.Mu_1:F1}")
-                ' Punzonamiento
-                DibujarEtiqueta(g, f, bPunz, bFondo, xp - 6, yp - 22, $"Vu = {Math.Abs(res.Vu_p):F0}  φVc = {res.Vc_p:F0}")
+                  bFondo As New SolidBrush(Color.FromArgb(230, 255, 255, 255)),
+                  f As New Font("Segoe UI", 8.5!, FontStyle.Bold)
+                ' Cortante — etiqueta pegada al lado correspondiente
+                Dim eVu1 As PointF = W2S(+Lb2, 0) : DibujarEtiqueta(g, f, bNaranja, bFondo, eVu1.X + 6, eVu1.Y - 8, $"Vu1 = {res.Vu1_C:F0}")
+                Dim eVu2 As PointF = W2S(0, -Lh2) : DibujarEtiqueta(g, f, bNaranja, bFondo, eVu2.X - 30, eVu2.Y + 4, $"Vu2 = {res.Vu2_C:F0}")
+                Dim eVu3 As PointF = W2S(-Lb2, 0) : DibujarEtiqueta(g, f, bNaranja, bFondo, eVu3.X - 70, eVu3.Y - 8, $"Vu3 = {res.Vu3_C:F0}")
+                Dim eVu4 As PointF = W2S(0, +Lh2) : DibujarEtiqueta(g, f, bNaranja, bFondo, eVu4.X - 30, eVu4.Y - 20, $"Vu4 = {res.Vu4_C:F0}")
+                ' Flexión — etiqueta hacia el ala correspondiente
+                Dim eMu1 As PointF = W2S(+b2, -Lh2 + 0.15) : DibujarEtiqueta(g, f, bVerde, bFondo, eMu1.X + 6, eMu1.Y, $"Mu1 = {res.Mu_1:F1}")
+                Dim eMu2 As PointF = W2S(-Lb2 + 0.15, -h2) : DibujarEtiqueta(g, f, bVerde, bFondo, eMu2.X, eMu2.Y + 6, $"Mu2 = {res.Mu_2:F1}")
+                ' Punzonamiento — nota interior sobre el pedestal
+                Dim ePunz As PointF = W2S(0, +h2 + d2 + 0.05)
+                DibujarEtiqueta(g, f, bPunz, bFondo, ePunz.X - 60, ePunz.Y - 16, $"Vu = {Math.Abs(res.Vu_p):F0}  φVc = {res.Vc_p:F0}")
             End Using
         End If
+
+        ' Ejes de referencia
+        Using penEje As New Pen(Color.DarkGray, 1),
+              fEje As New Font("Segoe UI", 8.5!, FontStyle.Bold),
+              bEje As New SolidBrush(Color.FromArgb(60, 60, 60))
+            penEje.DashStyle = DashStyle.Dot
+            g.DrawLine(penEje, W2S(-Lb2, 0), W2S(+Lb2, 0))
+            g.DrawLine(penEje, W2S(0, -Lh2), W2S(0, +Lh2))
+            Dim tipX As PointF = W2S(+Lb2, 0)
+            Dim tipY As PointF = W2S(0, +Lh2)
+            g.DrawString("+X", fEje, bEje, tipX.X + 4, tipX.Y - 7)
+            g.DrawString("+Y", fEje, bEje, tipY.X - 18, tipY.Y - 14)
+        End Using
 
         ' Título
         Using f As New Font("Segoe UI", 11, FontStyle.Bold),

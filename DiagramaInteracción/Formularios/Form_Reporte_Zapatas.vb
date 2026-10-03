@@ -298,11 +298,12 @@ Public Class Form_Reporte_Zapatas
 
     End Function
 
+    ' Renombrada desde "Visible" para evitar BC40004 (sombreaba Control.Visible).
     ''' <summary>
     ''' El filtro esconde las que están bien, nunca las que no se han calculado:
     ''' una zapata sin calcular es justamente algo que hay que mirar.
     ''' </summary>
-    Private Function Visible(z As cZapata, r As ZapataService.ResumenZapata) As Boolean
+    Private Function EsVisibleEnReporte(z As cZapata, r As ZapataService.ResumenZapata) As Boolean
         If Not _chkSoloObs.Checked Then Return True
         Return TieneObservaciones(z, r)
     End Function
@@ -343,7 +344,7 @@ Public Class Form_Reporte_Zapatas
             Dim resumen = ZapataService.Resumir(z)
 
             If TieneObservaciones(z, resumen) Then noCumplen += 1
-            If Not Visible(z, resumen) Then Continue For
+            If Not EsVisibleEnReporte(z, resumen) Then Continue For
 
             Dim row = dgv.Rows(dgv.Rows.Add())
             mostradas += 1
@@ -431,7 +432,7 @@ Public Class Form_Reporte_Zapatas
         For Each z In tipos
 
             If z.Resultados Is Nothing Then Continue For
-            If Not Visible(z, ZapataService.Resumir(z)) Then Continue For
+            If Not EsVisibleEnReporte(z, ZapataService.Resumir(z)) Then Continue For
 
             Dim factores = ZapataService.FactoresPorCombinacion(z) _
                                         .ToDictionary(Function(f) f.Combinacion)
@@ -632,7 +633,7 @@ Public Class Form_Reporte_Zapatas
         For Each z In tipos
 
             Dim resumen = ZapataService.Resumir(z)
-            If Not Visible(z, resumen) Then Continue For
+            If Not EsVisibleEnReporte(z, resumen) Then Continue For
 
             ws.Cell(fila, 1).Value = z.Nombre
             ws.Cell(fila, 2).Value = z.Label_joint
@@ -692,7 +693,7 @@ Public Class Form_Reporte_Zapatas
         For Each z In tipos
 
             If z.Resultados Is Nothing Then Continue For
-            If Not Visible(z, ZapataService.Resumir(z)) Then Continue For
+            If Not EsVisibleEnReporte(z, ZapataService.Resumir(z)) Then Continue For
 
             Dim factores = ZapataService.FactoresPorCombinacion(z) _
                                         .ToDictionary(Function(f) f.Combinacion)

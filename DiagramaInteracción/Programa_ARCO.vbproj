@@ -528,7 +528,9 @@
     <Compile Include="Formularios\Complementos\ReporteGridHelpers.vb" />
     <Compile Include="Formularios\03_Losas\LosaService.vb" />
     <Compile Include="Funciones\ZapataService.vb" />
-    <Compile Include="Formularios\Form_Planta_Zapatas.vb" />
+    <Compile Include="Formularios\Form_Planta_Zapatas.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Complementos\GraficosResumen.vb" />
     <Compile Include="Formularios\Complementos\Form_ALR.Designer.vb">
       <DependentUpon>Form_ALR.vb</DependentUpon>
@@ -1012,7 +1014,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Clases\Vigas\" />
-    <Folder Include="Formularios\07_Zapatas\" />
     <Folder Include="Formularios\08_V_Fundacion\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />

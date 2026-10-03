@@ -676,6 +676,27 @@ Public Class Form_07_Pag_Zapatas
 
     End Sub
 
+    ''' <summary>
+    ''' Suprime el MessageBox nativo del DataGridView cuando una celda recibe un valor
+    ''' que no puede validar (típicamente ComboBoxCell con valor fuera de sus Items, o
+    ''' TextBoxCell con un tipo que no puede formatear). El error se loguea con el
+    ''' contexto suficiente para diagnosticarlo sin bloquear la sesión del usuario.
+    ''' </summary>
+    Private Sub Tabla_Elementos_DataError(sender As Object, e As DataGridViewDataErrorEventArgs) _
+        Handles Tabla_Elementos.DataError
+
+        Dim col As String = If(e.ColumnIndex >= 0 AndAlso e.ColumnIndex < Tabla_Elementos.Columns.Count,
+                                Tabla_Elementos.Columns(e.ColumnIndex).Name, $"col#{e.ColumnIndex}")
+        Dim ctx As String = $"Row={e.RowIndex} Col={col} Contexts={e.Context}"
+        If e.Exception IsNot Nothing Then
+            Logger.Error(e.Exception, "Form_07_Pag_Zapatas.Tabla_Elementos_DataError", ctx)
+        Else
+            Logger.Warning("Form_07_Pag_Zapatas.Tabla_Elementos_DataError", ctx & " (sin excepción)")
+        End If
+        e.ThrowException = False
+        e.Cancel = True
+    End Sub
+
 
     Private Sub ImportarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarDemandasToolStripMenuItem.Click
 
@@ -753,6 +774,8 @@ Public Class Form_07_Pag_Zapatas
     End Sub
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+
+        If Not PreflightValidador.HayReaccionesDeZapatas(Proyecto) Then Return
 
         Dim Lista_Elementos As New List(Of String)
 
@@ -1130,8 +1153,11 @@ Public Class Form_07_Pag_Zapatas
                     F_Punzonamiento = res.Vc_p / vuAbs
                 End If
 
+                ' Guardas contra Infinity/NaN — si no hay demanda de cortante o
+                ' cuantía requerida (combinación sin fuerza), la división
+                ' cortaría la exportación con "Value can't be NaN or infinity".
                 Dim Vu_C_max As Double = Math.Max(res.Vu1_C, res.Vu3_C)
-                If (res.Vc2_C / Vu_C_max) < F_Cortante Then
+                If Vu_C_max > 0 AndAlso (res.Vc2_C / Vu_C_max) < F_Cortante Then
                     Vu_Cortante_max = Vu_C_max
                     Vc_Cortante = res.Vc2_C
                     Check_Cortante = res.CumpleCortante_1 And res.CumpleCortante_3
@@ -1139,15 +1165,15 @@ Public Class Form_07_Pag_Zapatas
                 End If
 
                 Vu_C_max = Math.Max(res.Vu2_C, res.Vu4_C)
-                If (res.Vc1_C / Vu_C_max) < F_Cortante Then
+                If Vu_C_max > 0 AndAlso (res.Vc1_C / Vu_C_max) < F_Cortante Then
                     Vu_Cortante_max = Vu_C_max
                     Vc_Cortante = res.Vc1_C
                     Check_Cortante = res.CumpleCortante_2 And res.CumpleCortante_4
                     F_Cortante = res.Vc1_C / Vu_C_max
                 End If
 
-                Dim F1_M As Double = Elemento.Rho_L1 / res.Rho_1
-                Dim F2_M As Double = Elemento.Rho_L2 / res.Rho_2
+                Dim F1_M As Double = If(res.Rho_1 > 0, Elemento.Rho_L1 / res.Rho_1, Double.MaxValue)
+                Dim F2_M As Double = If(res.Rho_2 > 0, Elemento.Rho_L2 / res.Rho_2, Double.MaxValue)
 
                 If F_Momento > Math.Min(F1_M, F2_M) Then
                     F_Momento = Math.Min(F1_M, F2_M)
@@ -1229,8 +1255,9 @@ Public Class Form_07_Pag_Zapatas
                     F_Punzonamiento = res.Vc_p / vuAbs_D
                 End If
 
+                ' Mismas guardas que en el bloque de combos estáticos (arriba).
                 Dim Vu_C_max As Double = Math.Max(res.Vu1_C, res.Vu3_C)
-                If (res.Vc2_C / Vu_C_max) < F_Cortante Then
+                If Vu_C_max > 0 AndAlso (res.Vc2_C / Vu_C_max) < F_Cortante Then
                     Vu_Cortante_max = Vu_C_max
                     Vc_Cortante = res.Vc2_C
                     Check_Cortante = res.CumpleCortante_1 And res.CumpleCortante_3
@@ -1238,15 +1265,15 @@ Public Class Form_07_Pag_Zapatas
                 End If
 
                 Vu_C_max = Math.Max(res.Vu2_C, res.Vu4_C)
-                If (res.Vc1_C / Vu_C_max) < F_Cortante Then
+                If Vu_C_max > 0 AndAlso (res.Vc1_C / Vu_C_max) < F_Cortante Then
                     Vu_Cortante_max = Vu_C_max
                     Vc_Cortante = res.Vc1_C
                     Check_Cortante = res.CumpleCortante_2 And res.CumpleCortante_4
                     F_Cortante = res.Vc1_C / Vu_C_max
                 End If
 
-                Dim F1_M As Double = Elemento.Rho_L1 / res.Rho_1
-                Dim F2_M As Double = Elemento.Rho_L2 / res.Rho_2
+                Dim F1_M As Double = If(res.Rho_1 > 0, Elemento.Rho_L1 / res.Rho_1, Double.MaxValue)
+                Dim F2_M As Double = If(res.Rho_2 > 0, Elemento.Rho_L2 / res.Rho_2, Double.MaxValue)
 
                 If F_Momento > Math.Min(F1_M, F2_M) Then
                     F_Momento = Math.Min(F1_M, F2_M)
