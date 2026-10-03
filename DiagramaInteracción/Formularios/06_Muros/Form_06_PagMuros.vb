@@ -25,6 +25,9 @@ Public Class Form_06_PagMuros
     End Class
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+
+        If Not PreflightValidador.HayMurosImportados(proyecto) Then Return
+
         Me.Cursor = Cursors.WaitCursor
 
         Try
@@ -619,6 +622,8 @@ Public Class Form_06_PagMuros
 
     Private Sub DiseñoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles DiseñoToolStripMenuItem.Click
 
+        If Not PreflightValidador.HayMurosImportados(proyecto) Then Return
+
         LlenarTabla_Diseno_Muros()
 
         Dim Tabla As DataGridView
@@ -837,6 +842,8 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub SeccionesDeMurosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SeccionesDeMurosToolStripMenuItem.Click
+
+        If Not PreflightValidador.HayMurosImportados(proyecto) Then Return
 
         LlenarTabla_Secciones()
 

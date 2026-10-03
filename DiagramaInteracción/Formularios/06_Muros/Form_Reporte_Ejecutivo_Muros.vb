@@ -41,7 +41,7 @@ Public Class Form_Reporte_Ejecutivo_Muros
         Me.BackColor = Color.White
         Me.Font = New Font("Segoe UI", 9)
         BuildUI()
-        AddHandler Me.Load, AddressOf OnLoad
+        AddHandler Me.Load, AddressOf Form_Load
     End Sub
 
     ' ── Construcción de interfaz ──────────────────────────────────────────
@@ -146,7 +146,8 @@ Public Class Form_Reporte_Ejecutivo_Muros
     End Sub
 
     ' ── Carga ─────────────────────────────────────────────────────────────
-    Private Sub OnLoad(sender As Object, e As EventArgs)
+    ' Renombrada desde "OnLoad" para evitar BC40005 (sombreaba Form.OnLoad).
+    Private Sub Form_Load(sender As Object, e As EventArgs)
         If Muros Is Nothing OrElse Muros.Count = 0 Then Return
         _filas = Muros.Select(AddressOf MurosResumenService.CalcularFila).ToList()
         Mostrar(_filas)
@@ -280,15 +281,17 @@ Public Class Form_Reporte_Ejecutivo_Muros
             ws.Cell(fila, 3).Value = Math.Round(f.Lw, 2)
             ws.Cell(fila, 4).Value = Math.Round(f.tw, 3)
             ws.Cell(fila, 5).Value = Math.Round(f.Hw, 2)
-            ws.Cell(fila, 6).Value = If(f.ALR_G > 0, CDbl(Math.Round(f.ALR_G, 3)), "-")
-            ws.Cell(fila, 7).Value = If(f.ALR_D > 0, CDbl(Math.Round(f.ALR_D, 3)), "-")
-            ws.Cell(fila, 8).Value = If(f.FFlexMin < 0, "Sin cálculo", CDbl(Math.Round(f.FFlexMin, 2)))
+            ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+            ' If(cond, Double, "-") devuelve Object → InvalidCastException al asignar.
+            If f.ALR_G > 0 Then ws.Cell(fila, 6).Value = CDbl(Math.Round(f.ALR_G, 3)) Else ws.Cell(fila, 6).Value = "-"
+            If f.ALR_D > 0 Then ws.Cell(fila, 7).Value = CDbl(Math.Round(f.ALR_D, 3)) Else ws.Cell(fila, 7).Value = "-"
+            If f.FFlexMin < 0 Then ws.Cell(fila, 8).Value = "Sin cálculo" Else ws.Cell(fila, 8).Value = CDbl(Math.Round(f.FFlexMin, 2))
             ws.Cell(fila, 9).Value = f.PisoCriticoFlex
-            ws.Cell(fila, 10).Value = If(f.FCortMin < 0, "Sin cálculo", CDbl(Math.Round(f.FCortMin, 2)))
+            If f.FCortMin < 0 Then ws.Cell(fila, 10).Value = "Sin cálculo" Else ws.Cell(fila, 10).Value = CDbl(Math.Round(f.FCortMin, 2))
             ws.Cell(fila, 11).Value = f.PisoCriticoCort
             ws.Cell(fila, 12).Value = f.EBIzq
             ws.Cell(fila, 13).Value = f.EBDer
-            ws.Cell(fila, 14).Value = If(f.PorcVs > 0, CDbl(Math.Round(f.PorcVs, 1)), "-")
+            If f.PorcVs > 0 Then ws.Cell(fila, 14).Value = CDbl(Math.Round(f.PorcVs, 1)) Else ws.Cell(fila, 14).Value = "-"
             ws.Cell(fila, 15).Value = If(f.Cumple, "OK", "Revisar")
 
             EscribirFactorXL(ws.Cell(fila, 8), f.FFlexMin)

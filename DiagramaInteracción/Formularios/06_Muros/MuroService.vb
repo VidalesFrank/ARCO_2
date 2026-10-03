@@ -40,7 +40,9 @@ Partial Public Class MuroService
         Dim Vs As Single = 0.75 * tw * Lw * CuantiaH * Fy * 1000
         Dim Vc As Single = 0.75 * 0.17 * tw * Lw * Math.Sqrt(fc) * 1000
         Dim Vn As Single = Vc + Vs
-        Dim F_ As Single = Vn / Vu
+        ' Vu = 0 (muro sin combinaciones de cortante seleccionadas) → Vn/0 = Infinity
+        ' y ClosedXML aborta con "Value can't be NaN or infinity".
+        Dim F_ As Single = If(Vu > 0, CSng(Vn / Vu), 0)
 
         Revision(1) = Math.Round(Vc, 2)
         Revision(2) = Math.Round(Vs, 2)

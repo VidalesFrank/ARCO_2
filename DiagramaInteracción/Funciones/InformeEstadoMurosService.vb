@@ -88,42 +88,51 @@ Public Class InformeEstadoMurosService
     End Sub
 
     Private Sub Generar(proyecto As Proyecto, opciones As OpcionesInformeEstadoMuros, rutaSalida As String)
-        File.WriteAllBytes(rutaSalida, My.Resources.PlantillaReporteRevision)
+        ' Trabajar en memoria: los clientes de sync (Dropbox, OneDrive) toman handle al archivo
+        ' recién escrito y chocan con WordprocessingDocument.Open(path, isEditable:=True). Ver
+        ' comentario en ReporteRevisionService.Generar.
+        Dim plantilla = My.Resources.PlantillaReporteRevision
+        Using ms As New MemoryStream()
+            ms.Write(plantilla, 0, plantilla.Length)
+            ms.Position = 0
 
-        Using wordDoc As WordprocessingDocument = WordprocessingDocument.Open(rutaSalida, True)
-            Dim mainPart As MainDocumentPart = wordDoc.MainDocumentPart
-            Dim body As Body = mainPart.Document.Body
-            Dim sectPr As SectionProperties = body.Elements(Of SectionProperties)().FirstOrDefault()
-            If sectPr IsNot Nothing Then sectPr.Remove()
+            Using wordDoc As WordprocessingDocument = WordprocessingDocument.Open(ms, True)
+                Dim mainPart As MainDocumentPart = wordDoc.MainDocumentPart
+                Dim body As Body = mainPart.Document.Body
+                Dim sectPr As SectionProperties = body.Elements(Of SectionProperties)().FirstOrDefault()
+                If sectPr IsNot Nothing Then sectPr.Remove()
 
-            body.Append(Heading1("INFORME DE ESTADO DEL PROYECTO"))
-            body.Append(Heading2("INFORMACIÓN GENERAL DEL PROYECTO"))
-            EscribirInformacionGeneral(body, opciones)
+                body.Append(Heading1("INFORME DE ESTADO DEL PROYECTO"))
+                body.Append(Heading2("INFORMACIÓN GENERAL DEL PROYECTO"))
+                EscribirInformacionGeneral(body, opciones)
 
-            body.Append(Heading1("INFORMACIÓN RECIBIDA"))
-            EscribirChecklist(body, "Se relaciona a continuación la información recibida para el desarrollo de la revisión.",
-                               {"DETALLE", "ESTADO", "OBSERVACIONES"}, opciones.InfoRecibida)
+                body.Append(Heading1("INFORMACIÓN RECIBIDA"))
+                EscribirChecklist(body, "Se relaciona a continuación la información recibida para el desarrollo de la revisión.",
+                                   {"DETALLE", "ESTADO", "OBSERVACIONES"}, opciones.InfoRecibida)
 
-            body.Append(Heading1("DETALLES DE AVANCE"))
-            EscribirChecklist(body, "Se relaciona a continuación el grado de avance del proyecto al momento de este informe.",
-                               {"ÍTEM", "GRADO DE AVANCE", "OBSERVACIONES"}, opciones.DetallesAvance)
+                body.Append(Heading1("DETALLES DE AVANCE"))
+                EscribirChecklist(body, "Se relaciona a continuación el grado de avance del proyecto al momento de este informe.",
+                                   {"ÍTEM", "GRADO DE AVANCE", "OBSERVACIONES"}, opciones.DetallesAvance)
 
-            body.Append(Heading1("ANÁLISIS CONCEPTUAL"))
-            EscribirDensidadMuros(body, proyecto, opciones)
-            EscribirDerivas(body, mainPart, proyecto, opciones)
-            EscribirALR(body, mainPart, proyecto, opciones)
+                body.Append(Heading1("ANÁLISIS CONCEPTUAL"))
+                EscribirDensidadMuros(body, proyecto, opciones)
+                EscribirDerivas(body, mainPart, proyecto, opciones)
+                EscribirALR(body, mainPart, proyecto, opciones)
 
-            body.Append(Heading1("ANEXOS"))
-            EscribirAnexos(body, mainPart, proyecto, opciones)
+                body.Append(Heading1("ANEXOS"))
+                EscribirAnexos(body, mainPart, proyecto, opciones)
 
-            body.Append(Heading1("ANÁLISIS PRELIMINAR Y RECOMENDACIONES"))
-            EscribirRecomendaciones(body, opciones)
+                body.Append(Heading1("ANÁLISIS PRELIMINAR Y RECOMENDACIONES"))
+                EscribirRecomendaciones(body, opciones)
 
-            If sectPr IsNot Nothing Then body.Append(sectPr)
+                If sectPr IsNot Nothing Then body.Append(sectPr)
 
-            ActualizarCodigoEnEncabezado(wordDoc, opciones.CodigoProyecto)
+                ActualizarCodigoEnEncabezado(wordDoc, opciones.CodigoProyecto)
 
-            mainPart.Document.Save()
+                wordDoc.Save()
+            End Using
+
+            File.WriteAllBytes(rutaSalida, ms.ToArray())
         End Using
     End Sub
 
