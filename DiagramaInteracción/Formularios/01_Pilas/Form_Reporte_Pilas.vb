@@ -125,9 +125,8 @@ Public Class Form_Reporte_Pilas
             Dim okCargas = p.Check1_PsE >= 0.9 AndAlso p.Check2_PsD >= 0.9 AndAlso p.Check3_PuE >= 0.9 AndAlso p.Check4_PuD >= 0.9
             Dim okSuelo = p.Relacion_EsfE >= 0.9 AndAlso p.Relacion_EsfD >= 0.9
             Dim okCortante = p.FactorShear >= 0.9
-            Dim fManR1 As Single = p.Factor_Manual_DI
-            Dim fDiagR1 As Single = If(fManR1 > 0, fManR1, p.Factor_Diagonal)
-            Dim fCortR1 As Single = If(fManR1 > 0, fManR1, p.Factor_CortesH)
+            Dim fDiagR1 As Single = p.F_Diagonal_Efectivo
+            Dim fCortR1 As Single = p.F_CortesH_Efectivo
             Dim okInteraccion = fDiagR1 >= 0.9 AndAlso fCortR1 >= 0.9
 
             AsignarOk(row.Cells("Cargas"), okCargas)
@@ -218,11 +217,8 @@ Public Class Form_Reporte_Pilas
             AsignarFactor(row.Cells("FV"), p.FactorShear)
             row.Cells("CV2").Value = p.Check_V2
             row.Cells("CV3").Value = p.Check_V3
-            Dim fManR3 As Single = p.Factor_Manual_DI
-            Dim fCortR3 As Single = If(fManR3 > 0, fManR3, p.Factor_CortesH)
-            Dim fDiagR3 As Single = If(fManR3 > 0, fManR3, p.Factor_Diagonal)
-            AsignarFactor(row.Cells("FCortes"), fCortR3)
-            AsignarFactor(row.Cells("FDiag"), fDiagR3)
+            AsignarFactor(row.Cells("FCortes"), p.F_CortesH_Efectivo)
+            AsignarFactor(row.Cells("FDiag"), p.F_Diagonal_Efectivo)
         Next
     End Sub
 
@@ -312,9 +308,8 @@ Public Class Form_Reporte_Pilas
             Dim okC = p.Check1_PsE >= 0.9 AndAlso p.Check2_PsD >= 0.9 AndAlso p.Check3_PuE >= 0.9 AndAlso p.Check4_PuD >= 0.9
             Dim okS = p.Relacion_EsfE >= 0.9 AndAlso p.Relacion_EsfD >= 0.9
             Dim okV = p.FactorShear >= 0.9
-            Dim fManR2 As Single = p.Factor_Manual_DI
-            Dim fDiagR2 As Single = If(fManR2 > 0, fManR2, p.Factor_Diagonal)
-            Dim fCortR2 As Single = If(fManR2 > 0, fManR2, p.Factor_CortesH)
+            Dim fDiagR2 As Single = p.F_Diagonal_Efectivo
+            Dim fCortR2 As Single = p.F_CortesH_Efectivo
             Dim okI = fDiagR2 >= 0.9 AndAlso fCortR2 >= 0.9
 
             ColorXL(ws.Cell(row, 7), If(okC, "Ok", "Revisar"), okC, Me)
@@ -383,11 +378,8 @@ Public Class Form_Reporte_Pilas
             FactorXL(ws.Cell(row, 8), p.FactorShear, Me)
             ws.Cell(row, 9).Value = p.Check_V2
             ws.Cell(row, 10).Value = p.Check_V3
-            Dim fManR4 As Single = p.Factor_Manual_DI
-            Dim fCortR4 As Single = If(fManR4 > 0, fManR4, p.Factor_CortesH)
-            Dim fDiagR4 As Single = If(fManR4 > 0, fManR4, p.Factor_Diagonal)
-            FactorXL(ws.Cell(row, 11), fCortR4, Me)
-            FactorXL(ws.Cell(row, 12), fDiagR4, Me)
+            FactorXL(ws.Cell(row, 11), p.F_CortesH_Efectivo, Me)
+            FactorXL(ws.Cell(row, 12), p.F_Diagonal_Efectivo, Me)
         Next
         ws.Columns().AdjustToContents()
     End Sub

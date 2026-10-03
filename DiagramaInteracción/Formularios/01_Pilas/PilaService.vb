@@ -216,6 +216,9 @@ Public Class PilaService
             Vn = Vc + Vs
             Vuu = Math.Max(Lista_V2(i), Lista_V3(i))
 
+            ' Vuu = 0 (pila sin combinaciones de cortante) → Vn/0 = Infinity y ClosedXML
+            ' aborta la exportación con "Value can't be NaN or infinity".
+            If Vuu <= 0 Then Continue For
             If Fmax > Vn / Vuu Then
                 Fmax = Vn / Vuu
                 Vu = Vuu

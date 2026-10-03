@@ -734,8 +734,8 @@ Public Class Form_01_PagPilas
             TablaRevi.Rows(i).Cells(18).Value = p.Check_V2
             TablaRevi.Rows(i).Cells(19).Value = p.Check_V3
             TablaRevi.Rows(i).Cells(20).Value = p.Cuantia
-            TablaRevi.Rows(i).Cells(21).Value = Math.Round(p.Factor_CortesH, 2)
-            TablaRevi.Rows(i).Cells(22).Value = Math.Round(p.Factor_Diagonal, 2)
+            TablaRevi.Rows(i).Cells(21).Value = Math.Round(p.F_CortesH_Efectivo, 2)
+            TablaRevi.Rows(i).Cells(22).Value = Math.Round(p.F_Diagonal_Efectivo, 2)
 
             ' ── Tabla_Elementos (Form_01_00_PagInfoPilas) ───────────────────
             ' Col 0: Name_Label | 1: Nombre | 2: Df | 3: Dc | 4: L_Pila
@@ -811,7 +811,7 @@ Public Class Form_01_PagPilas
                 Tabla_ResumenVisual.Rows(i).Cells(3).Style.ForeColor = colorFailFG
             End If
             ' Col 4: Interacción
-            If p.Factor_CortesH >= 0.9 And p.Factor_Diagonal >= 0.9 Then
+            If p.F_CortesH_Efectivo >= 0.9 And p.F_Diagonal_Efectivo >= 0.9 Then
                 Tabla_ResumenVisual.Rows(i).Cells(4).Value = "Ok"
                 Tabla_ResumenVisual.Rows(i).Cells(4).Style.BackColor = colorOk
                 Tabla_ResumenVisual.Rows(i).Cells(4).Style.ForeColor = colorOkFG
@@ -1024,11 +1024,13 @@ Public Class Form_01_PagPilas
     End Sub
 
     Private Sub ReporteToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ReporteToolStripMenuItem.Click
+        If Not PreflightValidador.HayPilasImportadas(Proyecto) Then Return
         Dim frm As New Form_Reporte_Pilas()
         frm.Show()
     End Sub
 
     Private Sub DiagramaDiametroToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles DiagramaDiametroToolStripMenuItem.Click
+        If Not PreflightValidador.HayPilasImportadas(Proyecto) Then Return
         Dim frm As New Form_DiagramaInteraccionPilas_Resumen()
         frm.Show()
     End Sub
@@ -1123,18 +1125,21 @@ Public Class Form_01_PagPilas
 
         For i = 0 To pilas.Count - 1
             Dim p = pilas(i)
-            Dim fManual As Single = p.Factor_Manual_DI
-            Dim fEfecDiag As Single = If(fManual > 0, fManual, p.Factor_Diagonal)
-            Dim fEfecCortes As Single = If(fManual > 0, fManual, p.Factor_CortesH)
+            Dim fEfecDiag As Single = p.F_Diagonal_Efectivo
+            Dim fEfecCortes As Single = p.F_CortesH_Efectivo
+            Dim mandoManDiag As Boolean = (p.Factor_Manual_DI > p.Factor_Diagonal)
+            Dim mandoManCort As Boolean = (p.Factor_Manual_DI > p.Factor_CortesH)
 
             If TablaRevi.Rows.Count > i Then
                 TablaRevi.Rows(i).Cells(21).Value = Math.Round(fEfecCortes, 2)
                 TablaRevi.Rows(i).Cells(22).Value = Math.Round(fEfecDiag, 2)
-                For Each ci As Integer In {21, 22}
+                Dim manCell = {(21, mandoManCort), (22, mandoManDiag)}
+                For Each pareja In manCell
+                    Dim ci = pareja.Item1
                     Dim v = CDbl(TablaRevi.Rows(i).Cells(ci).Value)
                     TablaRevi.Rows(i).Cells(ci).Style.BackColor = If(v >= 0.9, colorOKB, colorMalB)
                     TablaRevi.Rows(i).Cells(ci).Style.ForeColor = If(v >= 0.9, colorOKT, colorMalT)
-                    TablaRevi.Rows(i).Cells(ci).Style.Font = If(fManual > 0, New Font(TablaRevi.Font, FontStyle.Bold Or FontStyle.Italic), Nothing)
+                    TablaRevi.Rows(i).Cells(ci).Style.Font = If(pareja.Item2, New Font(TablaRevi.Font, FontStyle.Bold Or FontStyle.Italic), Nothing)
                 Next
             End If
 

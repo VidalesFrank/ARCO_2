@@ -217,11 +217,8 @@ SiguienteElemento:
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(18).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check_V2
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(19).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Check_V3
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(20).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Cuantia
-            Dim fManual_i As Single = Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Manual_DI
-            Dim fEfecCortes As Single = If(fManual_i > 0, fManual_i, Proyecto.Elementos.Pilas.ListaElementos(i).Factor_CortesH)
-            Dim fEfecDiag As Single = If(fManual_i > 0, fManual_i, Proyecto.Elementos.Pilas.ListaElementos(i).Factor_Diagonal)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(21).Value = Math.Round(fEfecCortes, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(22).Value = Math.Round(fEfecDiag, 2)
+            Form_01_PagPilas.TablaRevi.Rows(i).Cells(21).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).F_CortesH_Efectivo, 2)
+            Form_01_PagPilas.TablaRevi.Rows(i).Cells(22).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).F_Diagonal_Efectivo, 2)
 
             Form_01_PagPilas.ComboElementos.Items.Add(Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento)
 
@@ -265,7 +262,7 @@ SiguienteElemento:
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(3).Style.ForeColor = Color.FromArgb(156, 0, 6)
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(3).Value = "Revisar"
             End If
-            If Math.Round(fEfecCortes, 2) >= 0.9 And Math.Round(fEfecDiag, 2) >= 0.9 Then
+            If Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).F_CortesH_Efectivo, 2) >= 0.9 And Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).F_Diagonal_Efectivo, 2) >= 0.9 Then
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(4).Value = "Ok"
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(4).Style.BackColor = Color.FromArgb(198, 239, 206)
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(4).Style.ForeColor = Color.FromArgb(0, 97, 0)

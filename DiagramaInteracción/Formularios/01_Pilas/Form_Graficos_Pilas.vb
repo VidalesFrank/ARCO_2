@@ -205,8 +205,8 @@ Public Class Form_Graficos_Pilas
 
     ' -----------------------------------------------------------------------
     ' Flexocompresión — diagrama de interacción.
-    ' Respeta el override manual Factor_Manual_DI (>0 = usar ese), igual que el
-    ' resto del módulo (Form_01_PagPilas, Form_Reporte_Pilas).
+    ' Usa la envolvente C/D con override manual (Elemento_Pila.F_*_Efectivo):
+    ' el Factor_Manual_DI solo gana si es mayor que el calculado.
     ' -----------------------------------------------------------------------
     Private Sub MostrarInteraccion()
 
@@ -217,8 +217,8 @@ Public Class Form_Graficos_Pilas
 
         For Each p In pilas
             Dim fMan As Single = p.Factor_Manual_DI
-            Dim fDiag As Single = If(fMan > 0, fMan, p.Factor_Diagonal)
-            Dim fCort As Single = If(fMan > 0, fMan, p.Factor_CortesH)
+            Dim fDiag As Single = p.F_Diagonal_Efectivo
+            Dim fCort As Single = p.F_CortesH_Efectivo
 
             If fDiag <= 0 AndAlso fCort <= 0 Then
                 items.Add(New GraficosResumen.ItemCD(EtiquetaPila(p), -1))
@@ -228,19 +228,27 @@ Public Class Form_Graficos_Pilas
             Dim peor As Double
             Dim quien As String
             Dim combo As String
+            Dim mandoManualDiag As Boolean = (fMan > 0 AndAlso fMan > p.Factor_Diagonal)
+            Dim mandoManualCort As Boolean = (fMan > 0 AndAlso fMan > p.Factor_CortesH)
             If fDiag <= 0 Then
-                peor = fCort : quien = "cortes horizontales" : combo = p.combinacion_Factor_CortesH
+                peor = fCort : quien = "cortes horizontales"
+                combo = If(mandoManualCort, "Manual", p.combinacion_Factor_CortesH)
             ElseIf fCort <= 0 Then
-                peor = fDiag : quien = "diagonal" : combo = p.Combinacion_Factor_Diagonal
+                peor = fDiag : quien = "diagonal"
+                combo = If(mandoManualDiag, "Manual", p.Combinacion_Factor_Diagonal)
             ElseIf fDiag <= fCort Then
-                peor = fDiag : quien = "diagonal" : combo = p.Combinacion_Factor_Diagonal
+                peor = fDiag : quien = "diagonal"
+                combo = If(mandoManualDiag, "Manual", p.Combinacion_Factor_Diagonal)
             Else
-                peor = fCort : quien = "cortes horizontales" : combo = p.combinacion_Factor_CortesH
+                peor = fCort : quien = "cortes horizontales"
+                combo = If(mandoManualCort, "Manual", p.combinacion_Factor_CortesH)
             End If
 
             Dim tip As String = "Gobierna: " & quien
             If Not String.IsNullOrWhiteSpace(combo) Then tip &= vbCrLf & "Combinación: " & combo
-            If fMan > 0 Then tip &= vbCrLf & "(Factor manual ingresado por el usuario)"
+            If fMan > 0 AndAlso (mandoManualDiag OrElse mandoManualCort) Then
+                tip &= vbCrLf & "(Factor manual del usuario)"
+            End If
 
             items.Add(New GraficosResumen.ItemCD(EtiquetaPila(p), peor, tip))
         Next

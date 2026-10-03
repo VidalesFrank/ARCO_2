@@ -45,6 +45,21 @@ Public Class Elemento_Pila
         ' Factor_Manual_DI = 0 → sin override (proyectos guardados antes de esta versión)
     End Sub
 
+    ' Envolvente C/D con el override manual: el manual solo gana si es mayor que el
+    ' calculado (regla: "el manual rescata al elemento, no lo empeora"). Usar estas
+    ' propiedades en todo reporte / dashboard para que la regla no se duplique.
+    Public ReadOnly Property F_Diagonal_Efectivo As Single
+        Get
+            Return If(Factor_Manual_DI > Factor_Diagonal, Factor_Manual_DI, Factor_Diagonal)
+        End Get
+    End Property
+
+    Public ReadOnly Property F_CortesH_Efectivo As Single
+        Get
+            Return If(Factor_Manual_DI > Factor_CortesH, Factor_Manual_DI, Factor_CortesH)
+        End Get
+    End Property
+
     Public Matriz_PS As List(Of Single)
     Public Matriz_MS As List(Of Single)
     Public Matriz_PU As List(Of Single)
