@@ -11,6 +11,9 @@ Partial Public Class Form_02_PagColumnas
     ' Secciones circulares detectadas en "Frame Sec Def - Conc Circle": nombre → (diámetro m, material)
     Private Shared _SeccionesCirculares As New Dictionary(Of String, Tuple(Of Single, String))(StringComparer.OrdinalIgnoreCase)
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+
+        If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
+
         Me.Cursor = Cursors.WaitCursor
         Columna = New Columna()
 
@@ -1099,21 +1102,20 @@ SkipPierDiseno:
     End Sub
 
     Private Sub ResultadosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Resultados_Col.Click
+        If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
         Form_02_01_ResultadosColumnas.Combo_Elementos.Text = Proyecto.Elementos.Columnas.Lista_Columnas(0).Name_Label
         Form_02_01_ResultadosColumnas.Show()
     End Sub
 
     Private Sub Reporte_Col_Click(sender As Object, e As EventArgs) Handles Reporte_Col.Click
-        If Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
-            MessageBox.Show("No hay columnas procesadas. Ejecute el análisis primero.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            Return
-        End If
+        If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
         Dim rpt As New Form_02_Reporte_Columnas
         rpt.Columnas = Proyecto.Elementos.Columnas.Lista_Columnas
         rpt.Show()
     End Sub
 
     Private Sub GráficasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Graficos_Col.Click
+        If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
         Form_Graficos.Show()
     End Sub
 

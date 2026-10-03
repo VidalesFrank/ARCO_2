@@ -47,7 +47,7 @@ Public Class Form_02_Reporte_Columnas
         Me.BackColor = Color.White
         Me.Font = New Font("Segoe UI", 9)
         BuildUI()
-        AddHandler Me.Load, AddressOf OnLoad
+        AddHandler Me.Load, AddressOf Form_Load
     End Sub
 
     ' ── Construcción UI ────────────────────────────────────────────────────
@@ -230,7 +230,8 @@ Public Class Form_02_Reporte_Columnas
     End Sub
 
     ' ── Carga ──────────────────────────────────────────────────────────────
-    Private Sub OnLoad(sender As Object, e As EventArgs)
+    ' Renombrada desde "OnLoad" para evitar BC40005 (sombreaba Form.OnLoad).
+    Private Sub Form_Load(sender As Object, e As EventArgs)
         If Columnas Is Nothing OrElse Columnas.Count = 0 Then Return
         CalcularFilas()
         MostrarFlex()
@@ -622,12 +623,22 @@ Public Class Form_02_Reporte_Columnas
         End If
     End Sub
 
+    ' ClosedXML rechaza Double.NaN e Infinity en cell.Value con
+    ' "Value can't be NaN or infinity". Filtrar antes de asignar.
+    Private Shared Function EsFinito(x As Single) As Boolean
+        Return Not Single.IsNaN(x) AndAlso Not Single.IsInfinity(x)
+    End Function
+
+    Private Shared Function EsFinitoPositivo(x As Single) As Boolean
+        Return EsFinito(x) AndAlso x > 0
+    End Function
+
     Private Sub ExportarHojaFlex(ws As IXLWorksheet)
         Enc(ws, {"Columna", "Tramo", "Sección", "f'c (MPa)", "As Col (cm2)", "As Req (cm2)", "C/D", "Zona", "Estado"})
         Dim r = 2
         For Each f In _filasFlex
             Dim cdTop = f.FFlexTop : Dim cdBot = f.FFlexBot
-            Dim hayTop = cdTop > 0 : Dim hayBot = cdBot > 0
+            Dim hayTop = EsFinitoPositivo(cdTop) : Dim hayBot = EsFinitoPositivo(cdBot)
             If Not hayTop AndAlso Not hayBot Then Continue For
             Dim cdMin = If(hayTop AndAlso hayBot, Math.Min(cdTop, cdBot), If(hayTop, cdTop, cdBot))
             Dim usarTop = hayTop AndAlso (Not hayBot OrElse cdTop <= cdBot)
@@ -647,9 +658,10 @@ Public Class Form_02_Reporte_Columnas
             Dim asReq = CDbl(If(usarTop, f.AsReqTop, f.AsReqBot)) / 100.0
             Dim secc = $"{f.B:0.00}×{f.H:0.00} m"
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Piso
-            ws.Cell(r, 3).Value = secc : ws.Cell(r, 4).Value = CDbl(f.fc)
-            ws.Cell(r, 5).Value = CDbl(Math.Round(asCol, 2))
-            ws.Cell(r, 6).Value = CDbl(Math.Round(asReq, 2))
+            ws.Cell(r, 3).Value = secc
+            If EsFinito(f.fc) Then ws.Cell(r, 4).Value = CDbl(f.fc) Else ws.Cell(r, 4).Value = "-"
+            If EsFinitoPositivo(CSng(asCol)) Then ws.Cell(r, 5).Value = CDbl(Math.Round(asCol, 2)) Else ws.Cell(r, 5).Value = "-"
+            If EsFinitoPositivo(CSng(asReq)) Then ws.Cell(r, 6).Value = CDbl(Math.Round(asReq, 2)) Else ws.Cell(r, 6).Value = "-"
             ws.Cell(r, 7).Value = CDbl(Math.Round(cdMin, 2))
             ws.Cell(r, 8).Value = zona
             ws.Cell(r, 9).Value = If(cdMin >= 0.9F, "OK", "Revisar")
@@ -666,12 +678,14 @@ Public Class Form_02_Reporte_Columnas
             Dim secc = $"{f.B:0.00}×{f.H:0.00} m"
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Piso
             ws.Cell(r, 3).Value = secc
-            ws.Cell(r, 4).Value = If(f.Vu2 > 0, CObj(CDbl(Math.Round(f.Vu2, 2))), "-")
-            ws.Cell(r, 5).Value = If(f.Vn2 > 0, CObj(CDbl(Math.Round(f.Vn2, 2))), "-")
-            ws.Cell(r, 6).Value = If(f.FV2 > 0, CObj(CDbl(Math.Round(f.FV2, 2))), "-")
-            ws.Cell(r, 7).Value = If(f.Vu3 > 0, CObj(CDbl(Math.Round(f.Vu3, 2))), "-")
-            ws.Cell(r, 8).Value = If(f.Vn3 > 0, CObj(CDbl(Math.Round(f.Vn3, 2))), "-")
-            ws.Cell(r, 9).Value = If(f.FV3 > 0, CObj(CDbl(Math.Round(f.FV3, 2))), "-")
+            ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+            ' If(cond, CObj(Double), "-") devuelve Object → InvalidCastException al asignar.
+            If EsFinitoPositivo(f.Vu2) Then ws.Cell(r, 4).Value = CDbl(Math.Round(f.Vu2, 2)) Else ws.Cell(r, 4).Value = "-"
+            If EsFinitoPositivo(f.Vn2) Then ws.Cell(r, 5).Value = CDbl(Math.Round(f.Vn2, 2)) Else ws.Cell(r, 5).Value = "-"
+            If EsFinitoPositivo(f.FV2) Then ws.Cell(r, 6).Value = CDbl(Math.Round(f.FV2, 2)) Else ws.Cell(r, 6).Value = "-"
+            If EsFinitoPositivo(f.Vu3) Then ws.Cell(r, 7).Value = CDbl(Math.Round(f.Vu3, 2)) Else ws.Cell(r, 7).Value = "-"
+            If EsFinitoPositivo(f.Vn3) Then ws.Cell(r, 8).Value = CDbl(Math.Round(f.Vn3, 2)) Else ws.Cell(r, 8).Value = "-"
+            If EsFinitoPositivo(f.FV3) Then ws.Cell(r, 9).Value = CDbl(Math.Round(f.FV3, 2)) Else ws.Cell(r, 9).Value = "-"
             Dim ok = (f.FV2 >= 0.9F OrElse f.FV2 = 0) AndAlso (f.FV3 >= 0.9F OrElse f.FV3 = 0)
             ws.Cell(r, 10).Value = If(ok, "OK", "Revisar")
             FXL(ws.Cell(r, 6), f.FV2) : FXL(ws.Cell(r, 9), f.FV3)
@@ -688,19 +702,22 @@ Public Class Form_02_Reporte_Columnas
         Dim r = 2
         For Each f In _filasConf
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Piso
-            ws.Cell(r, 3).Value = CDbl(Math.Round(f.B, 3)) : ws.Cell(r, 4).Value = CDbl(Math.Round(f.H, 3))
+            If EsFinito(f.B) Then ws.Cell(r, 3).Value = CDbl(Math.Round(f.B, 3)) Else ws.Cell(r, 3).Value = "-"
+            If EsFinito(f.H) Then ws.Cell(r, 4).Value = CDbl(Math.Round(f.H, 3)) Else ws.Cell(r, 4).Value = "-"
             ws.Cell(r, 5).Value = If(f.BarraLongMin IsNot Nothing, f.BarraLongMin, "-")
-            ws.Cell(r, 6).Value = If(f.S0_L > 0, CObj(CDbl(Math.Round(f.S0_L, 3))), "-")
-            ws.Cell(r, 7).Value = If(f.AshLReq > 0, CObj(CDbl(Math.Round(f.AshLReq, 1))), "-")
-            ws.Cell(r, 8).Value = If(f.AshLProv > 0, CObj(CDbl(Math.Round(f.AshLProv, 1))), "-")
-            ws.Cell(r, 9).Value = If(f.FAshL > 0, CObj(CDbl(Math.Round(f.FAshL, 2))), "-")
-            ws.Cell(r, 10).Value = If(f.S0_C > 0, CObj(CDbl(Math.Round(f.S0_C, 3))), "-")
-            ws.Cell(r, 11).Value = If(f.AshCReq > 0, CObj(CDbl(Math.Round(f.AshCReq, 1))), "-")
-            ws.Cell(r, 12).Value = If(f.AshCProv > 0, CObj(CDbl(Math.Round(f.AshCProv, 1))), "-")
-            ws.Cell(r, 13).Value = If(f.FAshC > 0, CObj(CDbl(Math.Round(f.FAshC, 2))), "-")
-            ws.Cell(r, 14).Value = If(f.L0Req > 0, CObj(CDbl(Math.Round(f.L0Req, 3))), "-")
-            ws.Cell(r, 15).Value = If(f.L0Prov > 0, CObj(CDbl(Math.Round(f.L0Prov, 3))), "-")
-            ws.Cell(r, 16).Value = If(f.FL0 > 0, CObj(CDbl(Math.Round(f.FL0, 2))), "-")
+            ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+            ' If(cond, CObj(Double), "-") devuelve Object → InvalidCastException al asignar.
+            If EsFinitoPositivo(f.S0_L) Then ws.Cell(r, 6).Value = CDbl(Math.Round(f.S0_L, 3)) Else ws.Cell(r, 6).Value = "-"
+            If EsFinitoPositivo(f.AshLReq) Then ws.Cell(r, 7).Value = CDbl(Math.Round(f.AshLReq, 1)) Else ws.Cell(r, 7).Value = "-"
+            If EsFinitoPositivo(f.AshLProv) Then ws.Cell(r, 8).Value = CDbl(Math.Round(f.AshLProv, 1)) Else ws.Cell(r, 8).Value = "-"
+            If EsFinitoPositivo(f.FAshL) Then ws.Cell(r, 9).Value = CDbl(Math.Round(f.FAshL, 2)) Else ws.Cell(r, 9).Value = "-"
+            If EsFinitoPositivo(f.S0_C) Then ws.Cell(r, 10).Value = CDbl(Math.Round(f.S0_C, 3)) Else ws.Cell(r, 10).Value = "-"
+            If EsFinitoPositivo(f.AshCReq) Then ws.Cell(r, 11).Value = CDbl(Math.Round(f.AshCReq, 1)) Else ws.Cell(r, 11).Value = "-"
+            If EsFinitoPositivo(f.AshCProv) Then ws.Cell(r, 12).Value = CDbl(Math.Round(f.AshCProv, 1)) Else ws.Cell(r, 12).Value = "-"
+            If EsFinitoPositivo(f.FAshC) Then ws.Cell(r, 13).Value = CDbl(Math.Round(f.FAshC, 2)) Else ws.Cell(r, 13).Value = "-"
+            If EsFinitoPositivo(f.L0Req) Then ws.Cell(r, 14).Value = CDbl(Math.Round(f.L0Req, 3)) Else ws.Cell(r, 14).Value = "-"
+            If EsFinitoPositivo(f.L0Prov) Then ws.Cell(r, 15).Value = CDbl(Math.Round(f.L0Prov, 3)) Else ws.Cell(r, 15).Value = "-"
+            If EsFinitoPositivo(f.FL0) Then ws.Cell(r, 16).Value = CDbl(Math.Round(f.FL0, 2)) Else ws.Cell(r, 16).Value = "-"
             Dim ok = (f.FAshL >= 0.9F OrElse f.FAshL = 0) AndAlso (f.FAshC >= 0.9F OrElse f.FAshC = 0) AndAlso
                      (f.FL0 >= 0.9F OrElse f.FL0 = 0)
             ws.Cell(r, 17).Value = If(ok, "OK", "Revisar")
@@ -717,12 +734,15 @@ Public Class Form_02_Reporte_Columnas
         Dim r = 2
         For Each f In _filasALR
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Piso
-            ws.Cell(r, 3).Value = CDbl(f.fc)
-            ws.Cell(r, 4).Value = CDbl(Math.Round(f.B, 3)) : ws.Cell(r, 5).Value = CDbl(Math.Round(f.H, 3))
+            If EsFinito(f.fc) Then ws.Cell(r, 3).Value = CDbl(f.fc) Else ws.Cell(r, 3).Value = "-"
+            If EsFinito(f.B) Then ws.Cell(r, 4).Value = CDbl(Math.Round(f.B, 3)) Else ws.Cell(r, 4).Value = "-"
+            If EsFinito(f.H) Then ws.Cell(r, 5).Value = CDbl(Math.Round(f.H, 3)) Else ws.Cell(r, 5).Value = "-"
             ws.Cell(r, 6).Value = f.Combinacion
-            ws.Cell(r, 7).Value = If(f.Pu > 0, CObj(CDbl(Math.Round(f.Pu, 1))), "-")
-            ws.Cell(r, 8).Value = If(f.Ag > 0, CObj(CDbl(Math.Round(f.Ag, 4))), "-")
-            ws.Cell(r, 9).Value = If(f.ALR > 0, CObj(CDbl(Math.Round(f.ALR, 3))), "-")
+            ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+            ' If(cond, CObj(Double), "-") devuelve Object → InvalidCastException al asignar.
+            If EsFinitoPositivo(f.Pu) Then ws.Cell(r, 7).Value = CDbl(Math.Round(f.Pu, 1)) Else ws.Cell(r, 7).Value = "-"
+            If EsFinitoPositivo(f.Ag) Then ws.Cell(r, 8).Value = CDbl(Math.Round(f.Ag, 4)) Else ws.Cell(r, 8).Value = "-"
+            If EsFinitoPositivo(f.ALR) Then ws.Cell(r, 9).Value = CDbl(Math.Round(f.ALR, 3)) Else ws.Cell(r, 9).Value = "-"
             ws.Cell(r, 10).Value = If(f.ALR <= 0.35F, "OK", If(f.ALR <= 0.40F, "Alerta", "Revisar"))
             ALRXL(ws.Cell(r, 9), f.ALR)
             r += 1
@@ -737,15 +757,18 @@ Public Class Form_02_Reporte_Columnas
         Dim r = 2
         For Each f In _filasResumen
             ws.Cell(r, 1).Value = f.Elemento : ws.Cell(r, 2).Value = f.Secciones
-            ws.Cell(r, 3).Value = If(f.FFlexMin < 0, "Sin calc.", CObj(CDbl(Math.Round(f.FFlexMin, 2))))
+            ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+            ' If(cond, CObj(Double), "-") / If(cond, "-", CObj(Double)) devuelven Object → InvalidCastException.
+            ' EsFinito filtra además NaN/Infinity (que evaden el sentinela "< 0").
+            If EsFinito(f.FFlexMin) AndAlso f.FFlexMin >= 0 Then ws.Cell(r, 3).Value = CDbl(Math.Round(f.FFlexMin, 2)) Else ws.Cell(r, 3).Value = "Sin calc."
             ws.Cell(r, 4).Value = f.PisoCritFlex
-            ws.Cell(r, 5).Value = If(f.FV2Min < 0, "Sin calc.", CObj(CDbl(Math.Round(f.FV2Min, 2))))
-            ws.Cell(r, 6).Value = If(f.FV3Min < 0, "Sin calc.", CObj(CDbl(Math.Round(f.FV3Min, 2))))
+            If EsFinito(f.FV2Min) AndAlso f.FV2Min >= 0 Then ws.Cell(r, 5).Value = CDbl(Math.Round(f.FV2Min, 2)) Else ws.Cell(r, 5).Value = "Sin calc."
+            If EsFinito(f.FV3Min) AndAlso f.FV3Min >= 0 Then ws.Cell(r, 6).Value = CDbl(Math.Round(f.FV3Min, 2)) Else ws.Cell(r, 6).Value = "Sin calc."
             ws.Cell(r, 7).Value = f.PisoCritCort
-            ws.Cell(r, 8).Value = If(f.FAshLMin < 0, "Sin calc.", CObj(CDbl(Math.Round(f.FAshLMin, 2))))
-            ws.Cell(r, 9).Value = If(f.FAshCMin < 0, "Sin calc.", CObj(CDbl(Math.Round(f.FAshCMin, 2))))
-            ws.Cell(r, 10).Value = If(f.FL0Min < 0, "Sin calc.", CObj(CDbl(Math.Round(f.FL0Min, 2))))
-            ws.Cell(r, 11).Value = If(f.ALRMax > 0, CObj(CDbl(Math.Round(f.ALRMax, 3))), "-")
+            If EsFinito(f.FAshLMin) AndAlso f.FAshLMin >= 0 Then ws.Cell(r, 8).Value = CDbl(Math.Round(f.FAshLMin, 2)) Else ws.Cell(r, 8).Value = "Sin calc."
+            If EsFinito(f.FAshCMin) AndAlso f.FAshCMin >= 0 Then ws.Cell(r, 9).Value = CDbl(Math.Round(f.FAshCMin, 2)) Else ws.Cell(r, 9).Value = "Sin calc."
+            If EsFinito(f.FL0Min) AndAlso f.FL0Min >= 0 Then ws.Cell(r, 10).Value = CDbl(Math.Round(f.FL0Min, 2)) Else ws.Cell(r, 10).Value = "Sin calc."
+            If EsFinitoPositivo(f.ALRMax) Then ws.Cell(r, 11).Value = CDbl(Math.Round(f.ALRMax, 3)) Else ws.Cell(r, 11).Value = "-"
             ws.Cell(r, 12).Value = If(f.Cumple, "OK", "Revisar")
             FXL(ws.Cell(r, 3), f.FFlexMin) : FXL(ws.Cell(r, 5), f.FV2Min) : FXL(ws.Cell(r, 6), f.FV3Min)
             FXL(ws.Cell(r, 8), f.FAshLMin) : FXL(ws.Cell(r, 9), f.FAshCMin)

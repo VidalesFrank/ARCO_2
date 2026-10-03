@@ -57,7 +57,7 @@ Public Class Form_02_03_DI_3D
     Public Sub New(tramo As Tramo_Columna)
         _tramo = tramo
         BuildUI()
-        AddHandler Me.Load, AddressOf OnLoad
+        AddHandler Me.Load, AddressOf Form_Load
     End Sub
 
     Private Sub BuildUI()
@@ -159,7 +159,7 @@ Public Class Form_02_03_DI_3D
                                    End Sub
         panelRight.Controls.Add(btnReset)
 
-        AddHandler Me.Resize, AddressOf OnResize
+        AddHandler Me.Resize, AddressOf Form_Resize
     End Sub
 
     Private Sub PanelSep(panel As Panel, y As Integer)
@@ -168,15 +168,16 @@ Public Class Form_02_03_DI_3D
             .AutoSize = True, .Location = New Point(4, y), .ForeColor = Color.Silver})
     End Sub
 
-    Private Sub OnLoad(sender As Object, e As EventArgs)
+    ' Renombradas desde "OnLoad"/"OnResize" para evitar BC40005 (sombreaban los virtuales de Form).
+    Private Sub Form_Load(sender As Object, e As EventArgs)
         GenerarSuperficie()
         GenerarDemanda()
         ActualizarInfo()
-        OnResize(Nothing, Nothing)
+        Form_Resize(Nothing, Nothing)
         picMain.Invalidate()
     End Sub
 
-    Private Sub OnResize(sender As Object, e As EventArgs)
+    Private Sub Form_Resize(sender As Object, e As EventArgs)
         Dim W = Me.ClientSize.Width : Dim H = Me.ClientSize.Height
         panelRight.SetBounds(W - 220, 0, 220, H)
         picMain.SetBounds(0, 0, W - 220, H)

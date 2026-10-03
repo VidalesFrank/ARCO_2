@@ -463,8 +463,12 @@ Public Class Form_02_00_PagInfoColumnas
                 Dim Seccion = col.Lista_Tramos_Columnas(j)
 
                 '--- Verificación a Flexo-Compresión -------
-                Seccion.F_Flexo_Top = Math.Round(Seccion.As_Col_Top / Seccion.As_Req_Top, 2)
-                Seccion.F_Flexo_Bottom = Math.Round(Seccion.As_Col_Bottom / Seccion.As_Req_Bottom, 2)
+                ' As_Req_* = 0 (sección sin combinaciones asignadas) genera Single.PositiveInfinity y
+                ' rompe la exportación a Excel (ClosedXML rechaza NaN/Infinity en cell.Value).
+                Seccion.F_Flexo_Top = If(Seccion.As_Req_Top > 0,
+                                         CSng(Math.Round(Seccion.As_Col_Top / Seccion.As_Req_Top, 2)), 0)
+                Seccion.F_Flexo_Bottom = If(Seccion.As_Req_Bottom > 0,
+                                            CSng(Math.Round(Seccion.As_Col_Bottom / Seccion.As_Req_Bottom, 2)), 0)
 
                 '---- Verificación a Cortante -------
                 If Seccion.EsCircular Then
@@ -496,8 +500,10 @@ Public Class Form_02_00_PagInfoColumnas
                     Dim Rev_Confinamiento_C = FuncionConfinamiento(Seccion.H_Plano, Seccion.B_Plano, Seccion.fc, 420, Seccion.Separacion_Estribos, Seccion.Barra_Long_Min, Seccion.Numero_Barras_Estribo, "DMO")
                     Seccion.Ash_L = Rev_Confinamiento_L(1) : Seccion.Ramas_Req_L = Rev_Confinamiento_L(2) : Seccion.S0_L = Rev_Confinamiento_L(3) : Seccion.L0_L = Rev_Confinamiento_L(4)
                     Seccion.Ash_C = Rev_Confinamiento_C(1) : Seccion.Ramas_Req_C = Rev_Confinamiento_C(2) : Seccion.S0_C = Rev_Confinamiento_C(3) : Seccion.L0_C = Rev_Confinamiento_C(4)
-                    Seccion.F_Ash_Largo = Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)
-                    Seccion.F_Ash_Corto = Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)
+                    Seccion.F_Ash_Largo = If(Seccion.Ash_L > 0,
+                                             CSng(Math.Round(Seccion.Ash_Col_Largo / Seccion.Ash_L, 2)), 0)
+                    Seccion.F_Ash_Corto = If(Seccion.Ash_C > 0,
+                                             CSng(Math.Round(Seccion.Ash_Col_Corto / Seccion.Ash_C, 2)), 0)
                 End If
 
                 ' D/C biaxial (diagrama de interacción)
