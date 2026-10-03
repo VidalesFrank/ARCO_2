@@ -63,6 +63,10 @@ Public Module ReporteRevisionWordHelpers
         Return NuevoParrafo("Ttulo2", CrearRun(texto))
     End Function
 
+    Public Function Heading3(texto As String) As Paragraph
+        Return NuevoParrafo("Ttulo3", CrearRun(texto))
+    End Function
+
     Public Function ParrafoNormal(texto As String) As Paragraph
         Return NuevoParrafo(Nothing, CrearRun(texto))
     End Function
@@ -249,10 +253,13 @@ Public Module ReporteRevisionWordHelpers
     ''' Reemplaza el texto "xx" resaltado en amarillo del encabezado (membrete corporativo) por el
     ''' código de proyecto. Común a todos los reportes que reutilizan la plantilla corporativa
     ''' (<see cref="ReporteRevisionService"/>, <see cref="InformeEstadoMurosService"/>).
+    ''' Guarda cada HeaderPart modificado para evitar el bug de "Word pide reparar" en el primer
+    ''' abrir (sin Save() explícito, algunos cambios de propiedades hijas no se persisten al Dispose).
     ''' </summary>
     Public Sub ActualizarCodigoEnEncabezado(wordDoc As WordprocessingDocument, codigo As String)
         If String.IsNullOrWhiteSpace(codigo) Then Return
         For Each headerPart In wordDoc.MainDocumentPart.HeaderParts
+            Dim modificado As Boolean = False
             For Each r In headerPart.Header.Descendants(Of Run)().ToList()
                 Dim rPr = r.RunProperties
                 If rPr Is Nothing OrElse rPr.Highlight Is Nothing OrElse rPr.Highlight.Val Is Nothing Then Continue For
@@ -261,9 +268,90 @@ Public Module ReporteRevisionWordHelpers
                 If t IsNot Nothing AndAlso t.Text.Trim() = "xx" Then
                     t.Text = codigo
                     rPr.Highlight.Remove()
+                    modificado = True
                 End If
             Next
+            If modificado Then headerPart.Header.Save()
         Next
+    End Sub
+
+    ' ── Numeración multinivel para Ttulo1/Ttulo2/Ttulo3 ────────────────────────
+    ''' <summary>
+    ''' Vincula los estilos Ttulo2 y Ttulo3 a la lista multinivel de la plantilla (Ttulo1 ya está
+    ''' vinculada por defecto). Formato: 1  TÍTULO CAPÍTULO / 1.1  TÍTULO SUBSECCIÓN /
+    ''' 1.1.1  Título subsubsección. La plantilla ya define abstractNum con pStyle=Ttulo1 en
+    ''' ilvl=0; este método agrega pStyle=Ttulo2 en ilvl=1 y pStyle=Ttulo3 en ilvl=2, además de
+    ''' inyectar el numPr correspondiente en las definiciones de estilo (Word requiere ambos
+    ''' vínculos para renderizar bien la numeración desde la primera apertura).
+    ''' </summary>
+    Public Sub VincularHeadingsALista(wordDoc As WordprocessingDocument)
+        Dim numPart = wordDoc.MainDocumentPart.NumberingDefinitionsPart
+        Dim stylesPart = wordDoc.MainDocumentPart.StyleDefinitionsPart
+        If numPart Is Nothing OrElse stylesPart Is Nothing Then Return
+
+        ' 1) Encontrar el abstractNum donde ilvl=0 tiene pStyle=Ttulo1 (es el "esquema de títulos")
+        Dim absNum As AbstractNum = numPart.Numbering.Elements(Of AbstractNum)() _
+            .FirstOrDefault(Function(a) a.Elements(Of Level)() _
+                .Any(Function(lv) lv.LevelIndex IsNot Nothing AndAlso lv.LevelIndex.Value = 0 AndAlso
+                                   lv.ParagraphStyleIdInLevel IsNot Nothing AndAlso
+                                   lv.ParagraphStyleIdInLevel.Val IsNot Nothing AndAlso
+                                   lv.ParagraphStyleIdInLevel.Val.Value = "Ttulo1"))
+        If absNum Is Nothing Then Return
+
+        ' 2) Agregar pStyle=Ttulo2 al ilvl=1 y pStyle=Ttulo3 al ilvl=2 (si no está ya)
+        AsegurarPStyleEnNivel(absNum, 1, "Ttulo2")
+        AsegurarPStyleEnNivel(absNum, 2, "Ttulo3")
+
+        ' 3) Encontrar la numId que referencia este abstractNumId
+        Dim absId As Integer = absNum.AbstractNumberId.Value
+        Dim numInst As NumberingInstance = numPart.Numbering.Elements(Of NumberingInstance)() _
+            .FirstOrDefault(Function(n) n.AbstractNumId IsNot Nothing AndAlso n.AbstractNumId.Val.Value = absId)
+        If numInst Is Nothing Then Return
+        Dim numId As Integer = numInst.NumberID.Value
+
+        ' 4) En StylesPart: inyectar numPr en Ttulo2 (ilvl=1) y Ttulo3 (ilvl=2)
+        AsegurarNumPrEnEstilo(stylesPart, "Ttulo2", ilvl:=1, numId:=numId)
+        AsegurarNumPrEnEstilo(stylesPart, "Ttulo3", ilvl:=2, numId:=numId)
+
+        numPart.Numbering.Save()
+        stylesPart.Styles.Save()
+    End Sub
+
+    Private Sub AsegurarPStyleEnNivel(absNum As AbstractNum, ilvl As Integer, styleId As String)
+        Dim nivel As Level = absNum.Elements(Of Level)() _
+            .FirstOrDefault(Function(lv) lv.LevelIndex IsNot Nothing AndAlso lv.LevelIndex.Value = ilvl)
+        If nivel Is Nothing Then Return
+        Dim ps = nivel.ParagraphStyleIdInLevel
+        If ps IsNot Nothing AndAlso ps.Val IsNot Nothing AndAlso ps.Val.Value = styleId Then Return
+        If ps IsNot Nothing Then ps.Remove()
+        ' pStyle debe ir después de numFmt/lvlRestart y antes de lvlText/lvlJc/pPr
+        Dim nuevoPs As New ParagraphStyleIdInLevel() With {.Val = styleId}
+        Dim lvlText = nivel.Elements(Of LevelText)().FirstOrDefault()
+        If lvlText IsNot Nothing Then
+            nivel.InsertBefore(nuevoPs, lvlText)
+        Else
+            nivel.Append(nuevoPs)
+        End If
+    End Sub
+
+    Private Sub AsegurarNumPrEnEstilo(stylesPart As StyleDefinitionsPart, styleId As String, ilvl As Integer, numId As Integer)
+        Dim est As Style = stylesPart.Styles.Elements(Of Style)() _
+            .FirstOrDefault(Function(s) s.StyleId IsNot Nothing AndAlso s.StyleId.Value = styleId)
+        If est Is Nothing Then Return
+
+        Dim pPr As StyleParagraphProperties = est.StyleParagraphProperties
+        If pPr Is Nothing Then
+            pPr = New StyleParagraphProperties()
+            est.Append(pPr)
+        End If
+
+        Dim numPr = pPr.GetFirstChild(Of NumberingProperties)()
+        If numPr IsNot Nothing Then numPr.Remove()
+
+        numPr = New NumberingProperties(
+            New NumberingLevelReference() With {.Val = ilvl},
+            New NumberingId() With {.Val = numId})
+        pPr.InsertAt(numPr, 0)
     End Sub
 
 End Module

@@ -573,7 +573,7 @@ Public Class Form_Reporte_Proyecto_Completo
                                p.Check3_PuE >= 0.9 AndAlso p.Check4_PuD >= 0.9
             Dim okSuelo      = p.Relacion_EsfE >= 0.9 AndAlso p.Relacion_EsfD >= 0.9
             Dim okCortante   = p.FactorShear >= 0.9
-            Dim okInteracc   = p.Factor_Diagonal >= 0.9 AndAlso p.Factor_CortesH >= 0.9
+            Dim okInteracc   = p.F_Diagonal_Efectivo >= 0.9 AndAlso p.F_CortesH_Efectivo >= 0.9
             Dim cumpleGeneral = okCargas AndAlso okSuelo AndAlso okCortante AndAlso okInteracc
 
             EscribirCumpleTexto(ws.Cell(fila, 8),  okCargas)

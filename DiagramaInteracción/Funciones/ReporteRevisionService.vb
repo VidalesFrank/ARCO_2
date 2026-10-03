@@ -35,16 +35,65 @@ Public Class ReporteRevisionService
 
     Private _numTabla As Integer = 0
 
-    Private Shared Function EsConforme(ratio As Double) As Boolean
-        Return ratio >= UMBRAL_CD
+    ' Índice de cada piso por su elevación (más bajo = 0). Los elementos con piso desconocido
+    ' se ordenan al final. Se pobla al inicio de Generar y se consulta desde OrdenarPorPiso.
+    Private _ordenPisos As Dictionary(Of String, Integer)
+
+    Private Sub InicializarOrdenPisos(proyecto As Proyecto)
+        _ordenPisos = New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+        If proyecto?.Pisos Is Nothing Then Return
+        Dim ordenados = proyecto.Pisos _
+            .Where(Function(p) p IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(p.Nombre)) _
+            .OrderBy(Function(p) p.CoorZ).ToList()
+        For i = 0 To ordenados.Count - 1
+            _ordenPisos(ordenados(i).Nombre.Trim()) = i
+        Next
+    End Sub
+
+    ' Devuelve un índice ordenable para el piso. Estrategia:
+    '   1) Si proyecto.Pisos está poblado, usa el índice por CoorZ (más bajo = 0).
+    '   2) Si no (caso más común hoy), parsea el nombre: "Sótano N" → -N, "Cimentación" → -1000,
+    '      "PN"/"Piso N"/"Story N"/"Planta N" → N, "Cubierta"/"Techo"/"Terraza" → 900.
+    '   3) Último recurso: MaxValue → los desconocidos quedan al final (orden estable).
+    Private Function OrdenPiso(nombre As String) As Integer
+        If String.IsNullOrWhiteSpace(nombre) Then Return Integer.MaxValue
+        Dim clave = nombre.Trim()
+
+        Dim idx As Integer
+        If _ordenPisos IsNot Nothing AndAlso _ordenPisos.TryGetValue(clave, idx) Then Return idx
+
+        Dim n = clave.ToUpperInvariant()
+
+        If n.Contains("CIMENT") OrElse n.Contains("FUND") OrElse n = "BASE" Then Return -1000
+        If n.Contains("CUBIERTA") OrElse n.Contains("TECHO") OrElse n.Contains("TERRAZA") OrElse n.Contains("AZOTEA") Then Return 900
+
+        Dim mSot = System.Text.RegularExpressions.Regex.Match(n, "S[OÓ]?TANO?\s*(\d+)")
+        If mSot.Success Then Return -CInt(mSot.Groups(1).Value)
+
+        Dim mPiso = System.Text.RegularExpressions.Regex.Match(n, "^\s*(?:PISO|PLANTA|STORY|NIVEL|P)\s*(\d+)")
+        If mPiso.Success Then Return CInt(mPiso.Groups(1).Value)
+
+        Dim mNum = System.Text.RegularExpressions.Regex.Match(n, "^\s*(\d+)\s*$")
+        If mNum.Success Then Return CInt(mNum.Groups(1).Value)
+
+        Return Integer.MaxValue
     End Function
 
-    ''' Devuelve True si la zona indicada supera el chequeo de cortante plástico (C.21.5.4).
-    ''' Solo aplica para zonas Izquierda/Derecha; la zona Centro no tiene chequeo plástico.
-    ''' Regla centralizada en VigaService (único punto de verdad).
-    Private Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
-                                                    cp As cResultadoCortantePlasticoFrame) As Boolean
-        Return VigaService.CumpleCortantePlastico(pos, cp)
+    ' Ordena las filas por el piso indicado (índice de columna), del más bajo al más alto según
+    ' la elevación (CoorZ) definida en proyecto.Pisos. Empate → orden estable por el resto de
+    ' columnas (típicamente nombre del elemento).
+    Private Sub OrdenarPorPiso(filas As List(Of String()), indiceColPiso As Integer)
+        If filas Is Nothing OrElse filas.Count < 2 Then Return
+        Dim indexada = filas _
+            .Select(Function(f, i) (Fila:=f, Orden:=OrdenPiso(If(indiceColPiso < f.Length, f(indiceColPiso), "")), Idx:=i)) _
+            .OrderBy(Function(x) x.Orden).ThenBy(Function(x) x.Idx) _
+            .Select(Function(x) x.Fila).ToList()
+        filas.Clear()
+        filas.AddRange(indexada)
+    End Sub
+
+    Private Shared Function EsConforme(ratio As Double) As Boolean
+        Return ratio >= UMBRAL_CD
     End Function
 
     Private Shared Function FCD(valor As Double) As String
@@ -64,54 +113,70 @@ Public Class ReporteRevisionService
     End Sub
 
     Private Sub Generar(proyecto As Proyecto, opciones As OpcionesReporteRevision, rutaSalida As String)
-        File.WriteAllBytes(rutaSalida, My.Resources.PlantillaReporteRevision)
+        ' Todo el trabajo se hace en memoria y se vuelca al disco en un único WriteAllBytes final.
+        ' Motivo: los clientes de sync en la nube (Dropbox, OneDrive, Google Drive) toman un handle
+        ' al archivo apenas aparece; si escribimos la plantilla y en el siguiente paso pedimos
+        ' WordprocessingDocument.Open(path, isEditable:=True), el lock exclusivo choca con el sync
+        ' y salta "El proceso no puede obtener acceso al archivo…". Trabajar sobre MemoryStream y
+        ' escribir una sola vez al final también resuelve el "hay que guardar dos veces": Word
+        ' recibe siempre un .docx íntegro, nunca uno a medio construir.
+        InicializarOrdenPisos(proyecto)
 
-        Using wordDoc As WordprocessingDocument = WordprocessingDocument.Open(rutaSalida, True)
-            Dim body As Body = wordDoc.MainDocumentPart.Document.Body
-            Dim sectPr As SectionProperties = body.Elements(Of SectionProperties)().FirstOrDefault()
-            If sectPr IsNot Nothing Then sectPr.Remove()
+        Dim plantilla = My.Resources.PlantillaReporteRevision
+        Using ms As New MemoryStream()
+            ms.Write(plantilla, 0, plantilla.Length)
+            ms.Position = 0
 
-            EscribirCarta(body, proyecto, opciones)
+            Using wordDoc As WordprocessingDocument = WordprocessingDocument.Open(ms, True)
+                Dim body As Body = wordDoc.MainDocumentPart.Document.Body
+                Dim sectPr As SectionProperties = body.Elements(Of SectionProperties)().FirstOrDefault()
+                If sectPr IsNot Nothing Then sectPr.Remove()
 
-            If opciones.IncluirCimentaciones Then
-                body.Append(Heading1("CIMENTACIONES"))
-                EscribirSeccionPilas(body, proyecto)
-                body.Append(Heading2("VIGAS DE CIMENTACIÓN"))
-                EscribirVigasCimentacion(body)
-            End If
+                EscribirCarta(body, proyecto, opciones)
 
-            If opciones.IncluirColumnas Then
-                body.Append(Heading1("COLUMNAS"))
-                EscribirSeccionColumnas(body, proyecto)
-            End If
+                If opciones.IncluirCimentaciones Then
+                    body.Append(Heading1("CIMENTACIONES"))
+                    EscribirSeccionPilas(body, proyecto)
+                    body.Append(Heading2("VIGAS DE CIMENTACIÓN"))
+                    EscribirVigasCimentacion(body, proyecto)
+                End If
 
-            If opciones.IncluirMuros Then
-                body.Append(Heading1("MUROS"))
-                EscribirSeccionMuros(body, proyecto)
-            End If
+                If opciones.IncluirColumnas Then
+                    body.Append(Heading1("COLUMNAS"))
+                    EscribirSeccionColumnas(body, proyecto)
+                End If
 
-            If opciones.IncluirVigas Then
-                body.Append(Heading1("VIGAS"))
-                EscribirSeccionVigas(body, proyecto)
-            End If
+                If opciones.IncluirMuros Then
+                    body.Append(Heading1("MUROS"))
+                    EscribirSeccionMuros(body, proyecto)
+                End If
 
-            If opciones.IncluirLosas Then
-                body.Append(Heading1("LOSAS"))
-                EscribirSeccionLosas(body, proyecto)
-            End If
+                If opciones.IncluirVigas Then
+                    body.Append(Heading1("VIGAS"))
+                    EscribirSeccionVigas(body, proyecto)
+                End If
 
-            If opciones.IncluirDetallesPlanos Then
-                body.Append(Heading1("DETALLES EN PLANOS"))
-                EscribirDetallesPlanos(body, opciones.DetallesPlanos)
-            End If
+                If opciones.IncluirLosas Then
+                    body.Append(Heading1("LOSAS"))
+                    EscribirSeccionLosas(body, proyecto)
+                End If
 
-            EscribirCierre(body)
+                If opciones.IncluirDetallesPlanos Then
+                    body.Append(Heading1("DETALLES EN PLANOS"))
+                    EscribirDetallesPlanos(body, opciones.DetallesPlanos)
+                End If
 
-            If sectPr IsNot Nothing Then body.Append(sectPr)
+                EscribirCierre(body)
 
-            ActualizarCodigoEnEncabezado(wordDoc, opciones.CodigoProyecto)
+                If sectPr IsNot Nothing Then body.Append(sectPr)
 
-            wordDoc.MainDocumentPart.Document.Save()
+                ActualizarCodigoEnEncabezado(wordDoc, opciones.CodigoProyecto)
+                VincularHeadingsALista(wordDoc)
+
+                wordDoc.Save()
+            End Using
+
+            File.WriteAllBytes(rutaSalida, ms.ToArray())
         End Using
     End Sub
 
@@ -206,8 +271,8 @@ Public Class ReporteRevisionService
         If pilas Is Nothing Then pilas = New List(Of Elemento_Pila)
 
         ' ── Flexo compresión ────────────────────────────────────────────────
-        body.Append(Heading2("Flexo compresión"))
-        Dim noFlexo = pilas.Where(Function(p) p.Factor_Diagonal > 0 AndAlso Not EsConforme(p.Factor_Diagonal)).ToList()
+        body.Append(Heading3("Flexo compresión"))
+        Dim noFlexo = pilas.Where(Function(p) p.Factor_Diagonal > 0 AndAlso Not EsConforme(p.F_Diagonal_Efectivo)).ToList()
         If noFlexo.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad de flexo compresión es mayor a la demanda."))
         Else
@@ -215,13 +280,13 @@ Public Class ReporteRevisionService
             body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexo-compresión de las pilas."))
             Dim filas As New List(Of String())
             For Each p In noFlexo
-                filas.Add({p.Name_Elemento, FNum(p.Df), FNum(p.Dc), FormatoRefuerzo(p), FCD(p.Factor_Diagonal)})
+                filas.Add({p.Name_Elemento, FNum(p.Df), FNum(p.Dc), FormatoRefuerzo(p), FCD(p.F_Diagonal_Efectivo)})
             Next
             body.Append(TablaDatos({"PILA", "Df (m)", "Dc (m)", "REFUERZO", "CAPACIDAD/DEMANDA"}, filas))
         End If
 
         ' ── Cortante ─────────────────────────────────────────────────────────
-        body.Append(Heading2("Cortante"))
+        body.Append(Heading3("Cortante"))
         Dim noCortante = pilas.Where(Function(p) p.FactorShear > 0 AndAlso Not EsConforme(p.FactorShear)).ToList()
         If noCortante.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad de cortante de las pilas es mayor a la demanda."))
@@ -236,7 +301,7 @@ Public Class ReporteRevisionService
         End If
 
         ' ── Esfuerzos admisibles del concreto ───────────────────────────────
-        body.Append(Heading2("Esfuerzos admisibles del concreto"))
+        body.Append(Heading3("Esfuerzos admisibles del concreto"))
         Dim conEsfConcreto = pilas.Select(Function(p) (Pila:=p, CD:=MinEsfConcreto(p))).Where(Function(x) x.CD > 0 AndAlso Not EsConforme(x.CD)).ToList()
         If conEsfConcreto.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad admisible del concreto es mayor a la demanda."))
@@ -251,7 +316,7 @@ Public Class ReporteRevisionService
         End If
 
         ' ── Esfuerzos transmitidos al suelo ─────────────────────────────────
-        body.Append(Heading2("Esfuerzos transmitidos al suelo"))
+        body.Append(Heading3("Esfuerzos transmitidos al suelo"))
         Dim conEsfSuelo = pilas.Select(Function(p) (Pila:=p, CD:=MinEsfSuelo(p))).Where(Function(x) x.CD > 0 AndAlso Not EsConforme(x.CD)).ToList()
         If conEsfSuelo.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad de esfuerzos transmitidos al terreno es adecuada para las cargas del proyecto."))
@@ -282,11 +347,46 @@ Public Class ReporteRevisionService
         Return valores.Min()
     End Function
 
-    Private Sub EscribirVigasCimentacion(body As Body)
-        body.Append(PendienteImplementar(
-            "el módulo de vigas de cimentación (Form_08_VigasFundacion) calcula Pmáx a compresión/tracción y φPn, " &
-            "pero el resultado no se persiste por elemento dentro del proyecto — corre manualmente, uno a la vez — " &
-            "por lo que hoy no es posible listarlos automáticamente en este reporte."))
+    Private Sub EscribirVigasCimentacion(body As Body, proyecto As Proyecto)
+        Dim vigasFund As List(Of cVigaFundacion) = proyecto?.Elementos?.VigasFundacion?.Elementos
+        If vigasFund Is Nothing OrElse vigasFund.Count = 0 Then
+            body.Append(ParrafoSinAnotaciones("No se registraron vigas de cimentación en el proyecto."))
+            Return
+        End If
+
+        ' Solo entran a la tabla las calculadas que no cumplen (C/D compresión o tracción < umbral,
+        ' o algún requisito normativo). Igual que el resto del reporte.
+        Dim noCumplen = vigasFund.Where(
+            Function(v) v.Calculado AndAlso Not v.Cumple).ToList()
+
+        If noCumplen.Count = 0 Then
+            body.Append(ParrafoSinAnotaciones(
+                "No se tienen anotaciones; las vigas de cimentación revisadas cumplen con el diagrama de interacción " &
+                "y los requisitos normativos de NSR-10."))
+            Return
+        End If
+
+        _numTabla += 1
+        body.Append(TituloTabla(_numTabla, "Verificación de vigas de cimentación (puntales) — C/D e requisitos NSR-10."))
+        Dim filas As New List(Of String())
+        For Each v In noCumplen
+            Dim seccion = FNum(v.B, 2) & "x" & FNum(v.H, 2)
+            Dim cdComp = If(v.CD_Comp > 0, FCD(v.CD_Comp), "-")
+            Dim cdTrac = If(v.CD_Trac > 0, FCD(v.CD_Trac), "-")
+
+            Dim obsParts As New List(Of String)
+            If v.CD_Comp > 0 AndAlso Not EsConforme(v.CD_Comp) Then obsParts.Add("Compresión")
+            If v.CD_Trac > 0 AndAlso Not EsConforme(v.CD_Trac) Then obsParts.Add("Tracción")
+            If Not v.CumpleDim Then obsParts.Add("Dimensiones NSR-10")
+            If Not v.CumpleCuantia Then obsParts.Add("Cuantía mínima")
+            If Not v.CumpleEstribo Then obsParts.Add("Estribo/separación")
+            Dim obs = If(obsParts.Count > 0, String.Join(", ", obsParts), "Revisar")
+
+            filas.Add({v.Nombre, seccion, FNum(v.Pu), cdComp, cdTrac, obs})
+        Next
+        body.Append(TablaDatos(
+            {"VIGA", "SECCIÓN (m)", "Pu (kN)", "C/D Comp.", "C/D Tracc.", "OBSERVACIONES"},
+            filas, {3, 4}))
     End Sub
 
     ' =========================================================================
@@ -331,6 +431,7 @@ Public Class ReporteRevisionService
         If noFlexo.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad de flexo compresión es mayor a la demanda."))
         Else
+            OrdenarPorPiso(noFlexo, indiceColPiso:=1)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexo-compresión de las columnas."))
             body.Append(TablaDatos({"COLUMNA", "TRAMO", "As colocada (cm" & ChrW(178) & ")", "As requerida (cm" & ChrW(178) & ")", "C/D", "OBSERVACIONES"}, noFlexo, {4}))
@@ -338,7 +439,7 @@ Public Class ReporteRevisionService
 
         ' ── Cortante (Ash colocado vs requerido, LC y LL) ───────────────────────
         body.Append(Heading2("CORTANTE"))
-        Dim noCortante As New List(Of String())
+        Dim tmpCortante As New List(Of (Piso As String, Fila As String()))
         For Each col In columnasCalculadas
             For Each tr In col.Lista_Tramos_Columnas
                 Dim failLC = tr.F_Ash_Corto > 0 AndAlso Not EsConforme(CDbl(tr.F_Ash_Corto))
@@ -347,12 +448,13 @@ Public Class ReporteRevisionService
                 Dim seccion = FNum(CDbl(tr.B_Plano), 2) & "x" & FNum(CDbl(tr.H_Plano), 2)
                 Dim verif = If(failLC AndAlso failLL, "No cumple (LC y LL)",
                             If(failLC, "No cumple (LC)", "No cumple (LL)"))
-                noCortante.Add({col.Name_Elemento, seccion,
+                tmpCortante.Add((tr.Piso, {col.Name_Elemento, seccion,
                                 FNum(CDbl(tr.Ash_Col_Corto)), FNum(CDbl(tr.Ash_Col_Largo)),
                                 FNum(CDbl(tr.Ash_C)), FNum(CDbl(tr.Ash_L)),
-                                verif})
+                                verif}))
             Next
         Next
+        Dim noCortante = tmpCortante.OrderBy(Function(x) OrdenPiso(x.Piso)).Select(Function(x) x.Fila).ToList()
         If noCortante.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a cortante de las columnas es mayor a la demanda."))
         Else
@@ -397,6 +499,7 @@ Public Class ReporteRevisionService
                 Dim asCol = Math.Max(x.Sec.AsT_Top_Col, x.Sec.AsT_Bot_Col)
                 filas.Add({x.Muro.Name, x.Sec.Piso, FNum(asReq), FNum(asCol), FCD(x.CD)})
             Next
+            OrdenarPorPiso(filas, indiceColPiso:=1)
             body.Append(TablaDatos({"MURO", "PISO", "As Requerido (cm2)", "As Suministrado (cm2)", "CAPACIDAD/DEMANDA"}, filas))
         End If
 
@@ -418,6 +521,7 @@ Public Class ReporteRevisionService
                 Dim asReq = Math.Max(x.Sec.AsH_Req_Top, x.Sec.AsH_Req_Bot)
                 filas.Add({x.Muro.Name, x.Sec.Piso, FNum(asReq), FNum(x.Sec.AsH_Col), FCD(x.Sec.F_Cortante)})
             Next
+            OrdenarPorPiso(filas, indiceColPiso:=1)
             body.Append(TablaDatos({"MURO", "PISO", "As Requerido (cm2)", "As Suministrado (cm2)", "CAPACIDAD/DEMANDA"}, filas))
         End If
 
@@ -461,6 +565,7 @@ Public Class ReporteRevisionService
         If noLH.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones; la longitud horizontal del elemento de borde cumple en todos los muros revisados."))
         Else
+            OrdenarPorPiso(noLH, indiceColPiso:=1)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la longitud horizontal de los elementos de borde."))
             body.Append(TablaDatos({"MURO", "PISO", "LADO", "LH Requerida (m)", "LH Colocada (m)", "VERIFICACIÓN"}, noLH))
@@ -492,6 +597,7 @@ Public Class ReporteRevisionService
         If noConf.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones; la separación del refuerzo transversal de los elementos de borde cumple en todos los muros revisados."))
         Else
+            OrdenarPorPiso(noConf, indiceColPiso:=1)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la separación máxima del refuerzo transversal de los elementos de borde."))
             body.Append(TablaDatos({"MURO", "PISO", "LADO", "S Requerida (m)", "S Colocada (m)", "VERIFICACIÓN"}, noConf))
@@ -502,10 +608,10 @@ Public Class ReporteRevisionService
 
         ' ── Requisitos normativos ────────────────────────────────────────────
         body.Append(Heading2("REQUISITOS NORMATIVOS"))
-        body.Append(Heading2("Cuantías máximas"))
+        body.Append(Heading3("Cuantías máximas"))
         body.Append(PendienteImplementar("no existe cálculo de cuantía máxima (Rho_Max) en el módulo de Muros."))
 
-        body.Append(Heading2("Cuantías mínimas"))
+        body.Append(Heading3("Cuantías mínimas"))
         Dim noCuantiaMin As New List(Of String())
         For Each m In murosCalculados
             For Each s In m.Lista_Secciones
@@ -521,6 +627,7 @@ Public Class ReporteRevisionService
         If noCuantiaMin.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones; la cuantía vertical colocada cumple la cuantía mínima en todos los muros revisados."))
         Else
+            OrdenarPorPiso(noCuantiaMin, indiceColPiso:=0)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Muros donde la cuantía colocada es menor a la mínima requerida."))
             body.Append(TablaDatos({"PISO", "MURO", "TRAMO", "ρCol", "OBSERVACIÓN"}, noCuantiaMin, {}))
@@ -595,6 +702,7 @@ Public Class ReporteRevisionService
         If noFlexion.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a flexión de las vigas es mayor a la demanda."))
         Else
+            OrdenarPorPiso(noFlexion, indiceColPiso:=0)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexión de las vigas."))
             body.Append(TablaDatos(
@@ -606,6 +714,8 @@ Public Class ReporteRevisionService
         End If
 
         ' ── Cortante ─────────────────────────────────────────────────────────
+        ' Envolvente C/D (Def) zona-a-zona unificada en VigaService (regla oficial
+        ' para todos los reportes de vigas). Solo entran a la tabla las que No cumplen.
         body.Append(Heading2("CORTANTE"))
         Dim noCortante As New List(Of String())
         For Each v In vigas
@@ -615,19 +725,14 @@ Public Class ReporteRevisionService
                 If Not (f.RefuerzoSuperior IsNot Nothing AndAlso f.RefuerzoSuperior.Any()) AndAlso
                    Not (f.RefuerzoInferior IsNot Nothing AndAlso f.RefuerzoInferior.Any()) Then Continue For
 
-                ' Excluir zonas que, aunque fallen el chequeo estándar, pasan el cortante plástico
-                Dim zonasQ = f.RevisionCortante.Where(Function(z) z.Vu > 0 AndAlso z.Factor > 0 AndAlso
-                                                        Not EsConforme(z.Factor) AndAlso
-                                                        Not CumpleCortantePlastico(z.Posicion, f.CortantePlastico)).ToList()
-                If zonasQ.Count = 0 Then Continue For
+                Dim eval = VigaService.EvaluarCDDefFrame(f, Funciones_00_Varias.UMBRAL_CD)
+                If eval.Estado <> VigaService.EstadoEnvolventeCortante.NoCumple Then Continue For
 
-                ' Peor zona
-                Dim peor = zonasQ.OrderBy(Function(z) z.Factor).First()
-
-                ' Observación posicional
-                Dim failIzq = zonasQ.Any(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
-                Dim failCen = zonasQ.Any(Function(z) z.Posicion = PosicionTramoViga.Centro)
-                Dim failDer = zonasQ.Any(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+                ' Observación posicional (zonas que no cumplen ni con plástico)
+                Dim zonasFail = eval.Zonas.Where(Function(z) z.Estado = VigaService.EstadoEnvolventeCortante.NoCumple).ToList()
+                Dim failIzq = zonasFail.Any(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+                Dim failCen = zonasFail.Any(Function(z) z.Posicion = PosicionTramoViga.Centro)
+                Dim failDer = zonasFail.Any(Function(z) z.Posicion = PosicionTramoViga.Derecha)
 
                 Dim obs As String
                 If failIzq AndAlso failDer Then
@@ -640,28 +745,31 @@ Public Class ReporteRevisionService
                     obs = "Zona central"
                 End If
 
+                Dim g = eval.ZonaGobernante
                 noCortante.Add({f.Story, nombreViga, EjeFrame(f),
-                                FNum(peor.phiVn), FNum(peor.Vu), FCD(peor.Factor), obs})
+                                VigaService.EtiquetaZona(g.Posicion),
+                                FNum(g.phiVn_Def), FNum(g.Vu_Def), FCD(g.CD_Def), obs})
             Next
         Next
         If noCortante.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a cortante de las vigas es mayor a la demanda."))
         Else
+            OrdenarPorPiso(noCortante, indiceColPiso:=0)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a cortante de las vigas."))
             body.Append(TablaDatos(
-                {"PISO", "VIGA", "EJE", ChrW(966) & "Vn (kN)", "Vu (kN)", "C/D", "OBSERVACIONES"},
-                noCortante, {5}))
+                {"PISO", "VIGA", "EJE", "ZONA", ChrW(966) & "Vn (kN)", "Vu (kN)", "C/D (Def)", "OBSERVACIONES"},
+                noCortante, {5, 7}))
         End If
 
         body.Append(Heading2("DEFLEXIONES"))
         body.Append(PendienteImplementar("el módulo de Vigas no calcula deflexiones inmediatas/diferidas ni el chequeo de elementos susceptibles de dañarse."))
 
         body.Append(Heading2("REQUISITOS NORMATIVOS"))
-        body.Append(Heading2("Cuantías máximas"))
+        body.Append(Heading3("Cuantías máximas"))
         body.Append(PendienteImplementar("no existe cálculo de cuantía máxima en el módulo de Vigas."))
 
-        body.Append(Heading2("Separación horizontal entre barras longitudinales"))
+        body.Append(Heading3("Separación horizontal entre barras longitudinales"))
         body.Append(PendienteImplementar("no existe verificación de separación libre entre barras longitudinales (NSR-10 C.7.6.1) en el módulo de Vigas."))
     End Sub
 
@@ -730,6 +838,7 @@ Public Class ReporteRevisionService
         If noFlexion.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a flexión de las viguetas es mayor a la demanda."))
         Else
+            OrdenarPorPiso(noFlexion, indiceColPiso:=0)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a flexión de viguetas de losa nervada."))
             body.Append(TablaDatos(
@@ -795,6 +904,7 @@ Public Class ReporteRevisionService
         If noCortante.Count = 0 Then
             body.Append(ParrafoSinAnotaciones("No se tienen anotaciones debido a que la capacidad a cortante de las viguetas es mayor a la demanda."))
         Else
+            OrdenarPorPiso(noCortante, indiceColPiso:=0)
             _numTabla += 1
             body.Append(TituloTabla(_numTabla, "Verificación de la capacidad a cortante de viguetas de losa nervada."))
             body.Append(TablaDatos(

@@ -71,7 +71,11 @@ Public NotInheritable Class ReporteHelpers
 
         If cell Is Nothing Then Exit Sub
 
-        If (sinDato = SinDato.CeroOMenor AndAlso valor <= 0) OrElse
+        ' NaN / Infinity vienen típicamente de divisiones por cero río arriba
+        ' (p.ej. Ash_Col / Ash_Req cuando Ash_Req = 0). ClosedXML rechaza esos
+        ' valores con "Value can't be NaN or infinity" y aborta la exportación.
+        If Double.IsNaN(valor) OrElse Double.IsInfinity(valor) OrElse
+           (sinDato = SinDato.CeroOMenor AndAlso valor <= 0) OrElse
            (sinDato = SinDato.MaxValue AndAlso valor = Double.MaxValue) Then
             cell.Value = "-"
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
@@ -134,6 +138,33 @@ Public NotInheritable Class ReporteHelpers
             cell.Style.Font.Bold = True
         End If
 
+    End Sub
+
+    ' -----------------------------------------------------------------------
+    ' Celda numérica con redondeo y filtro NaN/Infinity
+    ' -----------------------------------------------------------------------
+    ''' <summary>
+    ''' Redondea y escribe. Filtra NaN/Infinity con "-" (o el texto que se pase
+    ''' en <paramref name="sinDato"/>). Preferir esto sobre
+    ''' <c>cell.Value = Math.Round(x, n)</c> cuando <c>x</c> venga de una
+    ''' división: en VB.NET <c>Single/0.0</c> devuelve Infinity, no excepción,
+    ''' y ClosedXML rechaza NaN/Infinity con
+    ''' "Value can't be NaN or infinity".
+    ''' </summary>
+    Public Shared Sub EscribirNumero(cell As IXLCell, valor As Double,
+                                     Optional decimales As Integer = 2,
+                                     Optional sinDato As String = "-",
+                                     Optional formato As String = Nothing)
+        If cell Is Nothing Then Exit Sub
+        If Double.IsNaN(valor) OrElse Double.IsInfinity(valor) Then
+            cell.Value = sinDato
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            Exit Sub
+        End If
+        cell.Value = Math.Round(valor, decimales)
+        If Not String.IsNullOrEmpty(formato) Then
+            cell.Style.NumberFormat.Format = formato
+        End If
     End Sub
 
     ' -----------------------------------------------------------------------

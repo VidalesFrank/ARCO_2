@@ -244,11 +244,72 @@ Public Class Form_Reporte_Resumen
                 row.Cells("AsColInf").Value = If(asColInf > 0, CObj(Math.Round(asColInf, 2)), "—")
                 row.Cells("AsReqInf").Value = If(asReqInf > 0, CObj(Math.Round(asReqInf, 2)), "—")
                 AsignarFactorCelda(row.Cells("CDInf"), If(cdInf >= 0, cdInf, Double.MaxValue))
-                row.Cells("Obs").Value = obsStr
+
+                ' Alerta visual "cuantía > máxima" en las celdas de As Req.
+                Dim rhoMaxSec = VigaService.RhoMaxViga(frame.Section.fc, frame.Section.fy)
+                Dim sobreI = revIzq IsNot Nothing AndAlso revIzq.ResultadoActual.SobreRhoMaxSup
+                Dim sobreJ = revDer IsNot Nothing AndAlso revDer.ResultadoActual.SobreRhoMaxSup
+                Dim sobreC = revCen IsNot Nothing AndAlso revCen.ResultadoActual.SobreRhoMaxInf
+                Dim excI = revIzq IsNot Nothing AndAlso revIzq.ResultadoActual.RhoExcesivoSup
+                Dim excJ = revDer IsNot Nothing AndAlso revDer.ResultadoActual.RhoExcesivoSup
+                Dim excC = revCen IsNot Nothing AndAlso revCen.ResultadoActual.RhoExcesivoInf
+                MarcarCeldaNivelCuantia(row.Cells("AsReqSupI"),
+                                        If(revIzq IsNot Nothing, revIzq.ResultadoActual.RhoReqSup, 0),
+                                        rhoMaxSec, sobreI, excI)
+                MarcarCeldaNivelCuantia(row.Cells("AsReqSupJ"),
+                                        If(revDer IsNot Nothing, revDer.ResultadoActual.RhoReqSup, 0),
+                                        rhoMaxSec, sobreJ, excJ)
+                MarcarCeldaNivelCuantia(row.Cells("AsReqInf"),
+                                        If(revCen IsNot Nothing, revCen.ResultadoActual.RhoReqInf, 0),
+                                        rhoMaxSec, sobreC, excC)
+                Dim zonasAlerta As New List(Of String)
+                If excI Then
+                    zonasAlerta.Add("apoyo I (excesivo)")
+                ElseIf sobreI Then
+                    zonasAlerta.Add("apoyo I")
+                End If
+                If excJ Then
+                    zonasAlerta.Add("apoyo J (excesivo)")
+                ElseIf sobreJ Then
+                    zonasAlerta.Add("apoyo J")
+                End If
+                If excC Then
+                    zonasAlerta.Add("centro (excesivo)")
+                ElseIf sobreC Then
+                    zonasAlerta.Add("centro")
+                End If
+                If zonasAlerta.Count > 0 Then
+                    Dim extra = "ρ > ρ_max en " & String.Join(", ", zonasAlerta)
+                    row.Cells("Obs").Value = If(String.IsNullOrEmpty(obsStr), extra, obsStr & ". " & extra)
+                End If
+
                 row.Cells("Obs").Style.Alignment = DataGridViewContentAlignment.MiddleLeft
                 idx += 1
             Next
         Next
+    End Sub
+
+    ''' <summary>
+    ''' Marca de cuantia por nivel:
+    '''   rho excesivo   -> rojo intenso (NSR-10 C.21.5.2.1)
+    '''   rho sobre max  -> amarillo (NSR-10 C.10.3.5)
+    '''   caso normal    -> sin alerta
+    ''' El tooltip incluye los valores numericos concretos.
+    ''' </summary>
+    Private Sub MarcarCeldaNivelCuantia(cell As DataGridViewCell, rhoReq As Double, rhoMax As Double,
+                                        sobreMax As Boolean, excesivo As Boolean)
+        If excesivo Then
+            cell.Style.BackColor = ColorTranslator.FromHtml("#C00000")
+            cell.Style.ForeColor = ColorTranslator.FromHtml("#FFFFFF")
+            cell.ToolTipText = $"Cuantía excesiva (NSR-10 C.21.5.2.1)." & vbCrLf &
+                               $"ρ requerido = {rhoReq * 100:F2} %  >  2.50 %." & vbCrLf &
+                               $"ρ_max NSR-10 C.10.3.5 = {rhoMax * 100:F2} %."
+        ElseIf sobreMax Then
+            cell.Style.BackColor = ColorAlerta
+            cell.Style.ForeColor = ColorAlertaTexto
+            cell.ToolTipText = $"Cuantía mayor a la máxima (NSR-10 C.10.3.5)." & vbCrLf &
+                               $"ρ requerido = {rhoReq * 100:F2} %  >  ρ_max = {rhoMax * 100:F2} %."
+        End If
     End Sub
 
     ' ── REVISIÓN CORTANTE (por frame, zona gobernante, todas las vigas) ────────
@@ -257,13 +318,17 @@ Public Class Form_Reporte_Resumen
         For Each dgv In {DgvCortanteTodas, DgvCortanteNoCumple}
             dgv.Columns.Clear()
             dgv.Rows.Clear()
-            AgregarColumna(dgv, "Piso", "Piso", 68)
-            AgregarColumna(dgv, "Viga", "Viga", 115)
-            AgregarColumna(dgv, "Tramo", "Tramo", 82)
-            AgregarColumna(dgv, "Vu", "Vu (kN)", 88)
-            AgregarColumna(dgv, "Vn", "φVn (kN)", 88)
-            AgregarColumna(dgv, "Factor", "C/D", 78)
-            AgregarColumna(dgv, "Estado", "Estado", 85)
+            AgregarColumna(dgv, "Piso", "Piso", 60)
+            AgregarColumna(dgv, "Viga", "Viga", 105)
+            AgregarColumna(dgv, "Tramo", "Tramo", 80)
+            AgregarColumna(dgv, "Zona", "Zona", 55)
+            AgregarColumna(dgv, "VuT", "Vu (kN)", 82)
+            AgregarColumna(dgv, "Vn", "φVn (kN)", 82)
+            AgregarColumna(dgv, "CDT", "C/D", 70)
+            AgregarColumna(dgv, "VuP", "Vu Plást. (kN)", 100)
+            AgregarColumna(dgv, "CDP", "C/D Plást.", 82)
+            AgregarColumna(dgv, "CDDef", "C/D (Def)", 82)
+            AgregarColumna(dgv, "Estado", "Estado", 90)
         Next
 
         Dim idxT As Integer = 0
@@ -272,51 +337,21 @@ Public Class Form_Reporte_Resumen
         For Each viga In Vigas
             For Each frame In viga.Frames
                 If Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
-                Dim zonaGob = frame.RevisionCortante.Where(Function(z) z.phiVn > 0).
-                                                      OrderBy(Function(z) z.Factor).
-                                                      FirstOrDefault()
-                If zonaGob Is Nothing Then Continue For
 
-                Dim tramoStr As String
-                If Not String.IsNullOrWhiteSpace(frame.EjeApoyo_I) OrElse Not String.IsNullOrWhiteSpace(frame.EjeApoyo_J) Then
-                    tramoStr = $"{frame.EjeApoyo_I}-{frame.EjeApoyo_J}"
-                Else
-                    tramoStr = frame.ObjectLabel
-                End If
+                Dim eval = VigaService.EvaluarCDDefFrame(frame, UMBRAL_CD)
+                If eval.Estado = VigaService.EstadoEnvolventeCortante.SinDatos Then Continue For
 
-                ' Falla "real": alguna zona falla el estándar Y no está cubierta por cortante plástico
-                Dim failReal = frame.RevisionCortante.Any(Function(z)
-                    Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
-                           Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
-                End Function)
-
-                Dim cumple = Not failReal
-                Dim vuShow = zonaGob.Vu
-                Dim vnShow = zonaGob.phiVn
-                Dim factorShow = zonaGob.Factor
-                Dim etiqueta As String
-
-                If failReal Then
-                    ' Mostrar la zona con la peor falla real
-                    Dim peor = frame.RevisionCortante.Where(Function(z)
-                        Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
-                               Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
-                    End Function).OrderBy(Function(z) z.Factor).First()
-                    vuShow = peor.Vu : vnShow = peor.phiVn : factorShow = peor.Factor
-                    etiqueta = "Revisar"
-                ElseIf zonaGob.Factor < UMBRAL_CD Then
-                    etiqueta = "OK (Plást.)"
-                Else
-                    etiqueta = "OK"
-                End If
+                Dim tramoStr = TramoLabel(frame)
+                Dim zona = eval.ZonaGobernante
+                Dim cumple = (eval.Estado <> VigaService.EstadoEnvolventeCortante.NoCumple)
+                Dim etiqueta = EtiquetaEstado(eval.Estado)
 
                 AgregarFilaCortanteFrame(DgvCortanteTodas, idxT, viga.Piso, NombreReporte(viga),
-                                         tramoStr, vuShow, vnShow, factorShow, cumple, etiqueta)
+                                         tramoStr, zona, cumple, etiqueta)
                 idxT += 1
-
                 If Not cumple Then
                     AgregarFilaCortanteFrame(DgvCortanteNoCumple, idxN, viga.Piso, NombreReporte(viga),
-                                             tramoStr, vuShow, vnShow, factorShow, cumple, etiqueta)
+                                             tramoStr, zona, cumple, etiqueta)
                     idxN += 1
                 End If
             Next
@@ -330,51 +365,45 @@ Public Class Form_Reporte_Resumen
         End If
     End Sub
 
-    ''' Regla convencional-vs-plástico centralizada en VigaService (único punto de verdad).
-    ''' Ver VigaService.CumpleCortantePlastico para el criterio y por qué la zona Centro
-    ''' siempre devuelve False.
-    Private Shared Function CumpleCortantePlastico(pos As PosicionTramoViga,
-                                                    cp As cResultadoCortantePlasticoFrame) As Boolean
-        Return VigaService.CumpleCortantePlastico(pos, cp)
+    Private Shared Function TramoLabel(frame As cFrame) As String
+        If Not String.IsNullOrWhiteSpace(frame.EjeApoyo_I) OrElse Not String.IsNullOrWhiteSpace(frame.EjeApoyo_J) Then
+            Return $"{frame.EjeApoyo_I}-{frame.EjeApoyo_J}"
+        End If
+        Return frame.ObjectLabel
     End Function
 
-    ''' Devuelve True si alguna zona Centro de la viga no alcanza UMBRAL_CD en el chequeo
-    ''' convencional. Se usa en el "Resumen Completo" para impedir que el cortante plástico
-    ''' (que solo cubre las rótulas de los extremos) marque la viga como OK.
-    Private Shared Function FallaZonaCentral(viga As cViga) As Boolean
-        If viga Is Nothing OrElse viga.Frames Is Nothing Then Return False
-        For Each frame In viga.Frames
-            If frame.RevisionCortante Is Nothing Then Continue For
-            For Each z In frame.RevisionCortante
-                If z.Posicion = PosicionTramoViga.Centro AndAlso
-                   z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD Then
-                    ' La zona central también tiene chequeo por capacidad (Ve es
-                    ' constante en el vano), así que se le aplica la misma regla que a
-                    ' los extremos: si cumple a plástico, no cuenta como falla.
-                    If Not VigaService.CumpleCortantePlastico(z.Posicion, frame.CortantePlastico) Then
-                        Return True
-                    End If
-                End If
-            Next
-        Next
-        Return False
+    Private Shared Function EtiquetaEstado(e As VigaService.EstadoEnvolventeCortante) As String
+        Select Case e
+            Case VigaService.EstadoEnvolventeCortante.Cumple : Return "OK"
+            Case VigaService.EstadoEnvolventeCortante.CumplePlastico : Return "OK (Plást.)"
+            Case VigaService.EstadoEnvolventeCortante.NoCumple : Return "Revisar"
+            Case Else : Return "Sin datos"
+        End Select
     End Function
 
-    Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
+Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
                                           piso As String, viga As String, tramo As String,
-                                          vu As Double, vn As Double, factor As Double,
-                                          cumple As Boolean, Optional etiqueta As String = Nothing)
+                                          zona As VigaService.ResultadoCDDefZona,
+                                          cumple As Boolean, etiqueta As String)
         Dim r = dgv.Rows.Add()
         Dim row = dgv.Rows(r)
         If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
         row.Cells("Piso").Value = piso
         row.Cells("Viga").Value = viga
         row.Cells("Tramo").Value = tramo
-        row.Cells("Vu").Value = Math.Round(vu, 2).ToString("F2")
-        row.Cells("Vn").Value = Math.Round(vn, 2).ToString("F2")
-        AsignarFactorCelda(row.Cells("Factor"), factor)
-        Dim lbl = If(etiqueta IsNot Nothing, etiqueta, If(cumple, "OK", "Revisar"))
-        row.Cells("Estado").Value = lbl
+        row.Cells("Zona").Value = VigaService.EtiquetaZona(zona.Posicion)
+        row.Cells("VuT").Value = Math.Round(zona.Vu_Tipico, 2).ToString("F2")
+        row.Cells("Vn").Value = Math.Round(zona.phiVn_Tipico, 2).ToString("F2")
+        AsignarFactorCelda(row.Cells("CDT"), If(zona.CD_Tipico > 0, zona.CD_Tipico, Double.MaxValue))
+        If zona.TienePlastico Then
+            row.Cells("VuP").Value = Math.Round(zona.Vu_Plastico, 2).ToString("F2")
+            AsignarFactorCelda(row.Cells("CDP"), zona.CD_Plastico)
+        Else
+            row.Cells("VuP").Value = "—"
+            row.Cells("CDP").Value = "—"
+        End If
+        AsignarFactorCelda(row.Cells("CDDef"), zona.CD_Def)
+        row.Cells("Estado").Value = etiqueta
         row.Cells("Estado").Style.BackColor = If(cumple, ColorOK, ColorMal)
         row.Cells("Estado").Style.ForeColor = If(cumple, ColorOKTexto, ColorMalTexto)
         row.Cells("Estado").Style.Font = New Font("Segoe UI", 10, FontStyle.Bold)
@@ -394,9 +423,9 @@ Public Class Form_Reporte_Resumen
         AgregarColumna(dgv, "Frames", "Frames ETABS", 180)
         AgregarColumna(dgv, "FNeg", "F M-  mín", 100)
         AgregarColumna(dgv, "FPos", "F M+  mín", 100)
-        AgregarColumna(dgv, "FCor", "F Cor Final", 110)
+        AgregarColumna(dgv, "FCor", "C/D (Def) Cor", 110)
         AgregarColumna(dgv, "EstFlex", "Flexión", 90)
-        AgregarColumna(dgv, "EstCor", "Cortante", 90)
+        AgregarColumna(dgv, "EstCor", "Cortante", 100)
         AgregarColumna(dgv, "Estado", "Estado", 90)
 
         Dim idx As Integer = 0
@@ -410,7 +439,6 @@ Public Class Form_Reporte_Resumen
 
             Dim fNegMin As Double = Double.MaxValue
             Dim fPosMin As Double = Double.MaxValue
-            Dim fConMin As Double = Double.MaxValue
             Dim cumpleFlex As Boolean = True
 
             For Each frame In viga.Frames
@@ -425,41 +453,14 @@ Public Class Form_Reporte_Resumen
                         If Not act.CumpleInferior Then cumpleFlex = False
                     End If
                 Next
-                For Each zona In frame.RevisionCortante
-                    If zona.phiVn > 0 Then fConMin = Math.Min(fConMin, zona.Factor)
-                Next
             Next
 
-            ' Cortante plástico — envolvente
-            Dim fPlas As Double = Double.MaxValue
-            For Each frame In viga.Frames
-                If frame.CortantePlastico Is Nothing Then Continue For
-                Dim cp = frame.CortantePlastico
-                If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
-                If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
-                If cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.phiVn > 0 Then
-                    fPlas = Math.Min(fPlas, cp.ZonaCentro.Factor)
-                End If
-            Next
-            Dim tienePlastico = (fPlas < Double.MaxValue)
-            Dim fallaCentro As Boolean = FallaZonaCentral(viga)
-
-            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= UMBRAL_CD)
-            ' El cortante plástico (C.21.5.4) solo cubre las rótulas de los extremos: si la
-            ' zona Centro falla el chequeo convencional, no puede "rescatar" a la viga.
-            Dim cumplePlas = (tienePlastico AndAlso fPlas >= UMBRAL_CD AndAlso Not fallaCentro)
-            Dim cumpleCor = cumpleConv OrElse cumplePlas
-
-            Dim fFin As Double
-            If cumpleConv Then
-                fFin = fConMin
-            ElseIf cumplePlas Then
-                fFin = fPlas
-            ElseIf tienePlastico Then
-                fFin = Math.Max(If(fConMin = Double.MaxValue, 0.0, fConMin), fPlas)
-            Else
-                fFin = fConMin
-            End If
+            ' Cortante: envolvente C/D (Def) zona-a-zona, unificada en VigaService.
+            Dim evalCor = VigaService.EvaluarCDDefViga(viga, UMBRAL_CD)
+            Dim cumpleCor = (evalCor.Estado = VigaService.EstadoEnvolventeCortante.Cumple OrElse
+                             evalCor.Estado = VigaService.EstadoEnvolventeCortante.CumplePlastico)
+            Dim fFin = If(evalCor.Estado = VigaService.EstadoEnvolventeCortante.SinDatos,
+                          Double.MaxValue, evalCor.CD_Def)
 
             Dim r = dgv.Rows.Add()
             Dim row = dgv.Rows(r)
@@ -482,14 +483,17 @@ Public Class Form_Reporte_Resumen
                 AplicarEstado(row.Cells("EstFlex"), "Revisar", ColorMal, ColorMalTexto)
             End If
 
-            ' Cortante
-            If fFin = Double.MaxValue Then
-                AplicarEstado(row.Cells("EstCor"), "Sin datos", ColorAlerta, ColorAlertaTexto)
-            ElseIf cumpleCor Then
-                AplicarEstado(row.Cells("EstCor"), "OK", ColorOK, ColorOKTexto)
-            Else
-                AplicarEstado(row.Cells("EstCor"), "Revisar", ColorMal, ColorMalTexto)
-            End If
+            ' Cortante (etiqueta según envolvente unificada)
+            Select Case evalCor.Estado
+                Case VigaService.EstadoEnvolventeCortante.SinDatos
+                    AplicarEstado(row.Cells("EstCor"), "Sin datos", ColorAlerta, ColorAlertaTexto)
+                Case VigaService.EstadoEnvolventeCortante.Cumple
+                    AplicarEstado(row.Cells("EstCor"), "OK", ColorOK, ColorOKTexto)
+                Case VigaService.EstadoEnvolventeCortante.CumplePlastico
+                    AplicarEstado(row.Cells("EstCor"), "OK (Plást.)", ColorOK, ColorOKTexto)
+                Case Else
+                    AplicarEstado(row.Cells("EstCor"), "Revisar", ColorMal, ColorMalTexto)
+            End Select
 
             ' Estado general
             Dim ok = tieneRef AndAlso cumpleFlex AndAlso tieneCor AndAlso cumpleCor
@@ -596,24 +600,65 @@ Public Class Form_Reporte_Resumen
                 If cdSupI > 0 AndAlso cdSupI < UMBRAL_CD Then obs.Add("apoyo I por M(-)")
                 If cdSupJ > 0 AndAlso cdSupJ < UMBRAL_CD Then obs.Add("apoyo J por M(-)")
                 If cdInf > 0 AndAlso cdInf < UMBRAL_CD Then obs.Add("centro por M(+)")
-                Dim obsStr = If(obs.Count > 0, "En " & String.Join(" y ", obs), "")
+
+                Dim rhoMaxSec = VigaService.RhoMaxViga(frame.Section.fc, frame.Section.fy)
+                Dim sobreI = revIzq IsNot Nothing AndAlso revIzq.ResultadoActual.SobreRhoMaxSup
+                Dim sobreJ = revDer IsNot Nothing AndAlso revDer.ResultadoActual.SobreRhoMaxSup
+                Dim sobreC = revCen IsNot Nothing AndAlso revCen.ResultadoActual.SobreRhoMaxInf
+                Dim excI = revIzq IsNot Nothing AndAlso revIzq.ResultadoActual.RhoExcesivoSup
+                Dim excJ = revDer IsNot Nothing AndAlso revDer.ResultadoActual.RhoExcesivoSup
+                Dim excC = revCen IsNot Nothing AndAlso revCen.ResultadoActual.RhoExcesivoInf
+                Dim zonasAlerta As New List(Of String)
+                If excI Then
+                    zonasAlerta.Add("apoyo I (excesivo)")
+                ElseIf sobreI Then
+                    zonasAlerta.Add("apoyo I")
+                End If
+                If excJ Then
+                    zonasAlerta.Add("apoyo J (excesivo)")
+                ElseIf sobreJ Then
+                    zonasAlerta.Add("apoyo J")
+                End If
+                If excC Then
+                    zonasAlerta.Add("centro (excesivo)")
+                ElseIf sobreC Then
+                    zonasAlerta.Add("centro")
+                End If
+                If zonasAlerta.Count > 0 Then
+                    obs.Add("ρ > ρ_max en " & String.Join(", ", zonasAlerta))
+                End If
+                Dim obsStr = If(obs.Count > 0, String.Join(". ", obs), "")
 
                 ws.Cell(fila, 1).Value = viga.Piso
                 ws.Cell(fila, 2).Value = NombreReporte(viga)
                 ws.Cell(fila, 3).Value = tramoStr
-                ws.Cell(fila, 4).Value = If(asColSupI > 0, CObj(Math.Round(asColSupI, 2)), "-")
-                ws.Cell(fila, 5).Value = If(asReqSupI > 0, CObj(Math.Round(asReqSupI, 2)), "-")
+                ' ClosedXML 0.100+: .Value es XLCellValue, no acepta Object.
+                ' If(cond, CObj(Double), "-") devuelve Object → InvalidCastException al asignar.
+                If asColSupI > 0 Then ws.Cell(fila, 4).Value = Math.Round(asColSupI, 2) Else ws.Cell(fila, 4).Value = "-"
+                If asReqSupI > 0 Then ws.Cell(fila, 5).Value = Math.Round(asReqSupI, 2) Else ws.Cell(fila, 5).Value = "-"
                 If cdSupI > 0 Then EscribirFactor(ws.Cell(fila, 6), cdSupI) Else ws.Cell(fila, 6).Value = "-"
-                ws.Cell(fila, 7).Value = If(asColSupJ > 0, CObj(Math.Round(asColSupJ, 2)), "-")
-                ws.Cell(fila, 8).Value = If(asReqSupJ > 0, CObj(Math.Round(asReqSupJ, 2)), "-")
+                If asColSupJ > 0 Then ws.Cell(fila, 7).Value = Math.Round(asColSupJ, 2) Else ws.Cell(fila, 7).Value = "-"
+                If asReqSupJ > 0 Then ws.Cell(fila, 8).Value = Math.Round(asReqSupJ, 2) Else ws.Cell(fila, 8).Value = "-"
                 If cdSupJ > 0 Then EscribirFactor(ws.Cell(fila, 9), cdSupJ) Else ws.Cell(fila, 9).Value = "-"
-                ws.Cell(fila, 10).Value = If(asColInf > 0, CObj(Math.Round(asColInf, 2)), "-")
-                ws.Cell(fila, 11).Value = If(asReqInf > 0, CObj(Math.Round(asReqInf, 2)), "-")
+                If asColInf > 0 Then ws.Cell(fila, 10).Value = Math.Round(asColInf, 2) Else ws.Cell(fila, 10).Value = "-"
+                If asReqInf > 0 Then ws.Cell(fila, 11).Value = Math.Round(asReqInf, 2) Else ws.Cell(fila, 11).Value = "-"
                 If cdInf > 0 Then EscribirFactor(ws.Cell(fila, 12), cdInf) Else ws.Cell(fila, 12).Value = "-"
                 ws.Cell(fila, 13).Value = obsStr
                 ws.Cell(fila, 13).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
 
                 EstilarFilaDatos(ws, fila, enc.Length, fila Mod 2 = 1)
+
+                ' Alerta "cuantía > máxima" — se aplica DESPUÉS del zebrado para no perderla.
+                MarcarCeldaExcelNivelCuantia(ws.Cell(fila, 5),
+                                             If(revIzq IsNot Nothing, revIzq.ResultadoActual.RhoReqSup, 0),
+                                             rhoMaxSec, sobreI, excI)
+                MarcarCeldaExcelNivelCuantia(ws.Cell(fila, 8),
+                                             If(revDer IsNot Nothing, revDer.ResultadoActual.RhoReqSup, 0),
+                                             rhoMaxSec, sobreJ, excJ)
+                MarcarCeldaExcelNivelCuantia(ws.Cell(fila, 11),
+                                             If(revCen IsNot Nothing, revCen.ResultadoActual.RhoReqInf, 0),
+                                             rhoMaxSec, sobreC, excC)
+
                 fila += 1
             Next
         Next
@@ -622,11 +667,39 @@ Public Class Form_Reporte_Resumen
         AgregarBordesTabla(ws, 1, fila - 1, enc.Length)
     End Sub
 
+    ''' <summary>
+    ''' Marca en Excel escalada por nivel de cuantia:
+    '''   rho excesivo   -> rojo intenso + comentario (NSR-10 C.21.5.2.1)
+    '''   rho sobre max  -> amarillo + comentario (NSR-10 C.10.3.5)
+    '''   caso normal    -> sin marca
+    ''' </summary>
+    Private Sub MarcarCeldaExcelNivelCuantia(cell As IXLCell, rhoReq As Double, rhoMax As Double,
+                                             sobreMax As Boolean, excesivo As Boolean)
+        If excesivo Then
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#C00000")
+            cell.Style.Font.FontColor = XLColor.FromHtml("#FFFFFF")
+            cell.Style.Font.Bold = True
+            cell.CreateComment().AddText(
+                $"Cuantía excesiva (NSR-10 C.21.5.2.1)." & vbCrLf &
+                $"ρ requerido = {rhoReq * 100:F2} %  >  2.50 %." & vbCrLf &
+                $"ρ_max NSR-10 C.10.3.5 = {rhoMax * 100:F2} %.")
+        ElseIf sobreMax Then
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFEB9C")
+            cell.Style.Font.FontColor = XLColor.FromHtml("#9C5700")
+            cell.Style.Font.Bold = True
+            cell.CreateComment().AddText(
+                $"Cuantía mayor a la máxima (NSR-10 C.10.3.5)." & vbCrLf &
+                $"ρ requerido = {rhoReq * 100:F2} %  >  ρ_max = {rhoMax * 100:F2} %.")
+        End If
+    End Sub
+
     ' ── Hoja Cortante ─────────────────────────────────────────────────────────
 
     Private Sub ExportarHojaCortante(wb As XLWorkbook)
         Dim ws = wb.Worksheets.Add("Revisión Cortante")
-        Dim enc = {"Piso", "Viga", "Tramo", "Vu (kN)", "φVn (kN)", "C/D", "Estado"}
+        Dim enc = {"Piso", "Viga", "Tramo", "Zona",
+                   "Vu (kN)", "φVn (kN)", "C/D",
+                   "Vu Plást. (kN)", "C/D Plást.", "C/D (Def)", "Estado"}
 
         ' Bloque 1: Todas las vigas
         ws.Cell(1, 1).Value = "REVISIÓN CORTANTE — TODAS LAS VIGAS"
@@ -640,62 +713,25 @@ Public Class Form_Reporte_Resumen
         Dim fila As Integer = 3
 
         Dim filasNoCumplen As New List(Of (Piso As String, Viga As String, Tramo As String,
-                                           Vu As Double, Vn As Double, Factor As Double))
+                                           Zona As VigaService.ResultadoCDDefZona, Etiqueta As String))
 
         For Each viga In Vigas
             For Each frame In viga.Frames
                 If Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
-                Dim zonaGob = frame.RevisionCortante.Where(Function(z) z.phiVn > 0).
-                                                      OrderBy(Function(z) z.Factor).
-                                                      FirstOrDefault()
-                If zonaGob Is Nothing Then Continue For
 
-                Dim tramoStr As String
-                If Not String.IsNullOrWhiteSpace(frame.EjeApoyo_I) OrElse Not String.IsNullOrWhiteSpace(frame.EjeApoyo_J) Then
-                    tramoStr = $"{frame.EjeApoyo_I}-{frame.EjeApoyo_J}"
-                Else
-                    tramoStr = frame.ObjectLabel
-                End If
+                Dim eval = VigaService.EvaluarCDDefFrame(frame, UMBRAL_CD)
+                If eval.Estado = VigaService.EstadoEnvolventeCortante.SinDatos Then Continue For
 
-                Dim failReal = frame.RevisionCortante.Any(Function(z)
-                    Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
-                           Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
-                End Function)
+                Dim tramoStr = TramoLabel(frame)
+                Dim zona = eval.ZonaGobernante
+                Dim cumple = (eval.Estado <> VigaService.EstadoEnvolventeCortante.NoCumple)
+                Dim etiqExcel = EtiquetaExcelCumple(eval.Estado)
 
-                Dim cumple = Not failReal
-                Dim vuShow = zonaGob.Vu : Dim vnShow = zonaGob.phiVn : Dim factorShow = zonaGob.Factor
-                Dim etiqExcel As String
-
-                If failReal Then
-                    Dim peor = frame.RevisionCortante.Where(Function(z)
-                        Return z.phiVn > 0 AndAlso z.Factor > 0 AndAlso z.Factor < UMBRAL_CD AndAlso
-                               Not CumpleCortantePlastico(z.Posicion, frame.CortantePlastico)
-                    End Function).OrderBy(Function(z) z.Factor).First()
-                    vuShow = peor.Vu : vnShow = peor.phiVn : factorShow = peor.Factor
-                    etiqExcel = "NO"
-                ElseIf zonaGob.Factor < UMBRAL_CD Then
-                    etiqExcel = "OK (Plást.)"
-                Else
-                    etiqExcel = "SI"
-                End If
-
-                ws.Cell(fila, 1).Value = viga.Piso
-                ws.Cell(fila, 2).Value = NombreReporte(viga)
-                ws.Cell(fila, 3).Value = tramoStr
-                ws.Cell(fila, 4).Value = Math.Round(vuShow, 2)
-                ws.Cell(fila, 5).Value = Math.Round(vnShow, 2)
-                EscribirFactor(ws.Cell(fila, 6), factorShow)
-                ws.Cell(fila, 7).Value = etiqExcel
-                ws.Cell(fila, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
-                ws.Cell(fila, 7).Style.Font.Bold = True
-                ws.Cell(fila, 7).Style.Fill.BackgroundColor = If(cumple, ReporteHelpers.XlOKFondo, ReporteHelpers.XlMalFondo)
-                ws.Cell(fila, 7).Style.Font.FontColor = If(cumple, ReporteHelpers.XlOKTexto, ReporteHelpers.XlMalTexto)
-                EstilarFilaDatos(ws, fila, enc.Length, fila Mod 2 = 1)
+                EscribirFilaCortanteExcel(ws, fila, viga.Piso, NombreReporte(viga), tramoStr, zona, cumple, etiqExcel, enc.Length)
                 fila += 1
 
                 If Not cumple Then
-                    filasNoCumplen.Add((viga.Piso, NombreReporte(viga), tramoStr,
-                                        vuShow, vnShow, factorShow))
+                    filasNoCumplen.Add((viga.Piso, NombreReporte(viga), tramoStr, zona, etiqExcel))
                 End If
             Next
         Next
@@ -722,14 +758,7 @@ Public Class Form_Reporte_Resumen
             ws.Range(fila, 1, fila, enc.Length).Merge()
         Else
             For Each item In filasNoCumplen
-                ws.Cell(fila, 1).Value = item.Piso
-                ws.Cell(fila, 2).Value = item.Viga
-                ws.Cell(fila, 3).Value = item.Tramo
-                ws.Cell(fila, 4).Value = Math.Round(item.Vu, 2)
-                ws.Cell(fila, 5).Value = Math.Round(item.Vn, 2)
-                EscribirFactor(ws.Cell(fila, 6), item.Factor)
-                EscribirCeldaCumple(ws.Cell(fila, 7), False)
-                EstilarFilaDatos(ws, fila, enc.Length, fila Mod 2 = 1)
+                EscribirFilaCortanteExcel(ws, fila, item.Piso, item.Viga, item.Tramo, item.Zona, False, item.Etiqueta, enc.Length)
                 fila += 1
             Next
             AgregarBordesTabla(ws, fila - filasNoCumplen.Count - 1, fila - 1, enc.Length)
@@ -738,13 +767,51 @@ Public Class Form_Reporte_Resumen
         AjustarColumnas(ws, enc.Length)
     End Sub
 
+    Private Shared Function EtiquetaExcelCumple(e As VigaService.EstadoEnvolventeCortante) As String
+        Select Case e
+            Case VigaService.EstadoEnvolventeCortante.Cumple : Return "SI"
+            Case VigaService.EstadoEnvolventeCortante.CumplePlastico : Return "OK (Plást.)"
+            Case VigaService.EstadoEnvolventeCortante.NoCumple : Return "NO"
+            Case Else : Return "-"
+        End Select
+    End Function
+
+    Private Sub EscribirFilaCortanteExcel(ws As IXLWorksheet, fila As Integer,
+                                          piso As String, viga As String, tramo As String,
+                                          zona As VigaService.ResultadoCDDefZona,
+                                          cumple As Boolean, etiqueta As String, numCols As Integer)
+        ws.Cell(fila, 1).Value = piso
+        ws.Cell(fila, 2).Value = viga
+        ws.Cell(fila, 3).Value = tramo
+        ws.Cell(fila, 4).Value = VigaService.EtiquetaZona(zona.Posicion)
+        ws.Cell(fila, 5).Value = Math.Round(zona.Vu_Tipico, 2)
+        ws.Cell(fila, 6).Value = Math.Round(zona.phiVn_Tipico, 2)
+        EscribirFactor(ws.Cell(fila, 7), If(zona.CD_Tipico > 0, zona.CD_Tipico, Double.MaxValue))
+        If zona.TienePlastico Then
+            ws.Cell(fila, 8).Value = Math.Round(zona.Vu_Plastico, 2)
+            EscribirFactor(ws.Cell(fila, 9), zona.CD_Plastico)
+        Else
+            ws.Cell(fila, 8).Value = "-"
+            ws.Cell(fila, 9).Value = "-"
+        End If
+        EscribirFactor(ws.Cell(fila, 10), zona.CD_Def)
+        ws.Cell(fila, 11).Value = etiqueta
+        With ws.Cell(fila, 11).Style
+            .Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            .Font.Bold = True
+            .Fill.BackgroundColor = If(cumple, ReporteHelpers.XlOKFondo, ReporteHelpers.XlMalFondo)
+            .Font.FontColor = If(cumple, ReporteHelpers.XlOKTexto, ReporteHelpers.XlMalTexto)
+        End With
+        EstilarFilaDatos(ws, fila, numCols, fila Mod 2 = 1)
+    End Sub
+
     ' ── Hoja Completo ─────────────────────────────────────────────────────────
 
     Private Sub ExportarHojaCompleto(wb As XLWorkbook)
 
         Dim ws = wb.Worksheets.Add("Resumen Completo")
 
-        Dim encabezados = {"Piso", "Eje", "Nombre (plano)", "Frames ETABS", "F M- mín", "F M+ mín", "F Cor Final", "Flexión", "Cortante", "Estado"}
+        Dim encabezados = {"Piso", "Eje", "Nombre (plano)", "Frames ETABS", "F M- mín", "F M+ mín", "C/D (Def) Cor", "Flexión", "Cortante", "Estado"}
         EscribirEncabezados(ws, 1, encabezados)
 
         Dim fila As Integer = 2
@@ -757,7 +824,6 @@ Public Class Form_Reporte_Resumen
 
             Dim fNegMin As Double = Double.MaxValue
             Dim fPosMin As Double = Double.MaxValue
-            Dim fConMin As Double = Double.MaxValue
             Dim cumpleFlex As Boolean = True
 
             For Each frame In viga.Frames
@@ -772,40 +838,14 @@ Public Class Form_Reporte_Resumen
                         If Not act.CumpleInferior Then cumpleFlex = False
                     End If
                 Next
-                For Each zona In frame.RevisionCortante
-                    If zona.phiVn > 0 Then fConMin = Math.Min(fConMin, zona.Factor)
-                Next
             Next
 
-            ' Cortante plástico — envolvente
-            Dim fPlas As Double = Double.MaxValue
-            For Each frame In viga.Frames
-                If frame.CortantePlastico Is Nothing Then Continue For
-                Dim cp = frame.CortantePlastico
-                If cp.ZonaIzq.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaIzq.Factor)
-                If cp.ZonaDer.phiVn > 0 Then fPlas = Math.Min(fPlas, cp.ZonaDer.Factor)
-                If cp.ZonaCentro IsNot Nothing AndAlso cp.ZonaCentro.phiVn > 0 Then
-                    fPlas = Math.Min(fPlas, cp.ZonaCentro.Factor)
-                End If
-            Next
-            Dim tienePlastico = (fPlas < Double.MaxValue)
-            Dim fallaCentro As Boolean = FallaZonaCentral(viga)
-
-            Dim cumpleConv = (fConMin <> Double.MaxValue AndAlso fConMin >= UMBRAL_CD)
-            ' Ver nota en CargarResumenCompleto: el plástico no cubre la zona Centro.
-            Dim cumplePlas = (tienePlastico AndAlso fPlas >= UMBRAL_CD AndAlso Not fallaCentro)
-            Dim cumpleCor = cumpleConv OrElse cumplePlas
-
-            Dim fFin As Double
-            If cumpleConv Then
-                fFin = fConMin
-            ElseIf cumplePlas Then
-                fFin = fPlas
-            ElseIf tienePlastico Then
-                fFin = Math.Max(If(fConMin = Double.MaxValue, 0.0, fConMin), fPlas)
-            Else
-                fFin = fConMin
-            End If
+            ' Cortante: envolvente C/D (Def) zona-a-zona, unificada en VigaService.
+            Dim evalCor = VigaService.EvaluarCDDefViga(viga, UMBRAL_CD)
+            Dim cumpleCor = (evalCor.Estado = VigaService.EstadoEnvolventeCortante.Cumple OrElse
+                             evalCor.Estado = VigaService.EstadoEnvolventeCortante.CumplePlastico)
+            Dim fFin = If(evalCor.Estado = VigaService.EstadoEnvolventeCortante.SinDatos,
+                          Double.MaxValue, evalCor.CD_Def)
 
             ws.Cell(fila, 1).Value = viga.Piso
             ws.Cell(fila, 2).Value = If(String.IsNullOrWhiteSpace(viga.EjeParalelo), "-", viga.EjeParalelo)
@@ -825,14 +865,17 @@ Public Class Form_Reporte_Resumen
                 EscribirEstado(ws.Cell(fila, 8), "Revisar", ReporteHelpers.XlMalFondo, ReporteHelpers.XlMalTexto)
             End If
 
-            ' Col 9 — Cortante
-            If fFin = Double.MaxValue Then
-                EscribirEstado(ws.Cell(fila, 9), "Sin datos", ReporteHelpers.XlAlertaFondo, ReporteHelpers.XlAlertaTexto)
-            ElseIf cumpleCor Then
-                EscribirEstado(ws.Cell(fila, 9), "OK", ReporteHelpers.XlOKFondo, ReporteHelpers.XlOKTexto)
-            Else
-                EscribirEstado(ws.Cell(fila, 9), "Revisar", ReporteHelpers.XlMalFondo, ReporteHelpers.XlMalTexto)
-            End If
+            ' Col 9 — Cortante (etiqueta según envolvente unificada)
+            Select Case evalCor.Estado
+                Case VigaService.EstadoEnvolventeCortante.SinDatos
+                    EscribirEstado(ws.Cell(fila, 9), "Sin datos", ReporteHelpers.XlAlertaFondo, ReporteHelpers.XlAlertaTexto)
+                Case VigaService.EstadoEnvolventeCortante.Cumple
+                    EscribirEstado(ws.Cell(fila, 9), "OK", ReporteHelpers.XlOKFondo, ReporteHelpers.XlOKTexto)
+                Case VigaService.EstadoEnvolventeCortante.CumplePlastico
+                    EscribirEstado(ws.Cell(fila, 9), "OK (Plást.)", ReporteHelpers.XlOKFondo, ReporteHelpers.XlOKTexto)
+                Case Else
+                    EscribirEstado(ws.Cell(fila, 9), "Revisar", ReporteHelpers.XlMalFondo, ReporteHelpers.XlMalTexto)
+            End Select
 
             ' Col 10 — Estado general
             Dim ok = tieneRef AndAlso cumpleFlex AndAlso tieneCor AndAlso cumpleCor
