@@ -264,13 +264,16 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuReporteRevision.Click, Sub(s, ev) Form_Reporte_Revision.Mostrar(proyecto)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporteRevision)
 
-        ' Análisis de Sección independiente (Módulo 10)
+        ' Análisis de Sección independiente (Módulo 10) — se expone la v2 (Pro).
+        ' La v1 (Form_10_AnalisisSeccion) se conserva compilada pero oculta del
+        ' menú: sigue accesible por reflexión / código si se necesita revisar
+        ' resultados históricos, pero no aparece al usuario.
         Dim sepAS As New ToolStripSeparator()
         Dim mnuAS As New ToolStripMenuItem("Análisis de Sección…")
         mnuAS.BackColor = Color.FromArgb(87, 87, 86)
         mnuAS.ForeColor = Color.White
         AddHandler mnuAS.Click, Sub(s, ev)
-                                    Dim f As New Form_10_AnalisisSeccion()
+                                    Dim f As New Form_10_AnalisisSeccion_V2()
                                     f.Show()
                                 End Sub
         OpcionesToolStripMenuItem1.DropDownItems.Add(sepAS)

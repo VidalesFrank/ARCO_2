@@ -609,10 +609,26 @@ Public Module Funciones_10_AnalisisSeccion
         Dim kappaSeed = Math.Min(eps_cu_conf / c_min_est, eps_cu_conf / (0.03F * H) * 5)
         If kappaSeed < 0.0001F Then kappaSeed = 0.01F
 
-        Const NK_TARGET As Integer = 120
-        Const MAX_EXPAND_MULT As Single = 20.0F   ' techo de seguridad generoso
-        Const MAX_ITER_ABS As Integer = 4000      ' guarda dura contra loops descontrolados
-        Dim dkappa = kappaSeed / NK_TARGET
+        ' ── Paso adaptativo del barrido en 3 regímenes ───────────────────
+        ' 1) Rama elástica (κ ∈ [0, κy]) → paso muy fino:      kappaSeed/2000
+        ' 2) Rama plástica plana (κy → cerca de falla) → normal: kappaSeed/120
+        ' 3) Aproximación a falla (ecc≥0.85·εcu o ems≥0.85·εsu) → fino de nuevo
+        '    para que la interpolación de Ku sea precisa.
+        '
+        ' Con paso fijo, secciones típicas caían todo el rango elástico entre
+        ' 2 puntos: la curva graficada saltaba de M≈0 a M≈My en un segmento
+        ' recto, que se veía "brusco" en la gráfica y no reflejaba bien la
+        ' pendiente elástica ni la ubicación real de la fluencia.
+        Const NK_ELASTIC As Integer = 2000
+        Const NK_NORMAL As Integer = 120
+        Const MAX_EXPAND_MULT As Single = 20.0F
+        Const MAX_ITER_ABS As Integer = 8000
+        Dim dkappa_elastic As Single = kappaSeed / NK_ELASTIC
+        Dim dkappa_normal As Single = kappaSeed / NK_NORMAL
+        Dim dkappa_falla As Single = dkappa_normal / 5.0F
+        Dim dkappa As Single = dkappa_elastic
+        Dim yaExpandido As Boolean = False
+        Dim enFallaCercana As Boolean = False
         Dim kappaAbsMax = kappaSeed * MAX_EXPAND_MULT
 
         Dim firstYield As Boolean = False
@@ -664,6 +680,21 @@ Public Module Funciones_10_AnalisisSeccion
                 res.Ky = kappa_prev + frac * (kappa - kappa_prev)
                 res.My = Mf_prev + frac * (Mf - Mf_prev)
                 firstYield = True
+            End If
+
+            ' ── Ajuste del paso según régimen ──────────────────────────────
+            ' Una vez fluida la sección, relajar el paso (la rama plástica es
+            ' casi plana). Al acercarnos a falla, volver a paso fino para
+            ' capturar bien Ku sin saltos.
+            If firstYield AndAlso Not yaExpandido Then
+                dkappa = dkappa_normal
+                yaExpandido = True
+            End If
+            If yaExpandido AndAlso Not enFallaCercana Then
+                If ecc_max > 0.85F * eps_cu_conf OrElse ems_max > 0.85F * eps_su Then
+                    dkappa = dkappa_falla
+                    enFallaCercana = True
+                End If
             End If
 
             ' Condición de falla real: la que ocurra primero entre aplastamiento
