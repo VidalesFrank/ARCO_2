@@ -530,22 +530,23 @@ Public Class Form_PlantaInteractiva
         Dim corZonas = f.RevisionCortante.Where(Function(z) z.phiVn > 0).ToList()
         If corZonas.Count > 0 Then
             lineas.Add(("", False, Color.Transparent))
-            lineas.Add(("Cortante", True, Color.FromArgb(160, 80, 0)))
+            lineas.Add(("Cortante (C/D Def)", True, Color.FromArgb(160, 80, 0)))
+
+            ' Envolvente unificada zona-a-zona (misma regla que todos los reportes).
+            Dim evalFrame = VigaService.EvaluarCDDefFrame(f, Funciones_00_Varias.UMBRAL_CD)
+            Dim porZona = evalFrame.Zonas.ToDictionary(Function(z) z.Posicion, Function(z) z)
 
             For Each z In corZonas
-                Dim posNombre As String
-                Select Case z.Posicion
-                    Case PosicionTramoViga.Izquierda : posNombre = "Izq"
-                    Case PosicionTramoViga.Centro : posNombre = "Cen"
-                    Case Else : posNombre = "Der"
+                Dim zdef = If(porZona.ContainsKey(z.Posicion), porZona(z.Posicion), Nothing)
+                Dim ok = (zdef.Estado <> VigaService.EstadoEnvolventeCortante.NoCumple)
+                Dim marca As String
+                Select Case zdef.Estado
+                    Case VigaService.EstadoEnvolventeCortante.Cumple : marca = " ✓"
+                    Case VigaService.EstadoEnvolventeCortante.CumplePlastico : marca = " ✓ (plást.)"
+                    Case Else : marca = " ✗"
                 End Select
-                ' Una zona que falla el chequeo convencional pero cumple el cortante plástico
-                ' (C.21.5.4, solo extremos) no se marca como falla — misma regla que los reportes.
-                Dim okPlas = VigaService.CumpleCortantePlastico(z.Posicion, f.CortantePlastico)
-                Dim ok = z.Cumple OrElse okPlas
-                Dim marca As String = If(z.Cumple, " ✓", If(okPlas, " ✓ (plást.)", " ✗"))
                 Dim clr = If(ok, Color.FromArgb(0, 120, 0), Color.FromArgb(180, 0, 0))
-                lineas.Add(($"  {posNombre}  Vu={Math.Round(z.Vu, 1)} kN   φVn={Math.Round(z.phiVn, 1)} kN   F={Math.Round(z.Factor, 2)}{marca}", False, clr))
+                lineas.Add(($"  {VigaService.EtiquetaZona(z.Posicion)}  Vu={Math.Round(zdef.Vu_Def, 1)} kN   φVn={Math.Round(zdef.phiVn_Def, 1)} kN   C/D={Math.Round(zdef.CD_Def, 2)}{marca}", False, clr))
             Next
         End If
 

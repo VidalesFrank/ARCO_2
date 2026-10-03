@@ -47,7 +47,7 @@ Imports System.IO
 '''   Logger.Info("Form_02_PagColumnas.Button2_Click", "Iniciando cálculo de columnas Frame+Pier")
 '''
 '''   ' Advertencia (dato inesperado pero no fatal)
-'''   Logger.Warning("Form_06_PagMuros.ImportarFuerzas", "Muro sin fuerzas asignadas: " & muro.Name)
+'''   Logger.Warning("Form_06_PagMuros.ImportarFuerzas", "Muro sin fuerzas asignadas: " &amp; muro.Name)
 '''
 '''   ' Error en un Catch (reemplaza los Catch vacíos)
 '''   Catch ex As Exception
@@ -57,7 +57,7 @@ Imports System.IO
 '''   ' Error con contexto adicional de qué se estaba haciendo
 '''   Catch ex As Exception
 '''       Logger.Error(ex, "Form_06_00_PagInfoMuros.Combo_Elementos_SelectedIndexChanged",
-'''                    "Error al cargar secciones del muro: " & Combo_Elementos.Text)
+'''                    "Error al cargar secciones del muro: " &amp; Combo_Elementos.Text)
 '''   End Try
 '''
 '''   ' Error crítico que debe notificar al usuario
@@ -156,7 +156,7 @@ Public Module Logger
     ''' USO CON CONTEXTO ADICIONAL (recomendado cuando hay variables relevantes):
     '''   Catch ex As Exception
     '''       Logger.Error(ex, "Form_06_PagMuros.ImportarFuerzas",
-    '''                    "Fila problemática: " & i & " — Combinación: " & nombreCombo)
+    '''                    "Fila problemática: " &amp; i &amp; " — Combinación: " &amp; nombreCombo)
     '''   End Try
     ''' </summary>
     ''' <param name="ex">La excepción capturada (objeto 'ex' del bloque Catch).</param>
