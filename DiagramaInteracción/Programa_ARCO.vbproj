@@ -520,6 +520,7 @@
     </Compile>
     <Compile Include="Formularios\Complementos\PilaVerticalAdaptable.vb" />
     <Compile Include="Formularios\Complementos\GridCopiarPegar.vb" />
+    <Compile Include="Formularios\Complementos\PreflightValidador.vb" />
     <Compile Include="Formularios\Complementos\ReporteHelpers.vb" />
     <Compile Include="Formularios\Complementos\ReporteGridHelpers.vb" />
     <Compile Include="Formularios\03_Losas\LosaService.vb" />
