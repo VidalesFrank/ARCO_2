@@ -51,6 +51,7 @@ Public Class Form_08_VigasFundacion
 
     ' ── Controles — resultados ────────────────────────────────────────────────
     Private _chart      As New Chart()               ' Diagrama de Interacción
+    Private _panelSeccion As Panel                     ' Sección transversal (custom paint)
     Private WithEvents _dgvDI   As New DataGridView()   ' C/D compresión + tracción
     Private WithEvents _dgvNorm As New DataGridView()   ' Requisitos normativos
     Private _lblStatus As New Label()
@@ -190,6 +191,18 @@ Public Class Form_08_VigasFundacion
         ' Actualizar etiqueta Pu cuando cambian los campos de demanda
         AddHandler _txtPColumna.TextChanged, AddressOf ActualizarPuCalc
         AddHandler _txtAa.TextChanged, AddressOf ActualizarPuCalc
+
+        ' Repintar la sección al cambiar dimensiones, refuerzo o estribo
+        Dim invalidar = Sub(sender As Object, ev As EventArgs) _panelSeccion?.Invalidate()
+        AddHandler _txtB.TextChanged, invalidar
+        AddHandler _txtH.TextChanged, invalidar
+        AddHandler _txtRec.TextChanged, invalidar
+        AddHandler _txtSepEst.TextChanged, invalidar
+        AddHandler _cmbSup.SelectedIndexChanged, invalidar
+        AddHandler _cmbInf.SelectedIndexChanged, invalidar
+        AddHandler _cmbEst.SelectedIndexChanged, invalidar
+        AddHandler _nudCantSup.ValueChanged, invalidar
+        AddHandler _nudCantInf.ValueChanged, invalidar
     End Sub
 
     ' =========================================================================
@@ -306,38 +319,65 @@ Public Class Form_08_VigasFundacion
     ' =========================================================================
 
     Private Sub ConstruirResultados(pnl As Panel)
-        ' ── 1. Diagrama de Interacción (chart) ───────────────────────────────
-        Dim lblChart As New Label() With {
-            .Text = "  DIAGRAMA DE INTERACCIÓN",
-            .Dock = DockStyle.Top, .Height = 24,
-            .BackColor = Color.FromArgb(87, 87, 87),
-            .ForeColor = Color.White,
-            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold)
+        ' TableLayoutPanel maestro: 4 filas.
+        '   1) headers Chart + Sección (fijo)
+        '   2) fila que crece (100%) con chart y sección lado a lado (60/40)
+        '   3) header + grid C/D (fijo)
+        '   4) header + grid Norm (fijo)
+        Dim tabla As New TableLayoutPanel() With {
+            .Dock = DockStyle.Fill, .ColumnCount = 1, .RowCount = 4,
+            .BackColor = Color.White
         }
-        pnl.Controls.Add(lblChart)
+        tabla.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100))
+        tabla.RowStyles.Add(New RowStyle(SizeType.Absolute, 24))
+        tabla.RowStyles.Add(New RowStyle(SizeType.Percent, 100))
+        tabla.RowStyles.Add(New RowStyle(SizeType.Absolute, 128))
+        tabla.RowStyles.Add(New RowStyle(SizeType.Absolute, 176))
+        pnl.Controls.Add(tabla)
+
+        ' ── Fila 1: headers en 2 columnas ───────────────────────────────────
+        Dim headers As New TableLayoutPanel() With {
+            .Dock = DockStyle.Fill, .ColumnCount = 2, .RowCount = 1, .Margin = New Padding(0)
+        }
+        headers.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 60))
+        headers.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 40))
+        Dim lblChart = CrearBanda("  DIAGRAMA DE INTERACCIÓN")
+        Dim lblSec = CrearBanda("  SECCIÓN TRANSVERSAL")
+        headers.Controls.Add(lblChart, 0, 0)
+        headers.Controls.Add(lblSec, 1, 0)
+        tabla.Controls.Add(headers, 0, 0)
+
+        ' ── Fila 2: chart + sección lado a lado ─────────────────────────────
+        Dim mid As New TableLayoutPanel() With {
+            .Dock = DockStyle.Fill, .ColumnCount = 2, .RowCount = 1,
+            .Margin = New Padding(0), .BackColor = Color.White
+        }
+        mid.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 60))
+        mid.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 40))
 
         ConfigurarChart()
-        _chart.Dock = DockStyle.Top
-        _chart.Height = 240
-        pnl.Controls.Add(_chart)
+        _chart.Dock = DockStyle.Fill
+        _chart.Margin = New Padding(0, 4, 4, 4)
+        mid.Controls.Add(_chart, 0, 0)
 
-        Dim sep1 As New Panel() With {.Dock = DockStyle.Top, .Height = 8, .BackColor = Color.White}
-        pnl.Controls.Add(sep1)
+        _panelSeccion = CrearPanelSeccion()
+        _panelSeccion.Dock = DockStyle.Fill
+        _panelSeccion.Margin = New Padding(4, 4, 0, 4)
+        mid.Controls.Add(_panelSeccion, 1, 0)
+        tabla.Controls.Add(mid, 0, 1)
 
-        ' ── 2. Tabla C/D ─────────────────────────────────────────────────────
-        Dim lblDI As New Label() With {
-            .Text = "  VERIFICACIÓN C/D — PUNTAL",
-            .Dock = DockStyle.Top, .Height = 24,
-            .BackColor = Color.FromArgb(87, 87, 87),
-            .ForeColor = Color.White,
-            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold)
-        }
-        pnl.Controls.Add(lblDI)
-
+        ' ── Fila 3: grid C/D con su header ──────────────────────────────────
+        Dim contCD As New Panel() With {.Dock = DockStyle.Fill, .Margin = New Padding(0), .BackColor = Color.White}
+        Dim lblDI = CrearBanda("  VERIFICACIÓN C/D — PUNTAL") : lblDI.Dock = DockStyle.Top
+        contCD.Controls.Add(lblDI)
         EstilarGrid(_dgvDI)
-        _dgvDI.Dock = DockStyle.Top
-        _dgvDI.Height = 96
-        pnl.Controls.Add(_dgvDI)
+        _dgvDI.Dock = DockStyle.Fill
+        contCD.Controls.Add(_dgvDI)
+        _dgvDI.BringToFront() : lblDI.SendToBack()  ' orden visual: header arriba, grid abajo
+        ' Con Dock, si el label se agrega DESPUÉS y luego el grid, el grid ocupa el resto:
+        _dgvDI.Dock = DockStyle.Fill
+        lblDI.Dock = DockStyle.Top
+        tabla.Controls.Add(contCD, 0, 2)
 
         _dgvDI.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "Verif",    .HeaderText = "VERIFICACIÓN",        .Width = 155})
         _dgvDI.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "PhiPn",    .HeaderText = "φPn capacidad (kN)",  .Width = 140})
@@ -345,23 +385,16 @@ Public Class Form_08_VigasFundacion
         _dgvDI.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "CD",       .HeaderText = "C/D",                  .Width = 68})
         _dgvDI.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "EstadoDI", .HeaderText = "Estado",               .Width = 80})
 
-        Dim sep2 As New Panel() With {.Dock = DockStyle.Top, .Height = 8, .BackColor = Color.White}
-        pnl.Controls.Add(sep2)
-
-        ' ── 3. Requisitos normativos ──────────────────────────────────────────
-        Dim lblNorm As New Label() With {
-            .Text = "  REQUISITOS NORMATIVOS — NSR-10",
-            .Dock = DockStyle.Top, .Height = 24,
-            .BackColor = Color.FromArgb(87, 87, 87),
-            .ForeColor = Color.White,
-            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold)
-        }
-        pnl.Controls.Add(lblNorm)
-
+        ' ── Fila 4: grid Norm con su header ─────────────────────────────────
+        Dim contN As New Panel() With {.Dock = DockStyle.Fill, .Margin = New Padding(0), .BackColor = Color.White}
+        Dim lblNorm = CrearBanda("  REQUISITOS NORMATIVOS — NSR-10") : lblNorm.Dock = DockStyle.Top
+        contN.Controls.Add(lblNorm)
         EstilarGrid(_dgvNorm)
-        _dgvNorm.Dock = DockStyle.Top
-        _dgvNorm.Height = 148
-        pnl.Controls.Add(_dgvNorm)
+        _dgvNorm.Dock = DockStyle.Fill
+        contN.Controls.Add(_dgvNorm)
+        _dgvNorm.Dock = DockStyle.Fill
+        lblNorm.Dock = DockStyle.Top
+        tabla.Controls.Add(contN, 0, 3)
 
         _dgvNorm.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "Req",        .HeaderText = "REQUISITO",  .Width = 155})
         _dgvNorm.Columns.Add(New DataGridViewTextBoxColumn() With {.Name = "Detalle",    .HeaderText = "DETALLE",    .Width = 310})
@@ -369,6 +402,30 @@ Public Class Form_08_VigasFundacion
 
         _dgvNorm.Columns("Detalle").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
     End Sub
+
+    Private Function CrearBanda(texto As String) As Label
+        Return New Label() With {
+            .Text = texto,
+            .Dock = DockStyle.Fill, .Height = 24,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ForeColor = Color.White,
+            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .TextAlign = ContentAlignment.MiddleLeft,
+            .Margin = New Padding(0)
+        }
+    End Function
+
+    Private Function CrearPanelSeccion() As Panel
+        Dim p As New Panel() With {.BackColor = Color.White}
+        ' Doble-buffer para que el dibujo no titile al redimensionar.
+        Dim tipo = p.GetType()
+        tipo.InvokeMember("DoubleBuffered",
+            Reflection.BindingFlags.NonPublic Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.SetProperty,
+            Nothing, p, New Object() {True})
+        AddHandler p.Paint, AddressOf PanelSeccion_Paint
+        AddHandler p.Resize, Sub() p.Invalidate()
+        Return p
+    End Function
 
     Private Sub ConfigurarChart()
         _chart.BackColor = Color.White
@@ -834,5 +891,155 @@ Public Class Form_08_VigasFundacion
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
     End Sub
+
+    ' =========================================================================
+    ' DIBUJO DE LA SECCIÓN TRANSVERSAL
+    ' =========================================================================
+
+    Private Sub PanelSeccion_Paint(sender As Object, e As PaintEventArgs)
+        Dim g = e.Graphics
+        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+        g.TextRenderingHint = Drawing.Text.TextRenderingHint.ClearTypeGridFit
+        g.Clear(Color.White)
+
+        Dim p = DirectCast(sender, Panel)
+        Dim W = p.ClientSize.Width
+        Dim H = p.ClientSize.Height
+        If W < 40 OrElse H < 40 Then Return
+
+        ' Datos de la viga actual (o los del formulario si aún no está calculada)
+        Dim B As Double = ParseDbl(_txtB.Text, 0.3)
+        Dim Hs As Double = ParseDbl(_txtH.Text, 0.5)
+        Dim rec As Double = ParseDbl(_txtRec.Text, 0.05)
+        Dim nSup As Integer = CInt(_nudCantSup.Value)
+        Dim nInf As Integer = CInt(_nudCantInf.Value)
+        Dim barSup As String = If(_cmbSup.SelectedItem?.ToString(), "#4")
+        Dim barInf As String = If(_cmbInf.SelectedItem?.ToString(), "#4")
+        Dim barEst As String = If(_cmbEst.SelectedItem?.ToString(), "#3")
+
+        If B <= 0 OrElse Hs <= 0 Then Return
+
+        ' Área de dibujo con márgenes para cotas
+        Const margenIzq = 44, margenDer = 20, margenSup = 20, margenInf = 44
+        Dim Wd = W - margenIzq - margenDer
+        Dim Hd = H - margenSup - margenInf
+        If Wd < 20 OrElse Hd < 20 Then Return
+
+        ' Escala uniforme: la sección conserva su proporción B:H real
+        Dim escala = Math.Min(Wd / B, Hd / Hs)
+        Dim bpx = CSng(B * escala)
+        Dim hpx = CSng(Hs * escala)
+        Dim x0 = CSng(margenIzq + (Wd - bpx) / 2)
+        Dim y0 = CSng(margenSup + (Hd - hpx) / 2)
+
+        ' Rectángulo de hormigón
+        Using brHorm As New SolidBrush(Color.FromArgb(230, 230, 224))
+            g.FillRectangle(brHorm, x0, y0, bpx, hpx)
+        End Using
+        Using pnBorde As New Pen(Color.FromArgb(70, 70, 70), 1.6F)
+            g.DrawRectangle(pnBorde, x0, y0, bpx, hpx)
+        End Using
+
+        ' Estribo (rectángulo interno con esquinas redondeadas ligeras)
+        Dim dEst = CSng(DiametroBarraCm(barEst) / 100.0 * escala)
+        Dim recPx = CSng(rec * escala)
+        Dim xE = x0 + recPx
+        Dim yE = y0 + recPx
+        Dim bE = bpx - 2 * recPx
+        Dim hE = hpx - 2 * recPx
+        If bE > 4 AndAlso hE > 4 Then
+            Using pnEst As New Pen(Color.FromArgb(90, 90, 90), Math.Max(1.2F, dEst * 0.6F))
+                g.DrawRectangle(pnEst, xE, yE, bE, hE)
+            End Using
+        End If
+
+        ' Barras longitudinales
+        Dim dSup = CSng(DiametroBarraCm(barSup) / 100.0 * escala)
+        Dim dInf = CSng(DiametroBarraCm(barInf) / 100.0 * escala)
+        Dim radioMin = 3.5F
+        dSup = Math.Max(dSup, radioMin * 2)
+        dInf = Math.Max(dInf, radioMin * 2)
+        Dim margenBarraX = recPx + Math.Max(dEst, 1.5F) + Math.Max(dSup, dInf) / 2
+
+        DibujarFilaBarras(g, x0, y0, bpx, margenBarraX, dSup, nSup, esSuperior:=True)
+        DibujarFilaBarras(g, x0, y0 + hpx, bpx, margenBarraX, dInf, nInf, esSuperior:=False)
+
+        ' Cotas B (abajo) y H (izquierda)
+        Using pnCota As New Pen(Color.FromArgb(90, 90, 90), 1.0F)
+            pnCota.CustomEndCap = New Drawing2D.AdjustableArrowCap(4, 4, True)
+            pnCota.CustomStartCap = New Drawing2D.AdjustableArrowCap(4, 4, True)
+            ' Cota B
+            Dim yc = y0 + hpx + 22
+            g.DrawLine(pnCota, x0, yc, x0 + bpx, yc)
+            g.DrawLine(pnCota, x0, yc - 4, x0, yc + 4)
+            g.DrawLine(pnCota, x0 + bpx, yc - 4, x0 + bpx, yc + 4)
+            ' Cota H
+            Dim xc = x0 - 26
+            g.DrawLine(pnCota, xc, y0, xc, y0 + hpx)
+            g.DrawLine(pnCota, xc - 4, y0, xc + 4, y0)
+            g.DrawLine(pnCota, xc - 4, y0 + hpx, xc + 4, y0 + hpx)
+        End Using
+
+        Using fCota As New Font("Segoe UI", 8.5F, FontStyle.Bold)
+            Dim brCota As New SolidBrush(Color.FromArgb(50, 50, 50))
+            Dim txtB = $"B = {B:F2} m"
+            Dim szB = g.MeasureString(txtB, fCota)
+            g.DrawString(txtB, fCota, brCota, x0 + bpx / 2 - szB.Width / 2, y0 + hpx + 26)
+
+            Dim txtH = $"H = {Hs:F2} m"
+            Dim szH = g.MeasureString(txtH, fCota)
+            Dim st = g.Save()
+            g.TranslateTransform(x0 - 30, y0 + hpx / 2 + szH.Width / 2)
+            g.RotateTransform(-90)
+            g.DrawString(txtH, fCota, brCota, 0, 0)
+            g.Restore(st)
+        End Using
+
+        ' Etiquetas de refuerzo
+        Using fRef As New Font("Segoe UI", 8, FontStyle.Regular)
+            Dim brRef As New SolidBrush(Color.FromArgb(40, 40, 40))
+            Dim txtSup = $"{nSup}{ChrW(216)}{barSup}"
+            Dim szS = g.MeasureString(txtSup, fRef)
+            g.DrawString(txtSup, fRef, brRef, x0 + bpx / 2 - szS.Width / 2, y0 - 16)
+
+            Dim txtInf = $"{nInf}{ChrW(216)}{barInf}"
+            Dim szI = g.MeasureString(txtInf, fRef)
+            g.DrawString(txtInf, fRef, brRef, x0 + bpx / 2 - szI.Width / 2, y0 + hpx - 14)
+
+            Dim txtEst = $"est. {barEst}@{ParseDbl(_txtSepEst.Text, 0.15):F2}m"
+            g.DrawString(txtEst, fRef, brRef, x0 + bpx + 6, y0 + hpx / 2 - 6)
+        End Using
+    End Sub
+
+    Private Sub DibujarFilaBarras(g As Graphics, x0 As Single, yFila As Single, bpx As Single,
+                                    margenX As Single, dBarra As Single, n As Integer,
+                                    esSuperior As Boolean)
+        If n <= 0 Then Return
+        Dim yCentro = If(esSuperior, yFila + margenX, yFila - margenX)
+        Dim xIni = x0 + margenX
+        Dim ancho = bpx - 2 * margenX
+        Dim paso = If(n = 1, 0.0F, ancho / (n - 1))
+        Using brBarra As New SolidBrush(Color.FromArgb(50, 50, 50))
+            For i = 0 To n - 1
+                Dim xC = If(n = 1, x0 + bpx / 2, xIni + i * paso)
+                g.FillEllipse(brBarra, xC - dBarra / 2, yCentro - dBarra / 2, dBarra, dBarra)
+            Next
+        End Using
+    End Sub
+
+    Private Function DiametroBarraCm(codigo As String) As Double
+        ' Diámetros nominales (cm) — coherentes con AreaRefuerzo() de Funciones_00_Varias
+        Select Case codigo
+            Case "#2" : Return 0.635    ' 6.35 mm
+            Case "#3" : Return 0.953
+            Case "#4" : Return 1.27
+            Case "#5" : Return 1.588
+            Case "#6" : Return 1.905
+            Case "#7" : Return 2.223
+            Case "#8" : Return 2.54
+            Case "#10" : Return 3.226
+            Case Else : Return 1.27
+        End Select
+    End Function
 
 End Class
