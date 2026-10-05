@@ -1,4 +1,4 @@
-' Partial de Funciones_00_Varias: transformación DataTable (Excel de ETABS) → clases de dominio.
+﻿' Partial de Funciones_00_Varias: transformación DataTable (Excel de ETABS) → clases de dominio.
 ' Cada método toma una tabla cruda y devuelve una lista tipada de la entidad correspondiente.
 ' Los helpers GetColumnName/SafeString/SafeDouble son privados y compartidos por todos los DataTableTo*.
 Partial Public Class Funciones_00_Varias
@@ -50,19 +50,30 @@ Partial Public Class Funciones_00_Varias
     )
 
         ' 🔹 Buscar las columnas esperadas
+        ' E23 "Objects and Elements - Joints": Story, Object Type, Object Label,
+        '      Element Name, Global X/Y/Z.
+        ' E17 "Joint Coordinates":             Story, Label, Unique Name, X/Y/Z
+        '      — sin Object Type. De ahí los respaldos: sin ellos esta función
+        '      devolvía una lista VACÍA para todo archivo E17, y sin nodos no
+        '      hay vista en planta ni clasificación de apoyos.
         Dim colStory = GetColumnName(columnas, "Story")
-        Dim colElementLabel = GetColumnName(columnas, "Element Name")
         Dim colObjectType = GetColumnName(columnas, "Object Type")
-        Dim colObjectLabel = GetColumnName(columnas, "Object Label")
-        Dim colGlobalX = GetColumnName(columnas, "Global X")
-        Dim colGlobalY = GetColumnName(columnas, "Global Y")
-        Dim colGlobalZ = GetColumnName(columnas, "Global Z")
+        Dim colElementLabel = If(GetColumnName(columnas, "Element Name"),
+                                 GetColumnName(columnas, "Unique Name"))
+        Dim colObjectLabel = If(GetColumnName(columnas, "Object Label"),
+                                GetColumnName(columnas, "Label"))
+        Dim colGlobalX = If(GetColumnName(columnas, "Global X"), GetColumnName(columnas, "X"))
+        Dim colGlobalY = If(GetColumnName(columnas, "Global Y"), GetColumnName(columnas, "Y"))
+        Dim colGlobalZ = If(GetColumnName(columnas, "Global Z"), GetColumnName(columnas, "Z"))
+
+        ' El filtro por tipo solo aplica si la hoja trae esa columna.
+        Dim filtrarPorTipo As Boolean = Not String.IsNullOrEmpty(colObjectType)
 
         ' 🔹 Recorremos cada fila
         For Each r As DataRow In dt.Rows
 
             Dim tipo As String = SafeString(r, colObjectType)
-            If Not String.Equals(tipo, "Joint", StringComparison.OrdinalIgnoreCase) Then
+            If filtrarPorTipo AndAlso Not String.Equals(tipo, "Joint", StringComparison.OrdinalIgnoreCase) Then
                 Continue For
             End If
 
@@ -72,6 +83,9 @@ Partial Public Class Funciones_00_Varias
             j.ElementLabel = SafeString(r, colElementLabel)
             j.ObjectType = SafeString(r, colObjectType)
             j.ObjectLabel = SafeString(r, colObjectLabel)
+            ' ObjectLabel es la etiqueta que referencia "Joint Reactions"; si la
+            ' hoja no la trae, se usa la del elemento para no dejarla vacía.
+            If String.IsNullOrWhiteSpace(j.ObjectLabel) Then j.ObjectLabel = j.ElementLabel
             j.GlobalX = SafeDouble(r, colGlobalX)
             j.GlobalY = SafeDouble(r, colGlobalY)
             j.GlobalZ = SafeDouble(r, colGlobalZ)

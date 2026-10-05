@@ -224,7 +224,9 @@ exportación con "Value can't be NaN or infinity"). Cubierto por
 ### Servicio (`Funciones/ZapataService.vb`)
 Toda la lógica que no es UI vive aquí y está cubierta por pruebas:
 - `AlfaS(tipo)` / `PerimetroCritico(b, h, d, tipo)` / `CapacidadPunzonamiento(...)`
-- `ClasificarApoyos(zapatas, tolerancia)` — propone el tipo por posición en planta
+- `AnalizarMalla(...)` — ángulo, vano, banda y alcance de la malla de apoyos
+- `ClasificarApoyos(zapatas, [malla], ...)` — propone el tipo por posición en planta
+- `UbicarZapatas(zapatas, joints)` / `DetectarSuperpuestas(...)` — X,Y de cada apoyo
 - `FactoresPorCombinacion(z)` / `Resumir(z)` — las relaciones C/D y cuál gobierna
 
 ### Tipo de apoyo — NO es opcional
@@ -239,13 +241,56 @@ Toda la lógica que no es UI vive aquí y está cubierta por pruebas:
 
 \* zapata 2.00×2.00, pedestal 0.40×0.40, d = 0.45 m, fc = 21 MPa.
 
-Se clasifica automáticamente al importar (cuenta en cuántas de las cuatro
-direcciones hay vecinos: 4 → Central, 3 → Medianera, menos → Esquinera) y se
-puede corregir en la columna "Tipo de apoyo" de `Tabla_Elementos`.
-**`TipoApoyoManual = True` blinda la corrección: `ClasificarApoyos` no la pisa.**
+### Cómo se cataloga el apoyo: LADOS LIBRES
+`ClasificarApoyos` cuenta en cuántas de las cuatro direcciones de la malla
+**no** hay otro apoyo más allá:
 
-Limitación conocida: con una sola línea de columnas (plano degenerado) todas
-salen esquineras. Con dos líneas ya funciona.
+| Lados libres | Qué es | Tipo |
+|---|---|---|
+| 0 | interior | Central |
+| 1 | borde | Medianera |
+| 2 o más | esquina, o apoyo aislado | Esquinera |
+
+Dos lados libres **opuestos** (una sola línea de columnas, el brazo de una L de
+una columna de ancho) no es ninguno de los tres casos de C.11.11; queda como
+esquinera, que es el lado seguro. Se corrige en la columna "Tipo de apoyo" de
+`Tabla_Elementos`, y **`TipoApoyoManual = True` blinda la corrección:
+`ClasificarApoyos` no la pisa.**
+
+#### La búsqueda va en el marco de la malla, no en X,Y globales
+`AnalizarMalla` mide primero la planta y devuelve un `MallaInfo`
+(ángulo, coherencia, vano típico, banda, alcance) que se registra en el log y se
+muestra al clasificar. Tres cosas que no son obvias:
+
+- **El ángulo se mide de la nube de apoyos**, por el segmento de cada apoyo a su
+  vecino más cercano, promediado módulo 90°. Los ejes `X`/`Y` de ETABS **no
+  sirven**: solo traen una `Ordinate` en el sistema de ejes de ETABS, que puede
+  estar rotado respecto al global. Solo los de tipo `G` (General Cartesian)
+  traen `X1,Y1,X2,Y2`, y se usan **solo** cuando la nube no define dirección
+  (`Coherencia < COHERENCIA_MINIMA` = 0.5), porque un eje `G` puede ser una
+  rampa o una diagonal de fachada. Precedencia: forzado → nube → ejes → global.
+- **Banda y alcance son dos escalas distintas, a propósito.** La *banda* (cuánto
+  desalineamiento se admite para seguir siendo de la misma fila) sale de la
+  distancia al vecino más cercano × 0.5: una columna corrida dentro de su vano
+  no la mueve. El *alcance* (hasta dónde se busca vecino) sale del **vano** — la
+  separación entre ejes consecutivos de apoyos — × 1.5. No puede salir de la
+  distancia al vecino: con filas a 3 m y vanos de 9 m, el alcance quedaría en
+  4.5 m y los interiores de esos vanos saldrían como de borde.
+- **Un hueco de más de `VANO_ATIPICO` (4) veces el vano típico no es un vano**,
+  es otro bloque. Si contara, el alcance se estiraría hasta un apoyo suelto a
+  50 m y volvería a tapar el borde.
+
+Hasta 2026-10-05 la búsqueda era sobre los ejes globales con 0.30 m fijos de
+tolerancia. Dos consecuencias: un edificio **girado** respecto al origen de ETABS
+salía entero como esquineras (φVc al 37 %), y un apoyo suelto a 50 m, por estar
+alineado, **ascendía a Central** una zapata de borde — ese error sí era del lado
+no conservador. Cubierto por `ARCO.Tests/ZapataMallaTests.vb`.
+
+#### Lo que ninguna heurística resuelve
+El perímetro abierto de C.11.11 depende de hasta dónde llega **el concreto de la
+zapata** (lindero, junta de dilatación, voladizo), no de si hay columnas
+alrededor. Una zapata puede tener vecinas en las cuatro direcciones y estar
+vaciada contra el lindero. Para eso está la corrección a mano.
 
 ### g1..g8, gf, ga, gi, ge son PRESIONES, no factores
 Están en **kN/m²**: presión de contacto en las esquinas de la zapata (g1..g4),
@@ -259,6 +304,35 @@ Una presión negativa es **tracción** bajo la zapata — hay que verla, no ocul
 ### Hojas ETABS
 `Joint Reactions` (obligatoria) + nodos y ejes (opcionales, pero sin ellas no hay
 planta ni clasificación automática). Ver `Form_AyudaImportacion`, módulo "Zapatas".
+
+### Etiqueta de nodo: `Object Label`, NO `Element Name`
+En la hoja de nodos de E23 son dos columnas distintas y `cJoint` guarda las dos:
+
+| Campo de `cJoint` | Columna E23 | Quién la referencia |
+|---|---|---|
+| `ObjectLabel` | `Object Label` | **`Joint Reactions`** (columna `Label`) → zapatas y pilas |
+| `ElementLabel` | `Element Name` | `Objects and Elements - Frames` → vigas y nervios |
+
+En modelos simples las dos numeraciones corren parejas y confundirlas no se
+nota. En cuanto divergen (nodos agregados o borrados, mallado), unas pocas
+zapatas toman la coordenada de **otro** nodo y en la planta aparecen encima de
+sus vecinas — el síntoma con el que se encontró, el 2026-10-05, que
+`Form_07_Pag_Zapatas` emparejaba contra `ElementLabel`.
+
+Una etiqueta **se repite en cada piso**: hay que quedarse con el nodo de
+**menor Z** (el de cimentación). `ZapataService.UbicarZapatas` /
+`IndexarJointsDeCimentacion` lo hacen, y `Funciones_00_Varias` ya lo hacía para
+Pilas con sus diccionarios `byLabel` / `byElem`.
+
+Dos apoyos no pueden compartir coordenada: `DetectarSuperpuestas` lo avisa al
+generar los elementos y lo deja en el log. **Reubicar sin regenerar** está en el
+menú Ver → "Reubicar y reclasificar apoyos": generar los elementos reconstruye
+`Tipos` y borra geometría, refuerzo y grupos.
+
+`DataTableToJoints` tolera E17 (`Joint Coordinates`: `Label`, `Unique Name`,
+`X/Y/Z`, sin `Object Type`). Antes filtraba por `Object Type = "Joint"` sin
+comprobar que la columna existiera, así que **para E17 devolvía lista vacía** y
+no había planta ni clasificación.
 
 ---
 

@@ -97,6 +97,47 @@ Public Class Form_07_Pag_Zapatas
         AddHandler item.Click, AddressOf AbrirPlanta_Click
         Ver_Zapatas.DropDownItems.Add(item)
 
+        ' Reubicar sin regenerar: la única forma de reclasificar era volver a
+        ' generar los elementos, que reconstruye la lista y borra la geometría y
+        ' los grupos ya ingresados. Un proyecto guardado con el emparejamiento
+        ' anterior ("Element Name" en vez de "Object Label") se repara con esto.
+        Dim itemReub As New ToolStripMenuItem("Reubicar y reclasificar apoyos") With {
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(87, 87, 87),
+            .ToolTipText = "Vuelve a leer X,Y de cada nodo y propone el tipo de apoyo, " &
+                           "sin tocar geometría, refuerzo ni grupos"
+        }
+        AddHandler itemReub.Click, AddressOf Reubicar_Click
+        Ver_Zapatas.DropDownItems.Add(itemReub)
+
+    End Sub
+
+    ''' <summary>
+    ''' Reubica y reclasifica sobre las zapatas que ya existen. No reconstruye
+    ''' la lista: la geometría, el refuerzo, los grupos y los tipos marcados a
+    ''' mano sobreviven.
+    ''' </summary>
+    Private Sub Reubicar_Click(sender As Object, e As EventArgs)
+
+        If Proyecto.Elementos.Zapatas.Tipos Is Nothing OrElse Proyecto.Elementos.Zapatas.Tipos.Count = 0 Then
+            MessageBox.Show("Primero genere los elementos.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        If Proyecto.Elementos.Joints Is Nothing OrElse Proyecto.Elementos.Joints.Count = 0 Then
+            MessageBox.Show("El proyecto no tiene la hoja de coordenadas de nodos. " &
+                            "Reimporte las demandas desde un Excel que la incluya " &
+                            "(vea el menú ""? Tablas ETABS"").",
+                            "Sin nodos", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        UbicarYAvisar()
+        ClasificarYAvisar()
+
+        If _planta IsNot Nothing AndAlso Not _planta.IsDisposed Then _planta.Refrescar()
+
     End Sub
 
     Private Sub AbrirPlanta_Click(sender As Object, e As EventArgs)
@@ -105,6 +146,21 @@ Public Class Form_07_Pag_Zapatas
             MessageBox.Show("Primero importe y calcule las zapatas.",
                             "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Return
+        End If
+
+        ' Se vuelven a resolver las coordenadas antes de dibujar. Es lo que
+        ' repara un proyecto .esm guardado con el emparejamiento anterior (que
+        ' buscaba por "Element Name" en vez de "Object Label") sin obligar a
+        ' regenerar los elementos, que borraría la geometría y los grupos que el
+        ' ingeniero ya ingresó. Aquí no se muestra MessageBox: solo queda en el log.
+        If Proyecto.Elementos.Joints IsNot Nothing AndAlso Proyecto.Elementos.Joints.Count > 0 Then
+            Dim resP = ZapataService.UbicarZapatas(Proyecto.Elementos.Zapatas.Tipos,
+                                                   Proyecto.Elementos.Joints)
+            If resP.HayProblemas Then
+                Logger.Warning("Form_07_Pag_Zapatas.AbrirPlanta_Click",
+                               $"Sin nodo: {String.Join(", ", resP.SinNodo)}. " &
+                               $"Superpuestas: {String.Join(" | ", resP.Superpuestas)}")
+            End If
         End If
 
         ' Una sola ventana: reabrirla la trae al frente con los datos al día.
@@ -787,6 +843,11 @@ Public Class Form_07_Pag_Zapatas
 
         Tabla_Elementos.Rows.Clear()
 
+        ' Tipos se RECONSTRUYE. Sin este Clear, volver a generar los elementos
+        ' (p. ej. tras reimportar demandas) duplicaba cada zapata: la tabla
+        ' mostraba N y la lista tenia 2N, con las copias una encima de otra en
+        ' la planta y un desfase tabla/lista en el bucle de calculo.
+        Proyecto.Elementos.Zapatas.Tipos.Clear()
 
         For Each Elemento_ In Lista_Elementos
 
@@ -848,10 +909,6 @@ Public Class Form_07_Pag_Zapatas
             Seccion.FD_E = Convert.ToDouble(FD_E.Text)
             Seccion.FD_D = Convert.ToDouble(FD_D.Text)
 
-            ' Coordenadas del nodo, si se importaron. Sin ellas la zapata no se
-            ' puede ubicar en planta ni clasificar automáticamente.
-            AsignarCoordenadas(Seccion)
-
             Proyecto.Elementos.Zapatas.Tipos.Add(Seccion)
 
             Dim idx As Integer = Tabla_Elementos.Rows.Add(Seccion.Label_joint,
@@ -881,30 +938,69 @@ Public Class Form_07_Pag_Zapatas
 
         Next
 
-        ' Con todas las zapatas creadas ya se puede ver el conjunto y proponer
-        ' cuáles son medianeras y esquineras.
+        ' Las coordenadas se asignan con TODAS las zapatas ya creadas: la
+        ' superposición de dos apoyos en el mismo punto solo se ve mirando el
+        ' conjunto, y es la señal de que una etiqueta se resolvió contra el nodo
+        ' equivocado.
+        UbicarYAvisar()
+
+        ' Con todas las zapatas ubicadas ya se puede proponer cuáles son
+        ' medianeras y esquineras.
         ClasificarYAvisar()
 
     End Sub
 
     ''' <summary>
-    ''' Copia a la zapata las coordenadas en planta de su nodo. El vínculo es el
-    ''' JointLabel de "Joint Reactions" contra el ElementLabel de la hoja de
-    ''' nodos; en ETABS son la misma etiqueta.
+    ''' Ubica todas las zapatas en planta y avisa de lo que no cuadró. La
+    ''' resolución etiqueta -> nodo vive en ZapataService.UbicarZapatas, donde
+    ''' está documentado por qué el vínculo es "Object Label" y no
+    ''' "Element Name", y está cubierta por pruebas.
     ''' </summary>
-    Private Sub AsignarCoordenadas(z As cZapata)
+    Private Sub UbicarYAvisar()
 
+        Dim zapatas = Proyecto.Elementos.Zapatas.Tipos
         Dim joints = Proyecto.Elementos.Joints
-        If joints Is Nothing OrElse joints.Count = 0 Then Exit Sub
 
-        Dim j = joints.FirstOrDefault(Function(x) String.Equals(Convert.ToString(x.ElementLabel).Trim(),
-                                                                Convert.ToString(z.Label_joint).Trim(),
-                                                                StringComparison.OrdinalIgnoreCase))
-        If j Is Nothing Then Exit Sub
+        If joints Is Nothing OrElse joints.Count = 0 Then
+            Logger.Warning("Form_07_Pag_Zapatas.UbicarYAvisar",
+                           "No se importó la hoja de nodos: ninguna zapata queda ubicada en planta.")
+            Exit Sub
+        End If
 
-        z.CoordX = j.GlobalX
-        z.CoordY = j.GlobalY
-        z.TieneCoordenadas = True
+        Dim res = ZapataService.UbicarZapatas(zapatas, joints)
+
+        Logger.Info("Form_07_Pag_Zapatas.UbicarYAvisar",
+                    $"Ubicadas {res.Ubicadas} de {zapatas.Count} zapatas. " &
+                    $"Sin nodo: {res.SinNodo.Count}. Superpuestas: {res.Superpuestas.Count} grupo(s).")
+
+        If Not res.HayProblemas Then Exit Sub
+
+        Dim msg As New System.Text.StringBuilder()
+        msg.AppendLine($"Se ubicaron {res.Ubicadas} de {zapatas.Count} zapatas en planta.")
+        msg.AppendLine()
+
+        If res.SinNodo.Count > 0 Then
+            msg.AppendLine("Sin nodo en la hoja de coordenadas (no se dibujan ni se clasifican):")
+            msg.AppendLine("    " & String.Join(", ", res.SinNodo.Take(20)))
+            If res.SinNodo.Count > 20 Then msg.AppendLine($"    ... y {res.SinNodo.Count - 20} más")
+            msg.AppendLine()
+        End If
+
+        If res.Superpuestas.Count > 0 Then
+            msg.AppendLine("Zapatas que quedaron en el MISMO punto:")
+            For Each linea In res.Superpuestas.Take(20)
+                msg.AppendLine("    " & linea)
+            Next
+            If res.Superpuestas.Count > 20 Then msg.AppendLine($"    ... y {res.Superpuestas.Count - 20} grupo(s) más")
+            msg.AppendLine()
+            msg.AppendLine("Dos apoyos del modelo no pueden compartir coordenada. Suele significar " &
+                           "que la hoja de nodos exportada no cubre todos los apoyos, o que el " &
+                           "modelo tiene nodos coincidentes. Revise la planta antes de confiar en " &
+                           "la clasificación de medianeras y esquineras.")
+        End If
+
+        MessageBox.Show(msg.ToString(), "Ubicación en planta",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning)
 
     End Sub
 
@@ -924,15 +1020,19 @@ Public Class Form_07_Pag_Zapatas
             Exit Sub
         End If
 
-        ZapataService.ClasificarApoyos(zapatas)
+        Dim malla As ZapataService.MallaInfo = Nothing
+        ZapataService.ClasificarApoyos(zapatas, malla, 0.3, Proyecto.Elementos.Grids.GridLines)
         ActualizarColumnaTipoApoyo()
 
         Dim nEsq = zapatas.Where(Function(z) z.TipoApoyo = eTipoApoyoZapata.Esquinera).Count
         Dim nMed = zapatas.Where(Function(z) z.TipoApoyo = eTipoApoyoZapata.Medianera).Count
         Dim nCen = zapatas.Where(Function(z) z.TipoApoyo = eTipoApoyoZapata.Central).Count
 
+        Dim txtMalla As String = If(malla IsNot Nothing, malla.ToString(), "sin malla medida")
+
         Logger.Info("Form_07_Pag_Zapatas.ClasificarYAvisar",
-                    $"Clasificadas {conCoord} de {zapatas.Count}: {nCen} centrales, {nMed} medianeras, {nEsq} esquineras.")
+                    $"Clasificadas {conCoord} de {zapatas.Count}: {nCen} centrales, {nMed} medianeras, " &
+                    $"{nEsq} esquineras. {txtMalla}")
 
         If nEsq + nMed > 0 Then
             MessageBox.Show(
@@ -940,6 +1040,7 @@ Public Class Form_07_Pag_Zapatas
                 $"    Centrales    {nCen}" & vbCrLf &
                 $"    Medianeras   {nMed}" & vbCrLf &
                 $"    Esquineras   {nEsq}" & vbCrLf & vbCrLf &
+                "Medido sobre la " & txtMalla & "." & vbCrLf & vbCrLf &
                 "El punzonamiento de las medianeras y esquineras se revisa con perímetro " &
                 "crítico abierto, que es menor: su capacidad baja respecto a una central." & vbCrLf & vbCrLf &
                 "Revise la columna ""Tipo de apoyo"" y corrija a mano las que la geometría no " &

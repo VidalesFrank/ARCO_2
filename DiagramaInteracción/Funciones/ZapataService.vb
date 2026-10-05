@@ -1,4 +1,4 @@
-Imports ARCO.eNumeradores
+﻿Imports ARCO.eNumeradores
 
 ''' <summary>
 ''' Punzonamiento de zapatas según la posición del apoyo, y clasificación
@@ -111,13 +111,542 @@ Public NotInheritable Class ZapataService
     ''' Holgura en metros para considerar que dos nodos están alineados en un eje.
     ''' </param>
     ''' <returns>Cuántas zapatas cambiaron de tipo.</returns>
-    Public Shared Function ClasificarApoyos(zapatas As List(Of cZapata),
-                                            Optional tolerancia As Double = 0.3) As Integer
+    ' =====================================================================
+    ' UBICACIÓN EN PLANTA — de qué nodo saca cada zapata su X,Y
+    ' =====================================================================
 
+    ''' <summary>
+    ''' Resultado de ubicar las zapatas: cuántas quedaron con coordenadas, qué
+    ''' etiquetas no se encontraron y qué zapatas comparten posición.
+    ''' </summary>
+    Public Class ResultadoUbicacion
+        Public Property Ubicadas As Integer
+        ''' <summary>Labels de "Joint Reactions" que no existen en la hoja de nodos.</summary>
+        Public Property SinNodo As New List(Of String)
+        ''' <summary>Grupos de zapatas que cayeron en el mismo punto, ya formateados.</summary>
+        Public Property Superpuestas As New List(Of String)
+        Public ReadOnly Property HayProblemas As Boolean
+            Get
+                Return SinNodo.Count > 0 OrElse Superpuestas.Count > 0
+            End Get
+        End Property
+    End Class
+
+    ''' <summary>
+    ''' Índice de nodos de cimentación por etiqueta.
+    '''
+    ''' EL VÍNCULO CORRECTO ES "Object Label", NO "Element Name". En la hoja de
+    ''' nodos de E23, "Object Label" es la etiqueta del nodo por piso — la misma
+    ''' que trae la columna Label de "Joint Reactions" — mientras que
+    ''' "Element Name" es el nombre único del elemento, que es lo que
+    ''' referencian los frames. En modelos simples los dos corren parejos y el
+    ''' error pasa desapercibido; en cuanto divergen (nodos agregados o
+    ''' borrados, mallado) unas pocas zapatas toman la coordenada de OTRO nodo
+    ''' y aparecen superpuestas sobre sus vecinas. Así lo resuelve también el
+    ''' importador de Pilas (Funciones_00_Varias, diccionarios byLabel/byElem).
+    '''
+    ''' Una etiqueta se repite en todos los pisos, así que se conserva el nodo
+    ''' de MENOR Z: el de la cimentación.
+    ''' </summary>
+    Public Shared Function IndexarJointsDeCimentacion(joints As List(Of cJoint),
+                                                      porElementName As Boolean) As Dictionary(Of String, cJoint)
+
+        Dim idx As New Dictionary(Of String, cJoint)(StringComparer.OrdinalIgnoreCase)
+        If joints Is Nothing Then Return idx
+
+        For Each j As cJoint In joints
+            If j Is Nothing Then Continue For
+            Dim clave As String = If(porElementName, j.ElementLabel, j.ObjectLabel)
+            If String.IsNullOrWhiteSpace(clave) Then Continue For
+            clave = clave.Trim()
+
+            Dim ex As cJoint = Nothing
+            If Not idx.TryGetValue(clave, ex) OrElse j.GlobalZ < ex.GlobalZ Then
+                idx(clave) = j
+            End If
+        Next
+
+        Return idx
+    End Function
+
+    ''' <summary>
+    ''' Copia a cada zapata la X,Y de su nodo y reporta lo que no cuadró. Se
+    ''' llama con TODAS las zapatas a la vez, no una por una, porque la
+    ''' superposición solo se ve mirando el conjunto.
+    '''
+    ''' Orden de resolución por etiqueta: primero "Object Label" (el vínculo de
+    ''' "Joint Reactions"), y si ahí no está, "Element Name" como respaldo —
+    ''' cubre los archivos donde coinciden y el formato E17.
+    ''' </summary>
+    Public Shared Function UbicarZapatas(zapatas As List(Of cZapata),
+                                         joints As List(Of cJoint),
+                                         Optional tolerancia As Double = 0.001) As ResultadoUbicacion
+
+        Dim res As New ResultadoUbicacion()
+        If zapatas Is Nothing OrElse zapatas.Count = 0 Then Return res
+
+        Dim porLabel = IndexarJointsDeCimentacion(joints, porElementName:=False)
+        Dim porElem = IndexarJointsDeCimentacion(joints, porElementName:=True)
+
+        For Each z In zapatas
+            If z Is Nothing Then Continue For
+
+            Dim etiqueta As String = Convert.ToString(z.Label_joint)
+            If etiqueta Is Nothing Then etiqueta = ""
+            etiqueta = etiqueta.Trim()
+
+            Dim j As cJoint = Nothing
+            If etiqueta.Length > 0 Then
+                If Not porLabel.TryGetValue(etiqueta, j) Then
+                    porElem.TryGetValue(etiqueta, j)
+                End If
+            End If
+
+            If j Is Nothing Then
+                ' Sin nodo no se puede ubicar ni clasificar. Se limpia la marca
+                ' para que no quede una coordenada vieja de un calculo anterior.
+                z.TieneCoordenadas = False
+                res.SinNodo.Add(If(etiqueta.Length > 0, etiqueta, "(sin etiqueta)"))
+                Continue For
+            End If
+
+            z.CoordX = j.GlobalX
+            z.CoordY = j.GlobalY
+            z.TieneCoordenadas = True
+            res.Ubicadas += 1
+        Next
+
+        res.Superpuestas.AddRange(DetectarSuperpuestas(zapatas, tolerancia))
+        Return res
+    End Function
+
+    ''' <summary>
+    ''' Zapatas que quedaron en el mismo punto. Dos apoyos del modelo no pueden
+    ''' compartir coordenada: si pasa, la etiqueta se resolvió contra el nodo
+    ''' equivocado y en la planta una tapa a la otra.
+    ''' </summary>
+    Public Shared Function DetectarSuperpuestas(zapatas As List(Of cZapata),
+                                                Optional tolerancia As Double = 0.001) As List(Of String)
+
+        Dim avisos As New List(Of String)
+        If zapatas Is Nothing Then Return avisos
+
+        Dim ubicadas = zapatas.Where(Function(z) z IsNot Nothing AndAlso z.TieneCoordenadas).ToList()
+        If ubicadas.Count < 2 Then Return avisos
+
+        ' Redondeo a la tolerancia para agrupar: con 0.001 m son milimetros.
+        Dim paso As Double = If(tolerancia > 0, tolerancia, 0.001)
+        Dim grupos = ubicadas.GroupBy(Function(z) New With {
+                                          Key .X = Math.Round(z.CoordX / paso),
+                                          Key .Y = Math.Round(z.CoordY / paso)
+                                      })
+
+        For Each g In grupos
+            If g.Count() < 2 Then Continue For
+            Dim nombres = String.Join(", ", g.Select(Function(z) NombreCorto(z)))
+            Dim primera = g.First()
+            avisos.Add(nombres & "  ->  (" & primera.CoordX.ToString("0.00") & ", " &
+                       primera.CoordY.ToString("0.00") & ")")
+        Next
+
+        Return avisos
+    End Function
+
+    Private Shared Function NombreCorto(z As cZapata) As String
+        If Not String.IsNullOrWhiteSpace(z.Nombre) Then Return z.Nombre
+        Return Convert.ToString(z.Label_joint)
+    End Function
+
+    ''' <summary>
+    ''' Coherencia mínima para creerle a la dirección medida de la nube de
+    ''' apoyos. 0.5 = la mitad de los segmentos al vecino más cercano apuntan en
+    ''' la misma dirección de malla. Por debajo no hay una malla que medir.
+    ''' </summary>
+    Public Const COHERENCIA_MINIMA As Double = 0.5
+
+    ''' <summary>
+    ''' A partir de cuántas veces el vano típico un hueco deja de ser un vano.
+    ''' Un apoyo suelto a 50 m de una malla de 5 m abre un hueco de 50 m en la
+    ''' lista de ordenadas, pero eso no es una crujía: es otro bloque, o un
+    ''' apoyo aislado. Si contara como vano, el alcance se estiraría hasta él y
+    ''' volvería a tapar el borde, que es justo lo que se quiso evitar.
+    ''' </summary>
+    Public Const VANO_ATIPICO As Double = 4.0
+
+    ' ---------------------------------------------------------------------
+    ' Marco de la malla: dirección dominante y escala
+    ' ---------------------------------------------------------------------
+
+    ''' <summary>
+    ''' Marco y escala de la malla de apoyos, medidos de la propia planta.
+    ''' </summary>
+    Public Class MallaInfo
+        ''' <summary>Dirección dominante de la malla respecto al eje X global, en grados, dentro de [0, 90).</summary>
+        Public Property AnguloGrados As Double
+        ''' <summary>Qué tan definida está la dirección de la malla, de 0 a 1. Ver AnguloDeLaNube.</summary>
+        Public Property Coherencia As Double
+        ''' <summary>De dónde salió el ángulo: "apoyos", "ejes" (líneas tipo G), "forzado" o "global".</summary>
+        Public Property Origen As String = "apoyos"
+
+        ''' <summary>
+        ''' Distancia típica entre apoyos vecinos (m): mediana de la distancia al
+        ''' más cercano. Mide el desalineamiento admisible, no el vano.
+        ''' </summary>
+        Public Property SeparacionTipica As Double
+        ''' <summary>Vano típico (m): mediana de la separación entre ejes de apoyos consecutivos.</summary>
+        Public Property LuzTipica As Double
+        ''' <summary>Vano ancho (m): percentil 90 de esas separaciones. Es lo que fija el alcance.</summary>
+        Public Property LuzMaxima As Double
+
+        ''' <summary>Semiancho de la franja para considerar dos apoyos alineados (m).</summary>
+        Public Property Banda As Double
+        ''' <summary>Distancia máxima a la que otro apoyo cuenta como vecino (m).</summary>
+        Public Property Alcance As Double
+        ''' <summary>Apoyos con coordenadas que entraron en la medición.</summary>
+        Public Property Apoyos As Integer
+
+        Public Overrides Function ToString() As String
+            Return $"malla a {AnguloGrados:0.0}° (según {Origen}), vano típico " &
+                   $"{LuzTipica:0.00} m, banda {Banda:0.00} m, alcance {Alcance:0.00} m"
+        End Function
+    End Class
+
+    ''' <summary>
+    ''' Mide la malla antes de clasificar: su dirección y sus dos escalas.
+    '''
+    ''' POR QUÉ NO SE SACA DEL GRID DE ETABS: las líneas de eje tipo X e Y solo
+    ''' traen una Ordinate, expresada en el sistema de ejes de ETABS, que puede
+    ''' estar rotado respecto al global — no hay ángulo que leer, y así las dibuja
+    ''' la planta. Solo las de tipo General (Cartesian) traen X1,Y1,X2,Y2 y por
+    ''' tanto una dirección real.
+    '''
+    ''' SON DOS ESCALAS DISTINTAS, a propósito:
+    '''   - la BANDA (qué tanto desalineamiento se admite para seguir contando a
+    '''     dos apoyos como de la misma fila) sale de la distancia al vecino más
+    '''     cercano, que es robusta: una columna corrida dentro de su vano no la
+    '''     mueve.
+    '''   - el ALCANCE (hasta dónde se busca vecino) sale del VANO, es decir de la
+    '''     separación entre ejes consecutivos de apoyos. No puede salir de la
+    '''     distancia al vecino más cercano: en una malla de filas juntas y vanos
+    '''     largos — 3 m entre filas y 9 m entre ejes — el vecino más cercano
+    '''     siempre está a 3 m, el alcance quedaría en 4.5 m y los apoyos
+    '''     interiores de esos vanos largos saldrían como de borde.
+    ''' </summary>
+    ''' <param name="anguloGradosForzado">
+    ''' Ángulo impuesto a mano. NaN (el valor normal) significa detectarlo.
+    ''' </param>
+    ''' <param name="tolerancia">Banda mínima en metros, para mallas muy apretadas.</param>
+    ''' <param name="factorBanda">
+    ''' Fracción de la distancia al vecino que se admite de desalineamiento.
+    ''' 0.5 = media luz: una columna corrida medio vano sigue contando como
+    ''' vecina de su fila. Pasar de 0.5 empezaría a contar las diagonales.
+    ''' </param>
+    ''' <param name="factorAlcance">
+    ''' Múltiplo del vano ancho hasta donde se busca vecino. Acota el caso de un
+    ''' apoyo suelto a 50 m que, por estar alineado, tapaba el borde.
+    ''' </param>
+    Public Shared Function AnalizarMalla(zapatas As List(Of cZapata),
+                                         Optional gridLines As List(Of cGridLine) = Nothing,
+                                         Optional anguloGradosForzado As Double = Double.NaN,
+                                         Optional tolerancia As Double = 0.3,
+                                         Optional factorBanda As Double = 0.5,
+                                         Optional factorAlcance As Double = 1.5) As MallaInfo
+
+        Dim info As New MallaInfo()
+        Dim pts = PuntosConCoordenadas(zapatas)
+        info.Apoyos = pts.Count
+
+        info.SeparacionTipica = Percentil(DistanciasAlVecinoMasCercano(pts), 0.5)
+
+        ' Ángulo: forzado > nube de apoyos (si es coherente) > ejes tipo G > 0.
+        ' La nube manda porque es justo lo que se está clasificando. Las líneas
+        ' de eje solo entran cuando la nube no define una dirección — dos bloques
+        ' con orientaciones distintas, una planta irregular — porque un eje tipo
+        ' General puede ser cualquier cosa: una rampa, una diagonal de fachada.
+        Dim coherencia As Double = 0
+        Dim angNube As Double = AnguloDeLaNube(pts, coherencia)
+        info.Coherencia = coherencia
+
+        If Not Double.IsNaN(anguloGradosForzado) Then
+            info.AnguloGrados = NormalizarACuadrante(anguloGradosForzado)
+            info.Origen = "forzado"
+        ElseIf coherencia >= COHERENCIA_MINIMA Then
+            info.AnguloGrados = angNube
+            info.Origen = "apoyos"
+        Else
+            Dim angEjes As Double = AnguloDeEjesGenerales(gridLines)
+            If Not Double.IsNaN(angEjes) Then
+                info.AnguloGrados = angEjes
+                info.Origen = "ejes"
+            Else
+                ' Ni la nube ni los ejes dicen nada: se queda en los ejes
+                ' globales, que es el comportamiento de siempre.
+                info.AnguloGrados = 0
+                info.Origen = "global"
+            End If
+        End If
+
+        ' Vanos: ya con el ángulo se pueden proyectar los apoyos sobre las dos
+        ' direcciones de la malla y medir la separación entre ejes consecutivos.
+        Dim vanos = VanosDeLaMalla(pts, info.AnguloGrados, tolerancia)
+        info.LuzTipica = Percentil(vanos, 0.5)
+        info.LuzMaxima = VanoAnchoPlausible(vanos, info.LuzTipica)
+
+        info.Banda = Math.Max(tolerancia, factorBanda * info.SeparacionTipica)
+        Dim luz As Double = Math.Max(info.SeparacionTipica, info.LuzMaxima)
+        info.Alcance = If(luz > 0, factorAlcance * luz, Double.MaxValue)
+
+        Return info
+    End Function
+
+    Private Shared Function PuntosConCoordenadas(zapatas As List(Of cZapata)) As List(Of cZapata)
+        If zapatas Is Nothing Then Return New List(Of cZapata)()
+        Return zapatas.Where(Function(z) z IsNot Nothing AndAlso z.TieneCoordenadas).ToList()
+    End Function
+
+    Private Shared Function DistanciasAlVecinoMasCercano(pts As List(Of cZapata)) As List(Of Double)
+        Dim dists As New List(Of Double)
+        If pts Is Nothing Then Return dists
+        For i = 0 To pts.Count - 1
+            Dim mejor As Double = Double.MaxValue
+            For j = 0 To pts.Count - 1
+                If i = j Then Continue For
+                Dim dx = pts(j).CoordX - pts(i).CoordX
+                Dim dy = pts(j).CoordY - pts(i).CoordY
+                Dim d2 = dx * dx + dy * dy
+                If d2 > 0.000001 AndAlso d2 < mejor Then mejor = d2
+            Next
+            If mejor < Double.MaxValue Then dists.Add(Math.Sqrt(mejor))
+        Next
+        Return dists
+    End Function
+
+    ''' <summary>
+    ''' Separaciones entre ejes consecutivos de apoyos, en las dos direcciones de
+    ''' la malla. Los apoyos se proyectan sobre cada dirección, se agrupan los
+    ''' que caen dentro de la tolerancia (ese grupo es un eje) y se devuelven las
+    ''' distancias entre ejes vecinos. Es la medida del VANO.
+    ''' </summary>
+    Private Shared Function VanosDeLaMalla(pts As List(Of cZapata),
+                                           anguloGrados As Double,
+                                           tolerancia As Double) As List(Of Double)
+
+        Dim vanos As New List(Of Double)
+        If pts Is Nothing OrElse pts.Count < 2 Then Return vanos
+
+        Dim rad As Double = anguloGrados * Math.PI / 180.0
+        Dim cosT As Double = Math.Cos(rad)
+        Dim senT As Double = Math.Sin(rad)
+
+        Dim us As New List(Of Double)
+        Dim vs As New List(Of Double)
+        For Each p In pts
+            us.Add(p.CoordX * cosT + p.CoordY * senT)
+            vs.Add(-p.CoordX * senT + p.CoordY * cosT)
+        Next
+
+        vanos.AddRange(SeparacionesEntreEjes(us, tolerancia))
+        vanos.AddRange(SeparacionesEntreEjes(vs, tolerancia))
+        Return vanos
+    End Function
+
+    ''' <summary>
+    ''' Agrupa ordenadas que caen dentro de la tolerancia (cada grupo es un eje)
+    ''' y devuelve la distancia entre ejes consecutivos.
+    ''' </summary>
+    Private Shared Function SeparacionesEntreEjes(ordenadas As List(Of Double),
+                                                  tolerancia As Double) As List(Of Double)
+
+        Dim seps As New List(Of Double)
+        If ordenadas Is Nothing OrElse ordenadas.Count < 2 Then Return seps
+
+        Dim tol As Double = If(tolerancia > 0, tolerancia, 0.3)
+        Dim orden = ordenadas.OrderBy(Function(v) v).ToList()
+
+        Dim anterior As Double = orden(0)
+        For i = 1 To orden.Count - 1
+            Dim d As Double = orden(i) - anterior
+            If d > tol Then
+                seps.Add(d)
+                anterior = orden(i)
+            End If
+        Next
+
+        Return seps
+    End Function
+
+    ''' <summary>
+    ''' El vano más ancho que sigue siendo creíble como crujía: el mayor que no
+    ''' pase de VANO_ATIPICO veces el típico. Un percentil no sirve aquí — con
+    ''' tres o cuatro vanos medidos, el p90 ES el hueco del apoyo suelto.
+    ''' </summary>
+    Private Shared Function VanoAnchoPlausible(vanos As List(Of Double),
+                                               vanoTipico As Double) As Double
+        If vanos Is Nothing OrElse vanos.Count = 0 Then Return 0
+        If vanoTipico <= 0 Then Return vanos.Max()
+        Dim techo As Double = VANO_ATIPICO * vanoTipico
+        Dim creibles = vanos.Where(Function(v) v <= techo).ToList()
+        If creibles.Count = 0 Then Return vanoTipico
+        Return creibles.Max()
+    End Function
+
+    Private Shared Function Percentil(valores As List(Of Double), q As Double) As Double
+        If valores Is Nothing OrElse valores.Count = 0 Then Return 0
+        Dim orden = valores.OrderBy(Function(v) v).ToList()
+        Dim idx As Integer = CInt(Math.Ceiling(q * orden.Count)) - 1
+        If idx < 0 Then idx = 0
+        If idx > orden.Count - 1 Then idx = orden.Count - 1
+        Return orden(idx)
+    End Function
+
+    ''' <summary>
+    ''' Ángulo de la malla medido de la nube: el segmento de cada apoyo a su
+    ''' vecino más cercano va a lo largo de una de las dos direcciones de la
+    ''' malla. El ángulo se toma módulo 90° (una malla ortogonal no distingue sus
+    ''' dos direcciones) promediando en el círculo con el truco del cuádruple:
+    ''' 4 x 0° y 4 x 90° caen en el mismo punto, así que el promedio es correcto.
+    ''' </summary>
+    ''' <param name="coherencia">
+    ''' Qué tan de acuerdo están esos segmentos, de 0 a 1. Una malla ortogonal
+    ''' regular da 1; dos bloques con orientaciones distintas, o una planta sin
+    ''' malla, dan cerca de 0 y el ángulo no significa nada.
+    ''' </param>
+    Private Shared Function AnguloDeLaNube(pts As List(Of cZapata),
+                                           ByRef coherencia As Double) As Double
+
+        coherencia = 0
+        If pts Is Nothing OrElse pts.Count < 2 Then Return 0
+
+        Dim sx As Double = 0, sy As Double = 0, n As Integer = 0
+
+        For i = 0 To pts.Count - 1
+            Dim mejor As Integer = -1, d2Mejor As Double = Double.MaxValue
+            For j = 0 To pts.Count - 1
+                If i = j Then Continue For
+                Dim dx = pts(j).CoordX - pts(i).CoordX
+                Dim dy = pts(j).CoordY - pts(i).CoordY
+                Dim d2 = dx * dx + dy * dy
+                If d2 > 0.000001 AndAlso d2 < d2Mejor Then
+                    d2Mejor = d2
+                    mejor = j
+                End If
+            Next
+            If mejor < 0 Then Continue For
+            Dim ang = Math.Atan2(pts(mejor).CoordY - pts(i).CoordY,
+                                 pts(mejor).CoordX - pts(i).CoordX)
+            sx += Math.Cos(4.0 * ang)
+            sy += Math.Sin(4.0 * ang)
+            n += 1
+        Next
+
+        If n = 0 Then Return 0
+
+        Dim resultante As Double = Math.Sqrt(sx * sx + sy * sy)
+        coherencia = resultante / n
+        If resultante < 0.000001 Then Return 0
+
+        Return NormalizarACuadrante(Math.Atan2(sy, sx) / 4.0 * 180.0 / Math.PI)
+    End Function
+
+    ''' <summary>
+    ''' Ángulo de las líneas de eje tipo General (Cartesian), las únicas que
+    ''' traen coordenadas y por tanto dirección. NaN si el proyecto no tiene.
+    ''' </summary>
+    Private Shared Function AnguloDeEjesGenerales(gridLines As List(Of cGridLine)) As Double
+
+        If gridLines Is Nothing Then Return Double.NaN
+
+        Dim sx As Double = 0, sy As Double = 0, n As Integer = 0
+
+        For Each gl In gridLines
+            If gl Is Nothing OrElse Not gl.EsTipoGeneral Then Continue For
+            Dim dx = gl.X2 - gl.X1
+            Dim dy = gl.Y2 - gl.Y1
+            Dim largo = Math.Sqrt(dx * dx + dy * dy)
+            If largo < 0.001 Then Continue For
+            ' Pesado por la longitud: un eje largo define la malla mejor que el
+            ' tramo corto de una rampa o un voladizo.
+            Dim ang = Math.Atan2(dy, dx)
+            sx += largo * Math.Cos(4.0 * ang)
+            sy += largo * Math.Sin(4.0 * ang)
+            n += 1
+        Next
+
+        If n = 0 OrElse (Math.Abs(sx) < 0.000001 AndAlso Math.Abs(sy) < 0.000001) Then Return Double.NaN
+
+        Return NormalizarACuadrante(Math.Atan2(sy, sx) / 4.0 * 180.0 / Math.PI)
+    End Function
+
+    ''' <summary>Lleva un ángulo en grados al rango [0, 90).</summary>
+    Private Shared Function NormalizarACuadrante(grados As Double) As Double
+        If Double.IsNaN(grados) OrElse Double.IsInfinity(grados) Then Return 0
+        Dim g As Double = grados - Math.Floor(grados / 90.0) * 90.0
+        If g < 0 OrElse g >= 90.0 Then g = 0
+        Return g
+    End Function
+
+    ' ---------------------------------------------------------------------
+    ' Clasificación
+    ' ---------------------------------------------------------------------
+
+    ''' <summary>
+    ''' Propone Central / Medianera / Esquinera por la posición del apoyo en la
+    ''' planta, contando LADOS LIBRES: direcciones de la malla en las que no hay
+    ''' ningún otro apoyo más allá.
+    '''
+    '''     0 lados libres  -> interior  -> Central
+    '''     1 lado libre    -> borde     -> Medianera
+    '''     2 o más         -> esquina   -> Esquinera
+    '''
+    ''' Dos lados libres opuestos (una sola línea de columnas) no es ninguno de
+    ''' los tres casos de NSR-10 C.11.11; queda como esquinera, que es el lado
+    ''' seguro. Lo mismo un apoyo aislado, con tres o cuatro lados libres.
+    '''
+    ''' La búsqueda se hace EN EL MARCO DE LA MALLA, no en los ejes X,Y globales:
+    ''' hasta 2026-10-05 un edificio girado respecto al origen de ETABS no tenía
+    ''' ningún par de apoyos alineado dentro de la tolerancia y salía entero como
+    ''' esquineras (phi-Vc al 37 %). Y el vecino tiene que estar DENTRO DEL
+    ''' ALCANCE: antes un apoyo suelto a 50 m contaba igual que uno a 5 m y podía
+    ''' ascender a Central un apoyo que estaba en el borde — ese error sí es del
+    ''' lado no conservador.
+    '''
+    ''' Lo que el ingeniero marcó a mano (TipoApoyoManual) no se toca: un
+    ''' voladizo, una junta de dilatación, un lindero o una zapata combinada
+    ''' rompen cualquier inferencia geométrica.
+    ''' </summary>
+    ''' <returns>Cuántas zapatas cambiaron de tipo.</returns>
+    Public Shared Function ClasificarApoyos(zapatas As List(Of cZapata),
+                                            Optional tolerancia As Double = 0.3,
+                                            Optional gridLines As List(Of cGridLine) = Nothing,
+                                            Optional anguloGradosForzado As Double = Double.NaN) As Integer
+
+        Dim info As MallaInfo = Nothing
+        Return ClasificarApoyos(zapatas, info, tolerancia, gridLines, anguloGradosForzado)
+    End Function
+
+    ''' <summary>
+    ''' Igual que la anterior, pero devuelve además cómo quedó medida la malla,
+    ''' para registrarla y que el ingeniero la vea.
+    ''' </summary>
+    Public Shared Function ClasificarApoyos(zapatas As List(Of cZapata),
+                                            ByRef malla As MallaInfo,
+                                            Optional tolerancia As Double = 0.3,
+                                            Optional gridLines As List(Of cGridLine) = Nothing,
+                                            Optional anguloGradosForzado As Double = Double.NaN) As Integer
+
+        malla = Nothing
         If zapatas Is Nothing Then Return 0
 
-        Dim conCoord = zapatas.Where(Function(z) z.TieneCoordenadas).ToList()
+        Dim conCoord = PuntosConCoordenadas(zapatas)
         If conCoord.Count < 2 Then Return 0
+
+        malla = AnalizarMalla(zapatas, gridLines, anguloGradosForzado, tolerancia)
+
+        Dim rad As Double = malla.AnguloGrados * Math.PI / 180.0
+        Dim cosT As Double = Math.Cos(rad)
+        Dim senT As Double = Math.Sin(rad)
+        Dim banda As Double = malla.Banda
+        Dim alcance As Double = malla.Alcance
 
         Dim cambios As Integer = 0
 
@@ -131,32 +660,35 @@ Public NotInheritable Class ZapataService
             For Each otra In conCoord
                 If otra Is z Then Continue For
 
-                Dim dx As Double = otra.CoordX - z.CoordX
-                Dim dy As Double = otra.CoordY - z.CoordY
+                Dim dxg As Double = otra.CoordX - z.CoordX
+                Dim dyg As Double = otra.CoordY - z.CoordY
+                If Math.Sqrt(dxg * dxg + dyg * dyg) > alcance Then Continue For
 
-                ' Vecino en X: alineado en Y dentro de la tolerancia
-                If Math.Abs(dy) <= tolerancia Then
-                    If dx < -tolerancia Then hayIzq = True
-                    If dx > tolerancia Then hayDer = True
+                ' Al marco de la malla: u a lo largo de la dirección dominante.
+                Dim du As Double = dxg * cosT + dyg * senT
+                Dim dv As Double = -dxg * senT + dyg * cosT
+
+                If Math.Abs(dv) <= banda Then
+                    If du < -tolerancia Then hayIzq = True
+                    If du > tolerancia Then hayDer = True
                 End If
 
-                ' Vecino en Y: alineado en X dentro de la tolerancia
-                If Math.Abs(dx) <= tolerancia Then
-                    If dy < -tolerancia Then hayAbajo = True
-                    If dy > tolerancia Then hayArriba = True
+                If Math.Abs(du) <= banda Then
+                    If dv < -tolerancia Then hayAbajo = True
+                    If dv > tolerancia Then hayArriba = True
                 End If
             Next
 
-            Dim lados As Integer = 0
-            If hayIzq Then lados += 1
-            If hayDer Then lados += 1
-            If hayAbajo Then lados += 1
-            If hayArriba Then lados += 1
+            Dim libres As Integer = 0
+            If Not hayIzq Then libres += 1
+            If Not hayDer Then libres += 1
+            If Not hayAbajo Then libres += 1
+            If Not hayArriba Then libres += 1
 
             Dim propuesto As eTipoApoyoZapata
-            Select Case lados
-                Case 4 : propuesto = eTipoApoyoZapata.Central
-                Case 3 : propuesto = eTipoApoyoZapata.Medianera
+            Select Case libres
+                Case 0 : propuesto = eTipoApoyoZapata.Central
+                Case 1 : propuesto = eTipoApoyoZapata.Medianera
                 Case Else : propuesto = eTipoApoyoZapata.Esquinera
             End Select
 
