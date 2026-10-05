@@ -82,7 +82,7 @@ Public Class Form_01_PagPilas
             TablaRevi.Columns(2).HeaderText = "Ps Dinámica [kN]"
             TablaRevi.Columns(3).HeaderText = "Pu Estática [kN]"
             TablaRevi.Columns(4).HeaderText = "Pu Dinámica [kN]"
-            TablaRevi.Columns(5).HeaderText = "Pu Tracción [kN]"
+            TablaRevi.Columns(5).HeaderText = "Pu Tracción [kN] (− = tracción)"
             TablaRevi.Columns(6).HeaderText = "Chequeo 1 (Ps E)"
             TablaRevi.Columns(7).HeaderText = "Chequeo 2 (Ps D)"
             TablaRevi.Columns(8).HeaderText = "Chequeo 3 (Pu E)"
@@ -683,7 +683,7 @@ Public Class Form_01_PagPilas
         TablaRevi.Columns(2).HeaderText = "Ps Dinámica [kN]"
         TablaRevi.Columns(3).HeaderText = "Pu Estática [kN]"
         TablaRevi.Columns(4).HeaderText = "Pu Dinámica [kN]"
-        TablaRevi.Columns(5).HeaderText = "Pu Tracción [kN]"
+        TablaRevi.Columns(5).HeaderText = "Pu Tracción [kN] (− = tracción)"
         TablaRevi.Columns(6).HeaderText = "Chequeo 1 (Ps E)"
         TablaRevi.Columns(7).HeaderText = "Chequeo 2 (Ps D)"
         TablaRevi.Columns(8).HeaderText = "Chequeo 3 (Pu E)"
@@ -691,8 +691,8 @@ Public Class Form_01_PagPilas
         TablaRevi.Columns(10).HeaderText = "Chequeo 5 (Pu T)"
         TablaRevi.Columns(11).HeaderText = "σ Transmitido Estático [kN/m2]"
         TablaRevi.Columns(12).HeaderText = "σ Transmitido Dinámico [kN/m2]"
-        TablaRevi.Columns(13).HeaderText = "σAdm/σTrans Estático"
-        TablaRevi.Columns(14).HeaderText = "σAdm/σTrans Dinámico"
+        TablaRevi.Columns(13).HeaderText = "Q Total / Ps Est. (C/D)"
+        TablaRevi.Columns(14).HeaderText = "Q Total / Ps Din. (C/D)"
         TablaRevi.Columns(15).HeaderText = "φVn [kN]"
         TablaRevi.Columns(16).HeaderText = "Vu [kN]"
         TablaRevi.Columns(17).HeaderText = "φVn/Vu"
@@ -719,11 +719,13 @@ Public Class Form_01_PagPilas
             TablaRevi.Rows(i).Cells(3).Value = Math.Round(p.Pu_Estatica, 2)
             TablaRevi.Rows(i).Cells(4).Value = Math.Round(p.Pu_Dinamica, 2)
             TablaRevi.Rows(i).Cells(5).Value = Math.Round(p.P_Traccion, 2)
-            TablaRevi.Rows(i).Cells(6).Value = Math.Round(p.Check1_PsE, 2)
-            TablaRevi.Rows(i).Cells(7).Value = Math.Round(p.Check2_PsD, 2)
-            TablaRevi.Rows(i).Cells(8).Value = Math.Round(p.Check3_PuE, 2)
-            TablaRevi.Rows(i).Cells(9).Value = Math.Round(p.Check4_PuD, 2)
-            TablaRevi.Rows(i).Cells(10).Value = Math.Round(p.Check5_PuT, 2)
+            ' Igual que en Form_01_00_PagInfoPilas: C/D = 0 es "no aplica", se escribe
+            ' "—" y no se pinta de rojo.
+            ReporteGridHelpers.AsignarCD(TablaRevi.Rows(i).Cells(6), p.Check1_PsE, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(TablaRevi.Rows(i).Cells(7), p.Check2_PsD, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(TablaRevi.Rows(i).Cells(8), p.Check3_PuE, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(TablaRevi.Rows(i).Cells(9), p.Check4_PuD, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(TablaRevi.Rows(i).Cells(10), p.Check5_PuT, guionSinDato:=True)
             TablaRevi.Rows(i).Cells(11).Value = Math.Round(p.EsfE_Trans, 2)
             TablaRevi.Rows(i).Cells(12).Value = Math.Round(p.EsfD_Trans, 2)
             TablaRevi.Rows(i).Cells(13).Value = Math.Round(p.Relacion_EsfE, 2)
@@ -758,12 +760,13 @@ Public Class Form_01_PagPilas
         For i = 0 To Proyecto.Elementos.Pilas.ListaElementos.Count() - 1
             Dim p = Proyecto.Elementos.Pilas.ListaElementos(i)
 
-            ' Color coding TablaRevi
-            For j = 6 To 22
+            ' Color coding TablaRevi — desde 11: los chequeos 1..5 (columnas 6..10) ya
+            ' los pintó AsignarCD, con su "—" para los que no aplican.
+            For j = 11 To 22
                 If j <> 11 And j <> 12 And j <> 15 And j <> 16 And j <> 18 And j <> 19 And j <> 20 Then
                     Dim v As Object = TablaRevi.Rows(i).Cells(j).Value
                     Dim vd As Double = If(v Is Nothing, 0, Convert.ToDouble(v))
-                    If vd >= 0.9 Then
+                    If vd >= UMBRAL_CD Then
                         TablaRevi.Rows(i).Cells(j).Style.BackColor = Color.FromArgb(198, 239, 206)
                         TablaRevi.Rows(i).Cells(j).Style.ForeColor = Color.FromArgb(0, 97, 0)
                     Else
@@ -780,8 +783,8 @@ Public Class Form_01_PagPilas
             Dim colorFail As Color = Color.FromArgb(255, 199, 206)
             Dim colorFailFG As Color = Color.FromArgb(156, 0, 6)
 
-            ' Col 1: Cargas
-            If p.Check1_PsE >= 0.9 And p.Check2_PsD >= 0.9 And p.Check3_PuE >= 0.9 And p.Check4_PuD >= 0.9 Then
+            ' Col 1: Cargas — los cinco chequeos que apliquen, tracción incluida.
+            If CumpleEsfuerzos(p) Then
                 Tabla_ResumenVisual.Rows(i).Cells(1).Value = "Ok"
                 Tabla_ResumenVisual.Rows(i).Cells(1).Style.BackColor = colorOk
                 Tabla_ResumenVisual.Rows(i).Cells(1).Style.ForeColor = colorOkFG

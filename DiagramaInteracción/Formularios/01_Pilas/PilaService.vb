@@ -1,4 +1,4 @@
-Imports ARCO.Funciones_00_Varias
+﻿Imports ARCO.Funciones_00_Varias
 
 ' Servicio de negocio del módulo Pilas — cálculos NSR-10 puros y construcción de secciones.
 ' Renombrado desde Funciones_01_Pilas (agosto 2026) para alinear la arquitectura con
@@ -36,6 +36,85 @@ Public Class PilaService
             pilas.ListaElementos.Add(seccion)
         Next
     End Sub
+
+
+    ' =========================================================================
+    ' CHEQUEOS DE ESFUERZOS (columnas "Chequeo 1" a "Chequeo 5" de TablaRevi)
+    '
+    ' CONVENIO DE SIGNOS DEL MÓDULO: FZ de Joint Reactions es POSITIVO en
+    ' COMPRESIÓN. No es casualidad: al leer "Pier Forces" se invierte el P de
+    ' ETABS justamente para que coincida con Joint Reactions
+    ' (Funciones_00_Varias: "P negativo = compresión -> FZ positivo = compresión").
+    ' Por eso:
+    '   - Chequeos 1..4 (compresión) toman Max(FZ) -> la compresión máxima, > 0.
+    '   - Chequeo 5    (tracción)    toma  Min(FZ) -> el valor más NEGATIVO, que
+    '     es la tracción. Solo hay tracción si ese mínimo es negativo.
+    '
+    ' SENTINELA COMPARTIDA: C/D = 0 significa "no aplica / sin cálculo". Así ya
+    ' lo leen Form_Graficos_Pilas (tooltip de tracción solo si > 0) y
+    ' ReporteRevisionService.MinEsfConcreto (Where v > 0). Estas funciones nunca
+    ' devuelven infinito ni negativo: eran los dos valores que pintaban de rojo
+    ' un chequeo inexistente y rompían la exportación a Excel.
+    ' =========================================================================
+
+    ''' <summary>
+    ''' C/D a compresión: (coef x fc x Ag) / P. El coeficiente es el límite de
+    ''' esfuerzo en el concreto (0.25 Ps est., 0.33 Ps din., 0.35 Pu).
+    ''' </summary>
+    ''' <param name="agF">Área del fuste [m2].</param>
+    ''' <param name="p">Compresión máxima [kN], positiva. Si es menor o igual a
+    ''' cero no hay demanda de compresión en las combinaciones elegidas y se
+    ''' devuelve 0 (no aplica), no infinito.</param>
+    Public Shared Function ChequeoCompresion(coef As Double, fc As Double,
+                                             agF As Double, p As Double) As Single
+        If p <= 0 Then Return 0
+        If coef <= 0 OrElse fc <= 0 OrElse agF <= 0 Then Return 0
+        ' fc [MPa] x Ag [m2] x 1000 = kN
+        Return CSng(coef * fc * agF * 1000.0 / p)
+    End Function
+
+    ''' <summary>
+    ''' C/D a tracción: phi x fy x As_total / |Pu_tracción|, con phi = 0.90
+    ''' (NSR-10 C.9.3.2.2, tracción axial). Todo el tirón lo toma el acero: el
+    ''' concreto fisurado no aporta.
+    ''' </summary>
+    ''' <param name="pTraccion">Mínimo de FZ [kN] con el signo de ETABS. Solo
+    ''' aplica si es NEGATIVO; si es mayor o igual a cero la pila nunca se
+    ''' levanta y el chequeo no aplica (0).</param>
+    ''' <param name="areaBarra">Área de UNA barra longitudinal [mm2].</param>
+    Public Shared Function ChequeoTraccion(pTraccion As Double, fy As Double,
+                                           areaBarra As Double, cantBarras As Double) As Single
+        If pTraccion >= 0 Then Return 0
+        If fy <= 0 OrElse areaBarra <= 0 OrElse cantBarras <= 0 Then Return 0
+        Dim phiTn As Double = 0.9 * fy * areaBarra * cantBarras   ' MPa x mm2 = N
+        Return CSng(phiTn / (Math.Abs(pTraccion) * 1000.0))       ' N / (kN -> N)
+    End Function
+
+    ''' <summary>
+    ''' Mínimo C/D entre los cinco chequeos de esfuerzos que apliquen; 0 si no
+    ''' aplica ninguno. Criterio único para el veredicto "Cargas" del resumen,
+    ''' el dashboard y el reporte de revisión.
+    ''' </summary>
+    Public Shared Function MinChequeoEsfuerzos(p As Elemento_Pila) As Double
+        If p Is Nothing Then Return 0
+        Dim valores = {p.Check1_PsE, p.Check2_PsD, p.Check3_PuE, p.Check4_PuD, p.Check5_PuT}.
+                      Where(Function(v) v > 0 AndAlso Not Single.IsInfinity(v)).ToList()
+        If valores.Count = 0 Then Return 0
+        ' Redondeado a los dos decimales que se muestran: el veredicto tiene que
+        ' coincidir con la tabla. Un C/D que se imprime 0.90 vale 0.8999999 como
+        ' Single, y comparado crudo contra el umbral salía "no cumple".
+        Return Math.Round(CDbl(valores.Min()), 2)
+    End Function
+
+    ''' <summary>
+    ''' True si todos los chequeos de esfuerzos que aplican alcanzan el umbral
+    ''' único del programa. Sin ningún chequeo calculado devuelve False
+    ''' ("Revisar"): no se puede afirmar que cumple algo que no se calculó.
+    ''' </summary>
+    Public Shared Function CumpleEsfuerzos(p As Elemento_Pila) As Boolean
+        Dim minimo As Double = MinChequeoEsfuerzos(p)
+        Return minimo > 0 AndAlso minimo >= Funciones_00_Varias.UMBRAL_CD
+    End Function
 
 
     '-------------------------- FUNCIÓN PARA DETERMINAR EL DIAGRAMA DE INTERACCIÓN EN UNA SECCIÓN CIRCULAR --------------------------

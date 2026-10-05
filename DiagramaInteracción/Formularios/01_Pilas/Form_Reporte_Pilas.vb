@@ -1,4 +1,4 @@
-Imports System.Drawing
+﻿Imports System.Drawing
 Imports ClosedXML.Excel
 
 Public Class Form_Reporte_Pilas
@@ -122,12 +122,13 @@ Public Class Form_Reporte_Pilas
             row.Cells("fc").Value = p.fc
             If i Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250)
 
-            Dim okCargas = p.Check1_PsE >= 0.9 AndAlso p.Check2_PsD >= 0.9 AndAlso p.Check3_PuE >= 0.9 AndAlso p.Check4_PuD >= 0.9
-            Dim okSuelo = p.Relacion_EsfE >= 0.9 AndAlso p.Relacion_EsfD >= 0.9
-            Dim okCortante = p.FactorShear >= 0.9
+            ' Cargas: los cinco chequeos que apliquen, el de tracción incluido.
+            Dim okCargas = PilaService.CumpleEsfuerzos(p)
+            Dim okSuelo = p.Relacion_EsfE >= Funciones_00_Varias.UMBRAL_CD AndAlso p.Relacion_EsfD >= Funciones_00_Varias.UMBRAL_CD
+            Dim okCortante = p.FactorShear >= Funciones_00_Varias.UMBRAL_CD
             Dim fDiagR1 As Single = p.F_Diagonal_Efectivo
             Dim fCortR1 As Single = p.F_CortesH_Efectivo
-            Dim okInteraccion = fDiagR1 >= 0.9 AndAlso fCortR1 >= 0.9
+            Dim okInteraccion = fDiagR1 >= Funciones_00_Varias.UMBRAL_CD AndAlso fCortR1 >= Funciones_00_Varias.UMBRAL_CD
 
             AsignarOk(row.Cells("Cargas"), okCargas)
             AsignarOk(row.Cells("Suelo"), okSuelo)
@@ -155,8 +156,8 @@ Public Class Form_Reporte_Pilas
         Col(dgv, "C5", "Ch5 (PuT)", 85)
         Col(dgv, "EsfE", "σ Est. [kPa]", 100)
         Col(dgv, "EsfD", "σ Din. [kPa]", 100)
-        Col(dgv, "RelE", "σAdm/σ Est.", 95)
-        Col(dgv, "RelD", "σAdm/σ Din.", 95)
+        Col(dgv, "RelE", "QTot/Ps Est.", 95)
+        Col(dgv, "RelD", "QTot/Ps Din.", 95)
 
         For i = 0 To pilas.Count - 1
             Dim p = pilas(i)
@@ -234,16 +235,12 @@ Public Class Form_Reporte_Pilas
         ReporteGridHelpers.AgregarColumna(dgv, name, header, width, ordenable:=False)
     End Sub
 
+    ' C/D con semáforo. Delega en el helper compartido: umbral único (0.90),
+    ' recorte en 9.99 y "—" cuando el factor es 0 — que en Pilas significa "no
+    ' aplica" (sin combinaciones de esa familia, o sin tracción en el Chequeo 5),
+    ' no "no cumple".
     Private Sub AsignarFactor(cell As DataGridViewCell, valor As Double)
-        Dim v = Math.Round(valor, 2)
-        cell.Value = v
-        If v >= 0.9 Then
-            cell.Style.BackColor = ColorOK
-            cell.Style.ForeColor = ColorOKTexto
-        Else
-            cell.Style.BackColor = ColorMal
-            cell.Style.ForeColor = ColorMalTexto
-        End If
+        ReporteGridHelpers.AsignarCD(cell, valor, guionSinDato:=True)
     End Sub
 
     Private Sub AsignarFactor(cell As DataGridViewCell, valor As Single)
@@ -323,7 +320,7 @@ Public Class Form_Reporte_Pilas
     Private Sub ExportarHojaCapacidad(wb As XLWorkbook, pilas As List(Of Elemento_Pila))
         Dim ws = wb.Worksheets.Add("Capacidad de Carga")
         Dim hdrs = {"Elemento", "Ps Est. [kN]", "Ps Din. [kN]", "Pu Est. [kN]", "Pu Din. [kN]", "Pu Trac. [kN]",
-                    "Ch1", "Ch2", "Ch3", "Ch4", "Ch5", "σ Est. [kPa]", "σ Din. [kPa]", "σAdm/σ Est.", "σAdm/σ Din."}
+                    "Ch1", "Ch2", "Ch3", "Ch4", "Ch5", "σ Est. [kPa]", "σ Din. [kPa]", "QTot/Ps Est.", "QTot/Ps Din."}
         For j = 0 To hdrs.Length - 1
             Dim c = ws.Cell(1, j + 1)
             c.Value = hdrs(j)
@@ -392,12 +389,12 @@ Public Class Form_Reporte_Pilas
         cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
     End Sub
 
+    ' Contraparte en Excel. También delega: además del umbral único, el helper
+    ' atrapa NaN/Infinity, que ClosedXML rechaza con "Value can't be NaN or
+    ' infinity" y abortaba la exportación completa. Un Chequeo con demanda en
+    ' cero producía exactamente ese infinito.
     Private Shared Sub FactorXL(cell As IXLCell, valor As Single, frm As Form_Reporte_Pilas)
-        Dim v = Math.Round(CDbl(valor), 2)
-        cell.Value = v
-        cell.Style.Fill.BackgroundColor = If(v >= 0.9, frm.XlOKFondo, frm.XlMalFondo)
-        cell.Style.Font.FontColor = If(v >= 0.9, frm.XlOKTexto, frm.XlMalTexto)
-        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+        ReporteHelpers.EscribirFactor(cell, CDbl(valor), ReporteHelpers.SinDato.CeroOMenor)
     End Sub
 
 End Class

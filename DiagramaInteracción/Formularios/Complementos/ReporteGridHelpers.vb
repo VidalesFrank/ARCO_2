@@ -1,4 +1,4 @@
-Imports System.Drawing
+﻿Imports System.Drawing
 Imports System.Windows.Forms
 
 ''' <summary>
@@ -157,6 +157,15 @@ Public NotInheritable Class ReporteGridHelpers
                                 Optional negrita As Boolean = False)
 
         If cell Is Nothing Then Exit Sub
+
+        ' NaN / Infinity vienen de divisiones por cero río arriba. Como en
+        ' AsignarValor y en ReporteHelpers.EscribirFactor, no son un C/D: se
+        ' muestran como "—" aunque no se haya pedido guionSinDato, porque pintarlos
+        ' de verde (Infinity >= umbral) afirmaría que cumple algo sin calcular.
+        If Double.IsNaN(cd) OrElse Double.IsInfinity(cd) Then
+            cell.Value = "—"
+            Exit Sub
+        End If
 
         If guionSinDato AndAlso (cd <= 0 OrElse cd = Double.MaxValue) Then
             cell.Value = "—"

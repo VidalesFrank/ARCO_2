@@ -1,4 +1,4 @@
-Imports System.Windows.Forms.DataVisualization.Charting
+﻿Imports System.Windows.Forms.DataVisualization.Charting
 
 ''' <summary>
 ''' Dashboard de gráficas resumen del módulo de Pilas. Permite ver de un vistazo
@@ -113,8 +113,11 @@ Public Class Form_Graficos_Pilas
             Next
 
             Dim tip As String = "Gobierna: " & quien
+            ' Ch5 no entra en la barra (es acero a tracción, no esfuerzo en el concreto),
+            ' pero si no cumple hay que verlo: la barra verde no lo dice.
             If p.Check5_PuT > 0 Then
                 tip &= vbCrLf & "Tracción (Ch5): " & Math.Round(p.Check5_PuT, 2).ToString("F2")
+                If p.Check5_PuT < Funciones_00_Varias.UMBRAL_CD Then tip &= "  ← no cumple"
             End If
 
             items.Add(New GraficosResumen.ItemCD(EtiquetaPila(p), peor, tip))

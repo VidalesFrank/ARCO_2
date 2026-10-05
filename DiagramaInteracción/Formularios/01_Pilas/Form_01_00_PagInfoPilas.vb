@@ -114,11 +114,16 @@ Public Class Form_01_00_PagInfoPilas
             Next
 
             '------------------------ VERIFICACIÓN DE ESFUERZOS EN EL CONCRETO ------------------------
-            Elemento.Check1_PsE = 0.25 * Elemento.fc * Elemento.Ag_F * 1000 / (Elemento.Ps_Estatica)
-            Elemento.Check2_PsD = 0.33 * Elemento.fc * Elemento.Ag_F * 1000 / (Elemento.Ps_Dinamica)
-            Elemento.Check3_PuE = 0.35 * Elemento.fc * Elemento.Ag_F * 1000 / (Elemento.Pu_Estatica)
-            Elemento.Check4_PuD = 0.35 * Elemento.fc * Elemento.Ag_F * 1000 / (Elemento.Pu_Dinamica)
-            Elemento.Check5_PuT = 0.9 * Proyecto.Elementos.Pilas.Fy * Elemento.Acero_Long * Elemento.Cant_Barras_Long / (Elemento.P_Traccion * 1000)
+            ' Chequeos 1 a 4: límite de esfuerzo de COMPRESIÓN en el concreto, contra
+            ' Max(FZ). Chequeo 5: TRACCIÓN, que la toma íntegra el acero, contra Min(FZ)
+            ' — y solo aplica si ese mínimo es negativo. El convenio de signos y el caso
+            ' "no aplica" (C/D = 0) los resuelve PilaService, donde están documentados.
+            Elemento.Check1_PsE = ChequeoCompresion(0.25, Elemento.fc, Elemento.Ag_F, Elemento.Ps_Estatica)
+            Elemento.Check2_PsD = ChequeoCompresion(0.33, Elemento.fc, Elemento.Ag_F, Elemento.Ps_Dinamica)
+            Elemento.Check3_PuE = ChequeoCompresion(0.35, Elemento.fc, Elemento.Ag_F, Elemento.Pu_Estatica)
+            Elemento.Check4_PuD = ChequeoCompresion(0.35, Elemento.fc, Elemento.Ag_F, Elemento.Pu_Dinamica)
+            Elemento.Check5_PuT = ChequeoTraccion(Elemento.P_Traccion, Proyecto.Elementos.Pilas.Fy,
+                                                  Elemento.Acero_Long, Elemento.Cant_Barras_Long)
 
             '------------------------ VERIFICACIÓN DE ESFUERZOS TRANSMITIDOS AL SUELO ------------------------
             Proyecto.Elementos.Pilas.Esf_Adm_Est = If(String.IsNullOrWhiteSpace(Form_01_PagPilas.EadmEst.Text), 0.0F, CSng(Form_01_PagPilas.EadmEst.Text))
@@ -202,11 +207,15 @@ SiguienteElemento:
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(3).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Pu_Estatica, 2)
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(4).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Pu_Dinamica, 2)
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(5).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).P_Traccion, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(6).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check1_PsE, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(7).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check2_PsD, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(8).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check3_PuE, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(9).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check4_PuD, 2)
-            Form_01_PagPilas.TablaRevi.Rows(i).Cells(10).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check5_PuT, 2)
+            ' Los cinco chequeos van con AsignarCD: un C/D en 0 no se pinta de rojo, se
+            ' escribe "—". Rojo significaría "no cumple", y lo que pasa es que no aplica
+            ' (sin combinaciones de esa familia, o sin tracción en el Chequeo 5).
+            Dim pila As Elemento_Pila = Proyecto.Elementos.Pilas.ListaElementos(i)
+            ReporteGridHelpers.AsignarCD(Form_01_PagPilas.TablaRevi.Rows(i).Cells(6), pila.Check1_PsE, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(Form_01_PagPilas.TablaRevi.Rows(i).Cells(7), pila.Check2_PsD, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(Form_01_PagPilas.TablaRevi.Rows(i).Cells(8), pila.Check3_PuE, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(Form_01_PagPilas.TablaRevi.Rows(i).Cells(9), pila.Check4_PuD, guionSinDato:=True)
+            ReporteGridHelpers.AsignarCD(Form_01_PagPilas.TablaRevi.Rows(i).Cells(10), pila.Check5_PuT, guionSinDato:=True)
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(11).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).EsfE_Trans, 2)
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(12).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).EsfD_Trans, 2)
             Form_01_PagPilas.TablaRevi.Rows(i).Cells(13).Value = Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Relacion_EsfE, 2)
@@ -222,9 +231,10 @@ SiguienteElemento:
 
             Form_01_PagPilas.ComboElementos.Items.Add(Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento)
 
-            For j = 6 To 22
+            ' Desde 11: los chequeos 1..5 (6..10) ya quedaron pintados por AsignarCD.
+            For j = 11 To 22
                 If j <> 11 And j <> 12 And j <> 15 And j <> 16 And j <> 18 And j <> 19 And j <> 20 Then
-                    If Form_01_PagPilas.TablaRevi.Rows(i).Cells(j).Value >= 0.9 Then
+                    If Form_01_PagPilas.TablaRevi.Rows(i).Cells(j).Value >= UMBRAL_CD Then
                         Form_01_PagPilas.TablaRevi.Rows(i).Cells(j).Style.BackColor = Color.FromArgb(198, 239, 206)
                         Form_01_PagPilas.TablaRevi.Rows(i).Cells(j).Style.ForeColor = Color.FromArgb(0, 97, 0)
                     Else
@@ -235,7 +245,9 @@ SiguienteElemento:
             Next
 
             Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(0).Value = Proyecto.Elementos.Pilas.ListaElementos(i).Name_Elemento
-            If Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check1_PsE, 2) >= 0.9 And Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check2_PsD, 2) >= 0.9 And Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check3_PuE, 2) >= 0.9 And Math.Round(Proyecto.Elementos.Pilas.ListaElementos(i).Check4_PuD, 2) >= 0.9 Then
+            ' Los cinco chequeos, no solo los cuatro de compresión: una pila que se
+            ' levanta y no tiene acero para el tirón no puede decir "Ok".
+            If CumpleEsfuerzos(Proyecto.Elementos.Pilas.ListaElementos(i)) Then
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(1).Value = "Ok"
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(1).Style.BackColor = Color.FromArgb(198, 239, 206)
                 Form_01_PagPilas.Tabla_ResumenVisual.Rows(i).Cells(1).Style.ForeColor = Color.FromArgb(0, 97, 0)

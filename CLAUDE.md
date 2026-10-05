@@ -186,6 +186,39 @@ Tablas: Tabla_Demandas, Ref_Superior, Ref_Inferior, Ref_Transversal, Tabla_Resul
 
 ---
 
+## Módulo de Pilas
+
+### FZ positivo = COMPRESIÓN
+Convenio de todo el módulo, y no es accidental: al leer `Pier Forces` se
+**invierte** el P de ETABS para que coincida con `Joint Reactions`
+(`Funciones_00_Varias`). De ahí que `ObtenerFZMaximoPorElemento` se use con
+`buscarMin:=False` para compresión y `buscarMin:=True` para tracción.
+
+### Los cinco chequeos de esfuerzos
+Chequeos 1 a 4 = **límite de compresión en el concreto** (0.25·fc·Ag servicio
+estático, 0.33 servicio dinámico, 0.35 último), contra `Max(FZ)`.
+Chequeo 5 = **tracción**, φ·fy·As / |Pu_T| con φ = 0.90, contra `Min(FZ)` — y
+**solo aplica si ese mínimo es negativo**.
+
+Viven en `PilaService`: `ChequeoCompresion`, `ChequeoTraccion`,
+`MinChequeoEsfuerzos`, `CumpleEsfuerzos`. No recalcularlos en los formularios.
+
+**Sentinela: C/D = 0 significa "no aplica", no "no cumple".** Es la convención
+que ya leían el dashboard (`Form_Graficos_Pilas`, tooltip solo si > 0) y el
+reporte de revisión (`Where v > 0`). En las grillas se escribe con
+`ReporteGridHelpers.AsignarCD(..., guionSinDato:=True)`, que pinta "—".
+`MinChequeoEsfuerzos` redondea a 2 decimales **a propósito**: el veredicto debe
+coincidir con lo que muestra la tabla, y un C/D que se imprime 0.90 vale
+0.8999999 como `Single`.
+
+Hasta 2026-10-05 el Chequeo 5 dividía por el valor **con signo**: con tracción
+real salía negativo (rojo siempre, con cualquier cantidad de acero) y sin
+combinaciones de tracción salía `Infinity` (verde, y ClosedXML abortaba la
+exportación con "Value can't be NaN or infinity"). Cubierto por
+`ARCO.Tests/PilaServiceTests.vb`.
+
+---
+
 ## Módulo de Zapatas
 
 ### Servicio (`Funciones/ZapataService.vb`)

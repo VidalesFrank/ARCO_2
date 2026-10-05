@@ -1,4 +1,4 @@
-Imports System.IO
+﻿Imports System.IO
 Imports DocumentFormat.OpenXml.Packaging
 Imports DocumentFormat.OpenXml.Wordprocessing
 Imports ARCO.eNumeradores
@@ -335,10 +335,10 @@ Public Class ReporteRevisionService
         Return p.Cant_Barras_Long.ToString() & " x " & p.N_Barra_Long
     End Function
 
+    ' El criterio vive en PilaService: C/D = 0 es "no aplica" y no vota, y los
+    ' infinitos de proyectos guardados antes del arreglo del Chequeo 5 se descartan.
     Private Shared Function MinEsfConcreto(p As Elemento_Pila) As Double
-        Dim valores = {p.Check1_PsE, p.Check2_PsD, p.Check3_PuE, p.Check4_PuD, p.Check5_PuT}.Where(Function(v) v > 0).ToList()
-        If valores.Count = 0 Then Return 0
-        Return valores.Min()
+        Return PilaService.MinChequeoEsfuerzos(p)
     End Function
 
     Private Shared Function MinEsfSuelo(p As Elemento_Pila) As Double
