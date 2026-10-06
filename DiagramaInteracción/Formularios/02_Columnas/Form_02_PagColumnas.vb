@@ -12,7 +12,17 @@ Partial Public Class Form_02_PagColumnas
     Private Shared _SeccionesCirculares As New Dictionary(Of String, Tuple(Of Single, String))(StringComparer.OrdinalIgnoreCase)
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
 
-        If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
+        ' Preflight: Button2 (Calcular) es el que PUEBLA Lista_Columnas, así que
+        ' no puede chequear Lista_Columnas.Count. Mira los flags de importación.
+        If Not Proyecto.Elementos.Columnas.Elementos_Frame AndAlso
+           Not Proyecto.Elementos.Columnas.Elementos_Pier Then
+            MessageBox.Show(
+                "No ha importado columnas desde ETABS." & vbCrLf & vbCrLf &
+                "Use el menú ""Importar"" (todo en uno) o cargue individualmente las " &
+                "tablas de Diseño, Secciones y Fuerzas.",
+                "Sin importación", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
 
         Me.Cursor = Cursors.WaitCursor
         Columna = New Columna()
@@ -1362,14 +1372,37 @@ SkipPierDiseno:
     End Function
 
     Public Sub ActualizarCortanteDesdeSeleccion()
+        Dim combosCortante = Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante
+
+        ' combo faltante → nombres de columnas donde no está. Cuando Frame y Pier se
+        ' importan por separado, cada hoja trae su propio set de combos y el usuario
+        ' puede escoger una que exista solo en uno de los dos — las columnas del otro
+        ' quedarían con V2 = V3 = 0 silenciosamente.
+        Dim combosFaltantesPorColumna As New Dictionary(Of String, List(Of String))
+
         For Each col In Proyecto.Elementos.Columnas.Lista_Columnas
+            Dim combosDelElemento As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each tramo In col.Lista_Tramos_Columnas
+                For Each f In tramo.Lista_Combinaciones
+                    combosDelElemento.Add(f.Name)
+                Next
+            Next
+            For Each combo In combosCortante
+                If Not combosDelElemento.Contains(combo) Then
+                    If Not combosFaltantesPorColumna.ContainsKey(combo) Then
+                        combosFaltantesPorColumna(combo) = New List(Of String)
+                    End If
+                    combosFaltantesPorColumna(combo).Add(col.Name_Elemento)
+                End If
+            Next
+
             For Each tramo In col.Lista_Tramos_Columnas
                 tramo.V2 = 0
                 tramo.V3 = 0
                 tramo.Pu_V2 = 0
                 tramo.Pu_V3 = 0
                 For Each f In tramo.Lista_Combinaciones
-                    If Proyecto.Elementos.Columnas.Lista_Combinaciones_Cortante.Contains(f.Name) Then
+                    If combosCortante.Contains(f.Name) Then
                         If Math.Abs(f.V2) > Math.Abs(tramo.V2) Then
                             tramo.V2 = f.V2
                             If f.P < 0 Then tramo.Pu_V2 = f.P
@@ -1382,6 +1415,33 @@ SkipPierDiseno:
                 Next
             Next
         Next
+
+        If combosFaltantesPorColumna.Count > 0 Then
+            Const MAX_COLS_POR_COMBO As Integer = 10
+            Dim sb As New System.Text.StringBuilder()
+            sb.AppendLine("Algunas combinaciones de cortante no están presentes en todas las columnas:")
+            sb.AppendLine()
+            For Each kv In combosFaltantesPorColumna
+                Dim lista = kv.Value
+                sb.AppendLine($"• ""{kv.Key}"" falta en {lista.Count} columna(s):")
+                For i = 0 To Math.Min(MAX_COLS_POR_COMBO - 1, lista.Count - 1)
+                    sb.AppendLine($"    - {lista(i)}")
+                Next
+                If lista.Count > MAX_COLS_POR_COMBO Then
+                    sb.AppendLine($"    (y {lista.Count - MAX_COLS_POR_COMBO} más)")
+                End If
+            Next
+            sb.AppendLine()
+            sb.AppendLine("Esas columnas tendrán V2/V3 = 0 para los tramos sin la combinación.")
+            sb.AppendLine("Revise que las fuerzas estén importadas con esas combinaciones (típicamente")
+            sb.AppendLine("Frame y Pier traen listas distintas) o escoja combinaciones comunes a ambos.")
+
+            MessageBox.Show(sb.ToString(), "Combinaciones de cortante faltantes",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Logger.Warning("Form_02_PagColumnas.ActualizarCortanteDesdeSeleccion",
+                           $"{combosFaltantesPorColumna.Count} combo(s) de cortante no están en todas las columnas: " &
+                           String.Join("; ", combosFaltantesPorColumna.Select(Function(kv) $"{kv.Key} ({kv.Value.Count})")))
+        End If
     End Sub
 
     Private Sub Comb_Diseno_Columnas_Click(sender As Object, e As EventArgs) Handles Comb_Diseno_Columnas.Click
@@ -1634,6 +1694,11 @@ SkipPierDiseno:
         Proyecto.Elementos.Columnas.Info_Fuerzas = True
         Importar_Datos_de_Excel(rutaArchivo, Tabla_Fuerzas, "Fuerzas", "Frame")
         ProcesarFuerzasEnvolvente(Tabla_Fuerzas, "Frame")
+        ' Repropaga la envolvente a tramo.V2/V3 (que es la que usa el chequeo de
+        ' cortante). Sin esto, "Actualizar Solicitaciones" refresca los per-combo
+        ' pero deja la V2/V3 del tramo con el valor anterior — típicamente 0 en
+        ' columnas Shell que no estaban cuando se eligieron los combos.
+        ActualizarCortanteDesdeSeleccion()
     End Sub
 
     Private Sub ActualizarFuerzasPier(rutaArchivo As String)
@@ -1641,6 +1706,7 @@ SkipPierDiseno:
         Proyecto.Elementos.Columnas.Info_Fuerzas = True
         Importar_Datos_de_Excel(rutaArchivo, Tabla_Fuerzas_Pier, "Fuerzas", "Pier")
         ProcesarFuerzasEnvolvente(Tabla_Fuerzas_Pier, "Pier")
+        ActualizarCortanteDesdeSeleccion()
     End Sub
 
     ''' <summary>Actualiza As_Req desde hoja Frame. Devuelve tramos actualizados, o -1 si la hoja no existe.</summary>
