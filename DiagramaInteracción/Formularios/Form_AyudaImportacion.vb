@@ -24,14 +24,21 @@ Public Class Form_AyudaImportacion
     Private Shared ReadOnly _tablasPorModulo As New Dictionary(Of String, List(Of InfoTabla)) From {
         {
             "Pilas", New List(Of InfoTabla) From {
-                New InfoTabla("Joint Reactions", "Reacciones en nodos de cimentación", "Joint Reactions", "Joint Reactions")
+                New InfoTabla("Reacciones en nodos", "Reacciones en nodos de cimentación (vía Frame o Pier)", "Joint Reactions", "Joint Reactions"),
+                New InfoTabla("Coordenadas de nodos", "Coordenadas de joints para ubicar los apoyos en planta", "Joint Coordinates", "Objects and Elements - Joints"),
+                New InfoTabla("Conectividad Frames", "Elementos Frame — solo si hay pilas tipo columna", "Connectivity - Frame", "Objects and Elements - Frames", False),
+                New InfoTabla("Fuerzas Pier", "Fuerzas internas en piers — solo si hay pilas tipo muro", "Pier Forces", "Pier Forces", False),
+                New InfoTabla("Propiedades Pier", "Dimensiones de secciones Pier — solo si hay pilas tipo muro", "Pier Section Properties", "Pier Section Properties", False)
             }
         },
         {
             "Columnas", New List(Of InfoTabla) From {
                 New InfoTabla("Diseño columnas Frame", "Resultados de diseño ACI 318", "Concrete Column Summary - ACI 3", "Conc Col Sum - ACI 318-14"),
                 New InfoTabla("Diseño columnas Pier", "Resultados de diseño muros/piers", "Shear Wall Pier Summary", "Pier Dgn Sum"),
-                New InfoTabla("Secciones Frame", "Definición de secciones rectangulares", "Frame Sections", "Frame Sec Def - Conc Rect"),
+                New InfoTabla("Coordenadas de nodos", "Coordenadas de los joints de la estructura", "Joint Coordinates", "Objects and Elements - Joints"),
+                New InfoTabla("Conectividad Frames", "Nodos i, j que definen cada frame", "Connectivity - Frame", "Objects and Elements - Frames"),
+                New InfoTabla("Secciones rectangulares", "Dimensiones b×h de secciones Frame", "Frame Sections", "Frame Sec Def - Conc Rect"),
+                New InfoTabla("Secciones circulares", "Diámetro de secciones Frame circulares", "Frame Sec Def - Conc Circle", "Frame Sec Def - Conc Circle", False),
                 New InfoTabla("Propiedades Pier", "Dimensiones de secciones pier", "Pier Section Properties", "Pier Section Properties"),
                 New InfoTabla("Fuerzas Frame", "Fuerzas internas en columnas", "Column Forces", "Element Forces - Columns"),
                 New InfoTabla("Fuerzas Pier", "Fuerzas internas en piers", "Pier Forces", "Pier Forces")

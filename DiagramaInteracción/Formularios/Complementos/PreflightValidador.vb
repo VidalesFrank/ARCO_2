@@ -119,6 +119,27 @@ Public Module PreflightValidador
     ' Muros
     ' ---------------------------------------------------------------------
 
+    ' Chequeo PREVIO al "Ejecutar": al menos una hoja ETABS fue importada.
+    ' Button2 (Ejecutar) es el que puebla Lista_Muros a partir de los
+    ' DataGridView, así que no puede exigir Lista_Muros.Count > 0 — ese sería
+    ' el estado DESPUÉS de ejecutar.
+    Public Function HayHojasEtabsMuros(proyecto As Proyecto,
+                                       Optional mostrarMensaje As Boolean = True) As Boolean
+        If Not HayProyectoActivo(proyecto, mostrarMensaje) Then Return False
+        If proyecto.Elementos.Muros Is Nothing OrElse
+           (Not proyecto.Elementos.Muros.Info_Diseño AndAlso
+            Not proyecto.Elementos.Muros.Info_Secciones AndAlso
+            Not proyecto.Elementos.Muros.Info_Fuerzas) Then
+            Return Avisar(
+                "No ha importado ninguna hoja ETABS en el módulo de Muros." & vbCrLf & vbCrLf &
+                "Vaya al menú ""Importar Datos ETABS"" y cargue al menos una de las hojas: " &
+                "Diseño (Shear Wall Pier Summary / Pier Dgn Sum), Secciones (Pier Section " &
+                "Properties) o Fuerzas (Pier Forces).",
+                mostrarMensaje)
+        End If
+        Return True
+    End Function
+
     Public Function HayMurosImportados(proyecto As Proyecto,
                                        Optional mostrarMensaje As Boolean = True) As Boolean
         If Not HayProyectoActivo(proyecto, mostrarMensaje) Then Return False

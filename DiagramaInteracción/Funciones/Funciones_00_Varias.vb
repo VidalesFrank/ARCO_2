@@ -302,43 +302,56 @@ Partial Public Class Funciones_00_Varias
             Dim colUNm = GetColumnName(colsR, "Unique Name")
             Dim colRSt = GetColumnName(colsR, "Story")
 
+            ' Si falla la hoja de coordenadas, igual registramos el label: el candidato
+            ' se emite sin coords (la planta no lo ubicará, pero las reacciones son válidas).
             Dim supportJoints As New Dictionary(Of String, cJoint)(StringComparer.OrdinalIgnoreCase)
             If dtReact IsNot Nothing Then
                 For Each row As DataRow In dtReact.Rows
                     Dim lbl = SafeString(row, colLbl)
                     If String.IsNullOrEmpty(lbl) OrElse supportJoints.ContainsKey(lbl) Then Continue For
                     Dim jt As cJoint = Nothing
-                    If byLabel.TryGetValue(lbl, jt) Then supportJoints(lbl) = jt
+                    byLabel.TryGetValue(lbl, jt)
+                    supportJoints(lbl) = jt
                 Next
             End If
 
             ' ── 4. Detectar candidatos Frame ──────────────────────────────────
-            If dtFrames IsNot Nothing AndAlso supportJoints.Count > 0 Then
+            ' Regla: cada joint que aparece en Joint Reactions es un candidato Frame.
+            '        Las demandas son sus reacciones. La hoja "Objects and Elements - Frames"
+            '        se usa solo para asignarle un nombre bonito (Object Label de la columna
+            '        que termina en ese joint); si no hay frame asociado, el nombre es el
+            '        propio label del joint.
+            Logger.Info("DetectarCandidatosETABS",
+                        $"Frame detect inputs: dtFrames.Rows={If(dtFrames IsNot Nothing, dtFrames.Rows.Count, 0)}, " &
+                        $"supportJoints={supportJoints.Count}, byElem={byElem.Count}, " &
+                        $"byLabel={byLabel.Count}, joints={joints.Count}")
+
+            ' 4a. Mapa opcional: supportJointLabel → Object Label del Frame vertical cuya base coincide.
+            Dim nombresFrame As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            If dtFrames IsNot Nothing AndAlso dtFrames.Rows.Count > 0 AndAlso supportJoints.Count > 0 Then
                 Dim colsF  = ETABSColDict(dtFrames)
-                Dim colFTp = GetColumnName(colsF, "Object Type")
                 Dim colFLb = GetColumnName(colsF, "Object Label")
                 Dim colJtI = GetColumnName(colsF, "Elm JtI")
                 Dim colJtJ = GetColumnName(colsF, "Elm JtJ")
 
-                ' Agrupar por support: guardar el frame con la base más baja (más cercana a la cimentación)
-                Dim frameGroups As New Dictionary(Of String, Tuple(Of String, Double))(StringComparer.OrdinalIgnoreCase)
+                ' Para cada frame vertical, encontrar su base en Z y asociarla al supportJoint
+                ' más cercano en XY. Se queda con el frame cuya base está más baja.
+                Dim nivelBase As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
 
                 For Each row As DataRow In dtFrames.Rows
-                    If Not String.Equals(SafeString(row, colFTp), "Frame", StringComparison.OrdinalIgnoreCase) Then Continue For
                     Dim jtI = SafeString(row, colJtI)
                     Dim jtJ = SafeString(row, colJtJ)
                     If jtI.StartsWith("~") OrElse jtJ.StartsWith("~") Then Continue For
                     If String.IsNullOrEmpty(jtI) OrElse String.IsNullOrEmpty(jtJ) Then Continue For
 
-                    Dim ptI As cJoint = Nothing : Dim ptJ As cJoint = Nothing
+                    Dim ptI As cJoint = Nothing, ptJ As cJoint = Nothing
                     If Not byElem.TryGetValue(jtI, ptI) Then Continue For
                     If Not byElem.TryGetValue(jtJ, ptJ) Then Continue For
 
-                    ' Filtrar vigas/elementos no verticales (ΔXY > 1m en planta)
+                    ' Descartar vigas: ΔXY grande significa elemento no vertical.
                     Dim dxy = Math.Sqrt((ptI.GlobalX - ptJ.GlobalX) ^ 2 + (ptI.GlobalY - ptJ.GlobalY) ^ 2)
                     If dxy > 1.0 Then Continue For
 
-                    ' Joint base = mínimo Z
                     Dim baseX, baseY, baseZ As Double
                     If ptI.GlobalZ <= ptJ.GlobalZ Then
                         baseX = ptI.GlobalX : baseY = ptI.GlobalY : baseZ = ptI.GlobalZ
@@ -346,7 +359,6 @@ Partial Public Class Funciones_00_Varias
                         baseX = ptJ.GlobalX : baseY = ptJ.GlobalY : baseZ = ptJ.GlobalZ
                     End If
 
-                    ' Joint de apoyo más cercano en XY
                     Dim bestLbl As String = Nothing
                     Dim bestDist As Double = Double.MaxValue
                     For Each kvp In supportJoints
@@ -356,30 +368,95 @@ Partial Public Class Funciones_00_Varias
                     If bestLbl Is Nothing OrElse bestDist > toleranciaXY Then Continue For
 
                     Dim fLbl = SafeString(row, colFLb)
-                    If String.IsNullOrEmpty(fLbl) Then fLbl = bestLbl
-                    Dim ex As Tuple(Of String, Double) = Nothing
-                    If Not frameGroups.TryGetValue(bestLbl, ex) OrElse baseZ < ex.Item2 Then
-                        frameGroups(bestLbl) = Tuple.Create(fLbl, baseZ)
+                    If String.IsNullOrEmpty(fLbl) Then Continue For
+
+                    Dim zAnt As Double
+                    If Not nivelBase.TryGetValue(bestLbl, zAnt) OrElse baseZ < zAnt Then
+                        nombresFrame(bestLbl) = fLbl
+                        nivelBase(bestLbl) = baseZ
+                    End If
+                Next
+            End If
+
+            ' 4b. Zonas pier en planta: para no duplicar un muro Pier como Frame, se
+            '     excluyen los supportJoints que caen dentro del footprint del pier.
+            '     Zona = círculo centrado en (CG Bottom X, Y) con radio = max(Width, Thickness)/2 + 0.3 m.
+            '     Si no hay Width/Thickness en la hoja, se usa un radio fallback de 1.0 m.
+            Dim zonasPier As New List(Of Tuple(Of Double, Double, Double))()
+            If dtPierP IsNot Nothing AndAlso dtPierP.Rows.Count > 0 Then
+                Dim colsPZ = ETABSColDict(dtPierP)
+                Dim colZBX = GetColumnName(colsPZ, "CG Bottom X")
+                Dim colZBY = GetColumnName(colsPZ, "CG Bottom Y")
+                Dim colZBZ = GetColumnName(colsPZ, "CG Bottom Z")
+                Dim colZW  = GetColumnName(colsPZ, "Width Bottom")
+                If String.IsNullOrEmpty(colZW) Then colZW = GetColumnName(colsPZ, "Width")
+                Dim colZT  = GetColumnName(colsPZ, "Thickness Bottom")
+                If String.IsNullOrEmpty(colZT) Then colZT = GetColumnName(colsPZ, "Thickness")
+                Dim colZP  = GetColumnName(colsPZ, "Pier")
+
+                ' Quedarnos con el registro base (mínimo CG Bottom Z) por pier
+                Dim pierZBase As New Dictionary(Of String, Tuple(Of Double, Double, Double, Double))(StringComparer.OrdinalIgnoreCase)
+                For Each row As DataRow In dtPierP.Rows
+                    Dim pn = SafeString(row, colZP)
+                    If String.IsNullOrEmpty(pn) Then Continue For
+                    Dim pz = SafeDouble(row, colZBZ)
+                    Dim px = SafeDouble(row, colZBX)
+                    Dim py = SafeDouble(row, colZBY)
+                    Dim pw = SafeDouble(row, colZW)
+                    Dim pt = SafeDouble(row, colZT)
+                    Dim exT As Tuple(Of Double, Double, Double, Double) = Nothing
+                    If Not pierZBase.TryGetValue(pn, exT) OrElse pz < exT.Item1 Then
+                        pierZBase(pn) = Tuple.Create(pz, px, py, Math.Max(pw, pt))
                     End If
                 Next
 
-                For Each kvp In frameGroups
-                    Dim spt As cJoint = Nothing : supportJoints.TryGetValue(kvp.Key, spt)
-                    Dim rxns = ETABSReaccionesJoint(dtReact, kvp.Key, colLbl, colCas, colStp,
-                                                    colRFX, colRFY, colRFZ, colRMX, colRMY, colRMZ, colUNm, colRSt)
-                    Dim c As New cCandidatoPila()
-                    c.Nombre      = kvp.Value.Item1
-                    c.Tipo        = "Frame"
-                    c.SourceLabel = kvp.Key
-                    c.Story       = If(spt IsNot Nothing, spt.Story, "")
-                    c.X           = If(spt IsNot Nothing, spt.GlobalX, 0)
-                    c.Y           = If(spt IsNot Nothing, spt.GlobalY, 0)
-                    c.Z           = If(spt IsNot Nothing, spt.GlobalZ, 0)
-                    c.Reactions   = rxns
-                    If rxns.Count = 0 Then c.Estado = "Sin reacciones"
-                    resultado.Add(c)
+                For Each kv In pierZBase
+                    Dim dim2 As Double = kv.Value.Item4
+                    Dim radio As Double = If(dim2 > 0.01, dim2 / 2.0 + 0.3, 1.0)
+                    zonasPier.Add(Tuple.Create(kv.Value.Item2, kv.Value.Item3, radio))
                 Next
             End If
+
+            ' 4c. Emitir un candidato Frame por cada supportJoint que NO caiga en una zona pier.
+            Dim nOmitidosPorPier As Integer = 0
+            For Each kvp In supportJoints
+                Dim lblJoint As String = kvp.Key
+                Dim spt As cJoint = kvp.Value
+
+                ' Omitir si el joint cae dentro de una zona pier (ya se emitirá como Pier)
+                If spt IsNot Nothing AndAlso zonasPier.Count > 0 Then
+                    Dim dentroPier As Boolean = False
+                    For Each z In zonasPier
+                        Dim d = Math.Sqrt((spt.GlobalX - z.Item1) ^ 2 + (spt.GlobalY - z.Item2) ^ 2)
+                        If d <= z.Item3 Then dentroPier = True : Exit For
+                    Next
+                    If dentroPier Then nOmitidosPorPier += 1 : Continue For
+                End If
+
+                Dim nombre As String = Nothing
+                If Not nombresFrame.TryGetValue(lblJoint, nombre) OrElse String.IsNullOrEmpty(nombre) Then
+                    nombre = lblJoint
+                End If
+
+                Dim rxns = ETABSReaccionesJoint(dtReact, lblJoint, colLbl, colCas, colStp,
+                                                colRFX, colRFY, colRFZ, colRMX, colRMY, colRMZ, colUNm, colRSt)
+                Dim c As New cCandidatoPila()
+                c.Nombre      = nombre
+                c.Tipo        = "Frame"
+                c.SourceLabel = lblJoint
+                c.Story       = If(spt IsNot Nothing, spt.Story, "")
+                c.X           = If(spt IsNot Nothing, spt.GlobalX, 0)
+                c.Y           = If(spt IsNot Nothing, spt.GlobalY, 0)
+                c.Z           = If(spt IsNot Nothing, spt.GlobalZ, 0)
+                c.Reactions   = rxns
+                If rxns.Count = 0 Then c.Estado = "Sin reacciones"
+                resultado.Add(c)
+            Next
+
+            Logger.Info("DetectarCandidatosETABS",
+                        $"Frame detect: emitidos={supportJoints.Count - nOmitidosPorPier}, " &
+                        $"omitidosPorPier={nOmitidosPorPier}, zonasPier={zonasPier.Count}, " &
+                        $"conNombreFrame={nombresFrame.Count}")
 
             ' ── 5. Detectar candidatos Pier ───────────────────────────────────
             If dtPierP IsNot Nothing Then

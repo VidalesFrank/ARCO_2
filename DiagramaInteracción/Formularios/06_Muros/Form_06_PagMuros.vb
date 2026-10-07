@@ -26,7 +26,9 @@ Public Class Form_06_PagMuros
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
 
-        If Not PreflightValidador.HayMurosImportados(proyecto) Then Return
+        ' Button2 (Ejecutar) PUEBLA Lista_Muros desde las DataGridView de las hojas
+        ' ETABS importadas, así que el chequeo previo es "hay hojas", no "hay muros".
+        If Not PreflightValidador.HayHojasEtabsMuros(proyecto) Then Return
 
         Me.Cursor = Cursors.WaitCursor
 
@@ -622,8 +624,6 @@ Public Class Form_06_PagMuros
 
     Private Sub DiseñoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles DiseñoToolStripMenuItem.Click
 
-        If Not PreflightValidador.HayMurosImportados(proyecto) Then Return
-
         LlenarTabla_Diseno_Muros()
 
         Dim Tabla As DataGridView
@@ -842,8 +842,6 @@ Public Class Form_06_PagMuros
     End Sub
 
     Private Sub SeccionesDeMurosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SeccionesDeMurosToolStripMenuItem.Click
-
-        If Not PreflightValidador.HayMurosImportados(proyecto) Then Return
 
         LlenarTabla_Secciones()
 

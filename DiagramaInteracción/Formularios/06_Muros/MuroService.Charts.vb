@@ -360,7 +360,15 @@ Partial Public Class MuroService
         End With
 
         '====== EJE Y - PRINCIPAL =======
-        Dim Valor_Ymax As Single = Math.Min(Math.Max(Lista_MurosComplemento_L.Max(Function(p) p.Ar), Lista_MurosComplemento_T.Max(Function(p) p.Ar)), 20)
+        ' Max sobre lista vacía lanza InvalidOperationException: si la clasificación
+        ' Protagónico/Complemento deja una dirección con 0 Complementos (típico cuando
+        ' sólo hay 2 muros en esa dirección), fallback a Protagónicos; si tampoco, a 10.
+        Dim MaxAr = Function(muros As List(Of Muro)) As Single
+                        Return If(muros.Any(), muros.Max(Function(p) p.Ar), 0.0F)
+                    End Function
+        Dim MaxComp As Single = Math.Max(MaxAr(Lista_MurosComplemento_L), MaxAr(Lista_MurosComplemento_T))
+        Dim MaxProt As Single = Math.Max(MaxAr(Lista_MurosProtagonicos_L), MaxAr(Lista_MurosProtagonicos_T))
+        Dim Valor_Ymax As Single = Math.Min(If(MaxComp > 0, MaxComp, If(MaxProt > 0, MaxProt, 10.0F)), 20)
 
         Dim axis_y = chart1.ChartAreas("ChartArea1").AxisY
         OrganizaEje(axis_y, myfontFamily, "Relación de Aspecto, Ar", Size_Title_Axis, Size_Value_Axis, Size_Legend)
