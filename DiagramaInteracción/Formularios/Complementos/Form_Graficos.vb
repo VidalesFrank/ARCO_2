@@ -341,7 +341,9 @@ Public Class Form_Graficos
         area.AxisY.Maximum = ym
         area.AxisY.Interval = Math.Round(ym / 8, 2)
 
-        EstilizarGrafico("Flexo-Compresión Biaxial (C/D) — Columnas", "C/D  (Criterio Bresler)", "Columna", nCols)
+        EstilizarGrafico("Flexo-Compresión (C/D) — Columnas",
+                         "C/D  (envolvente: Bresler biaxial ∪ rel. aceros ETABS)",
+                         "Columna", nCols)
     End Sub
 
     ' -----------------------------------------------------------------------

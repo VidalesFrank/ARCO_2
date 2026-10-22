@@ -12,10 +12,15 @@ Public Class PilaService
     ' Construye los Elemento_Pila a partir de los parámetros comunes del UI y
     ' la lista de labels de apoyos. Reemplaza el loop inline de Button1_Click
     ' del formulario — separa lógica de dominio de la manipulación del DataGridView.
+    '
+    ' Si cPilas.CoordsPorLabel tiene una entrada para el nombre del elemento, se
+    ' escribe CoordX/CoordY/TieneCoordenadas directamente sobre el Elemento_Pila
+    ' creado. Así la planta no depende de que CoordsPorLabel sobreviva al .esm.
     ' =========================================================================
     Public Shared Sub CrearSeccionesDesdeParametros(pilas As cPilas,
                                                     params As ParametrosSeccionPila,
                                                     nombresElementos As List(Of String))
+        Dim coordsMap As Dictionary(Of String, System.Drawing.PointF) = pilas.CoordsPorLabel
         pilas.ListaElementos.Clear()
         For Each nombreElemento In nombresElementos
             Dim seccion As New Elemento_Pila With {
@@ -33,6 +38,14 @@ Public Class PilaService
                 .Separacion_Trans = params.SeparacionTrans,
                 .Acero_Long       = CDbl(AreaRefuerzo(params.NBarraLong))
             }
+            If coordsMap IsNot Nothing Then
+                Dim pt As System.Drawing.PointF
+                If coordsMap.TryGetValue(nombreElemento, pt) Then
+                    seccion.CoordX = pt.X
+                    seccion.CoordY = pt.Y
+                    seccion.TieneCoordenadas = True
+                End If
+            End If
             pilas.ListaElementos.Add(seccion)
         Next
     End Sub
@@ -114,6 +127,56 @@ Public Class PilaService
     Public Shared Function CumpleEsfuerzos(p As Elemento_Pila) As Boolean
         Dim minimo As Double = MinChequeoEsfuerzos(p)
         Return minimo > 0 AndAlso minimo >= Funciones_00_Varias.UMBRAL_CD
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D del chequeo "esfuerzos transmitidos al suelo": Q_total / Ps
+    ''' en los casos estático y dinámico. Sentinela 0 = ninguno aplica.
+    ''' </summary>
+    Public Shared Function PeorCDSuelo(p As Elemento_Pila) As Double
+        If p Is Nothing Then Return 0
+        Dim vals = {CSng(p.Relacion_EsfE), CSng(p.Relacion_EsfD)}.
+                   Where(Function(v) v > 0 AndAlso Not Single.IsInfinity(v)).ToList()
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(CDbl(vals.Min()), 2)
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D del chequeo de cortante: phi Vn / Vu. Un solo valor por pila.
+    ''' Sentinela 0 = no calculado.
+    ''' </summary>
+    Public Shared Function PeorCDCortante(p As Elemento_Pila) As Double
+        If p Is Nothing Then Return 0
+        If p.FactorShear <= 0 OrElse Single.IsInfinity(p.FactorShear) Then Return 0
+        Return Math.Round(CDbl(p.FactorShear), 2)
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D del chequeo de flexo-compresión: mínimo entre el factor
+    ''' diagonal (Mn-Pn gobernante en 2D) y el factor de cortes horizontales
+    ''' (M3-P y M2-P). Usa los *_Efectivo que ya incorporan el override manual.
+    ''' Sentinela 0 = no calculado.
+    ''' </summary>
+    Public Shared Function PeorCDFlexo(p As Elemento_Pila) As Double
+        If p Is Nothing Then Return 0
+        Dim vals = {p.F_Diagonal_Efectivo, p.F_CortesH_Efectivo}.
+                   Where(Function(v) v > 0 AndAlso Not Single.IsInfinity(v)).ToList()
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(CDbl(vals.Min()), 2)
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D entre TODOS los chequeos que aplican a una pila (esfuerzos
+    ''' concreto, esfuerzos al suelo, cortante, flexo-compresión). Si ningún
+    ''' chequeo aplica, 0. Es el criterio "global" para la planta: muestra
+    ''' siempre el chequeo más crítico.
+    ''' </summary>
+    Public Shared Function PeorCDGlobal(p As Elemento_Pila) As Double
+        If p Is Nothing Then Return 0
+        Dim vals = {MinChequeoEsfuerzos(p), PeorCDSuelo(p), PeorCDCortante(p), PeorCDFlexo(p)}.
+                   Where(Function(v) v > 0).ToList()
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(vals.Min(), 2)
     End Function
 
 

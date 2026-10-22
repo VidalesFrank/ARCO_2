@@ -238,4 +238,57 @@ Public Class PilaServiceTests
             Funciones_00_Varias.ObtenerFZMaximoPorElemento(reacciones, ninguna, "12", True, False))
     End Sub
 
+    ' =====================================================================
+    ' Peor C/D por chequeo (suelo, cortante, flexo) y envolvente global.
+    ' La planta y el dashboard dependen de que la sentinela 0 = "sin calcular"
+    ' se respete y los infinitos no contaminen.
+    ' =====================================================================
+
+    <TestMethod>
+    Public Sub PeorCDSuelo_TomaElPeorDeLosDos()
+        Dim p As New Elemento_Pila With {.Relacion_EsfE = 1.3, .Relacion_EsfD = 0.95}
+        Assert.AreEqual(0.95, PilaService.PeorCDSuelo(p), 0.001)
+    End Sub
+
+    <TestMethod>
+    Public Sub PeorCDSuelo_SinCalculoEsCero()
+        Dim p As New Elemento_Pila With {.Relacion_EsfE = 0, .Relacion_EsfD = 0}
+        Assert.AreEqual(0.0, PilaService.PeorCDSuelo(p))
+        Assert.AreEqual(0.0, PilaService.PeorCDSuelo(Nothing))
+    End Sub
+
+    <TestMethod>
+    Public Sub PeorCDCortante_ReflejaFactorShear()
+        Dim p As New Elemento_Pila With {.FactorShear = 1.2F}
+        Assert.AreEqual(1.2, PilaService.PeorCDCortante(p), 0.001)
+        Dim pSin As New Elemento_Pila With {.FactorShear = 0.0F}
+        Assert.AreEqual(0.0, PilaService.PeorCDCortante(pSin))
+    End Sub
+
+    <TestMethod>
+    Public Sub PeorCDFlexo_TomaElPeorDeDiagonalYCortes()
+        Dim p As New Elemento_Pila With {.Factor_Diagonal = 1.5F, .Factor_CortesH = 0.85F}
+        Assert.AreEqual(0.85, PilaService.PeorCDFlexo(p), 0.001)
+    End Sub
+
+    <TestMethod>
+    Public Sub PeorCDGlobal_EsElMinimoDeLosCuatroChequeos()
+        ' Esf. concreto peor = 1.5; suelo peor = 1.1; cortante = 0.95; flexo = 1.8 → global = 0.95
+        Dim p As New Elemento_Pila With {
+            .Check1_PsE = 1.5F, .Check2_PsD = 2.0F, .Check3_PuE = 1.8F,
+            .Check4_PuD = 1.8F, .Check5_PuT = 0.0F,
+            .Relacion_EsfE = 1.1, .Relacion_EsfD = 1.4,
+            .FactorShear = 0.95F,
+            .Factor_Diagonal = 1.8F, .Factor_CortesH = 2.0F
+        }
+        Assert.AreEqual(0.95, PilaService.PeorCDGlobal(p), 0.001)
+    End Sub
+
+    <TestMethod>
+    Public Sub PeorCDGlobal_IgnoraLosChequeosQueNoAplican()
+        ' Solo flexo tiene datos: gobierna aunque sea el único.
+        Dim p As New Elemento_Pila With {.Factor_Diagonal = 0.88F, .Factor_CortesH = 1.5F}
+        Assert.AreEqual(0.88, PilaService.PeorCDGlobal(p), 0.001)
+    End Sub
+
 End Class

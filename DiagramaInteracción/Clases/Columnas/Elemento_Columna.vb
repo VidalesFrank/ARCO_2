@@ -151,6 +151,13 @@ Public Class Tramo_Columna
     <OptionalField> Public Diametro As Single
     <OptionalField> Public TipoTransversal As String   ' "Espiral" | "Estribos"
 
+    ' === ORIENTACIÓN LOCAL ===
+    ' Ángulo del eje local 2 de la sección respecto al eje global X, en grados
+    ' antihorarios (convención ETABS "Local Axis Angle"). 0 = sección alineada
+    ' al global (B en X, H en Y). Afecta solo la visualización en planta;
+    ' los chequeos de flexión/cortante usan los ejes locales (V2/V3) de ETABS.
+    <OptionalField> Public AnguloOrientacion As Single
+
     <OnDeserializing>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         Lista_Detalles_Refuerzo_Top = New List(Of Detalles_Refuerzo_Longitudinal)

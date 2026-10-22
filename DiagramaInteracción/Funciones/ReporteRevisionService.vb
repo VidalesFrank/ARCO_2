@@ -642,6 +642,9 @@ Public Class ReporteRevisionService
 
         Dim vigas As List(Of cViga) = proyecto.Elementos.Vigas.Vigas
         If vigas Is Nothing Then vigas = New List(Of cViga)
+        ' Reporte final al cliente: solo vigas marcadas como revisables.
+        ' Las excluidas no se mencionan en ninguna tabla.
+        vigas = vigas.Where(Function(v) v.IncluirEnRevision).ToList()
 
         ' ── Flexión ──────────────────────────────────────────────────────────
         body.Append(Heading2("FLEXIÓN"))

@@ -60,6 +60,8 @@ Partial Class Form_00_PaginaPrincipal
         Me.PictureBox9 = New System.Windows.Forms.PictureBox()
         Me.Button3 = New System.Windows.Forms.Button()
         Me.BtnNervios = New System.Windows.Forms.Button()
+        Me.BtnMurosContencion = New System.Windows.Forms.Button()
+        Me.BtnMuroCortina = New System.Windows.Forms.Button()
         Me.Button2 = New System.Windows.Forms.Button()
         Me.PictureBox8 = New System.Windows.Forms.PictureBox()
         Me.Button1 = New System.Windows.Forms.Button()
@@ -393,6 +395,8 @@ Partial Class Form_00_PaginaPrincipal
         Me.Panel2.Controls.Add(Me.PictureBox9)
         Me.Panel2.Controls.Add(Me.Button3)
         Me.Panel2.Controls.Add(Me.BtnNervios)
+        Me.Panel2.Controls.Add(Me.BtnMurosContencion)
+        Me.Panel2.Controls.Add(Me.BtnMuroCortina)
         Me.Panel2.Controls.Add(Me.Button2)
         Me.Panel2.Controls.Add(Me.PictureBox8)
         Me.Panel2.Controls.Add(Me.Button1)
@@ -481,6 +485,44 @@ Partial Class Form_00_PaginaPrincipal
         Me.BtnNervios.Text = "         NERVIOS"
         Me.BtnNervios.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         Me.BtnNervios.UseVisualStyleBackColor = True
+        '
+        'BtnMurosContencion
+        '
+        Me.BtnMurosContencion.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.BtnMurosContencion.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
+        Me.BtnMurosContencion.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.BtnMurosContencion.Font = New System.Drawing.Font("Segoe UI", 14.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.BtnMurosContencion.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.BtnMurosContencion.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.BtnMurosContencion.Location = New System.Drawing.Point(769, 438)
+        Me.BtnMurosContencion.Margin = New System.Windows.Forms.Padding(0)
+        Me.BtnMurosContencion.Name = "BtnMurosContencion"
+        Me.BtnMurosContencion.Padding = New System.Windows.Forms.Padding(8, 0, 0, 0)
+        Me.BtnMurosContencion.Size = New System.Drawing.Size(312, 80)
+        Me.BtnMurosContencion.TabIndex = 51
+        Me.BtnMurosContencion.Text = "M. Contención"
+        Me.BtnMurosContencion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.BtnMurosContencion.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText
+        Me.BtnMurosContencion.UseVisualStyleBackColor = True
+        '
+        'BtnMuroCortina
+        '
+        Me.BtnMuroCortina.BackColor = System.Drawing.Color.FromArgb(CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer), CType(CType(224, Byte), Integer))
+        Me.BtnMuroCortina.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom
+        Me.BtnMuroCortina.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control
+        Me.BtnMuroCortina.Font = New System.Drawing.Font("Segoe UI", 14.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.BtnMuroCortina.ForeColor = System.Drawing.Color.FromArgb(CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer), CType(CType(87, Byte), Integer))
+        Me.BtnMuroCortina.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.BtnMuroCortina.Location = New System.Drawing.Point(1105, 438)
+        Me.BtnMuroCortina.Margin = New System.Windows.Forms.Padding(0)
+        Me.BtnMuroCortina.Name = "BtnMuroCortina"
+        Me.BtnMuroCortina.Padding = New System.Windows.Forms.Padding(8, 0, 0, 0)
+        Me.BtnMuroCortina.Size = New System.Drawing.Size(312, 80)
+        Me.BtnMuroCortina.TabIndex = 52
+        Me.BtnMuroCortina.Text = "MC. Cortina"
+        Me.BtnMuroCortina.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+        Me.BtnMuroCortina.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText
+        Me.BtnMuroCortina.UseVisualStyleBackColor = True
         '
         'Button2
         '
@@ -973,6 +1015,8 @@ Partial Class Form_00_PaginaPrincipal
     Friend WithEvents Button2 As Button
     Friend WithEvents Button3 As Button
     Friend WithEvents BtnNervios As Button
+    Friend WithEvents BtnMurosContencion As Button
+    Friend WithEvents BtnMuroCortina As Button
     Friend WithEvents PictureBox10 As PictureBox
     Friend WithEvents PictureBox9 As PictureBox
 End Class

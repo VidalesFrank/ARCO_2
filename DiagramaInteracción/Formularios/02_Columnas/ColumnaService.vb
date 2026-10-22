@@ -80,6 +80,23 @@ Public Class ColumnaService
 
     End Function
 
+    ''' <summary>
+    ''' Peor ALR calculado para una columna (máximo entre todas las combinaciones
+    ''' de Lista_ALR). Sentinela 0 = sin cálculo, igual que el resto del módulo.
+    ''' NSR-10 C.21.6.3.1 limita ALR a 0.30 para columnas; valores mayores no
+    ''' cumplen el requerimiento de ductilidad DES.
+    ''' </summary>
+    Public Shared Function PeorALR(col As Columna) As Single
+        If col Is Nothing OrElse col.Lista_ALR Is Nothing OrElse col.Lista_ALR.Count = 0 Then Return 0
+        Dim vals = col.Lista_ALR.Where(Function(a) a IsNot Nothing AndAlso
+                                           a.ALR > 0 AndAlso
+                                           Not Single.IsInfinity(a.ALR) AndAlso
+                                           Not Single.IsNaN(a.ALR)).
+                                 Select(Function(a) a.ALR).ToList()
+        If vals.Count = 0 Then Return 0
+        Return vals.Max()
+    End Function
+
     Public Shared Function ColumnasDiseno(ByVal Opcion As String)
         Dim Vector_Columnas(5)
 
@@ -706,6 +723,229 @@ Public Class ColumnaService
         Next
 
         CoordenadasBarras = Lista_Coordendas
+    End Function
+
+    ' =====================================================================
+    ' FLEXO-COMPRESIÓN — ENVOLVENTE
+    ' =====================================================================
+    ' Criterio del equipo (NO NSR-10 estricto): el tramo cumple si cualquiera
+    ' de los dos chequeos pasa. Esto cubre casos donde el acero por diseño
+    ' uniaxial es suficiente aunque la interacción biaxial de Bresler para
+    ' la combinación P-M3-M2 particular no cierre, y viceversa.
+    '
+    '   - Biaxial: 1 / F_Interaccion → Bresler P-M3-M2 real de la sección.
+    '   - Rel. aceros: peor entre F_Flexo_Top y F_Flexo_Bottom = As_Col / As_Req
+    '     (ETABS calculó As_Req por diseño uniaxial por dirección).
+    '
+    ' Las tres funciones devuelven 0 cuando no hay valor disponible (sentinela
+    ' "sin cálculo" consistente con el resto del módulo).
+    ' =====================================================================
+    Public Shared Function CDFlexoBiaxial(tr As Tramo_Columna) As Single
+        If tr Is Nothing Then Return 0
+        If tr.F_Interaccion <= 0 Then Return 0
+        If Single.IsInfinity(tr.F_Interaccion) OrElse Single.IsNaN(tr.F_Interaccion) Then Return 0
+        Return 1.0F / tr.F_Interaccion
+    End Function
+
+    Public Shared Function CDFlexoAceros(tr As Tramo_Columna) As Single
+        If tr Is Nothing Then Return 0
+        Dim t As Single = tr.F_Flexo_Top
+        Dim b As Single = tr.F_Flexo_Bottom
+        If Single.IsInfinity(t) OrElse Single.IsNaN(t) Then t = 0
+        If Single.IsInfinity(b) OrElse Single.IsNaN(b) Then b = 0
+        If t <= 0 AndAlso b <= 0 Then Return 0
+        If t > 0 AndAlso b > 0 Then Return Math.Min(t, b)
+        Return Math.Max(t, b)
+    End Function
+
+    Public Shared Function CDFlexoEnvolvente(tr As Tramo_Columna) As Single
+        Dim bi = CDFlexoBiaxial(tr)
+        Dim ar = CDFlexoAceros(tr)
+        If bi <= 0 AndAlso ar <= 0 Then Return 0
+        Return Math.Max(bi, ar)
+    End Function
+
+    ''' <summary>
+    ''' Nombre del criterio que gobierna la envolvente ("Bresler biaxial" o
+    ''' "Rel. aceros"). Vacío cuando ninguno aportó valor.
+    ''' </summary>
+    Public Shared Function CriterioFlexoGobernante(tr As Tramo_Columna) As String
+        Dim bi = CDFlexoBiaxial(tr)
+        Dim ar = CDFlexoAceros(tr)
+        If bi <= 0 AndAlso ar <= 0 Then Return ""
+        If bi >= ar Then Return "Bresler biaxial"
+        Return "Rel. aceros"
+    End Function
+
+    ''' <summary>
+    ''' Peor envolvente de flexo-compresión entre todos los tramos de la columna.
+    ''' Usada en Form_Graficos para graficar C/D por columna. Devuelve 0 si
+    ''' ningún tramo tiene valor calculado.
+    ''' </summary>
+    Public Shared Function PeorCDFlexoColumna(c As Columna) As Single
+        If c Is Nothing OrElse c.Lista_Tramos_Columnas Is Nothing OrElse c.Lista_Tramos_Columnas.Count = 0 Then Return 0
+        Dim peor As Single = Single.MaxValue
+        Dim visto As Boolean = False
+        For Each tr In c.Lista_Tramos_Columnas
+            Dim cd = CDFlexoEnvolvente(tr)
+            If cd <= 0 Then Continue For
+            visto = True
+            If cd < peor Then peor = cd
+        Next
+        Return If(visto, peor, 0.0F)
+    End Function
+
+    ''' <summary>
+    ''' Mínimo C/D entre los dos ejes de cortante del tramo. Descarta 99 (sentinela
+    ''' "no aplica" usada por el módulo). 0 = sin cálculo.
+    ''' </summary>
+    Public Shared Function CDCortanteTramo(tr As Tramo_Columna) As Single
+        If tr Is Nothing Then Return 0
+        Dim valores As New List(Of Single)
+        If tr.F_Cortante_2 > 0 AndAlso tr.F_Cortante_2 < 99 Then valores.Add(tr.F_Cortante_2)
+        If tr.F_Cortante_3 > 0 AndAlso tr.F_Cortante_3 < 99 Then valores.Add(tr.F_Cortante_3)
+        If valores.Count = 0 Then Return 0
+        Return valores.Min()
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D del tramo combinando flexo-compresión (envolvente) + cortante.
+    ''' ALR no mezcla porque su escala es invertida (menor es mejor). 0 = sin cálculo.
+    ''' </summary>
+    Public Shared Function PeorCDGlobalTramo(tr As Tramo_Columna) As Single
+        Dim valores As New List(Of Single)
+        Dim flx = CDFlexoEnvolvente(tr)
+        Dim cor = CDCortanteTramo(tr)
+        If flx > 0 Then valores.Add(flx)
+        If cor > 0 Then valores.Add(cor)
+        If valores.Count = 0 Then Return 0
+        Return valores.Min()
+    End Function
+
+    ' =====================================================================
+    ' ORIENTACIÓN LOCAL
+    ' =====================================================================
+    ' Lee los ángulos de orientación desde las dos tablas ETABS que los
+    ' publican: "Frame Assigns - Local Axes" para frames (columna "Angle") y
+    ' "Pier Section Properties" para piers (columna "AxisAngle"). Ambas
+    ' pueden venir vacías o faltar; en ese caso simplemente no se actualiza.
+    '
+    ' Puebla cColumnas.AngulosPorLabel con clave "Name_Elemento|Piso" y aplica
+    ' el ángulo encontrado a cada Tramo_Columna.AnguloOrientacion. Idempotente.
+    ' =====================================================================
+    Public Shared Function AplicarAngulosOrientacion(proyecto As Proyecto,
+                                                     dtFrameLocalAxes As DataTable,
+                                                     dtPierSectionProperties As DataTable) As Integer
+        If proyecto Is Nothing OrElse proyecto.Elementos Is Nothing Then Return 0
+        Dim cols = proyecto.Elementos.Columnas
+        If cols Is Nothing OrElse cols.Lista_Columnas Is Nothing Then Return 0
+        If cols.AngulosPorLabel Is Nothing Then
+            cols.AngulosPorLabel = New Dictionary(Of String, Single)(StringComparer.OrdinalIgnoreCase)
+        End If
+        Dim mapa = cols.AngulosPorLabel
+
+        ' --- Frame Assigns - Local Axes --------------------------------------
+        If dtFrameLocalAxes IsNot Nothing AndAlso dtFrameLocalAxes.Rows.Count >= 3 Then
+            Dim colStory = BuscarColumnaDT(dtFrameLocalAxes, "Story")
+            Dim colLabel = BuscarColumnaDT(dtFrameLocalAxes, "Label", "UniqueName")
+            Dim colAngle = BuscarColumnaDT(dtFrameLocalAxes, "Angle")
+            If colLabel >= 0 AndAlso colAngle >= 0 Then
+                For r As Integer = 2 To dtFrameLocalAxes.Rows.Count - 1
+                    Dim lbl = Convert.ToString(dtFrameLocalAxes.Rows(r)(colLabel)).Trim()
+                    Dim sty = If(colStory >= 0, Convert.ToString(dtFrameLocalAxes.Rows(r)(colStory)).Trim(), "")
+                    If lbl = "" Then Continue For
+                    Dim ang As Single
+                    If Not Single.TryParse(Convert.ToString(dtFrameLocalAxes.Rows(r)(colAngle)),
+                                           Globalization.NumberStyles.Float,
+                                           Globalization.CultureInfo.InvariantCulture, ang) Then Continue For
+                    mapa(ClaveAngulo(lbl, sty)) = ang
+                    ' Fallback por label-solo: primera coincidencia (si no está ya).
+                    ' Cubre el caso en que la hoja no tenga fila para una historia
+                    ' específica (p.ej. cubierta) y nuestro tramo no matchee exacto.
+                    Dim keyLbl = ClaveAngulo(lbl, "")
+                    If Not mapa.ContainsKey(keyLbl) Then mapa(keyLbl) = ang
+                Next
+            End If
+        End If
+
+        ' --- Pier Section Properties: AxisAngle ------------------------------
+        If dtPierSectionProperties IsNot Nothing AndAlso dtPierSectionProperties.Rows.Count >= 3 Then
+            Dim colStory = BuscarColumnaDT(dtPierSectionProperties, "Story")
+            Dim colPier = BuscarColumnaDT(dtPierSectionProperties, "Pier", "SectionName")
+            Dim colAxis = BuscarColumnaDT(dtPierSectionProperties, "AxisAngle", "Axis Angle")
+            If colPier >= 0 AndAlso colAxis >= 0 Then
+                For r As Integer = 2 To dtPierSectionProperties.Rows.Count - 1
+                    Dim lbl = Convert.ToString(dtPierSectionProperties.Rows(r)(colPier)).Trim()
+                    Dim sty = If(colStory >= 0, Convert.ToString(dtPierSectionProperties.Rows(r)(colStory)).Trim(), "")
+                    If lbl = "" Then Continue For
+                    Dim ang As Single
+                    If Not Single.TryParse(Convert.ToString(dtPierSectionProperties.Rows(r)(colAxis)),
+                                           Globalization.NumberStyles.Float,
+                                           Globalization.CultureInfo.InvariantCulture, ang) Then Continue For
+                    mapa(ClaveAngulo(lbl, sty)) = ang
+                    Dim keyLbl = ClaveAngulo(lbl, "")
+                    If Not mapa.ContainsKey(keyLbl) Then mapa(keyLbl) = ang
+                Next
+            End If
+        End If
+
+        Return AplicarAngulosDesdeMapa(cols)
+    End Function
+
+    ' Aplica los ángulos del mapa a Tramo_Columna.AnguloOrientacion. Útil
+    ' cuando el mapa ya está poblado (p. ej. tras deserializar un .esm) y hay
+    ' que re-aplicar sin volver a leer el Excel.
+    Public Shared Function AplicarAngulosDesdeMapa(cols As cColumnas) As Integer
+        If cols Is Nothing OrElse cols.Lista_Columnas Is Nothing Then Return 0
+        If cols.AngulosPorLabel Is Nothing OrElse cols.AngulosPorLabel.Count = 0 Then Return 0
+
+        Dim actualizadas As Integer = 0
+        For Each col In cols.Lista_Columnas
+            If col Is Nothing OrElse col.Lista_Tramos_Columnas Is Nothing Then Continue For
+            For Each tr In col.Lista_Tramos_Columnas
+                If tr Is Nothing OrElse String.IsNullOrWhiteSpace(tr.Name_Elemento) Then Continue For
+                Dim claveConPiso = ClaveAngulo(tr.Name_Elemento, tr.Piso)
+                Dim ang As Single
+                If cols.AngulosPorLabel.TryGetValue(claveConPiso, ang) Then
+                    tr.AnguloOrientacion = ang
+                    actualizadas += 1
+                    Continue For
+                End If
+                ' Fallback: sin piso. Un frame con el mismo label suele compartir ángulo
+                ' entre pisos; aceptamos cualquier entrada que coincida solo por label.
+                Dim claveSinPiso = ClaveAngulo(tr.Name_Elemento, "")
+                If cols.AngulosPorLabel.TryGetValue(claveSinPiso, ang) Then
+                    tr.AnguloOrientacion = ang
+                    actualizadas += 1
+                End If
+            Next
+        Next
+        Return actualizadas
+    End Function
+
+    Private Shared Function ClaveAngulo(label As String, story As String) As String
+        Return $"{(If(label, "")).Trim().ToUpperInvariant()}|{(If(story, "")).Trim().ToUpperInvariant()}"
+    End Function
+
+    ' Busca una columna de DataTable por nombre (primero por Columns, después
+    ' por el header de la fila 0 — ETABS a veces exporta con nombres genéricos
+    ' Column1..N y pone el header en los datos). Devuelve -1 si no encuentra.
+    Private Shared Function BuscarColumnaDT(dt As DataTable, ParamArray nombres As String()) As Integer
+        If dt Is Nothing OrElse nombres Is Nothing OrElse nombres.Length = 0 Then Return -1
+        For Each n In nombres
+            Dim nTrim = n.Replace(" ", "").ToUpperInvariant()
+            For ci As Integer = 0 To dt.Columns.Count - 1
+                Dim hc = dt.Columns(ci).ColumnName.Replace(" ", "").ToUpperInvariant()
+                If hc = nTrim Then Return ci
+            Next
+            If dt.Rows.Count > 0 Then
+                For ci As Integer = 0 To dt.Columns.Count - 1
+                    Dim raw = Convert.ToString(dt.Rows(0)(ci)).Replace(" ", "").ToUpperInvariant()
+                    If raw = nTrim Then Return ci
+                Next
+            End If
+        Next
+        Return -1
     End Function
 
 End Class

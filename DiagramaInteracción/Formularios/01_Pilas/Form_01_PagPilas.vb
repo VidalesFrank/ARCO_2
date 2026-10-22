@@ -172,8 +172,6 @@ Public Class Form_01_PagPilas
     Public Sub DatosAExcelToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Exportar_Excel.Click
         Me.Cursor = Cursors.WaitCursor
         Dim Archivo As String = "Revisión"
-        Dim connection As String = "Provider=sqloledb;Data Source==miServidor;Initial Catalog=bdd_Web;User Id=web;Password="
-        Dim conexion As New OleDb.OleDbConnection(connection)
 
         Try
             Dim c As Color = Color.FromArgb(200, 200, 200)
@@ -254,27 +252,9 @@ Public Class Form_01_PagPilas
                         shxl4.Cells(2, 1) = TablaRevi.Columns(0).HeaderText
                         shxl4.Cells(j + 3, 1) = TablaRevi.Rows(j).Cells(0).Value
                     Next
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(17).Value) >= 0.9 Then
-                        shxl4.Range("F" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shxl4.Range("F" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shxl4.Range("F" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shxl4.Range("F" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(21).Value) >= 0.9 Then
-                        shxl4.Range("J" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shxl4.Range("J" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shxl4.Range("J" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shxl4.Range("J" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(22).Value) >= 0.9 Then
-                        shxl4.Range("K" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shxl4.Range("K" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shxl4.Range("K" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shxl4.Range("K" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
+                    AplicarSemaforoCD(shxl4, "F" & 3 + j, TablaRevi.Rows(j).Cells(17).Value)
+                    AplicarSemaforoCD(shxl4, "J" & 3 + j, TablaRevi.Rows(j).Cells(21).Value)
+                    AplicarSemaforoCD(shxl4, "K" & 3 + j, TablaRevi.Rows(j).Cells(22).Value)
                 Next
 
                 shxl4.PageSetup.Application.ActiveWindow.DisplayGridlines = False
@@ -283,37 +263,25 @@ Public Class Form_01_PagPilas
                 shXL2 = wbXL.Sheets.Add()
                 shXL2 = wbXL.Sheets("Hoja3")
                 shXL2.Name = "Revisión Suelo-Estructura"
-                shXL2.Range("A1:G1").Merge(True)
+                shXL2.Range("A1:E1").Merge(True)
                 shXL2.Cells(1, 1) = "REVISIÓN INTERACCIÓN SUELO - ESTRUCTURA"
-                shXL2.Range("A1:G100").Font.Name = "Arial"
-                shXL2.Range("A1:G2").Font.Bold = True
-                shXL2.Range("A1:G1").Font.Size = 11
-                shXL2.Range("A2:G100").Font.Size = 10
-                shXL2.Range("A1:G2").Interior.Color = c
-                shXL2.Range("A1:G100").HorizontalAlignment = Excel.XlVAlign.xlVAlignCenter
-                shXL2.Range("A:G").ColumnWidth = 30
+                shXL2.Range("A1:E100").Font.Name = "Arial"
+                shXL2.Range("A1:E2").Font.Bold = True
+                shXL2.Range("A1:E1").Font.Size = 11
+                shXL2.Range("A2:E100").Font.Size = 10
+                shXL2.Range("A1:E2").Interior.Color = c
+                shXL2.Range("A1:E100").HorizontalAlignment = Excel.XlVAlign.xlVAlignCenter
+                shXL2.Range("A:E").ColumnWidth = 30
                 shXL2.PageSetup.Application.ActiveWindow.DisplayGridlines = False
                 For j = 0 To numfilas - 1
-                    For i = 9 To 14
-                        shXL2.Cells(2, i - 7) = TablaRevi.Columns(i).HeaderText
-                        shXL2.Cells(j + 3, i - 7) = TablaRevi.Rows(j).Cells(i).Value
+                    For i = 11 To 14
+                        shXL2.Cells(2, i - 9) = TablaRevi.Columns(i).HeaderText
+                        shXL2.Cells(j + 3, i - 9) = TablaRevi.Rows(j).Cells(i).Value
                         shXL2.Cells(2, 1) = TablaRevi.Columns(0).HeaderText
                         shXL2.Cells(j + 3, 1) = TablaRevi.Rows(j).Cells(0).Value
                     Next
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(13).Value) >= 0.9 Then
-                        shXL2.Range("F" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL2.Range("F" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL2.Range("F" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL2.Range("F" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(14).Value) >= 0.9 Then
-                        shXL2.Range("G" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL2.Range("G" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL2.Range("G" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL2.Range("G" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
+                    AplicarSemaforoCD(shXL2, "D" & 3 + j, TablaRevi.Rows(j).Cells(13).Value)
+                    AplicarSemaforoCD(shXL2, "E" & 3 + j, TablaRevi.Rows(j).Cells(14).Value)
                 Next
 
                 Dim shXL5 As Excel.Worksheet
@@ -335,41 +303,11 @@ Public Class Form_01_PagPilas
                         shXL5.Cells(2, i + 1) = TablaRevi.Columns(i).HeaderText
                         shXL5.Cells(j + 3, i + 1) = TablaRevi.Rows(j).Cells(i).Value
                     Next
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(6).Value) >= 0.9 Then
-                        shXL5.Range("G" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL5.Range("G" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL5.Range("G" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL5.Range("G" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(7).Value) >= 0.9 Then
-                        shXL5.Range("H" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL5.Range("H" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL5.Range("H" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL5.Range("H" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(8).Value) >= 0.9 Then
-                        shXL5.Range("I" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL5.Range("I" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL5.Range("I" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL5.Range("I" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(9).Value) >= 0.9 Then
-                        shXL5.Range("J" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL5.Range("J" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL5.Range("J" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL5.Range("J" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
-                    If Convert.ToSingle(TablaRevi.Rows(j).Cells(10).Value) >= 0.9 Then
-                        shXL5.Range("K" & 3 + j).Font.Color = Color.FromArgb(0, 97, 0)
-                        shXL5.Range("K" & 3 + j).Interior.Color = Color.FromArgb(198, 239, 206)
-                    Else
-                        shXL5.Range("K" & 3 + j).Font.Color = Color.FromArgb(156, 0, 6)
-                        shXL5.Range("K" & 3 + j).Interior.Color = Color.FromArgb(255, 199, 206)
-                    End If
+                    AplicarSemaforoCD(shXL5, "G" & 3 + j, TablaRevi.Rows(j).Cells(6).Value)
+                    AplicarSemaforoCD(shXL5, "H" & 3 + j, TablaRevi.Rows(j).Cells(7).Value)
+                    AplicarSemaforoCD(shXL5, "I" & 3 + j, TablaRevi.Rows(j).Cells(8).Value)
+                    AplicarSemaforoCD(shXL5, "J" & 3 + j, TablaRevi.Rows(j).Cells(9).Value)
+                    AplicarSemaforoCD(shXL5, "K" & 3 + j, TablaRevi.Rows(j).Cells(10).Value)
                 Next
             End If
             '--------------------------- Imprimir resumen de Datos ----------------------------
@@ -423,20 +361,44 @@ Public Class Form_01_PagPilas
             saveFileDialog1.Title = "Guardar documento Excel"
             saveFileDialog1.Filter = "Excel File|*.xlsx"
             saveFileDialog1.FileName = Convert.ToString(Archivo & "_Proyecto.Elementos -" & PagInfoGeneral.NameProject.Text)
-            saveFileDialog1.ShowDialog()
+            If saveFileDialog1.ShowDialog() <> DialogResult.OK OrElse String.IsNullOrWhiteSpace(saveFileDialog1.FileName) Then
+                appXL.Workbooks.Close()
+                appXL.Quit()
+                Return
+            End If
             wbXL.SaveAs(saveFileDialog1.FileName)
             appXL.Workbooks.Close()
             appXL.Quit()
             System.Diagnostics.Process.Start(saveFileDialog1.FileName)
         Catch ex As Exception
-            MessageBox.Show("Error al exportar los datos a excel.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Logger.Error(ex, "Form_01_PagPilas.DatosAExcelToolStripMenuItem_Click")
+            MessageBox.Show("Error al exportar los datos a Excel." & Environment.NewLine & Environment.NewLine & ex.Message,
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
-            conexion.Close()
             Cursor = Cursors.Arrow
         End Try
     End Sub
 
-    '---------------------- LLAMAR Y LLENAR CADA DATAGRIDVIEW CON LAS TABLAS DE EXCEL ------------------------------- 
+    ' AsignarCD con guionSinDato:=True escribe "—" en los chequeos que no aplican
+    ' (p. ej. tracción sin combinaciones de tracción). Convert.ToSingle("—") lanza
+    ' FormatException y el export aborta. Si no parsea, se deja la celda sin pintar.
+    Private Shared Sub AplicarSemaforoCD(sh As Excel.Worksheet, rng As String, raw As Object)
+        Dim txt = Convert.ToString(raw)
+        Dim val As Single
+        If Not Single.TryParse(txt, val) _
+           AndAlso Not Single.TryParse(txt, Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, val) Then
+            Return
+        End If
+        If val >= UMBRAL_CD Then
+            sh.Range(rng).Font.Color = Color.FromArgb(0, 97, 0)
+            sh.Range(rng).Interior.Color = Color.FromArgb(198, 239, 206)
+        Else
+            sh.Range(rng).Font.Color = Color.FromArgb(156, 0, 6)
+            sh.Range(rng).Interior.Color = Color.FromArgb(255, 199, 206)
+        End If
+    End Sub
+
+    '---------------------- LLAMAR Y LLENAR CADA DATAGRIDVIEW CON LAS TABLAS DE EXCEL -------------------------------
     Private Sub TipoFrameToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Importar_Frame.Click
         Proyecto.Elementos.Pilas.Opcion_Elemento = "Frame"
         AbrirImportarExcel()
@@ -1053,6 +1015,24 @@ Public Class Form_01_PagPilas
 
     End Sub
 
+    Private Sub PlantaPilas_Click(sender As Object, e As EventArgs)
+
+        If Proyecto Is Nothing OrElse Proyecto.Elementos.Pilas Is Nothing OrElse
+           Proyecto.Elementos.Pilas.ListaElementos Is Nothing OrElse
+           Proyecto.Elementos.Pilas.ListaElementos.Count = 0 Then
+            MessageBox.Show("Primero importe y calcule los datos de pilas.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim frm As New Form_Planta_Pilas() With {
+            .Proyecto = Proyecto,
+            .GridLines = Proyecto?.Elementos?.Grids?.GridLines
+        }
+        frm.Show(Me)
+
+    End Sub
+
     Private _hayCambiosPilas As Boolean = False
     Private _ultimoGuardadoPilas As DateTime = DateTime.Now
     Private _timerAutoSavePilas As New Timer With {.Interval = 60000}
@@ -1094,6 +1074,17 @@ Public Class Form_01_PagPilas
                                             Form_01_00_PagInfoPilas.BringToFront()
                                         End Sub
         VerToolStripMenuItem.DropDownItems.Add(itemInfoPilas)
+
+        Dim itemPlantaPilas As New ToolStripMenuItem("Planta de Pilas")
+        itemPlantaPilas.ForeColor = Color.White
+        itemPlantaPilas.BackColor = Color.FromArgb(87, 87, 87)
+        itemPlantaPilas.ToolTipText = "Vista en planta con las pilas escaladas y coloreadas según su C/D"
+        AddHandler itemPlantaPilas.Click, AddressOf PlantaPilas_Click
+        VerToolStripMenuItem.DropDownItems.Add(itemPlantaPilas)
+
+        ' Igual que Columnas: el Designer deja Ver=False hasta calcular, pero la
+        ' planta soporta estado vacío y debe estar siempre accesible.
+        VerToolStripMenuItem.Enabled = True
 
         Dim sepOpc As New ToolStripSeparator() With {.BackColor = Color.FromArgb(87, 87, 87)}
         OpcionesToolStripMenuItem.DropDownItems.Add(sepOpc)

@@ -264,6 +264,13 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuReporteRevision.Click, Sub(s, ev) Form_Reporte_Revision.Mostrar(proyecto)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuReporteRevision)
 
+        ' Agregar ítem "Informe Técnico Ejecutivo..." en menú Opciones
+        Dim mnuInformeTecnico As New ToolStripMenuItem("Informe Técnico Ejecutivo…")
+        mnuInformeTecnico.BackColor = Color.FromArgb(87, 87, 86)
+        mnuInformeTecnico.ForeColor = Color.White
+        AddHandler mnuInformeTecnico.Click, Sub(s, ev) Form_Informe_Tecnico.Mostrar(proyecto)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuInformeTecnico)
+
         ' Análisis de Sección independiente (Módulo 10) — se expone la v2 (Pro).
         ' La v1 (Form_10_AnalisisSeccion) se conserva compilada pero oculta del
         ' menú: sigue accesible por reflexión / código si se necesita revisar
@@ -287,6 +294,14 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuE2K.Click, AddressOf VisualizadorE2K_Click
         OpcionesToolStripMenuItem1.DropDownItems.Add(sepE2K)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuE2K)
+
+        ' Ícono del botón Muros de Contención (dibujado con GDI+)
+        BtnMurosContencion.Image = GenerarIconoMuroContencion(60)
+        BtnMurosContencion.ImageAlign = ContentAlignment.MiddleLeft
+
+        ' Ícono del botón MC. Cortina
+        BtnMuroCortina.Image = GenerarIconoMuroCortina(60)
+        BtnMuroCortina.ImageAlign = ContentAlignment.MiddleLeft
 
         ' Combinar módulos desde archivo — en menú Archivo antes de Salir
         Dim sepCombinar As New ToolStripSeparator()
@@ -830,4 +845,139 @@ Public Class Form_00_PaginaPrincipal
         Form_11_Nervios.Show()
         Form_11_Nervios.WindowState = FormWindowState.Maximized
     End Sub
+
+    ''' <summary>
+    ''' Módulo 12 — Muros de Contención. Es un flujo independiente del edificio
+    ''' (no recibe el Proyecto .esm): abre su propio form con un muro default y
+    ''' el usuario gestiona Nuevo / Abrir / Guardar en archivos .esm (misma
+    ''' extensión que el proyecto edificio, pero el contenido es un MuroContencion).
+    ''' </summary>
+    Private Sub BtnMurosContencion_Click(sender As Object, e As EventArgs) Handles BtnMurosContencion.Click
+        Form_12_MuroContencion.Mostrar()
+    End Sub
+
+    ''' <summary>
+    ''' Módulo 13 — MC. Cortina (pantalla apoyada en altura). Flujo independiente,
+    ''' igual que M. Contención: cada archivo .esm es un muro cortina.
+    ''' </summary>
+    Private Sub BtnMuroCortina_Click(sender As Object, e As EventArgs) Handles BtnMuroCortina.Click
+        Form_13_MuroCortina.Mostrar()
+    End Sub
+
+    ''' <summary>
+    ''' Dibuja un ícono para el botón de Muros de Contención: silueta de un muro
+    ''' cantilever simple (zapata + vástago trapezoidal + hatching del suelo).
+    ''' Se dibuja en memoria con GDI+ para no agregar un recurso al proyecto.
+    ''' </summary>
+    Private Function GenerarIconoMuroContencion(size As Integer) As Image
+        Dim bmp As New Bitmap(size, size)
+        Using g As Graphics = Graphics.FromImage(bmp)
+            g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+            g.Clear(Color.FromArgb(224, 224, 224))
+
+            ' Factor de escala según el size
+            Dim s As Single = size / 60.0F
+
+            ' Hatching del suelo detrás del muro (lado del relleno)
+            Using hb As New Drawing2D.HatchBrush(
+                Drawing2D.HatchStyle.ForwardDiagonal,
+                Color.FromArgb(185, 155, 95),
+                Color.FromArgb(245, 232, 196))
+                Dim ptsSuelo As PointF() = {
+                    New PointF(35 * s, 10 * s),
+                    New PointF(56 * s, 10 * s),
+                    New PointF(56 * s, 48 * s),
+                    New PointF(35 * s, 48 * s)
+                }
+                g.FillPolygon(hb, ptsSuelo)
+            End Using
+
+            ' Zapata (losa inferior)
+            Using b As New SolidBrush(Color.FromArgb(90, 90, 100)),
+                  p As New Pen(Color.FromArgb(40, 40, 50), 1.5F * s)
+                Dim rectZap As New Rectangle(CInt(5 * s), CInt(44 * s),
+                                              CInt(50 * s), CInt(8 * s))
+                g.FillRectangle(b, rectZap)
+                g.DrawRectangle(p, rectZap)
+
+                ' Vástago trapezoidal (cara trasera recta en la derecha, frontal inclinada)
+                Dim ptsVast As PointF() = {
+                    New PointF(25 * s, 44 * s),
+                    New PointF(35 * s, 44 * s),
+                    New PointF(35 * s, 10 * s),
+                    New PointF(31 * s, 10 * s)
+                }
+                g.FillPolygon(b, ptsVast)
+                g.DrawPolygon(p, ptsVast)
+            End Using
+
+            ' Línea nivel de terreno (NT) punteada
+            Using pNT As New Pen(Color.FromArgb(130, 100, 50), 1 * s)
+                pNT.DashPattern = New Single() {3, 2}
+                g.DrawLine(pNT, 2 * s, 44 * s, 25 * s, 44 * s)
+            End Using
+        End Using
+        Return bmp
+    End Function
+
+    ''' <summary>
+    ''' Ícono del módulo MC. Cortina: pantalla vertical con apoyo simple arriba
+    ''' (triangulito) y empotrado abajo (hatch), hatching del suelo lateral.
+    ''' </summary>
+    Private Function GenerarIconoMuroCortina(size As Integer) As Image
+        Dim bmp As New Bitmap(size, size)
+        Using g As Graphics = Graphics.FromImage(bmp)
+            g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+            g.Clear(Color.FromArgb(224, 224, 224))
+
+            Dim s As Single = size / 60.0F
+
+            ' Hatching del suelo del lado derecho (relleno)
+            Using hb As New Drawing2D.HatchBrush(
+                Drawing2D.HatchStyle.ForwardDiagonal,
+                Color.FromArgb(185, 155, 95),
+                Color.FromArgb(245, 232, 196))
+                Dim ptos As PointF() = {
+                    New PointF(32 * s, 8 * s),
+                    New PointF(56 * s, 8 * s),
+                    New PointF(56 * s, 52 * s),
+                    New PointF(32 * s, 52 * s)
+                }
+                g.FillPolygon(hb, ptos)
+            End Using
+
+            ' Pantalla vertical (muro delgado)
+            Using b As New SolidBrush(Color.FromArgb(90, 90, 100)),
+                  p As New Pen(Color.FromArgb(40, 40, 50), 1.5F * s)
+                Dim rect As New Rectangle(CInt(26 * s), CInt(10 * s),
+                                           CInt(6 * s), CInt(42 * s))
+                g.FillRectangle(b, rect)
+                g.DrawRectangle(p, rect)
+            End Using
+
+            ' Apoyo simple ARRIBA (triangulito del lado libre, izquierdo)
+            Using b As New SolidBrush(Color.FromArgb(40, 40, 50))
+                Dim tri As PointF() = {
+                    New PointF(26 * s, 12 * s),
+                    New PointF(20 * s, 8 * s),
+                    New PointF(20 * s, 16 * s)
+                }
+                g.FillPolygon(b, tri)
+            End Using
+
+            ' Apoyo empotrado ABAJO (hatch bajo el muro)
+            Using hb As New Drawing2D.HatchBrush(
+                Drawing2D.HatchStyle.BackwardDiagonal,
+                Color.FromArgb(70, 70, 80),
+                Color.FromArgb(220, 220, 220))
+                Dim rect As New Rectangle(CInt(14 * s), CInt(52 * s),
+                                           CInt(24 * s), CInt(6 * s))
+                g.FillRectangle(hb, rect)
+                Using pen As New Pen(Color.FromArgb(40, 40, 50), 1 * s)
+                    g.DrawRectangle(pen, rect)
+                End Using
+            End Using
+        End Using
+        Return bmp
+    End Function
 End Class

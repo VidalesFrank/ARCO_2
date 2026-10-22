@@ -7,12 +7,25 @@ Public Class DiagramaService
         _geo = geo
     End Sub
 
+    ''' <summary>
+    ''' Modos de visualización del color de cada viga en la planta. Si no se
+    ''' pasa modo, por defecto se usa Ninguno (azul plano, retrocompatible con
+    ''' llamadores previos).
+    ''' </summary>
+    Public Enum ModoChequeoPlanta
+        Ninguno = -1
+        PeorGlobal = 0
+        Flexion = 1
+        Cortante = 2
+    End Enum
+
     Public Sub DibujarPlanta(pictureBox As PictureBox,
                             vigas As List(Of cViga),
                             joints As Dictionary(Of String, cJoint),
                             grids As List(Of cGridLine),
                             pisoSeleccionado As String,
-                            vigaSeleccionada As cViga
+                            vigaSeleccionada As cViga,
+                            Optional modo As ModoChequeoPlanta = ModoChequeoPlanta.Ninguno
                         )
 
         If vigas Is Nothing OrElse vigas.Count = 0 Then Exit Sub
@@ -44,13 +57,62 @@ Public Class DiagramaService
                     esSeleccionada = (v.Name_Beam = vigaSeleccionada.Name_Beam)
                 End If
 
-                DibujarViga(g, pictureBox, v, bbox, joints, esSeleccionada)
+                DibujarViga(g, pictureBox, v, bbox, joints, esSeleccionada, modo)
             Next
 
         End Using
 
         pictureBox.Refresh()
     End Sub
+
+    ''' <summary>
+    ''' Render headless de la planta a un Bitmap del tamaño pedido — para el Informe Técnico.
+    ''' Si <paramref name="pisoSeleccionado"/> es Nothing o vacío, dibuja TODAS las vigas de
+    ''' todos los pisos (equivale a la opción "Todos los pisos" del Form_PlantaInteractiva).
+    ''' Devuelve Nothing si no hay vigas con joints para dibujar.
+    ''' </summary>
+    Public Function DibujarPlantaBitmap(ancho As Integer, alto As Integer,
+                                        vigas As List(Of cViga),
+                                        joints As Dictionary(Of String, cJoint),
+                                        grids As List(Of cGridLine),
+                                        pisoSeleccionado As String,
+                                        Optional modo As ModoChequeoPlanta = ModoChequeoPlanta.PeorGlobal) As Bitmap
+        If vigas Is Nothing OrElse vigas.Count = 0 Then Return Nothing
+        If ancho <= 0 OrElse alto <= 0 Then Return Nothing
+
+        Dim vigasFiltro As List(Of cViga)
+        If String.IsNullOrWhiteSpace(pisoSeleccionado) Then
+            vigasFiltro = vigas.Where(Function(v) v IsNot Nothing AndAlso v.Frames IsNot Nothing AndAlso v.Frames.Count > 0).ToList()
+        Else
+            vigasFiltro = vigas.Where(Function(v) v.Frames IsNot Nothing AndAlso
+                                                  v.Frames.Any(Function(f) f.Story = pisoSeleccionado)).ToList()
+        End If
+        If vigasFiltro.Count = 0 Then Return Nothing
+
+        Using pb As New PictureBox With {.Width = ancho, .Height = alto}
+            Dim pisoParaDibujar = If(String.IsNullOrWhiteSpace(pisoSeleccionado),
+                                     vigasFiltro.First().Frames.First().Story,
+                                     pisoSeleccionado)
+            ' Si "todos los pisos": iteramos piso por piso pintando sobre el mismo bitmap.
+            If String.IsNullOrWhiteSpace(pisoSeleccionado) Then
+                pb.Image = New Bitmap(ancho, alto)
+                Using g As Graphics = Graphics.FromImage(pb.Image)
+                    g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+                    g.Clear(Color.White)
+                    Dim bbox = CalcularBoundingBox(vigasFiltro, joints)
+                    DibujarGridLines(g, pb, grids, bbox, joints)
+                    For Each v In vigasFiltro
+                        DibujarViga(g, pb, v, bbox, joints, False, modo)
+                    Next
+                End Using
+            Else
+                DibujarPlanta(pb, vigas, joints, grids, pisoParaDibujar, Nothing, modo)
+            End If
+            Dim resultado = TryCast(pb.Image, Bitmap)
+            pb.Image = Nothing   ' evita que el Dispose del PictureBox libere el bitmap
+            Return resultado
+        End Using
+    End Function
 
     Private Sub DibujarGridLines(g As Graphics,
                                  pictureBox As PictureBox,
@@ -189,21 +251,46 @@ Public Class DiagramaService
                             viga As cViga,
                             bbox As RectangleF,
                             joints As Dictionary(Of String, cJoint),
-                            Optional seleccionada As Boolean = False)
+                            Optional seleccionada As Boolean = False,
+                            Optional modo As ModoChequeoPlanta = ModoChequeoPlanta.Ninguno)
 
         Dim font As New Font("Segoe UI", 9.0F, FontStyle.Bold)
         Dim brushTexto As Brush = Brushes.Black
 
+        ' Color por chequeo cuando hay modo activo; azul plano cuando no.
         Dim colorViga As Color = Color.DarkBlue
         Dim espesor As Single = 2
+
+        If modo <> ModoChequeoPlanta.Ninguno Then
+            colorViga = ColorPorModo(viga, modo)
+        End If
+
+        ' Vigas excluidas de la revisión se dibujan en gris claro, pisando el
+        ' color por modo. La selección (rojo) sigue teniendo prioridad.
+        If Not viga.IncluirEnRevision Then
+            colorViga = Color.FromArgb(180, 180, 180)
+        End If
 
         If seleccionada Then
             colorViga = Color.Red
             espesor = 3
         End If
 
+        ' Escala píxeles/m consistente con Transformar() para extruir el ancho
+        ' real de la sección (frame.Section.b) a píxeles.
+        Dim margin As Single = 40
+        Dim scalePxPerM As Single = CSng(Math.Min(
+            (pictureBox.Width - 2 * margin) / Math.Max(bbox.Width, 0.001F),
+            (pictureBox.Height - 2 * margin) / Math.Max(bbox.Height, 0.001F)))
+
+        ' Borde más oscuro para el polígono (misma tonalidad pero más saturada).
+        Dim colorBorde As Color = Color.FromArgb(
+            Math.Max(0, CInt(colorViga.R) - 40),
+            Math.Max(0, CInt(colorViga.G) - 40),
+            Math.Max(0, CInt(colorViga.B) - 40))
+
         ' =====================================================
-        ' 🔹 Dibujar frames de la viga
+        ' 🔹 Dibujar frames de la viga con extrusión (b real)
         ' =====================================================
         For Each f In viga.Frames
 
@@ -213,16 +300,54 @@ Public Class DiagramaService
             Dim p1 As PointF = Transformar(New Vector3(ji.GlobalX, ji.GlobalY, 0), bbox, pictureBox.Width, pictureBox.Height)
             Dim p2 As PointF = Transformar(New Vector3(jj.GlobalX, jj.GlobalY, 0), bbox, pictureBox.Width, pictureBox.Height)
 
-            ' Halo de selección (más profesional)
-            If seleccionada Then
-                Using penHalo As New Pen(Color.Yellow, espesor + 4)
-                    g.DrawLine(penHalo, p1, p2)
+            ' Ancho real de la sección (b en metros → píxeles). Si falta Section
+            ' o b, caemos a línea plana con el espesor nominal.
+            Dim bMetros As Double = If(f.Section Is Nothing, 0.0, f.Section.b)
+            Dim bPx As Single = CSng(bMetros * scalePxPerM)
+
+            Dim dxPx As Single = p2.X - p1.X
+            Dim dyPx As Single = p2.Y - p1.Y
+            Dim lenPx As Double = Math.Sqrt(dxPx * dxPx + dyPx * dyPx)
+
+            If bPx < 2.0F OrElse lenPx < 1.0 Then
+                ' Zoom muy bajo o frame casi degenerado: línea plana.
+                If seleccionada Then
+                    Using penHalo As New Pen(Color.Yellow, espesor + 4)
+                        g.DrawLine(penHalo, p1, p2)
+                    End Using
+                End If
+                Using pen As New Pen(colorViga, espesor)
+                    g.DrawLine(pen, p1, p2)
+                End Using
+            Else
+                ' Polígono rectangular rotado: p1 ± n·b/2  →  p2 ± n·b/2.
+                Dim nx As Single = CSng(-dyPx / lenPx * bPx / 2.0)
+                Dim ny As Single = CSng(dxPx / lenPx * bPx / 2.0)
+                Dim pts As PointF() = {
+                    New PointF(p1.X + nx, p1.Y + ny),
+                    New PointF(p2.X + nx, p2.Y + ny),
+                    New PointF(p2.X - nx, p2.Y - ny),
+                    New PointF(p1.X - nx, p1.Y - ny)
+                }
+
+                If seleccionada Then
+                    Using penHalo As New Pen(Color.FromArgb(140, Color.Yellow), 3)
+                        Dim ptsHalo As PointF() = {
+                            New PointF(p1.X + nx * 1.4F, p1.Y + ny * 1.4F),
+                            New PointF(p2.X + nx * 1.4F, p2.Y + ny * 1.4F),
+                            New PointF(p2.X - nx * 1.4F, p2.Y - ny * 1.4F),
+                            New PointF(p1.X - nx * 1.4F, p1.Y - ny * 1.4F)
+                        }
+                        g.DrawPolygon(penHalo, ptsHalo)
+                    End Using
+                End If
+
+                Using brRelleno As New SolidBrush(colorViga),
+                      penBorde As New Pen(colorBorde, 1.0F)
+                    g.FillPolygon(brRelleno, pts)
+                    g.DrawPolygon(penBorde, pts)
                 End Using
             End If
-
-            Using pen As New Pen(colorViga, espesor)
-                g.DrawLine(pen, p1, p2)
-            End Using
 
         Next
 
@@ -1029,5 +1154,24 @@ Public Class DiagramaService
 
     End Function
 
+    ' ──────────────────────────────────────────────────────────────────────────
+    ' Color de una viga en la planta según el modo de chequeo activo. Paleta
+    ' estándar (verde ≥1.15, ámbar UMBRAL..1.15, rojo <UMBRAL, gris sin cálc.),
+    ' consistente con las plantas de Pilas/Columnas/Nervios. El gris sin-cálculo
+    ' va con alpha reducido para no opacar la vista.
+    ' ──────────────────────────────────────────────────────────────────────────
+    Private Shared Function ColorPorModo(v As cViga, modo As ModoChequeoPlanta) As Color
+        Dim cd As Double
+        Select Case modo
+            Case ModoChequeoPlanta.Flexion  : cd = VigaService.CDFlexionViga(v)
+            Case ModoChequeoPlanta.Cortante : cd = VigaService.CDCortanteViga(v)
+            Case Else                        : cd = VigaService.PeorCDViga(v)
+        End Select
+
+        If cd <= 0 Then Return Color.FromArgb(90, 150, 150, 150)
+        If cd < Funciones_00_Varias.UMBRAL_CD Then Return Color.FromArgb(227, 73, 72)
+        If cd < 1.15 Then Return Color.FromArgb(237, 161, 0)
+        Return Color.FromArgb(27, 175, 122)
+    End Function
 
 End Class

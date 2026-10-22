@@ -119,9 +119,10 @@ Public Class Form_Graficos_Vigas
 
         If Vigas Is Nothing Then Return New List(Of cViga)
 
-        ' Solo vigas revisadas (con refuerzo longitudinal colocado), mismo
-        ' criterio que Form_Reporte_Resumen.
-        Dim lista = Vigas.Where(Function(v) v.Frames IsNot Nothing AndAlso
+        ' Solo vigas revisadas (con refuerzo longitudinal colocado) y marcadas
+        ' como revisables. Mismo criterio que Form_Reporte_Resumen.
+        Dim lista = Vigas.Where(Function(v) v.IncluirEnRevision AndAlso
+                                            v.Frames IsNot Nothing AndAlso
                                             v.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse
                                                                      f.RefuerzoInferior.Any())).ToList()
 

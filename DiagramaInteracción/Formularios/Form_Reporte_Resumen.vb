@@ -1,4 +1,4 @@
-Imports System.Drawing
+﻿Imports System.Drawing
 Imports ARCO.eNumeradores
 Imports ClosedXML.Excel
 
@@ -32,6 +32,11 @@ Public Class Form_Reporte_Resumen
 
     ' ── Controles toolbar ─────────────────────────────────────────────────────
     Private WithEvents _chkSoloObs As New CheckBox()
+    Private WithEvents _chkCortanteTodas As New CheckBox()
+    Private WithEvents _chkMostrarExcluidas As New CheckBox()
+
+    ' Label del header del split izquierdo de Cortante — cambia según _chkCortanteTodas.
+    Private _lblHeaderCortanteIzq As Label
 
     ' ── Tab activo para saber qué exportar ────────────────────────────────────
     Private _tabs As TabControl
@@ -68,7 +73,9 @@ Public Class Form_Reporte_Resumen
             .BackColor = Color.FromArgb(200, 200, 200)
         }
         split.Panel1.Controls.Add(DgvCortanteTodas)
-        split.Panel1.Controls.Add(CrearPanelHeader("Todas las Vigas"))
+        Dim panelHeaderIzq = CrearPanelHeader("Vigas con refuerzo ingresado")
+        _lblHeaderCortanteIzq = CType(panelHeaderIzq.Controls(0), Label)
+        split.Panel1.Controls.Add(panelHeaderIzq)
         DgvCortanteTodas.Dock = DockStyle.Fill
         EstilarGrid(DgvCortanteTodas)
         split.Panel2.Controls.Add(DgvCortanteNoCumple)
@@ -90,21 +97,33 @@ Public Class Form_Reporte_Resumen
         ' ── Barra inferior ────────────────────────────────────────────────────
         Dim barra As New Panel() With {
             .Dock = DockStyle.Bottom,
-            .Height = 54,
+            .Height = 88,
             .BackColor = Color.FromArgb(245, 245, 245),
             .Padding = New Padding(10, 9, 10, 9)
         }
 
         _chkSoloObs.Text = "Solo elementos con observaciones"
         _chkSoloObs.AutoSize = True
-        _chkSoloObs.Location = New Point(10, 16)
+        _chkSoloObs.Location = New Point(10, 10)
         _chkSoloObs.Font = New Font("Segoe UI", 10)
         barra.Controls.Add(_chkSoloObs)
+
+        _chkCortanteTodas.Text = "Cortante: incluir todas las vigas (incluso sin refuerzo)"
+        _chkCortanteTodas.AutoSize = True
+        _chkCortanteTodas.Location = New Point(290, 10)
+        _chkCortanteTodas.Font = New Font("Segoe UI", 10)
+        barra.Controls.Add(_chkCortanteTodas)
+
+        _chkMostrarExcluidas.Text = "Mostrar también vigas excluidas de la revisión"
+        _chkMostrarExcluidas.AutoSize = True
+        _chkMostrarExcluidas.Location = New Point(10, 42)
+        _chkMostrarExcluidas.Font = New Font("Segoe UI", 10)
+        barra.Controls.Add(_chkMostrarExcluidas)
 
         Dim btnActualizar As New Button() With {
             .Text = "Actualizar",
             .Size = New Size(120, 36),
-            .Location = New Point(280, 9),
+            .Location = New Point(690, 10),
             .FlatStyle = FlatStyle.Flat,
             .BackColor = ColorEncabezado,
             .ForeColor = Color.White,
@@ -118,7 +137,7 @@ Public Class Form_Reporte_Resumen
         Dim btnExportar As New Button() With {
             .Text = "Exportar a Excel",
             .Size = New Size(160, 36),
-            .Location = New Point(410, 9),
+            .Location = New Point(820, 10),
             .FlatStyle = FlatStyle.Flat,
             .BackColor = Color.FromArgb(21, 130, 70),
             .ForeColor = Color.White,
@@ -132,9 +151,22 @@ Public Class Form_Reporte_Resumen
         Me.Controls.Add(barra)
 
         AddHandler Me.Load, AddressOf Form_Load
-        AddHandler _chkSoloObs.CheckedChanged, Sub(s, ev) CargarResumenFlexion()
+        AddHandler _chkSoloObs.CheckedChanged, Sub(s, ev)
+                                                   CargarResumenFlexion()
+                                                   CargarResumenCortante()
+                                               End Sub
+        AddHandler _chkCortanteTodas.CheckedChanged, Sub(s, ev) CargarResumenCortante()
+        AddHandler _chkMostrarExcluidas.CheckedChanged, Sub(s, ev) CargarTodo()
 
     End Sub
+
+    ' Filtra la lista Vigas según _chkMostrarExcluidas: por default solo incluidas,
+    ' pero si el usuario tilda "Mostrar excluidas" devuelve todas.
+    Private Function VigasFiltradas() As IEnumerable(Of cViga)
+        If Vigas Is Nothing Then Return Enumerable.Empty(Of cViga)()
+        If _chkMostrarExcluidas IsNot Nothing AndAlso _chkMostrarExcluidas.Checked Then Return Vigas
+        Return Vigas.Where(Function(v) v.IncluirEnRevision)
+    End Function
 
     Private Function CrearPanelHeader(titulo As String) As Panel
         Dim p As New Panel() With {.Dock = DockStyle.Top, .Height = 36, .BackColor = Color.FromArgb(60, 60, 60)}
@@ -187,7 +219,7 @@ Public Class Form_Reporte_Resumen
 
         Dim idx As Integer = 0
 
-        For Each viga In Vigas
+        For Each viga In VigasFiltradas()
             For Each frame In viga.Frames
                 If Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
 
@@ -331,12 +363,18 @@ Public Class Form_Reporte_Resumen
             AgregarColumna(dgv, "Estado", "Estado", 90)
         Next
 
+        Dim incluirTodas = _chkCortanteTodas.Checked
+        Dim soloObs = _chkSoloObs.Checked
+        If _lblHeaderCortanteIzq IsNot Nothing Then
+            _lblHeaderCortanteIzq.Text = If(incluirTodas, "  Todas las vigas", "  Vigas con refuerzo ingresado")
+        End If
+
         Dim idxT As Integer = 0
         Dim idxN As Integer = 0
 
-        For Each viga In Vigas
+        For Each viga In VigasFiltradas()
             For Each frame In viga.Frames
-                If Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
+                If Not incluirTodas AndAlso Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
 
                 Dim eval = VigaService.EvaluarCDDefFrame(frame, UMBRAL_CD)
                 If eval.Estado = VigaService.EstadoEnvolventeCortante.SinDatos Then Continue For
@@ -346,9 +384,11 @@ Public Class Form_Reporte_Resumen
                 Dim cumple = (eval.Estado <> VigaService.EstadoEnvolventeCortante.NoCumple)
                 Dim etiqueta = EtiquetaEstado(eval.Estado)
 
-                AgregarFilaCortanteFrame(DgvCortanteTodas, idxT, viga.Piso, NombreReporte(viga),
-                                         tramoStr, zona, cumple, etiqueta)
-                idxT += 1
+                If Not soloObs OrElse Not cumple Then
+                    AgregarFilaCortanteFrame(DgvCortanteTodas, idxT, viga.Piso, NombreReporte(viga),
+                                             tramoStr, zona, cumple, etiqueta)
+                    idxT += 1
+                End If
                 If Not cumple Then
                     AgregarFilaCortanteFrame(DgvCortanteNoCumple, idxN, viga.Piso, NombreReporte(viga),
                                              tramoStr, zona, cumple, etiqueta)
@@ -430,7 +470,7 @@ Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
 
         Dim idx As Integer = 0
 
-        For Each viga In Vigas
+        For Each viga In VigasFiltradas()
 
             ' Solo vigas con refuerzo longitudinal colocado (implica que fue revisada)
             Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
@@ -569,7 +609,7 @@ Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
         EscribirEncabezados(ws, 1, enc)
         Dim fila As Integer = 2
 
-        For Each viga In Vigas
+        For Each viga In VigasFiltradas()
             For Each frame In viga.Frames
                 If Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
 
@@ -701,8 +741,15 @@ Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
                    "Vu (kN)", "φVn (kN)", "C/D",
                    "Vu Plást. (kN)", "C/D Plást.", "C/D (Def)", "Estado"}
 
-        ' Bloque 1: Todas las vigas
-        ws.Cell(1, 1).Value = "REVISIÓN CORTANTE — TODAS LAS VIGAS"
+        Dim incluirTodas = _chkCortanteTodas.Checked
+        Dim soloObs = _chkSoloObs.Checked
+
+        ' Bloque 1: título refleja el filtro activo.
+        Dim titulo = If(incluirTodas,
+                        "REVISIÓN CORTANTE — TODAS LAS VIGAS",
+                        "REVISIÓN CORTANTE — VIGAS CON REFUERZO INGRESADO")
+        If soloObs Then titulo &= " (solo con observaciones)"
+        ws.Cell(1, 1).Value = titulo
         With ws.Cell(1, 1).Style
             .Font.Bold = True : .Font.FontSize = 11 : .Font.FontColor = XLColor.White
             .Fill.BackgroundColor = XLColor.FromHtml("#3C3C3C")
@@ -715,9 +762,9 @@ Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
         Dim filasNoCumplen As New List(Of (Piso As String, Viga As String, Tramo As String,
                                            Zona As VigaService.ResultadoCDDefZona, Etiqueta As String))
 
-        For Each viga In Vigas
+        For Each viga In VigasFiltradas()
             For Each frame In viga.Frames
-                If Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
+                If Not incluirTodas AndAlso Not (frame.RefuerzoSuperior.Any() OrElse frame.RefuerzoInferior.Any()) Then Continue For
 
                 Dim eval = VigaService.EvaluarCDDefFrame(frame, UMBRAL_CD)
                 If eval.Estado = VigaService.EstadoEnvolventeCortante.SinDatos Then Continue For
@@ -727,8 +774,10 @@ Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
                 Dim cumple = (eval.Estado <> VigaService.EstadoEnvolventeCortante.NoCumple)
                 Dim etiqExcel = EtiquetaExcelCumple(eval.Estado)
 
-                EscribirFilaCortanteExcel(ws, fila, viga.Piso, NombreReporte(viga), tramoStr, zona, cumple, etiqExcel, enc.Length)
-                fila += 1
+                If Not soloObs OrElse Not cumple Then
+                    EscribirFilaCortanteExcel(ws, fila, viga.Piso, NombreReporte(viga), tramoStr, zona, cumple, etiqExcel, enc.Length)
+                    fila += 1
+                End If
 
                 If Not cumple Then
                     filasNoCumplen.Add((viga.Piso, NombreReporte(viga), tramoStr, zona, etiqExcel))
@@ -816,7 +865,7 @@ Private Sub AgregarFilaCortanteFrame(dgv As DataGridView, idx As Integer,
 
         Dim fila As Integer = 2
 
-        For Each viga In Vigas
+        For Each viga In VigasFiltradas()
 
             Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
             Dim tieneCor = viga.Frames.Any(Function(f) f.RevisionCortante.Any(Function(z) z.phiVn > 0))

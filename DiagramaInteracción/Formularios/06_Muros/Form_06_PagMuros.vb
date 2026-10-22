@@ -741,6 +741,13 @@ Public Class Form_06_PagMuros
         AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Muros")
         Menu_Muros.Items.Add(itemAyuda)
 
+        Dim itemPlanta As New ToolStripMenuItem("Planta de Muros")
+        itemPlanta.ForeColor = Color.White
+        itemPlanta.BackColor = Color.FromArgb(87, 87, 87)
+        itemPlanta.ToolTipText = "Vista en planta por piso con los muros escalados y coloreados por C/D"
+        AddHandler itemPlanta.Click, AddressOf PlantaMuros_Click
+        VerToolStripMenuItem.DropDownItems.Add(itemPlanta)
+
         AddHandler _timerAutoSaveMuros.Tick, AddressOf AutoSaveMuros_Tick
         _timerAutoSaveMuros.Start()
         RefrescarDesdeProyecto()
@@ -805,6 +812,24 @@ Public Class Form_06_PagMuros
         End If
 
         Dim form As New Form_Graficos_Muros()
+        form.Show(Me)
+
+    End Sub
+
+    Private Sub PlantaMuros_Click(sender As Object, e As EventArgs)
+
+        If proyecto Is Nothing OrElse proyecto.Elementos.Muros Is Nothing OrElse
+           proyecto.Elementos.Muros.Lista_Muros Is Nothing OrElse
+           proyecto.Elementos.Muros.Lista_Muros.Count = 0 Then
+            MessageBox.Show("Primero importe y procese los datos de muros.",
+                            "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim form As New Form_Planta_Muros() With {
+            .Proyecto = proyecto,
+            .GridLines = proyecto?.Elementos?.Grids?.GridLines
+        }
         form.Show(Me)
 
     End Sub

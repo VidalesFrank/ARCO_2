@@ -31,6 +31,14 @@ Public Class cPilas
     <OptionalField> Public Joints As New List(Of cJoint)()
     <OptionalField> Public Frames As New List(Of cFrame)()
 
+    ' Coordenadas X,Y en planta por label de la pila. Se setea al confirmar la
+    ' importación con el mismo SourceLabel que termina siendo Elemento_Pila.Name_Label:
+    '   - Pilas Frame : SourceLabel = ElementLabel del frame   → también matcheable vía Joints.
+    '   - Pilas Pier  : SourceLabel = pierName (NO es ObjectLabel de ningún joint, no cruza con Joints).
+    '
+    ' GeometriaPlantasService lo usa como fallback cuando el cruce por Joints no encuentra.
+    <OptionalField> Public CoordsPorLabel As Dictionary(Of String, System.Drawing.PointF)
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         If ListaElementos Is Nothing Then ListaElementos = New List(Of Elemento_Pila)

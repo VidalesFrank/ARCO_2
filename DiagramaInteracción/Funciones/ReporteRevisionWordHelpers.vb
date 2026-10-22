@@ -248,6 +248,103 @@ Public Module ReporteRevisionWordHelpers
         Return p
     End Function
 
+    ''' <summary>
+    ''' Título de figura para el Informe Técnico Ejecutivo. Arial 10 pt, centrado,
+    ''' "Figura N." en NEGRITA (con N como CAMPO SEQ "Figura" que Word enumera y
+    ''' lista automáticamente en Referencias → Insertar índice) y el resto del
+    ''' epígrafe en normal, sin cursiva. Para que los números refresquen al abrir,
+    ''' el servicio debe llamar <see cref="ConfigurarActualizacionCampos"/>.
+    ''' </summary>
+    Public Function TituloFiguraEjecutivo(descripcion As String) As Paragraph
+        Return ParrafoEpigrafe("Figura", descripcion)
+    End Function
+
+    ''' <summary>
+    ''' Título de tabla para el Informe Técnico Ejecutivo. Mismo pattern que
+    ''' <see cref="TituloFiguraEjecutivo"/>: "Tabla N." en negrita (SEQ "Tabla")
+    ''' + descripción en normal, Arial 10 pt centrado. El <see cref="TituloTabla"/>
+    ''' clásico de EstrucMed (ambas partes en negrita, estilo "Tabla") queda
+    ''' intacto para <see cref="ReporteRevisionService"/>.
+    ''' </summary>
+    Public Function TituloTablaEjecutivo(descripcion As String) As Paragraph
+        Return ParrafoEpigrafe("Tabla", descripcion)
+    End Function
+
+    ' Construye el párrafo de epígrafe (figura o tabla) con el campo SEQ embebido.
+    Private Function ParrafoEpigrafe(etiqueta As String, descripcion As String) As Paragraph
+        Dim p As New Paragraph()
+        Dim pPr As New ParagraphProperties()
+        pPr.Append(New Justification() With {.Val = JustificationValues.Center})
+        pPr.Append(New SpacingBetweenLines() With {.Before = "60", .After = "120"})
+        p.Append(pPr)
+
+        p.Append(CrearRun(etiqueta & " ", negrita:=True, tamanoMedioPunto:=TAM_TITULO))
+        AgregarCampoSEQ(p, etiqueta, negrita:=True, tamanoMedioPunto:=TAM_TITULO)
+        p.Append(CrearRun(". " & descripcion, negrita:=False, tamanoMedioPunto:=TAM_TITULO))
+        Return p
+    End Function
+
+    ' Inserta el campo { SEQ <nombre> \* ARABIC } como una secuencia de runs:
+    ' fldChar begin → instrText → fldChar separate → text("1") → fldChar end.
+    ' Word reemplaza el "1" placeholder cuando actualiza campos (F9 o auto-open).
+    Private Sub AgregarCampoSEQ(p As Paragraph, nombreSecuencia As String,
+                                 negrita As Boolean, tamanoMedioPunto As String)
+        p.Append(RunFldChar(FieldCharValues.Begin, negrita, tamanoMedioPunto))
+        p.Append(RunFldInstr(" SEQ " & nombreSecuencia & " \* ARABIC ", negrita, tamanoMedioPunto))
+        p.Append(RunFldChar(FieldCharValues.Separate, negrita, tamanoMedioPunto))
+        p.Append(RunFldText("1", negrita, tamanoMedioPunto))
+        p.Append(RunFldChar(FieldCharValues.End, negrita, tamanoMedioPunto))
+    End Sub
+
+    Private Function RunFldChar(tipo As FieldCharValues, negrita As Boolean, tam As String) As Run
+        Dim r As New Run(PropiedadesRunCampo(negrita, tam))
+        r.Append(New FieldChar() With {.FieldCharType = tipo})
+        Return r
+    End Function
+
+    Private Function RunFldInstr(codigo As String, negrita As Boolean, tam As String) As Run
+        Dim r As New Run(PropiedadesRunCampo(negrita, tam))
+        r.Append(New FieldCode(codigo) With {.Space = SpaceProcessingModeValues.Preserve})
+        Return r
+    End Function
+
+    Private Function RunFldText(texto As String, negrita As Boolean, tam As String) As Run
+        Dim r As New Run(PropiedadesRunCampo(negrita, tam))
+        r.Append(New Text(texto) With {.Space = SpaceProcessingModeValues.Preserve})
+        Return r
+    End Function
+
+    Private Function PropiedadesRunCampo(negrita As Boolean, tam As String) As RunProperties
+        Dim rPr As New RunProperties()
+        rPr.Append(New RunFonts() With {.Ascii = FUENTE, .HighAnsi = FUENTE, .ComplexScript = FUENTE})
+        If negrita Then rPr.Append(New Bold())
+        rPr.Append(New FontSize() With {.Val = tam})
+        rPr.Append(New FontSizeComplexScript() With {.Val = tam})
+        Return rPr
+    End Function
+
+    ''' <summary>
+    ''' Marca el documento con "actualizar campos al abrir" para que los SEQ de
+    ''' figuras y tablas se refresquen automáticamente la primera vez que Word
+    ''' abre el .docx (si no, verían todos "1"). Idempotente.
+    ''' </summary>
+    Public Sub ConfigurarActualizacionCampos(wordDoc As WordprocessingDocument)
+        Dim settingsPart = wordDoc.MainDocumentPart.DocumentSettingsPart
+        If settingsPart Is Nothing Then
+            settingsPart = wordDoc.MainDocumentPart.AddNewPart(Of DocumentSettingsPart)()
+            settingsPart.Settings = New Settings()
+        End If
+        Dim settings = settingsPart.Settings
+        Dim uf = settings.Elements(Of UpdateFieldsOnOpen)().FirstOrDefault()
+        If uf Is Nothing Then
+            ' Insertar al inicio: w:updateFields debe aparecer temprano por schema.
+            settings.PrependChild(New UpdateFieldsOnOpen() With {.Val = True})
+        Else
+            uf.Val = True
+        End If
+        settings.Save()
+    End Sub
+
     ' ── Encabezado — sustituye el código de proyecto resaltado en amarillo ("xx") ──────────────
     ''' <summary>
     ''' Reemplaza el texto "xx" resaltado en amarillo del encabezado (membrete corporativo) por el

@@ -40,9 +40,18 @@ Public Class Elemento_Pila
     ''' <summary>Factor manual ingresado por el usuario (0 = usar calculado).</summary>
     <OptionalField> Public Factor_Manual_DI As Single = 0
 
+    ' Coordenadas globales X,Y de la pila en el plano de cimentación. Se resuelven
+    ' desde Proyecto.Elementos.Joints cruzando Name_Label contra ObjectLabel (nodo
+    ' de menor Z). Legacy sin coords: TieneCoordenadas = False y la planta las
+    ' considera "sin ubicar" para mostrar el warning de importación.
+    <OptionalField> Public CoordX As Single
+    <OptionalField> Public CoordY As Single
+    <OptionalField> Public TieneCoordenadas As Boolean = False
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         ' Factor_Manual_DI = 0 → sin override (proyectos guardados antes de esta versión)
+        ' CoordX/Y, TieneCoordenadas → en legacy quedan en 0/False y se resuelven on-demand.
     End Sub
 
     ' Envolvente C/D con el override manual: el manual solo gana si es mayor que el

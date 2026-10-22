@@ -526,12 +526,12 @@ Public Class Form_02_00_PagInfoColumnas
                 Dim l0Req As Single = Math.Max(Seccion.L0_L, Seccion.L0_C)
                 If l0Req > 0 Then Seccion.F_L0 = Math.Round(Seccion.L0_Prov / l0Req, 2)
 
-                If Lista(1, 1) > Seccion.F_Flexo_Top Then
-                    Lista(1, 1) = Seccion.F_Flexo_Top
-                    Lista(1, 2) = Seccion.Piso
-                End If
-                If Lista(1, 1) > Seccion.F_Flexo_Bottom Then
-                    Lista(1, 1) = Seccion.F_Flexo_Bottom
+                ' Lista_F(0) = peor envolvente de flexo-compresión entre tramos.
+                ' Envolvente = max(As ratio ETABS, 1/F_Interaccion Bresler). Esto es
+                ' lo que consume Form_Graficos y la planta para "cumple" global.
+                Dim envolTramo As Single = ColumnaService.CDFlexoEnvolvente(Seccion)
+                If envolTramo > 0 AndAlso Lista(1, 1) > envolTramo Then
+                    Lista(1, 1) = envolTramo
                     Lista(1, 2) = Seccion.Piso
                 End If
 

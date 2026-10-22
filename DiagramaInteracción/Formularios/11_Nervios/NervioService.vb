@@ -744,4 +744,83 @@ Public Class NervioService
         Return d
     End Function
 
+    ' ──────────────────────────────────────────────────────────────────────────
+    ' Helpers para la planta: C/D por chequeo. Sentinela 0 = sin cálculo, igual
+    ' que PilaService/ColumnaService.
+    '
+    ' CalcularFlexion/CalcularCortante setean 99.0 cuando el momento o cortante
+    ' demandado es ~0 (no aplica el chequeo). Lo tratamos como sentinela y lo
+    ' descartamos de la envolvente.
+    ' ──────────────────────────────────────────────────────────────────────────
+    Private Const SENTINELA_NO_APLICA As Double = 99.0
+
+    Private Shared Function EsValido(cd As Double) As Boolean
+        If cd <= 0 Then Return False
+        If cd >= SENTINELA_NO_APLICA Then Return False
+        If Double.IsInfinity(cd) OrElse Double.IsNaN(cd) Then Return False
+        Return True
+    End Function
+
+    ''' <summary>
+    ''' C/D de flexión del tramo: min entre los 3 momentos (neg izq, pos centro,
+    ''' neg der). Si Ref_Modificado = False o ninguno aplica, devuelve 0.
+    ''' </summary>
+    Public Shared Function CDFlexionFrame(fn As cFrameNervio) As Double
+        If fn Is Nothing OrElse Not fn.Ref_Modificado Then Return 0
+        Dim vals As New List(Of Double)
+        If EsValido(fn.CD_M_Sup_I) Then vals.Add(fn.CD_M_Sup_I)
+        If EsValido(fn.CD_M_Inf_C) Then vals.Add(fn.CD_M_Inf_C)
+        If EsValido(fn.CD_M_Sup_D) Then vals.Add(fn.CD_M_Sup_D)
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(vals.Min(), 2)
+    End Function
+
+    ''' <summary>
+    ''' C/D de cortante del tramo: min entre izquierda y derecha. 0 = sin cálculo.
+    ''' </summary>
+    Public Shared Function CDCortanteFrame(fn As cFrameNervio) As Double
+        If fn Is Nothing OrElse Not fn.Ref_Modificado Then Return 0
+        Dim vals As New List(Of Double)
+        If EsValido(fn.CD_Cortante_I) Then vals.Add(fn.CD_Cortante_I)
+        If EsValido(fn.CD_Cortante_D) Then vals.Add(fn.CD_Cortante_D)
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(vals.Min(), 2)
+    End Function
+
+    ''' <summary>Peor C/D (flex vs cortante) del tramo. 0 = sin cálculo.</summary>
+    Public Shared Function PeorCDFrame(fn As cFrameNervio) As Double
+        Dim fx = CDFlexionFrame(fn)
+        Dim cr = CDCortanteFrame(fn)
+        If fx > 0 AndAlso cr > 0 Then Return Math.Min(fx, cr)
+        If fx > 0 Then Return fx
+        If cr > 0 Then Return cr
+        Return 0
+    End Function
+
+    ''' <summary>Peor C/D flexión entre todos los tramos del nervio. 0 = sin cálculo.</summary>
+    Public Shared Function CDFlexionNervio(n As cNervio) As Double
+        If n Is Nothing OrElse n.Frames Is Nothing Then Return 0
+        Dim vals = n.Frames.Select(AddressOf CDFlexionFrame).Where(Function(v) v > 0).ToList()
+        If vals.Count = 0 Then Return 0
+        Return vals.Min()
+    End Function
+
+    ''' <summary>Peor C/D cortante entre todos los tramos del nervio. 0 = sin cálculo.</summary>
+    Public Shared Function CDCortanteNervio(n As cNervio) As Double
+        If n Is Nothing OrElse n.Frames Is Nothing Then Return 0
+        Dim vals = n.Frames.Select(AddressOf CDCortanteFrame).Where(Function(v) v > 0).ToList()
+        If vals.Count = 0 Then Return 0
+        Return vals.Min()
+    End Function
+
+    ''' <summary>Peor C/D global del nervio (flex + cortante). 0 = sin cálculo.</summary>
+    Public Shared Function PeorCDNervio(n As cNervio) As Double
+        Dim fx = CDFlexionNervio(n)
+        Dim cr = CDCortanteNervio(n)
+        If fx > 0 AndAlso cr > 0 Then Return Math.Min(fx, cr)
+        If fx > 0 Then Return fx
+        If cr > 0 Then Return cr
+        Return 0
+    End Function
+
 End Class

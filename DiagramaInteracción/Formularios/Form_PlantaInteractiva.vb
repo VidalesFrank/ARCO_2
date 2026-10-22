@@ -35,8 +35,38 @@ Public Class Form_PlantaInteractiva
     Private WithEvents _panel As BufferedPanel
     Private _lblInfo As Label
     Private _btnFit As Button
-    Private _chkAllFloors As CheckBox
+    Private _cmbPiso As ComboBox
+    Private _cmbChequeo As ComboBox
+    Private _cmbVista As ComboBox
     Private _lblZoom As Label
+
+    Private Enum ModoVista
+        Lineas = 0
+        Extruida = 1
+    End Enum
+
+    Private ReadOnly Property Vista As ModoVista
+        Get
+            If _cmbVista Is Nothing OrElse _cmbVista.SelectedIndex < 0 Then Return ModoVista.Lineas
+            Return CType(_cmbVista.SelectedIndex, ModoVista)
+        End Get
+    End Property
+
+    ' ── Modos de visualización por C/D (coinciden con DiagramaService) ──
+    Private ReadOnly Property Modo As DiagramaService.ModoChequeoPlanta
+        Get
+            If _cmbChequeo Is Nothing OrElse _cmbChequeo.SelectedIndex < 0 Then
+                Return DiagramaService.ModoChequeoPlanta.PeorGlobal
+            End If
+            Return CType(_cmbChequeo.SelectedIndex, DiagramaService.ModoChequeoPlanta)
+        End Get
+    End Property
+
+    ' ── Paleta estándar (misma que Nervios/Pilas/Columnas) ──
+    Private Shared ReadOnly ColorCumple As Color = Color.FromArgb(27, 175, 122)
+    Private Shared ReadOnly ColorAmbar As Color = Color.FromArgb(237, 161, 0)
+    Private Shared ReadOnly ColorNoCumple As Color = Color.FromArgb(227, 73, 72)
+    Private Shared ReadOnly ColorSinCalcular As Color = Color.FromArgb(80, 150, 150, 150)   ' alpha 80 — translúcido
 
     ' ── Propiedades para modo agrupación ──────────────────────
     Public Property VigaEditada As cViga = Nothing
@@ -45,6 +75,11 @@ Public Class Form_PlantaInteractiva
     ' Notifica al padre cuando el usuario hace doble clic sobre una viga
     Public Event VigaSeleccionadaPorDobleClick As Action(Of cViga)
 
+    ' Se dispara después de que el usuario cambió el flag IncluirEnRevision de
+    ' una o varias vigas desde esta planta (click derecho → menú contextual).
+    ' El padre lo escucha para marcar HayCambios y refrescar listados.
+    Public Event VigasIncluirRevisionCambiado As Action
+
     Public Property ModoAgrupacion As Boolean
         Get
             Return _modoAgrupacion
@@ -52,7 +87,8 @@ Public Class Form_PlantaInteractiva
         Set(value As Boolean)
             _modoAgrupacion = value
             If _pnlAgrupacion IsNot Nothing Then _pnlAgrupacion.Visible = value
-            If _chkAllFloors IsNot Nothing Then _chkAllFloors.Enabled = Not value
+            If _cmbPiso IsNot Nothing Then _cmbPiso.Enabled = Not value
+            If _cmbChequeo IsNot Nothing Then _cmbChequeo.Enabled = Not value
             If value Then
                 _panel.Cursor = Cursors.Default
                 If VigaEditada IsNot Nothing Then
@@ -117,14 +153,43 @@ Public Class Form_PlantaInteractiva
             .Text = "Zoom: --"
         }
 
-        _chkAllFloors = New CheckBox With {
+        _cmbPiso = New ComboBox With {
             .Dock = DockStyle.Right,
-            .Width = 110,
-            .Text = "Todos los pisos",
-            .ForeColor = Color.White,
-            .TextAlign = ContentAlignment.MiddleCenter,
-            .Checked = False
+            .Width = 170,
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .BackColor = Color.FromArgb(224, 224, 224),
+            .ForeColor = Color.FromArgb(40, 40, 40),
+            .Font = New Font("Segoe UI", 9)
         }
+
+        _cmbChequeo = New ComboBox With {
+            .Dock = DockStyle.Right,
+            .Width = 190,
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .BackColor = Color.FromArgb(224, 224, 224),
+            .ForeColor = Color.FromArgb(40, 40, 40),
+            .Font = New Font("Segoe UI", 9)
+        }
+        _cmbChequeo.Items.AddRange(New String() {
+            "Chequeo: peor global",
+            "Chequeo: flexión",
+            "Chequeo: cortante"
+        })
+        _cmbChequeo.SelectedIndex = 0
+
+        _cmbVista = New ComboBox With {
+            .Dock = DockStyle.Right,
+            .Width = 130,
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .BackColor = Color.FromArgb(224, 224, 224),
+            .ForeColor = Color.FromArgb(40, 40, 40),
+            .Font = New Font("Segoe UI", 9)
+        }
+        _cmbVista.Items.AddRange(New String() {"Vista: líneas", "Vista: extruida"})
+        _cmbVista.SelectedIndex = 0
 
         _btnFit = New Button With {
             .Dock = DockStyle.Right,
@@ -139,7 +204,9 @@ Public Class Form_PlantaInteractiva
 
         pnlBottom.Controls.Add(_lblInfo)
         pnlBottom.Controls.Add(_lblZoom)
-        pnlBottom.Controls.Add(_chkAllFloors)
+        pnlBottom.Controls.Add(_cmbPiso)
+        pnlBottom.Controls.Add(_cmbChequeo)
+        pnlBottom.Controls.Add(_cmbVista)
         pnlBottom.Controls.Add(_btnFit)
 
         ' ── Panel de dibujo ───────────────────────────────────
@@ -161,8 +228,13 @@ Public Class Form_PlantaInteractiva
         AddHandler _panel.MouseEnter, Sub() _panel.Focus()
         AddHandler _panel.Resize, Sub() _panel.Invalidate()
         AddHandler _btnFit.Click, Sub() FitView()
-        AddHandler _chkAllFloors.CheckedChanged, Sub() _panel.Invalidate()
-        AddHandler Me.Shown, Sub() FitView()
+        AddHandler _cmbPiso.SelectedIndexChanged, Sub() _panel.Invalidate()
+        AddHandler _cmbChequeo.SelectedIndexChanged, Sub() _panel.Invalidate()
+        AddHandler _cmbVista.SelectedIndexChanged, Sub() _panel.Invalidate()
+        AddHandler Me.Shown, Sub()
+                                 PoblarPisos()
+                                 FitView()
+                             End Sub
 
         ' ── Barra de modo agrupación (oculta por defecto) ─────
         _pnlAgrupacion = New Panel With {
@@ -303,6 +375,12 @@ Public Class Form_PlantaInteractiva
             Return
         End If
 
+        ' Click derecho en modo normal sobre una viga → menú contextual.
+        If e.Button = MouseButtons.Right AndAlso Not _modoAgrupacion AndAlso _hoveredViga IsNot Nothing Then
+            MostrarMenuContextualViga(e.Location, _hoveredViga)
+            Return
+        End If
+
         If _modoAgrupacion Then
             If e.Button = MouseButtons.Left Then
                 _clickPos = e.Location   ' registrar punto de inicio para detectar clic vs arrastre
@@ -318,6 +396,30 @@ Public Class Form_PlantaInteractiva
             _lastMouse = e.Location
             _panel.Cursor = Cursors.SizeAll
         End If
+    End Sub
+
+    Private Sub MostrarMenuContextualViga(pos As Point, viga As cViga)
+        Dim menu As New ContextMenuStrip()
+        Dim titulo = $"{viga.NombreDisplay}  —  Piso: {viga.Piso}"
+        Dim lblTitulo As New ToolStripLabel(titulo) With {
+            .Font = New Font("Segoe UI", 8.5F, FontStyle.Bold),
+            .Enabled = False
+        }
+        menu.Items.Add(lblTitulo)
+        menu.Items.Add(New ToolStripSeparator())
+
+        Dim textoToggle = If(viga.IncluirEnRevision,
+                             "Excluir de la revisión",
+                             "Incluir en la revisión")
+        Dim itemToggle As New ToolStripMenuItem(textoToggle)
+        AddHandler itemToggle.Click, Sub(s, ev)
+                                         viga.IncluirEnRevision = Not viga.IncluirEnRevision
+                                         _panel.Invalidate()
+                                         RaiseEvent VigasIncluirRevisionCambiado()
+                                     End Sub
+        menu.Items.Add(itemToggle)
+
+        menu.Show(_panel, pos)
     End Sub
 
     Private Sub Panel_MouseMove(sender As Object, e As MouseEventArgs)
@@ -414,9 +516,46 @@ Public Class Form_PlantaInteractiva
             Return String.IsNullOrEmpty(PisoActual) OrElse
                    v.Piso.Equals(PisoActual, StringComparison.OrdinalIgnoreCase)
         End If
-        If _chkAllFloors.Checked Then Return True
-        If String.IsNullOrEmpty(PisoActual) Then Return True
-        Return v.Piso.Equals(PisoActual, StringComparison.OrdinalIgnoreCase)
+        Dim pisoSel = PisoSeleccionado()
+        If String.IsNullOrEmpty(pisoSel) Then Return True   ' "Todos los pisos"
+        Return v.Piso.Equals(pisoSel, StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    ' Puebla el combo con todos los pisos presentes en Vigas y preselecciona el
+    ' que venga por `PisoActual` si existe; si no, "Todos los pisos".
+    Private Sub PoblarPisos()
+        If _cmbPiso Is Nothing Then Return
+        _cmbPiso.BeginUpdate()
+        Try
+            _cmbPiso.Items.Clear()
+            _cmbPiso.Items.Add("Todos los pisos")
+            If Vigas IsNot Nothing Then
+                Dim pisos = Vigas.Where(Function(v) Not String.IsNullOrEmpty(v.Piso)) _
+                                  .Select(Function(v) v.Piso) _
+                                  .Distinct(StringComparer.OrdinalIgnoreCase) _
+                                  .ToList()
+                For Each p In pisos
+                    _cmbPiso.Items.Add(p)
+                Next
+            End If
+            Dim seleccionado As Integer = 0
+            If Not String.IsNullOrEmpty(PisoActual) Then
+                For i As Integer = 1 To _cmbPiso.Items.Count - 1
+                    If _cmbPiso.Items(i).ToString().Equals(PisoActual, StringComparison.OrdinalIgnoreCase) Then
+                        seleccionado = i
+                        Exit For
+                    End If
+                Next
+            End If
+            _cmbPiso.SelectedIndex = seleccionado
+        Finally
+            _cmbPiso.EndUpdate()
+        End Try
+    End Sub
+
+    Private Function PisoSeleccionado() As String
+        If _cmbPiso Is Nothing OrElse _cmbPiso.SelectedIndex <= 0 Then Return ""
+        Return _cmbPiso.SelectedItem.ToString()
     End Function
 
     Private Sub MostrarInfoFrame(v As cViga, f As cFrame)
@@ -464,6 +603,7 @@ Public Class Form_PlantaInteractiva
             DibujarVigasAgrupacion(g)
         Else
             DibujarVigas(g)
+            DibujarLeyendaCD(g)
             ' Tooltip solo en modo normal
             If _hoveredViga IsNot Nothing AndAlso _hoveredFrame IsNot Nothing Then
                 DibujarTooltipElemento(g, _hoveredViga, _hoveredFrame)
@@ -472,6 +612,65 @@ Public Class Form_PlantaInteractiva
 
         DibujarEjes(g)
         DibujarEscala(g)
+    End Sub
+
+    ' ─────────────────────────────────────────────────────────
+    ' Leyenda flotante — explica la paleta C/D del modo activo.
+    ' Ubicada en la esquina superior derecha para no tapar el
+    ' modelo (los ejes y la escala viven abajo).
+    ' ─────────────────────────────────────────────────────────
+    Private Sub DibujarLeyendaCD(g As Graphics)
+        Dim titulo As String
+        Select Case Modo
+            Case DiagramaService.ModoChequeoPlanta.Flexion  : titulo = "C/D — Flexión"
+            Case DiagramaService.ModoChequeoPlanta.Cortante : titulo = "C/D — Cortante"
+            Case Else                                        : titulo = "C/D — Peor global"
+        End Select
+
+        Dim items As (clr As Color, texto As String)() = {
+            (ColorCumple,     "C/D ≥ 1.15   cumple holgado"),
+            (ColorAmbar,      "0.90 ≤ C/D < 1.15   cumple"),
+            (ColorNoCumple,   "C/D < 0.90   no cumple"),
+            (ColorSinCalcular, "Sin cálculo")
+        }
+
+        Dim padX As Single = 10, padY As Single = 8
+        Dim lineH As Single = 17
+        Dim boxW As Single = 220
+        Dim boxH As Single = (items.Length + 1) * lineH + padY * 2
+        Dim ox As Single = _panel.Width - boxW - 12
+        Dim oy As Single = 12
+
+        Try
+            Using bFondo As New SolidBrush(Color.FromArgb(220, 255, 255, 255))
+                g.FillRectangle(bFondo, ox, oy, boxW, boxH)
+            End Using
+            Using penB As New Pen(Color.FromArgb(160, 170, 185), 1)
+                g.DrawRectangle(penB, ox, oy, boxW, boxH)
+            End Using
+
+            Using fntTit As New Font("Segoe UI", 8.5F, FontStyle.Bold),
+                  fntItem As New Font("Segoe UI", 8),
+                  brTit As New SolidBrush(Color.FromArgb(50, 50, 60)),
+                  brTxt As New SolidBrush(Color.FromArgb(40, 40, 40))
+
+                g.DrawString(titulo, fntTit, brTit, ox + padX, oy + padY)
+                Dim y As Single = oy + padY + lineH
+
+                For Each it In items
+                    ' Muestra con alpha preservado — así "Sin cálculo" se ve translúcido.
+                    Using brMuestra As New SolidBrush(it.clr)
+                        g.FillRectangle(brMuestra, ox + padX, y + 3, 22, 10)
+                    End Using
+                    Using penMuestra As New Pen(Color.FromArgb(140, 140, 140), 0.8F)
+                        g.DrawRectangle(penMuestra, ox + padX, y + 3, 22, 10)
+                    End Using
+                    g.DrawString(it.texto, fntItem, brTxt, ox + padX + 30, y)
+                    y += lineH
+                Next
+            End Using
+        Catch ex As OverflowException
+        End Try
     End Sub
 
     ' ─────────────────────────────────────────────────────────
@@ -686,25 +885,33 @@ Public Class Form_PlantaInteractiva
     Private Sub DibujarVigas(g As Graphics)
         If Vigas Is Nothing OrElse Joints Is Nothing Then Return
 
+        ' Joints que son apoyos de alguna viga visible — se dibujan al final con
+        ' un círculo. Guardamos (coord, ejeTexto, selec, hover) para ordenarlos.
+        Dim apoyos As New List(Of (pt As PointF, eje As String, destacado As Boolean, hover As Boolean))
+
         For Each v In Vigas
             If Not MostrarViga(v) Then Continue For
 
             Dim esSelec = VigaSeleccionada IsNot Nothing AndAlso v.Name_Beam = VigaSeleccionada.Name_Beam
             Dim esHover = (v Is _hoveredViga)
 
-            Dim colorLinea As Color
+            Dim cd = CDPorModo(v)
+            Dim sinCalculo = (cd <= 0)
+            Dim colorBase = ColorPorCD(cd)
+
+            Dim colorElemento As Color
             Dim grosor As Single
 
             Select Case True
                 Case esSelec
-                    colorLinea = Color.FromArgb(210, 50, 50)
+                    colorElemento = Color.FromArgb(210, 50, 50)
                     grosor = 4.5F
                 Case esHover
-                    colorLinea = Color.FromArgb(30, 130, 220)
+                    colorElemento = Color.FromArgb(30, 130, 220)
                     grosor = 3.5F
                 Case Else
-                    colorLinea = Color.FromArgb(40, 70, 130)
-                    grosor = 2.0F
+                    colorElemento = colorBase
+                    grosor = If(sinCalculo, 1.6F, 2.4F)
             End Select
 
             For Each f In v.Frames
@@ -714,35 +921,174 @@ Public Class Form_PlantaInteractiva
                 Dim p1 = W2S(ji.GlobalX, ji.GlobalY)
                 Dim p2 = W2S(jj.GlobalX, jj.GlobalY)
 
-                Try
-                    If esSelec Then
-                        Using penHalo As New Pen(Color.FromArgb(70, 255, 210, 80), grosor + 5)
-                            g.DrawLine(penHalo, p1, p2)
-                        End Using
-                    End If
-                    If esHover AndAlso Not esSelec Then
-                        Using penHalo As New Pen(Color.FromArgb(50, 100, 180, 255), grosor + 4)
-                            g.DrawLine(penHalo, p1, p2)
-                        End Using
-                    End If
-                    Using pen As New Pen(colorLinea, grosor)
-                        g.DrawLine(pen, p1, p2)
-                    End Using
-                Catch ex As OverflowException
-                End Try
+                DibujarFrame(g, p1, p2, f, colorElemento, grosor, esSelec, esHover)
 
                 ' Nombre del frame (visible con zoom alto)
                 If (esHover OrElse esSelec) AndAlso _zoom > 20 Then
-                    DibujarEtiquetaFrame(g, ji, jj, f, colorLinea)
+                    DibujarEtiquetaFrame(g, ji, jj, f, colorElemento)
                 End If
+
+                ' Apoyos: ambos extremos del frame
+                apoyos.Add((p1, f.EjeApoyo_I, esSelec OrElse esHover, esHover))
+                apoyos.Add((p2, f.EjeApoyo_J, esSelec OrElse esHover, esHover))
             Next
 
-            ' Nombre de la viga (zoom medio)
+            ' Nombre de la viga (zoom medio) — las sin cálculo quedan más atenuadas
             If _zoom > 15 Then
-                DibujarNombreViga(g, v, esSelec, esHover)
+                DibujarNombreViga(g, v, esSelec, esHover, sinCalculo)
             End If
         Next
+
+        ' Dedup y dibujo de apoyos — un apoyo lo comparten dos frames vecinos y
+        ' no queremos dibujarlo dos veces. Clave por coordenada redondeada.
+        DibujarApoyos(g, apoyos)
     End Sub
+
+    ' Dibuja un frame según el modo de vista (líneas o extruida).
+    Private Sub DibujarFrame(g As Graphics, p1 As PointF, p2 As PointF,
+                              f As cFrame, colorElemento As Color, grosor As Single,
+                              esSelec As Boolean, esHover As Boolean)
+        Try
+            If Vista = ModoVista.Extruida AndAlso f.Section IsNot Nothing AndAlso f.Section.b > 0 Then
+                Dim bPx As Single = CSng(f.Section.b * _zoom)
+                Dim dxPx As Single = p2.X - p1.X
+                Dim dyPx As Single = p2.Y - p1.Y
+                Dim lenPx As Double = Math.Sqrt(dxPx * dxPx + dyPx * dyPx)
+
+                If bPx >= 2.0F AndAlso lenPx >= 1.0 Then
+                    Dim nx As Single = CSng(-dyPx / lenPx * bPx / 2.0)
+                    Dim ny As Single = CSng(dxPx / lenPx * bPx / 2.0)
+                    Dim pts As PointF() = {
+                        New PointF(p1.X + nx, p1.Y + ny),
+                        New PointF(p2.X + nx, p2.Y + ny),
+                        New PointF(p2.X - nx, p2.Y - ny),
+                        New PointF(p1.X - nx, p1.Y - ny)
+                    }
+
+                    If esSelec Then
+                        Using penHalo As New Pen(Color.FromArgb(140, 255, 210, 80), 3)
+                            g.DrawPolygon(penHalo, pts)
+                        End Using
+                    ElseIf esHover Then
+                        Using penHalo As New Pen(Color.FromArgb(140, 100, 180, 255), 2.5F)
+                            g.DrawPolygon(penHalo, pts)
+                        End Using
+                    End If
+
+                    ' Preserva alpha del cuerpo en el borde (importante para sin-cálculo).
+                    Dim colorBorde = Color.FromArgb(colorElemento.A,
+                        Math.Max(0, CInt(colorElemento.R) - 40),
+                        Math.Max(0, CInt(colorElemento.G) - 40),
+                        Math.Max(0, CInt(colorElemento.B) - 40))
+                    Using brRelleno As New SolidBrush(colorElemento),
+                          penBorde As New Pen(colorBorde, 1.0F)
+                        g.FillPolygon(brRelleno, pts)
+                        g.DrawPolygon(penBorde, pts)
+                    End Using
+                    Return
+                End If
+                ' zoom bajo o frame degenerado → cae a línea
+            End If
+
+            ' Vista líneas (o fallback)
+            If esSelec Then
+                Using penHalo As New Pen(Color.FromArgb(70, 255, 210, 80), grosor + 5)
+                    g.DrawLine(penHalo, p1, p2)
+                End Using
+            End If
+            If esHover AndAlso Not esSelec Then
+                Using penHalo As New Pen(Color.FromArgb(50, 100, 180, 255), grosor + 4)
+                    g.DrawLine(penHalo, p1, p2)
+                End Using
+            End If
+            Using pen As New Pen(colorElemento, grosor)
+                g.DrawLine(pen, p1, p2)
+            End Using
+        Catch ex As OverflowException
+        End Try
+    End Sub
+
+    ' Dibuja puntos naranjas en los apoyos (JointI/J de cada frame) y, con zoom
+    ' suficiente, la etiqueta del eje estructural (EjeApoyo_I/J).
+    Private Sub DibujarApoyos(g As Graphics,
+                               apoyos As List(Of (pt As PointF, eje As String, destacado As Boolean, hover As Boolean)))
+
+        If apoyos Is Nothing OrElse apoyos.Count = 0 Then Return
+
+        ' Dedup por coordenada redondeada (dos frames comparten joint)
+        Dim vistos As New Dictionary(Of (Integer, Integer), (eje As String, destacado As Boolean, hover As Boolean))
+        For Each a In apoyos
+            Dim key = (CInt(Math.Round(a.pt.X)), CInt(Math.Round(a.pt.Y)))
+            If vistos.ContainsKey(key) Then
+                ' Si ya existe, nos quedamos con el más "destacado" (hover > destacado > normal)
+                Dim prev = vistos(key)
+                Dim mejor = (a.eje, prev.destacado OrElse a.destacado, prev.hover OrElse a.hover)
+                vistos(key) = mejor
+            Else
+                vistos(key) = (a.eje, a.destacado, a.hover)
+            End If
+        Next
+
+        If _zoom < 6 Then Return
+
+        Dim radio As Single = If(_zoom > 25, 5.5F, 4.0F)
+
+        Using penBlanco As New Pen(Color.White, 1.4F),
+              fntEje As New Font("Segoe UI", 7.5F, FontStyle.Bold)
+            For Each kv In vistos
+                Dim x = kv.Key.Item1 - radio
+                Dim y = kv.Key.Item2 - radio
+
+                Dim color As Color
+                If kv.Value.hover Then
+                    color = Color.FromArgb(235, 80, 20)       ' naranja intenso
+                ElseIf kv.Value.destacado Then
+                    color = Color.FromArgb(235, 104, 52)      ' naranja (viga seleccionada)
+                Else
+                    color = Color.FromArgb(180, 110, 60)      ' naranja apagado — resto del plano
+                End If
+
+                Try
+                    Using br As New SolidBrush(color)
+                        g.FillEllipse(br, x, y, radio * 2, radio * 2)
+                    End Using
+                    g.DrawEllipse(penBlanco, x, y, radio * 2, radio * 2)
+                Catch ex As OverflowException
+                End Try
+
+                If _zoom > 20 AndAlso Not String.IsNullOrWhiteSpace(kv.Value.eje) Then
+                    Try
+                        Dim sz = g.MeasureString(kv.Value.eje, fntEje)
+                        Dim rx = kv.Key.Item1 + radio + 2
+                        Dim ry = kv.Key.Item2 - sz.Height - 1
+                        Using bBg As New SolidBrush(Color.FromArgb(210, Color.White))
+                            g.FillRectangle(bBg, rx - 1, ry, sz.Width + 3, sz.Height + 1)
+                        End Using
+                        Using brTxt As New SolidBrush(Color.FromArgb(150, 90, 20))
+                            g.DrawString(kv.Value.eje, fntEje, brTxt, rx, ry)
+                        End Using
+                    Catch ex As OverflowException
+                    End Try
+                End If
+            Next
+        End Using
+    End Sub
+
+    ' C/D de la viga según el modo activo (consistente con DiagramaService.ColorPorModo).
+    Private Function CDPorModo(v As cViga) As Double
+        Select Case Modo
+            Case DiagramaService.ModoChequeoPlanta.Flexion  : Return VigaService.CDFlexionViga(v)
+            Case DiagramaService.ModoChequeoPlanta.Cortante : Return VigaService.CDCortanteViga(v)
+            Case Else                                        : Return VigaService.PeorCDViga(v)
+        End Select
+    End Function
+
+    Private Shared Function ColorPorCD(cd As Double) As Color
+        If cd <= 0 Then Return ColorSinCalcular                          ' translúcido
+        If cd < Funciones_00_Varias.UMBRAL_CD Then Return ColorNoCumple
+        If cd < 1.15 Then Return ColorAmbar
+        Return ColorCumple
+    End Function
 
     Private Sub DibujarEtiquetaFrame(g As Graphics,
                                       ji As cJoint, jj As cJoint,
@@ -772,7 +1118,8 @@ Public Class Form_PlantaInteractiva
     End Sub
 
     Private Sub DibujarNombreViga(g As Graphics, v As cViga,
-                                   esSelec As Boolean, esHover As Boolean)
+                                   esSelec As Boolean, esHover As Boolean,
+                                   Optional sinCalculo As Boolean = False)
         If v.Frames.Count = 0 Then Return
 
         Try
@@ -790,17 +1137,29 @@ Public Class Form_PlantaInteractiva
                pt.Y < 0 OrElse pt.Y > _panel.Height Then Return
 
             Dim fSize As Single = If(esSelec OrElse esHover, 9.0F, 7.5F)
-            Dim brushNombre As Brush = If(esSelec, Brushes.DarkRed,
-                                          If(esHover, Brushes.DarkBlue, Brushes.DimGray))
+            Dim colorNombre As Color
+            If esSelec Then
+                colorNombre = Color.DarkRed
+            ElseIf esHover Then
+                colorNombre = Color.DarkBlue
+            ElseIf sinCalculo Then
+                colorNombre = Color.FromArgb(110, 130, 130, 130)   ' translúcido
+            Else
+                colorNombre = Color.DimGray
+            End If
+
+            Dim bgAlpha As Integer = If(sinCalculo AndAlso Not (esSelec OrElse esHover), 110, 180)
 
             Using fnt As New Font("Segoe UI", fSize, FontStyle.Bold)
                 Dim sz = g.MeasureString(v.Nombre, fnt)
                 Dim rx = pt.X - sz.Width / 2 - 2
                 Dim ry = pt.Y + 5
-                Using bBg As New SolidBrush(Color.FromArgb(180, Color.White))
+                Using bBg As New SolidBrush(Color.FromArgb(bgAlpha, Color.White))
                     g.FillRectangle(bBg, rx, ry, sz.Width + 4, sz.Height + 2)
                 End Using
-                g.DrawString(v.Nombre, fnt, brushNombre, rx + 2, ry + 1)
+                Using brNom As New SolidBrush(colorNombre)
+                    g.DrawString(v.Nombre, fnt, brNom, rx + 2, ry + 1)
+                End Using
             End Using
         Catch ex As OverflowException
         End Try

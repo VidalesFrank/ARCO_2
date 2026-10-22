@@ -134,6 +134,19 @@ Public Class Form_11_Nervios
         AddHandler menuReportes.Click, AddressOf AbrirReportesNervios_Click
         MenuStrip1.Items.Insert(MenuStrip1.Items.IndexOf(Exportar_Zapatas), menuReportes)
 
+        ' Menú "Ver → Planta de Nervios" (patrón consistente con Pilas/Columnas).
+        ' Reutiliza BtnVerPlantaAmpliada_Click, que ya abre la planta ampliada.
+        Dim menuVer As New ToolStripMenuItem("Ver")
+        menuVer.ForeColor = Color.White
+        menuVer.BackColor = Color.FromArgb(87, 87, 87)
+        Dim itemPlantaNervios As New ToolStripMenuItem("Planta de Nervios")
+        itemPlantaNervios.ForeColor = Color.White
+        itemPlantaNervios.BackColor = Color.FromArgb(87, 87, 87)
+        itemPlantaNervios.ToolTipText = "Vista en planta ampliada con pan/zoom y color por chequeo"
+        AddHandler itemPlantaNervios.Click, AddressOf BtnVerPlantaAmpliada_Click
+        menuVer.DropDownItems.Add(itemPlantaNervios)
+        MenuStrip1.Items.Insert(MenuStrip1.Items.IndexOf(menuReportes), menuVer)
+
         ' Menú Gráficas, aparte de Reportes: ese es un item de un solo clic y
         ' colgarle un desplegable le cambiaría el comportamiento actual.
         Dim menuGraficas As New ToolStripMenuItem("Gráficas")

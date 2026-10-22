@@ -1,7 +1,9 @@
-﻿Imports System.Runtime.Serialization
+Imports System.Reflection
+Imports System.Runtime.Serialization
 
 <Serializable>
 Public Class Muro
+    Implements ISerializable
 
     Public Name As String
     Public Label As String
@@ -41,10 +43,68 @@ Public Class Muro
     Public Porc_Vs As Single
     Public Porc_Vs_Geo As Single
 
+    Public Sub New()
+    End Sub
+
+    ' Constructor de deserialización. Lee cada campo del stream por reflexión y, para los
+    ' enums que históricamente se guardaron como String (Direccion y TipoMuro), convierte.
+    Protected Sub New(info As SerializationInfo, context As StreamingContext)
+        Dim t = Me.GetType()
+        For Each entry As SerializationEntry In info
+            Dim fi = t.GetField(entry.Name, BindingFlags.Public Or BindingFlags.NonPublic Or BindingFlags.Instance)
+            If fi Is Nothing Then Continue For
+            If fi.IsNotSerialized Then Continue For
+
+            Dim value = entry.Value
+
+            If fi.FieldType Is GetType(eNumeradores.eDireccion) AndAlso TypeOf value Is String Then
+                value = ParsearDireccion(CStr(value))
+            ElseIf fi.FieldType Is GetType(eNumeradores.eTipoMuro) AndAlso TypeOf value Is String Then
+                value = ParsearTipoMuro(CStr(value))
+            End If
+
+            Try
+                fi.SetValue(Me, value)
+            Catch
+                ' Si el stream trae un tipo incompatible imprevisto, dejamos el default
+                ' del campo (no abortamos la deserialización completa del proyecto).
+            End Try
+        Next
+
+        If Lista_Secciones Is Nothing Then Lista_Secciones = New List(Of SeccionMuro)
+    End Sub
+
+    Public Sub GetObjectData(info As SerializationInfo, context As StreamingContext) Implements ISerializable.GetObjectData
+        Dim t = Me.GetType()
+        For Each fi In t.GetFields(BindingFlags.Public Or BindingFlags.NonPublic Or BindingFlags.Instance)
+            If fi.IsNotSerialized Then Continue For
+            info.AddValue(fi.Name, fi.GetValue(Me))
+        Next
+    End Sub
+
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
         If Lista_Secciones Is Nothing Then Lista_Secciones = New List(Of SeccionMuro)
     End Sub
 
-End Class
+    Private Shared Function ParsearDireccion(s As String) As eNumeradores.eDireccion
+        If String.IsNullOrWhiteSpace(s) Then Return eNumeradores.eDireccion.X
+        Dim raw = s.Trim()
+        If raw.Equals("Y", StringComparison.OrdinalIgnoreCase) Then Return eNumeradores.eDireccion.Y
+        If raw.Equals("X", StringComparison.OrdinalIgnoreCase) Then Return eNumeradores.eDireccion.X
+        Dim parsed As eNumeradores.eDireccion
+        If [Enum].TryParse(Of eNumeradores.eDireccion)(raw, True, parsed) Then Return parsed
+        Return eNumeradores.eDireccion.X
+    End Function
 
+    Private Shared Function ParsearTipoMuro(s As String) As eNumeradores.eTipoMuro
+        If String.IsNullOrWhiteSpace(s) Then Return eNumeradores.eTipoMuro.Protagonico
+        Dim raw = s.Trim()
+        If raw.Equals("Complemento", StringComparison.OrdinalIgnoreCase) Then Return eNumeradores.eTipoMuro.Complemento
+        If raw.Equals("Protagonico", StringComparison.OrdinalIgnoreCase) Then Return eNumeradores.eTipoMuro.Protagonico
+        Dim parsed As eNumeradores.eTipoMuro
+        If [Enum].TryParse(Of eNumeradores.eTipoMuro)(raw, True, parsed) Then Return parsed
+        Return eNumeradores.eTipoMuro.Protagonico
+    End Function
+
+End Class

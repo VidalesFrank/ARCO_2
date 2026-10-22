@@ -2212,4 +2212,58 @@ Public Class VigaService
         End Select
     End Function
 
+    ' ──────────────────────────────────────────────────────────────────────────
+    ' Helpers de C/D por chequeo para la planta de Vigas. Sentinela 0 = sin
+    ' cálculo (consistente con PilaService/ColumnaService/NervioService).
+    ' Flexión: min(Ratio) sobre las zonas de cada frame.RevisionFlexion donde
+    ' el As requerido es > 0 (si AsReq ≤ 0, el chequeo no aplica a esa zona).
+    ' Cortante: delega en EvaluarCDDefViga, que ya respeta SinDatos.
+    ' ──────────────────────────────────────────────────────────────────────────
+    Private Shared Function EsRatioValido(r As Double, asReq As Double) As Boolean
+        If asReq <= 0 Then Return False
+        If r <= 0 Then Return False
+        If Double.IsInfinity(r) OrElse Double.IsNaN(r) Then Return False
+        Return True
+    End Function
+
+    ''' <summary>Peor C/D de flexión del frame (sup e inf, 3 zonas). 0 = sin cálculo.</summary>
+    Public Shared Function CDFlexionFrame(f As cFrame) As Double
+        If f Is Nothing OrElse f.RevisionFlexion Is Nothing Then Return 0
+        Dim vals As New List(Of Double)
+        For Each z In f.RevisionFlexion
+            If z Is Nothing OrElse z.ResultadoActual Is Nothing Then Continue For
+            Dim r = z.ResultadoActual
+            If EsRatioValido(r.RatioSup, r.AsReqSup) Then vals.Add(r.RatioSup)
+            If EsRatioValido(r.RatioInf, r.AsReqInf) Then vals.Add(r.RatioInf)
+        Next
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(vals.Min(), 2)
+    End Function
+
+    ''' <summary>Peor C/D de flexión de la viga (min entre frames). 0 = sin cálculo.</summary>
+    Public Shared Function CDFlexionViga(v As cViga) As Double
+        If v Is Nothing OrElse v.Frames Is Nothing Then Return 0
+        Dim vals = v.Frames.Select(AddressOf CDFlexionFrame).Where(Function(x) x > 0).ToList()
+        If vals.Count = 0 Then Return 0
+        Return vals.Min()
+    End Function
+
+    ''' <summary>C/D envolvente de cortante de la viga. 0 = sin cálculo (SinDatos).</summary>
+    Public Shared Function CDCortanteViga(v As cViga) As Double
+        Dim r = EvaluarCDDefViga(v)
+        If r.Estado = EstadoEnvolventeCortante.SinDatos Then Return 0
+        If r.CD_Def <= 0 OrElse Double.IsInfinity(r.CD_Def) OrElse Double.IsNaN(r.CD_Def) Then Return 0
+        Return Math.Round(r.CD_Def, 2)
+    End Function
+
+    ''' <summary>Peor C/D global de la viga (flexión + cortante). 0 = sin cálculo.</summary>
+    Public Shared Function PeorCDViga(v As cViga) As Double
+        Dim fx = CDFlexionViga(v)
+        Dim cr = CDCortanteViga(v)
+        If fx > 0 AndAlso cr > 0 Then Return Math.Min(fx, cr)
+        If fx > 0 Then Return fx
+        If cr > 0 Then Return cr
+        Return 0
+    End Function
+
 End Class

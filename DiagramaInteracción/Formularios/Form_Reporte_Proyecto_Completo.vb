@@ -426,7 +426,9 @@ Public Class Form_Reporte_Proyecto_Completo
         End If
 
         Dim fila As Integer = 2
-        For Each v In _proyecto.Elementos.Vigas.Vigas.OrderBy(Function(x) x.Piso).ThenBy(Function(x) x.Nombre)
+        ' Reporte ejecutivo: solo vigas marcadas como revisables.
+        For Each v In _proyecto.Elementos.Vigas.Vigas.Where(Function(x) x.IncluirEnRevision).
+                                                  OrderBy(Function(x) x.Piso).ThenBy(Function(x) x.Nombre)
             ws.Cell(fila, 1).Value = v.Nombre
             ws.Cell(fila, 2).Value = v.NombrePlano
             ws.Cell(fila, 3).Value = v.Piso

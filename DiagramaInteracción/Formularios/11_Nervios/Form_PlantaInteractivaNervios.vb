@@ -38,8 +38,9 @@ Public Class Form_PlantaInteractivaNervios
     Private WithEvents _panel As BufferedPanel
     Private _lblInfo As Label
     Private _btnFit As Button
-    Private _chkAllFloors As CheckBox
+    Private _cmbPiso As ComboBox
     Private _lblZoom As Label
+    Private _cmbChequeo As ComboBox
 
     ' ── Paleta categórica validada (misma que la planta inline) ──
     Private Shared ReadOnly ColoresNervio As Color() = {
@@ -52,6 +53,29 @@ Public Class Form_PlantaInteractivaNervios
         Color.FromArgb(74, 58, 167),    ' violeta
         Color.FromArgb(227, 73, 72)     ' rojo
     }
+
+    ' ── Paleta de C/D del marcador (misma que Pilas/Columnas) ──
+    Private Shared ReadOnly ColorCumple As Color = Color.FromArgb(27, 175, 122)
+    Private Shared ReadOnly ColorNoCumple As Color = Color.FromArgb(227, 73, 72)
+    Private Shared ReadOnly ColorAmbar As Color = Color.FromArgb(237, 161, 0)
+    ' Sin cálculo = translúcido para no opacar la vista. Alpha ~90/255.
+    Private Shared ReadOnly ColorSinCalcular As Color = Color.FromArgb(90, 150, 150, 150)
+
+    ' Modos de visualización del marcador (coinciden con el combo _cmbChequeo).
+    Private Enum ModoChequeo
+        PeorGlobal = 0
+        Flexion = 1
+        Cortante = 2
+    End Enum
+
+    Private ReadOnly Property Modo As ModoChequeo
+        Get
+            If _cmbChequeo Is Nothing OrElse _cmbChequeo.SelectedIndex < 0 Then
+                Return ModoChequeo.PeorGlobal
+            End If
+            Return CType(_cmbChequeo.SelectedIndex, ModoChequeo)
+        End Get
+    End Property
 
     ' =====================================================================
     Public Sub New()
@@ -100,14 +124,31 @@ Public Class Form_PlantaInteractivaNervios
             .Text = "Zoom: --"
         }
 
-        _chkAllFloors = New CheckBox With {
+        _cmbPiso = New ComboBox With {
             .Dock = DockStyle.Right,
-            .Width = 110,
-            .Text = "Todos los pisos",
-            .ForeColor = Color.White,
-            .TextAlign = ContentAlignment.MiddleCenter,
-            .Checked = False
+            .Width = 170,
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .BackColor = Color.FromArgb(224, 224, 224),
+            .ForeColor = Color.FromArgb(87, 87, 87),
+            .Font = New Font("Segoe UI", 9)
         }
+
+        _cmbChequeo = New ComboBox With {
+            .Dock = DockStyle.Right,
+            .Width = 190,
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .BackColor = Color.FromArgb(224, 224, 224),
+            .ForeColor = Color.FromArgb(87, 87, 87),
+            .Font = New Font("Segoe UI", 9)
+        }
+        _cmbChequeo.Items.AddRange(New String() {
+            "Chequeo: peor global",
+            "Chequeo: flexión",
+            "Chequeo: cortante"
+        })
+        _cmbChequeo.SelectedIndex = 0
 
         _btnFit = New Button With {
             .Dock = DockStyle.Right,
@@ -122,7 +163,8 @@ Public Class Form_PlantaInteractivaNervios
 
         pnlBottom.Controls.Add(_lblInfo)
         pnlBottom.Controls.Add(_lblZoom)
-        pnlBottom.Controls.Add(_chkAllFloors)
+        pnlBottom.Controls.Add(_cmbPiso)
+        pnlBottom.Controls.Add(_cmbChequeo)
         pnlBottom.Controls.Add(_btnFit)
 
         _panel = New BufferedPanel With {
@@ -142,9 +184,50 @@ Public Class Form_PlantaInteractivaNervios
         AddHandler _panel.MouseEnter, Sub() _panel.Focus()
         AddHandler _panel.Resize, Sub() _panel.Invalidate()
         AddHandler _btnFit.Click, Sub() FitView()
-        AddHandler _chkAllFloors.CheckedChanged, Sub() _panel.Invalidate()
-        AddHandler Me.Shown, Sub() FitView()
+        AddHandler _cmbPiso.SelectedIndexChanged, Sub() _panel.Invalidate()
+        AddHandler _cmbChequeo.SelectedIndexChanged, Sub() _panel.Invalidate()
+        AddHandler Me.Shown, Sub()
+                                 PoblarPisos()
+                                 FitView()
+                             End Sub
     End Sub
+
+    ' Puebla el combo con los pisos presentes en Nervios y preselecciona el que
+    ' venga por `PisoActual` si existe; si no, "Todos los pisos".
+    Private Sub PoblarPisos()
+        If _cmbPiso Is Nothing Then Return
+        _cmbPiso.BeginUpdate()
+        Try
+            _cmbPiso.Items.Clear()
+            _cmbPiso.Items.Add("Todos los pisos")
+            If Nervios IsNot Nothing Then
+                Dim pisos = Nervios.Where(Function(n) Not String.IsNullOrEmpty(n.Piso)) _
+                                    .Select(Function(n) n.Piso) _
+                                    .Distinct(StringComparer.OrdinalIgnoreCase) _
+                                    .ToList()
+                For Each p In pisos
+                    _cmbPiso.Items.Add(p)
+                Next
+            End If
+            Dim seleccionado As Integer = 0
+            If Not String.IsNullOrEmpty(PisoActual) Then
+                For i As Integer = 1 To _cmbPiso.Items.Count - 1
+                    If _cmbPiso.Items(i).ToString().Equals(PisoActual, StringComparison.OrdinalIgnoreCase) Then
+                        seleccionado = i
+                        Exit For
+                    End If
+                Next
+            End If
+            _cmbPiso.SelectedIndex = seleccionado
+        Finally
+            _cmbPiso.EndUpdate()
+        End Try
+    End Sub
+
+    Private Function PisoSeleccionado() As String
+        If _cmbPiso Is Nothing OrElse _cmbPiso.SelectedIndex <= 0 Then Return ""
+        Return _cmbPiso.SelectedItem.ToString()
+    End Function
 
     ' =====================================================================
     ' TRANSFORMADAS MUNDO ↔ PANTALLA
@@ -290,9 +373,9 @@ Public Class Form_PlantaInteractivaNervios
     End Sub
 
     Private Function MostrarNervio(n As cNervio) As Boolean
-        If _chkAllFloors.Checked Then Return True
-        If String.IsNullOrEmpty(PisoActual) Then Return True
-        Return n.Piso.Equals(PisoActual, StringComparison.OrdinalIgnoreCase)
+        Dim pisoSel = PisoSeleccionado()
+        If String.IsNullOrEmpty(pisoSel) Then Return True   ' "Todos los pisos"
+        Return n.Piso.Equals(pisoSel, StringComparison.OrdinalIgnoreCase)
     End Function
 
     Private Sub MostrarInfoFrame(n As cNervio, fn As cFrameNervio)
@@ -332,6 +415,7 @@ Public Class Form_PlantaInteractivaNervios
 
         DibujarGridLines(g)
         DibujarNervios(g)
+        DibujarLeyendaCD(g)
 
         If _hoveredNervio IsNot Nothing AndAlso _hoveredFrame IsNot Nothing Then
             DibujarTooltipElemento(g, _hoveredNervio, _hoveredFrame)
@@ -339,6 +423,62 @@ Public Class Form_PlantaInteractivaNervios
 
         DibujarEjesCoord(g)
         DibujarEscala(g)
+    End Sub
+
+    ' ─────────────────────────────────────────────────────────
+    ' Leyenda flotante — explica la paleta C/D del modo activo.
+    ' ─────────────────────────────────────────────────────────
+    Private Sub DibujarLeyendaCD(g As Graphics)
+        Dim titulo As String
+        Select Case Modo
+            Case ModoChequeo.Flexion  : titulo = "C/D — Flexión"
+            Case ModoChequeo.Cortante : titulo = "C/D — Cortante"
+            Case Else                  : titulo = "C/D — Peor global"
+        End Select
+
+        Dim items As (clr As Color, texto As String)() = {
+            (ColorCumple,     "C/D ≥ 1.15   cumple holgado"),
+            (ColorAmbar,      "0.90 ≤ C/D < 1.15   cumple"),
+            (ColorNoCumple,   "C/D < 0.90   no cumple"),
+            (ColorSinCalcular, "Sin cálculo")
+        }
+
+        Dim padX As Single = 10, padY As Single = 8
+        Dim lineH As Single = 17
+        Dim boxW As Single = 220
+        Dim boxH As Single = (items.Length + 1) * lineH + padY * 2
+        Dim ox As Single = _panel.Width - boxW - 12
+        Dim oy As Single = 12
+
+        Try
+            Using bFondo As New SolidBrush(Color.FromArgb(220, 255, 255, 255))
+                g.FillRectangle(bFondo, ox, oy, boxW, boxH)
+            End Using
+            Using penB As New Pen(Color.FromArgb(160, 170, 185), 1)
+                g.DrawRectangle(penB, ox, oy, boxW, boxH)
+            End Using
+
+            Using fntTit As New Font("Segoe UI", 8.5F, FontStyle.Bold),
+                  fntItem As New Font("Segoe UI", 8),
+                  brTit As New SolidBrush(Color.FromArgb(50, 50, 60)),
+                  brTxt As New SolidBrush(Color.FromArgb(40, 40, 40))
+
+                g.DrawString(titulo, fntTit, brTit, ox + padX, oy + padY)
+                Dim y As Single = oy + padY + lineH
+
+                For Each it In items
+                    Using brMuestra As New SolidBrush(it.clr)
+                        g.FillRectangle(brMuestra, ox + padX, y + 3, 22, 10)
+                    End Using
+                    Using penMuestra As New Pen(Color.FromArgb(140, 140, 140), 0.8F)
+                        g.DrawRectangle(penMuestra, ox + padX, y + 3, 22, 10)
+                    End Using
+                    g.DrawString(it.texto, fntItem, brTxt, ox + padX + 30, y)
+                    y += lineH
+                Next
+            End Using
+        Catch ex As OverflowException
+        End Try
     End Sub
 
     ' ─────────────────────────────────────────────────────────
@@ -419,8 +559,10 @@ Public Class Form_PlantaInteractivaNervios
                 Dim esSelec = NervioSeleccionado IsNot Nothing AndAlso ReferenceEquals(n, NervioSeleccionado)
                 Dim esHover = (n Is _hoveredNervio)
 
-                Dim colorLinea As Color = ColoresNervio(idx Mod ColoresNervio.Length)
-                Dim grosor As Single = If(esSelec, 4.5F, If(esHover, 3.5F, 2.2F))
+                ' Color categórico del nervio (para la etiqueta/nombre; distingue
+                ' nervios adyacentes). El cuerpo extruido usa C/D del chequeo activo.
+                Dim colorEtiqueta As Color = ColoresNervio(idx Mod ColoresNervio.Length)
+                Dim grosorLinea As Single = If(esSelec, 4.5F, If(esHover, 3.5F, 2.2F))
 
                 For Each fn In n.Frames
                     If Not Joints.ContainsKey(fn.JointI) OrElse Not Joints.ContainsKey(fn.JointJ) Then Continue For
@@ -429,37 +571,72 @@ Public Class Form_PlantaInteractivaNervios
                     Dim p1 = W2S(ji.GlobalX, ji.GlobalY)
                     Dim p2 = W2S(jj.GlobalX, jj.GlobalY)
 
+                    ' Color por chequeo activo. Gris automático si el nervio no se
+                    ' revisó (Ref_Modificado=False o CD=0 por sentinela).
+                    Dim cdActivo = ObtenerCDFrame(fn)
+                    Dim colorBody = ColorPorCD(cdActivo)
+
+                    ' Extrusión: ancho = Bw (metros) × _zoom (px/m).
+                    Dim bPx As Single = CSng(fn.Bw * _zoom)
+                    Dim dx As Single = p2.X - p1.X
+                    Dim dy As Single = p2.Y - p1.Y
+                    Dim lenPx As Double = Math.Sqrt(dx * dx + dy * dy)
+
                     Try
-                        If esSelec Then
-                            Using penHalo As New Pen(Color.FromArgb(70, 227, 73, 72), grosor + 5)
-                                g.DrawLine(penHalo, p1, p2)
+                        If bPx < 2.0F OrElse lenPx < 1.0 Then
+                            ' Zoom bajo o frame degenerado: línea plana con el color C/D.
+                            If esSelec Then
+                                Using penHalo As New Pen(Color.FromArgb(70, 227, 73, 72), grosorLinea + 5)
+                                    g.DrawLine(penHalo, p1, p2)
+                                End Using
+                            ElseIf esHover Then
+                                Using penHalo As New Pen(Color.FromArgb(60, 42, 120, 214), grosorLinea + 4)
+                                    g.DrawLine(penHalo, p1, p2)
+                                End Using
+                            End If
+                            Using pen As New Pen(colorBody, grosorLinea)
+                                g.DrawLine(pen, p1, p2)
                             End Using
-                        ElseIf esHover Then
-                            Using penHalo As New Pen(Color.FromArgb(60, 42, 120, 214), grosor + 4)
-                                g.DrawLine(penHalo, p1, p2)
+                        Else
+                            Dim nx As Single = CSng(-dy / lenPx * bPx / 2.0)
+                            Dim ny As Single = CSng(dx / lenPx * bPx / 2.0)
+                            Dim pts As PointF() = {
+                                New PointF(p1.X + nx, p1.Y + ny),
+                                New PointF(p2.X + nx, p2.Y + ny),
+                                New PointF(p2.X - nx, p2.Y - ny),
+                                New PointF(p1.X - nx, p1.Y - ny)
+                            }
+
+                            If esSelec Then
+                                Using penHalo As New Pen(Color.FromArgb(140, 227, 73, 72), 3)
+                                    g.DrawPolygon(penHalo, pts)
+                                End Using
+                            ElseIf esHover Then
+                                Using penHalo As New Pen(Color.FromArgb(120, 42, 120, 214), 2.5F)
+                                    g.DrawPolygon(penHalo, pts)
+                                End Using
+                            End If
+
+                            ' Para sin-cálculo (alpha reducido) preservamos el alpha también
+                            ' en el borde para que la pieza se vea pareja y traslúcida.
+                            Dim colorBorde = Color.FromArgb(
+                                colorBody.A,
+                                Math.Max(0, CInt(colorBody.R) - 40),
+                                Math.Max(0, CInt(colorBody.G) - 40),
+                                Math.Max(0, CInt(colorBody.B) - 40))
+                            Using brRelleno As New SolidBrush(colorBody),
+                                  penBorde As New Pen(colorBorde, 1.0F)
+                                g.FillPolygon(brRelleno, pts)
+                                g.DrawPolygon(penBorde, pts)
                             End Using
                         End If
-                        Using pen As New Pen(colorLinea, grosor)
-                            g.DrawLine(pen, p1, p2)
-                        End Using
                     Catch ex As OverflowException
                         Continue For
                     End Try
 
-                    If fn.Ref_Modificado Then
-                        Dim cdMin = Math.Min(fn.CD_Flex_Inf_C, Math.Min(fn.CD_Cortante_I, fn.CD_Cortante_D))
-                        Dim clrCD = If(cdMin >= 1.0, Color.FromArgb(0, 131, 0),
-                                     If(cdMin >= 0.9, Color.FromArgb(237, 161, 0), Color.FromArgb(227, 73, 72)))
-                        Dim xm = (p1.X + p2.X) / 2 : Dim ym = (p1.Y + p2.Y) / 2
-                        Using penCD As New Pen(Color.White, 1.5F), brushCD As New SolidBrush(clrCD)
-                            g.FillEllipse(brushCD, xm - 5, ym - 5, 10, 10)
-                            g.DrawEllipse(penCD, xm - 5, ym - 5, 10, 10)
-                        End Using
-                    End If
-
                     If (esHover OrElse esSelec) AndAlso _zoom > 12 Then
                         Dim xm = (p1.X + p2.X) / 2 : Dim ym = (p1.Y + p2.Y) / 2
-                        DibujarEtiquetaConFondo(g, fn.ObjectLabel, fontLabel, colorLinea, xm + 4, ym - 18)
+                        DibujarEtiquetaConFondo(g, fn.ObjectLabel, fontLabel, colorEtiqueta, xm + 4, ym - 18)
                     End If
 
                     If _zoom > 8 Then
@@ -486,7 +663,7 @@ Public Class Form_PlantaInteractivaNervios
                     Dim fn0 = n.Frames(0)
                     Dim ji As cJoint = Nothing
                     If Joints.TryGetValue(fn0.JointI, ji) Then
-                        DibujarEtiquetaConFondo(g, n.ToString(), fontNombre, colorLinea, W2S(ji.GlobalX, ji.GlobalY).X, W2S(ji.GlobalX, ji.GlobalY).Y - 16)
+                        DibujarEtiquetaConFondo(g, n.ToString(), fontNombre, colorEtiqueta, W2S(ji.GlobalX, ji.GlobalY).X, W2S(ji.GlobalX, ji.GlobalY).Y - 16)
                     End If
                 End If
             Next
@@ -507,6 +684,24 @@ Public Class Form_PlantaInteractivaNervios
         Catch ex As OverflowException
         End Try
     End Sub
+
+    ' ─────────────────────────────────────────────────────────
+    ' C/D del tramo según el chequeo seleccionado + color por banda.
+    ' ─────────────────────────────────────────────────────────
+    Private Function ObtenerCDFrame(fn As cFrameNervio) As Double
+        Select Case Modo
+            Case ModoChequeo.Flexion  : Return NervioService.CDFlexionFrame(fn)
+            Case ModoChequeo.Cortante : Return NervioService.CDCortanteFrame(fn)
+            Case Else                 : Return NervioService.PeorCDFrame(fn)
+        End Select
+    End Function
+
+    Private Shared Function ColorPorCD(cd As Double) As Color
+        If cd <= 0 Then Return ColorSinCalcular
+        If cd < Funciones_00_Varias.UMBRAL_CD Then Return ColorNoCumple
+        If cd < 1.15 Then Return ColorAmbar
+        Return ColorCumple
+    End Function
 
     ' ─────────────────────────────────────────────────────────
     ' Tooltip dibujado en canvas — aparece junto al cursor
@@ -666,5 +861,48 @@ Public Class Form_PlantaInteractivaNervios
                         ControlStyles.OptimizedDoubleBuffer, True)
         End Sub
     End Class
+
+    ''' <summary>
+    ''' Render headless de la planta para el Informe Técnico. Como esta planta no está
+    ''' construida sobre PlantaCanvas sino sobre un BufferedPanel propio con Panel_Paint,
+    ''' se muestra la ventana fuera de pantalla con opacidad 0 para que WinForms genere
+    ''' handles, se corre el pipeline normal (PoblarPisos + FitView) y después se usa
+    ''' DrawToBitmap del panel. Se oculta al final — nunca es visible al usuario.
+    ''' piso = Nothing/"" ⇒ "Todos los pisos". modoIndex: 0 Peor global | 1 Flexión | 2 Cortante.
+    ''' </summary>
+    Public Function RenderBitmapPlanta(ancho As Integer, alto As Integer,
+                                       Optional piso As String = Nothing,
+                                       Optional modoIndex As Integer = 0) As Bitmap
+        Me.Size = New Size(ancho + 20, alto + 100)
+        Me.Opacity = 0
+        Me.ShowInTaskbar = False
+        Me.StartPosition = FormStartPosition.Manual
+        Me.Location = New Point(-10000, -10000)
+        Me.Show()
+        Try
+            Me.Refresh()
+            If _cmbPiso IsNot Nothing AndAlso _cmbPiso.Items.Count > 0 Then
+                If String.IsNullOrWhiteSpace(piso) Then
+                    _cmbPiso.SelectedIndex = 0   ' "Todos los pisos"
+                Else
+                    Dim i = _cmbPiso.Items.IndexOf(piso)
+                    _cmbPiso.SelectedIndex = If(i >= 0, i, 0)
+                End If
+            End If
+            If _cmbChequeo IsNot Nothing AndAlso modoIndex >= 0 AndAlso modoIndex < _cmbChequeo.Items.Count Then
+                _cmbChequeo.SelectedIndex = modoIndex
+            End If
+            FitView()
+            Me.Refresh()
+
+            Dim w = _panel.Width, h = _panel.Height
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim bmp As New Bitmap(w, h)
+            _panel.DrawToBitmap(bmp, New Rectangle(0, 0, w, h))
+            Return bmp
+        Finally
+            Me.Hide()
+        End Try
+    End Function
 
 End Class

@@ -61,7 +61,8 @@ Public Class SmokeFormsTests
             "ARCO.Form_Reporte_Zapatas",
             "ARCO.Form_Reporte_Revision",
             "ARCO.Form_Reporte_Proyecto_Completo",
-            "ARCO.Form_InformeEstadoMuros"
+            "ARCO.Form_InformeEstadoMuros",
+            "ARCO.Form_Informe_Tecnico"
         }
 
         Dim asm = GetType(ARCO.Proyecto).Assembly

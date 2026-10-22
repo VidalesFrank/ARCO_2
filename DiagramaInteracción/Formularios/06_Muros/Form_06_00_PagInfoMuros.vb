@@ -1131,29 +1131,20 @@ Public Class Form_06_00_PagInfoMuros
     End Sub
 
     Private Sub Op_SeccionSimilar_CheckedChanged(sender As Object, e As EventArgs) Handles Op_SeccionSimilar.CheckedChanged
-        'Dim Secciones_Principales = Proyecto.Elementos.Muros.Lista_Muros.FindAll(Function(p) p.Secciones_Principal = True)
         C_Lista_Secciones_Principales.Items.Clear()
 
-        If Op_SeccionPrincipal.Checked = False Then
-            'If Secciones_Principales.Count < 1 Then
-            '    '    MessageBox.Show("No se tiene registro de ninguna sección", "Información Ingresada", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            '    '    Op_SeccionPrincipal.Checked = True
-            '    'Else
-            '    '    For i = 0 To Secciones_Principales.Count - 1
-            '    '        C_Lista_Secciones_Principales.Items.Add(Secciones_Principales(i).Name_Label)
-            '    '    Next
-            '    '    Form_02_PagColumnas.Proyecto.Elementos.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Similar = True
-            '    '    Form_02_PagColumnas.Proyecto.Elementos.Lista_Columnas.Find(Function(p) p.Name_Elemento = Combo_Elementos.Text).Secciones_Principal = False
-            '    '    C_Lista_Secciones_Principales.Enabled = True
-            '    'End If
+        If Op_SeccionSimilar.Checked Then
+            Dim muroActualName As String = If(Combo_Elementos.Text, "")
             For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
                 Dim muro = proyecto.Elementos.Muros.Lista_Muros(i)
-                If muro.Ref_Modificado_Muros AndAlso muro.Lista_Secciones.Any(Function(s) s.S_Patron) Then
+                If muro.Name = muroActualName Then Continue For
+                If muro.Ref_Modificado_Muros Then
                     C_Lista_Secciones_Principales.Items.Add(muro.Label)
                 End If
             Next
-
             C_Lista_Secciones_Principales.Enabled = True
+        Else
+            C_Lista_Secciones_Principales.Enabled = False
         End If
     End Sub
 

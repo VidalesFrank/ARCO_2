@@ -715,12 +715,30 @@ Public Class Form_01_ImportarETABS
             ' Acceder al proyecto mediante la referencia estándar del proyecto
             Dim Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
 
-            ' Agregar reacciones al proyecto
+            ' Agregar reacciones al proyecto. Se guarda X/Y/Z en cada reacción
+            ' como respaldo: si en el futuro Elemento_Pila se regenera o si el
+            ' diccionario CoordsPorLabel se pierde, las coords siguen siendo
+            ' recuperables desde las reactions.
             Proyecto.Elementos.Pilas.Reactions.Clear()
             For Each cand As cCandidatoPila In seleccionados
                 For Each rxn As cCombinacionPila In cand.Reactions
+                    rxn.X = cand.X
+                    rxn.Y = cand.Y
+                    rxn.Z = cand.Z
                     Proyecto.Elementos.Pilas.Reactions.Add(rxn)
                 Next
+            Next
+
+            ' Snapshot X,Y por SourceLabel para que GeometriaPlantasService pueda
+            ' ubicar las pilas tipo Pier en la planta (su SourceLabel = pierName
+            ' no existe en Joints, así que el cruce por ObjectLabel no las encuentra).
+            Proyecto.Elementos.Pilas.CoordsPorLabel =
+                New Dictionary(Of String, System.Drawing.PointF)(StringComparer.OrdinalIgnoreCase)
+            For Each cand As cCandidatoPila In seleccionados
+                Dim lbl = If(cand.SourceLabel, "").Trim()
+                If lbl.Length = 0 Then Continue For
+                Proyecto.Elementos.Pilas.CoordsPorLabel(lbl) =
+                    New System.Drawing.PointF(CSng(cand.X), CSng(cand.Y))
             Next
 
             ' Extraer lista de combinaciones únicas

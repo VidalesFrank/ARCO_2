@@ -10,6 +10,12 @@ Partial Public Class Form_02_PagColumnas
     Public Shared Columna As New Columna
     ' Secciones circulares detectadas en "Frame Sec Def - Conc Circle": nombre → (diámetro m, material)
     Private Shared _SeccionesCirculares As New Dictionary(Of String, Tuple(Of Single, String))(StringComparer.OrdinalIgnoreCase)
+
+    ' DataTables guardadas desde el ZIP import (lecturas ETABS crudas que no
+    ' llegan a DataGridViews pero sí al cálculo). Button2 "Calcular" las consume
+    ' para asignar ángulos de orientación.
+    Private _dtFrameLocalAxes As DataTable
+    Private _dtPierSAll As DataTable
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
 
         ' Preflight: Button2 (Calcular) es el que PUEBLA Lista_Columnas, así que
@@ -306,6 +312,20 @@ SkipPierDiseno:
                 Dim Col_Material As Integer = Col_Secciones(2)
                 Dim Col_B As Integer = Col_Secciones(3)
                 Dim Col_H As Integer = Col_Secciones(4)
+                ' Mismas columnas que lee Muros: cols 10,11 = CG bottom X/Y del pier.
+                ' Permiten ubicar la columna Pier en planta (Name_Elemento no cruza con Frames).
+                Const Col_CoordX As Integer = 10
+                Const Col_CoordY As Integer = 11
+
+                ' Index Pier → coord por name_label (col 0 del diseño = pier name).
+                ' La hoja Pier Section Properties NO tiene columna "Pier"; usamos la fila
+                ' donde Section coincida con la asignada al tramo. Dos tramos del mismo pier
+                ' comparten coord — con la primera basta.
+                If Proyecto.Elementos.Columnas.CoordsPorLabel Is Nothing Then
+                    Proyecto.Elementos.Columnas.CoordsPorLabel =
+                        New Dictionary(Of String, System.Drawing.PointF)(StringComparer.OrdinalIgnoreCase)
+                End If
+                Dim mapaCoords = Proyecto.Elementos.Columnas.CoordsPorLabel
 
                 For i = 0 To Proyecto.Elementos.Columnas.Lista_Columnas.Count - 1
                     Dim Elemento As String = Proyecto.Elementos.Columnas.Lista_Columnas(i).Name_Elemento
@@ -324,6 +344,25 @@ SkipPierDiseno:
                                 ' As_Req = B(m) × H(m) × Cuantia(%) × 10000 → mm²
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).As_Req_Bottom = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Cuantia_Req_Bottom * 10000
                                 Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).As_Req_Top = Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).B_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).H_Modelo * Proyecto.Elementos.Columnas.Lista_Columnas(i).Lista_Tramos_Columnas(Np).Cuantia_Req_Top * 10000
+
+                                ' Coord del pier: lee cols 10,11 si existen y aún no se guardó una.
+                                If Not mapaCoords.ContainsKey(Elemento) AndAlso
+                                   Col_CoordY < Tabla.Columns.Count Then
+                                    Try
+                                        Dim xv As Single
+                                        Dim yv As Single
+                                        If Single.TryParse(Convert.ToString(Tabla.Rows(j).Cells(Col_CoordX).Value),
+                                                           Globalization.NumberStyles.Float,
+                                                           Globalization.CultureInfo.InvariantCulture, xv) AndAlso
+                                           Single.TryParse(Convert.ToString(Tabla.Rows(j).Cells(Col_CoordY).Value),
+                                                           Globalization.NumberStyles.Float,
+                                                           Globalization.CultureInfo.InvariantCulture, yv) Then
+                                            mapaCoords(Elemento) = New System.Drawing.PointF(xv, yv)
+                                        End If
+                                    Catch
+                                        ' Si la columna no existe o no es numérica, seguimos sin coord
+                                    End Try
+                                End If
                                 Exit For
                             End If
                         Next
@@ -409,6 +448,11 @@ SkipPierDiseno:
                 Next
             End If
         End If
+
+        ' Aplicar ángulos de orientación local tras construir la lista de columnas.
+        ' Si _dtFrameLocalAxes / _dtPierSAll vienen del ZIP import quedan aquí; si
+        ' no, el método usa lo que ya haya en cColumnas.AngulosPorLabel.
+        ColumnaService.AplicarAngulosOrientacion(Proyecto, _dtFrameLocalAxes, _dtPierSAll)
 
         'If Proyecto.Elementos.Columnas.Verificacion_ALR = True Then
         '    For NC = 0 To Proyecto.Elementos.Columnas.Lista_Combinaciones.Count - 1
@@ -789,6 +833,12 @@ SkipPierDiseno:
                     dtPierS  = ZipLeerHoja(za, wbMap, sst, Nothing, 1, "Pier Section Properties")
                     dtPierF  = ZipLeerHoja(za, wbMap, sst, selPier, 1, "Pier Forces")
                 End If
+                ' Local Axes de frames (opcional) — se usa para orientar la planta.
+                ' Si la hoja no existe, el ángulo queda en 0 (sin rotación).
+                _dtFrameLocalAxes = ZipLeerHoja(za, wbMap, sst, Nothing, 1,
+                                                "Frame Assigns - Local Axes",
+                                                "Frame Assignments - Local Axes")
+                _dtPierSAll = dtPierS
             End Using
         Catch ex As Exception
             Me.Cursor = Cursors.Arrow
@@ -1127,6 +1177,16 @@ SkipPierDiseno:
     Private Sub GráficasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Graficos_Col.Click
         If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
         Form_Graficos.Show()
+    End Sub
+
+    Private Sub PlantaColumnas_Click(sender As Object, e As EventArgs)
+        If Not PreflightValidador.HayColumnasImportadas(Proyecto) Then Return
+
+        Dim form As New Form_Planta_Columnas() With {
+            .Proyecto = Proyecto,
+            .GridLines = Proyecto?.Elementos?.Grids?.GridLines
+        }
+        form.Show(Me)
     End Sub
 
     Private Sub FrameToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FrameToolStripMenuItem.Click
@@ -1511,6 +1571,23 @@ SkipPierDiseno:
         itemAyuda.BackColor = Color.FromArgb(87, 87, 87)
         AddHandler itemAyuda.Click, Sub(s, ev) Form_AyudaImportacion.MostrarModulo("Columnas")
         Menu_Columnas.Items.Add(itemAyuda)
+
+        Dim itemPlanta As New ToolStripMenuItem("Planta de Columnas")
+        itemPlanta.ForeColor = Color.White
+        itemPlanta.BackColor = Color.FromArgb(87, 87, 87)
+        itemPlanta.ToolTipText = "Vista en planta por piso con las columnas escaladas y coloreadas por C/D"
+        AddHandler itemPlanta.Click, AddressOf PlantaColumnas_Click
+
+        ' Hay DOS campos "Ver" en este Form: VerToolStripMenuItem (huérfano, no
+        ' está en ningún MenuStrip, legacy del Designer) y Ver_Columnas (el que
+        ' efectivamente se muestra en Menu_Columnas). El item tiene que ir en
+        ' Ver_Columnas o el usuario no lo verá.
+        Ver_Columnas.DropDownItems.Add(itemPlanta)
+        Ver_Columnas.Enabled = True
+
+        ' Mantenemos el VerToolStripMenuItem habilitado por si algún código
+        ' legacy lo consulta, pero el item visible va en Ver_Columnas.
+        VerToolStripMenuItem.Enabled = True
 
         ' Actualizar Diseño As Req (Frame / Pier)
         Dim itemActDis As New ToolStripMenuItem("Actualizar Diseño As Req")

@@ -34,6 +34,28 @@ Public Class cViga
     <OptionalField>
     Public RefuerzoDesincronizado As Boolean = False
 
+    ''' <summary>
+    ''' Si True, la viga sigue en el modelo (fuerzas, geometría, cálculos) pero
+    ''' se filtra en reportes, plantas y dashboards. Útil para frames modelados
+    ''' que no son vigas reales (riostras, bordes decorativos, fragmentos de
+    ''' agrupación manual).
+    ''' Los cálculos masivos (envolventes, diseño, cortante) NO leen este flag:
+    ''' solo se filtran las vistas, para que re-incluir no exija recalcular.
+    ''' El campo almacenado es "Excluir" (default False) para que un .esm viejo
+    ''' que no trae el campo deserialice con "excluir=False" → incluida.
+    ''' </summary>
+    <OptionalField>
+    Public ExcluirDeRevision As Boolean = False
+
+    Public Property IncluirEnRevision As Boolean
+        Get
+            Return Not ExcluirDeRevision
+        End Get
+        Set(value As Boolean)
+            ExcluirDeRevision = Not value
+        End Set
+    End Property
+
     ''' Nombre para mostrar en la interfaz con indicadores de grupo.
     ''' [P] = patrón, [S] = similar sincronizado, [S!] = similar desincronizado.
     Public ReadOnly Property NombreDisplay As String

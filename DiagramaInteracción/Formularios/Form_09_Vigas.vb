@@ -11,6 +11,17 @@ Public Class Form_09_Vigas
 
     Private _vigas As List(Of cViga)
     Private _joints As Dictionary(Of String, cJoint)
+    Private _cmbChequeoPlanta As ComboBox
+
+    ''' <summary>Modo de chequeo activo en el combo encima de la planta. PeorGlobal por defecto.</summary>
+    Private ReadOnly Property ModoPlanta As DiagramaService.ModoChequeoPlanta
+        Get
+            If _cmbChequeoPlanta Is Nothing OrElse _cmbChequeoPlanta.SelectedIndex < 0 Then
+                Return DiagramaService.ModoChequeoPlanta.PeorGlobal
+            End If
+            Return CType(_cmbChequeoPlanta.SelectedIndex, DiagramaService.ModoChequeoPlanta)
+        End Get
+    End Property
 
     ' Layout adaptable: reparten el alto disponible entre los GroupBox de cada
     ' pestaña según la pantalla del equipo. Ver ConfigurarLayoutAdaptable().
@@ -216,7 +227,7 @@ Public Class Form_09_Vigas
                 Dim grids = Proyecto?.Elementos?.Grids?.GridLines
                 If grids IsNot Nothing Then
                     _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids,
-                                                   Lista_Pisos.SelectedItem?.ToString(), vigaSel)
+                                                   Lista_Pisos.SelectedItem?.ToString(), vigaSel, ModoPlanta)
                 End If
                 CargarVigaCompleta(vigaSel)
             End If
@@ -269,7 +280,7 @@ Public Class Form_09_Vigas
 
         Dim grids = Proyecto?.Elementos?.Grids?.GridLines
         If grids IsNot Nothing Then
-            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel)
+            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel, ModoPlanta)
         End If
         CargarVigaCompleta(vigaSel)
 
@@ -942,6 +953,26 @@ Public Class Form_09_Vigas
         CentrarBotonesRefuerzo()
         TimerAutoSave.Start()
 
+        ' Combo de chequeo encima de la planta. Flota en la esquina sup-derecha
+        ' del GroupBox3 "Vista en Planta". Mismo patrón que Pilas/Columnas/Nervios.
+        _cmbChequeoPlanta = New ComboBox With {
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .Width = 180,
+            .Font = New Font("Segoe UI", 8.5F),
+            .FlatStyle = FlatStyle.Flat,
+            .Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        }
+        _cmbChequeoPlanta.Items.AddRange(New String() {
+            "Chequeo: peor global",
+            "Chequeo: flexión",
+            "Chequeo: cortante"
+        })
+        _cmbChequeoPlanta.SelectedIndex = 0
+        _cmbChequeoPlanta.Location = New Point(GroupBox3.ClientSize.Width - _cmbChequeoPlanta.Width - 8, 2)
+        GroupBox3.Controls.Add(_cmbChequeoPlanta)
+        _cmbChequeoPlanta.BringToFront()
+        AddHandler _cmbChequeoPlanta.SelectedIndexChanged, Sub() RedibujarPlanta()
+
         Dim menuVista As New ToolStripMenuItem("Vista Interactiva Planta")
         menuVista.ForeColor = Color.White
         menuVista.BackColor = Color.FromArgb(87, 87, 87)
@@ -1009,6 +1040,20 @@ Public Class Form_09_Vigas
         menuReportes.DropDownItems.Add(itemVerResumen)
         menuReportes.DropDownItems.Add(itemGraficas)
         MenuStrip1.Items.Add(menuReportes)
+
+        ' Menú "Ver → Planta de Vigas" (patrón consistente con Pilas/Columnas).
+        ' Reutiliza AbrirVistaInteractiva, que es el mismo handler del botón
+        ' "Opciones → Vista Interactiva Planta" existente.
+        Dim menuVer As New ToolStripMenuItem("Ver")
+        menuVer.ForeColor = Color.White
+        menuVer.BackColor = Color.FromArgb(87, 87, 87)
+        Dim itemPlantaVigas As New ToolStripMenuItem("Planta de Vigas")
+        itemPlantaVigas.ForeColor = Color.White
+        itemPlantaVigas.BackColor = Color.FromArgb(87, 87, 87)
+        itemPlantaVigas.ToolTipText = "Vista en planta ampliada con pan/zoom y color por chequeo"
+        AddHandler itemPlantaVigas.Click, AddressOf AbrirVistaInteractiva
+        menuVer.DropDownItems.Add(itemPlantaVigas)
+        MenuStrip1.Items.Insert(MenuStrip1.Items.IndexOf(menuReportes), menuVer)
 
         ' ── Nivel de Disipación (DMO / DES) ──────────────────────────────────
         ' Declarar ambas variables antes de asignar handlers (los lambdas se capturan mutuamente)
@@ -1465,6 +1510,7 @@ Public Class Form_09_Vigas
         form.PisoActual = If(Lista_Pisos.SelectedItem IsNot Nothing,
                               Lista_Pisos.SelectedItem.ToString(), "")
         AddHandler form.VigaSeleccionadaPorDobleClick, AddressOf SeleccionarVigaDesdePlanta
+        AddHandler form.VigasIncluirRevisionCambiado, Sub() HayCambios = True
         form.Show(Me)
     End Sub
 
@@ -1728,6 +1774,26 @@ Public Class Form_09_Vigas
             _vigaActual.Frames.Add(frame)
         Next
 
+        ' Preguntar qué hacer con los frames descartados antes de materializar las
+        ' vigas residuales. Default sugerido: marcarlas como excluidas (es lo que
+        ' el usuario suele querer: frames que no son vigas reales y quedaron
+        ' sueltos no deben hacer ruido en reportes).
+        Dim excluirResiduales As Boolean = False
+        If labelsQuitar.Count > 0 Then
+            Dim msg As String = $"Quedarán {labelsQuitar.Count} elemento(s) fuera de {_vigaActual.NombreDisplay}:" & vbCrLf &
+                                $"   {String.Join(", ", labelsQuitar)}" & vbCrLf & vbCrLf &
+                                "Cada uno se creará como una viga suelta residual." & vbCrLf & vbCrLf &
+                                "¿Marcarlas como EXCLUIDAS de la revisión?" & vbCrLf &
+                                "   Sí → se filtran en reportes, dashboards y plantas (recomendado si no son vigas reales)." & vbCrLf &
+                                "   No → quedan como vigas revisables normales." & vbCrLf &
+                                "   Cancelar → aborta toda la reagrupación."
+            Dim resExcl = MessageBox.Show(msg, "Elementos descartados del grupo",
+                                           MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question,
+                                           MessageBoxDefaultButton.Button1)
+            If resExcl = DialogResult.Cancel Then Return
+            excluirResiduales = (resExcl = DialogResult.Yes)
+        End If
+
         ' Retirar frames de la viga actual; cada uno queda en su propia viga residual
         For Each label In labelsQuitar
             Dim frame = _vigaActual.Frames.FirstOrDefault(Function(f) f.ObjectLabel = label)
@@ -1737,7 +1803,8 @@ Public Class Form_09_Vigas
             Dim residual As New cViga With {
                 .Piso = frame.Story,
                 .Nombre = "VIGA-TMP",
-                .Name_Beam = "VIGA-TMP"
+                .Name_Beam = "VIGA-TMP",
+                .IncluirEnRevision = Not excluirResiduales
             }
             residual.Frames.Add(frame)
             Dim dir = _geo.VectorFrame(frame, _joints)
@@ -1874,7 +1941,7 @@ Public Class Form_09_Vigas
             Dim grids = Proyecto?.Elementos?.Grids?.GridLines
             If grids Is Nothing Then Exit Sub
 
-            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, _vigaActual)
+            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, _vigaActual, ModoPlanta)
 
         Catch ex As Exception
             Logger.Error(ex, "Form_09_Vigas.RedibujarPlanta")
@@ -2663,7 +2730,7 @@ Public Class Form_09_Vigas
 
         Dim grids = Proyecto?.Elementos?.Grids?.GridLines
         If grids IsNot Nothing Then
-            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel)
+            _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel, ModoPlanta)
         End If
 
         CargarVigaCompleta(vigaSel)
@@ -3558,7 +3625,7 @@ Public Class Form_09_Vigas
             Dim piso = _vigaActual.Piso
             Dim grids = Proyecto.Elementos?.Grids?.GridLines
             If grids IsNot Nothing Then
-                _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, piso, _vigaActual)
+                _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, piso, _vigaActual, ModoPlanta)
             End If
             CargarVigaCompleta(_vigaActual)
         End If

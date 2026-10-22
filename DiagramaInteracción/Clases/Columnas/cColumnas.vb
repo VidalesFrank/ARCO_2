@@ -36,6 +36,20 @@ Public Class cColumnas
     <OptionalField> Public Joints As New List(Of cJoint)()
     <OptionalField> Public Frames As New List(Of cFrame)()
 
+    ' Coordenadas por nombre de elemento. Se puebla al importar y permite ubicar
+    ' en planta columnas tipo Pier, cuyo Name_Elemento es el nombre del pier
+    ' (ej. "P1") y NO existe en Frames — el cruce habitual por JointI/J falla.
+    ' Equivalente a cPilas.CoordsPorLabel.
+    <OptionalField> Public CoordsPorLabel As Dictionary(Of String, System.Drawing.PointF)
+
+    ' Ángulos de orientación local (ETABS "Angle" / "AxisAngle") por tramo.
+    ' Clave: "Name_Elemento|Piso" en upper-invariant. Valor: grados antihorarios
+    ' desde el global X. Se puebla desde "Frame Assigns - Local Axes" (frames)
+    ' y la columna "AxisAngle" de "Pier Section Properties" (piers), y se aplica
+    ' sobre Tramo_Columna.AnguloOrientacion. Guardarlo en cColumnas permite
+    ' re-aplicar al recalcular o reabrir el .esm sin tener que releer el Excel.
+    <OptionalField> Public AngulosPorLabel As Dictionary(Of String, Single)
+
     <OnDeserialized>
     Private Sub InicializarDefaults(ctx As StreamingContext)
         If Lista_Pisos Is Nothing Then Lista_Pisos = New List(Of String)
@@ -49,6 +63,12 @@ Public Class cColumnas
         If String.IsNullOrEmpty(Trans_Circular) Then Trans_Circular = "Espiral"
         If Joints Is Nothing Then Joints = New List(Of cJoint)()
         If Frames Is Nothing Then Frames = New List(Of cFrame)()
+        If CoordsPorLabel Is Nothing Then
+            CoordsPorLabel = New Dictionary(Of String, System.Drawing.PointF)(StringComparer.OrdinalIgnoreCase)
+        End If
+        If AngulosPorLabel Is Nothing Then
+            AngulosPorLabel = New Dictionary(Of String, Single)(StringComparer.OrdinalIgnoreCase)
+        End If
     End Sub
 
 End Class

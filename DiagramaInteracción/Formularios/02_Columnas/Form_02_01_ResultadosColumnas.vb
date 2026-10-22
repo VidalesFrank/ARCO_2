@@ -67,10 +67,18 @@ Public Class Form_02_01_ResultadosColumnas
         End If
 
         For i = 0 To Seccion.Count * 2 - 1
-            If Tabla_Resultados.Rows(i).Cells(5).Value < 0.9 AndAlso Tabla_Resultados.Rows(i).Cells(5).Value > 0 Then
-                FuncionColorCumple(Tabla_Resultados, i, 5, "No cumple")
-            ElseIf Tabla_Resultados.Rows(i).Cells(5).Value >= 0.9 Then
-                FuncionColorCumple(Tabla_Resultados, i, 5, "Cumple")
+            ' F_Flexo (col 5) y C/D Biaxial (colDIBiaxial): coloreado por envolvente.
+            ' Si cualquiera de los dos chequeos del tramo cumple, se marcan ambos como
+            ' cumple — decisión del equipo. El valor que se muestra sigue siendo el
+            ' valor individual de cada celda (no cambia el número, solo el color).
+            Dim tramo = Seccion(i \ 2)
+            Dim envol = ColumnaService.CDFlexoEnvolvente(tramo)
+            Dim cumpleEnv As Boolean = (envol >= 0.9F)
+            Dim estadoEnv As String = If(cumpleEnv, "Cumple", "No cumple")
+
+            Dim valF As Object = Tabla_Resultados.Rows(i).Cells(5).Value
+            If valF IsNot Nothing AndAlso IsNumeric(valF) AndAlso CSng(valF) > 0 Then
+                FuncionColorCumple(Tabla_Resultados, i, 5, estadoEnv)
             End If
             If Tabla_Resultados.Rows(i).Cells(6).Value < 0.9 And Tabla_Resultados.Rows(i).Cells(6).Value > 0 Then
                 FuncionColorCumple(Tabla_Resultados, i, 6, "No cumple")
@@ -87,12 +95,11 @@ Public Class Form_02_01_ResultadosColumnas
             Else
                 FuncionColorCumple(Tabla_Resultados, i, 13, "Cumple")
             End If
-            ' Color C/D Biaxial (solo filas pares)
+            ' Color C/D Biaxial (solo filas pares): mismo estado que la envolvente.
             If colDIBiaxial IsNot Nothing AndAlso i Mod 2 = 0 Then
                 Dim cdValObj As Object = Tabla_Resultados.Rows(i).Cells(colDIBiaxial.Index).Value
                 If cdValObj IsNot Nothing Then
-                    Dim cdVal As Single = CSng(cdValObj)
-                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, If(cdVal >= 0.9F, "Cumple", "No cumple"))
+                    FuncionColorCumple(Tabla_Resultados, i, colDIBiaxial.Index, estadoEnv)
                 End If
             End If
         Next
