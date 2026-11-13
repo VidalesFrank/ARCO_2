@@ -1,0 +1,1548 @@
+<Window x:Class="PiloteOverviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ARCO"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="{Binding TituloVentana}"
+        Width="1400" Height="900"
+        MinWidth="1180" MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BrushFondoApp}"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="56"
+                            ResizeBorderThickness="6"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Theme.Claro.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Styles.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/14_Pilotes/Resources/Pilotes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <local:CDColorConverter       x:Key="CDColor"/>
+            <local:CDTextConverter        x:Key="CDTexto"/>
+            <local:BoolToVisibilityConverter x:Key="BoolVis"/>
+            <local:InverseBoolConverter   x:Key="InvBool"/>
+            <local:ErroresTextConverter   x:Key="ErroresTxt"/>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═════════════════ TOPBAR ═════════════════ -->
+        <Border Grid.Row="0" Background="{DynamicResource BrushTopBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Marca -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="20,0,0,0">
+                    <Grid Width="32" Height="32" Margin="0,0,10,0">
+                        <Ellipse Fill="{DynamicResource BrushAzulInteraccion}"/>
+                        <Path Data="M 6,20 Q 16,4 26,20"
+                              Stroke="White" StrokeThickness="2.6"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Fill="Transparent"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Text="ARCO"
+                               FontFamily="{DynamicResource FuenteDisplay}"
+                               FontSize="18" Foreground="{DynamicResource BrushTopBarTexto}"
+                               VerticalAlignment="Center"/>
+                    <Rectangle Width="1" Height="24"
+                               Fill="{DynamicResource BrushTopBarDivisor}"
+                               Margin="16,0,16,0"/>
+                    <TextBlock Text="Pilotes"
+                               FontFamily="{DynamicResource FuenteBase}"
+                               FontSize="14"
+                               Foreground="{DynamicResource BrushTopBarTextoTenue}"
+                               VerticalAlignment="Center"/>
+                    <Border Margin="12,0,0,0" Padding="7,2" CornerRadius="10"
+                            Background="{DynamicResource BrushBadgeFondo}"
+                            BorderBrush="{DynamicResource BrushBadgeBorde}"
+                            BorderThickness="1" VerticalAlignment="Center">
+                        <TextBlock Text="BETA · Nueva UI"
+                                   FontFamily="{DynamicResource FuenteBase}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource BrushBadgeTexto}"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Breadcrumb -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="24,0,0,0">
+                    <TextBlock x:Name="LblSeccion"
+                               Text="{Binding VistaActiva}"
+                               FontFamily="{DynamicResource FuenteBase}"
+                               FontSize="13"
+                               Foreground="{DynamicResource BrushTopBarTextoTenue}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Botones de ventana (min/max/close) -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="0,0,10,0"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource BtnIconoTopBar}"
+                            Click="BtnMinimizar_Click" ToolTip="Minimizar">
+                        <Path Data="M 4,9 H 14" Stroke="{DynamicResource BrushTopBarTexto}"
+                              StrokeThickness="1.5"/>
+                    </Button>
+                    <Button Style="{StaticResource BtnIconoTopBar}"
+                            Click="BtnMaximizar_Click" ToolTip="Maximizar/Restaurar">
+                        <Rectangle Width="10" Height="10"
+                                   Stroke="{DynamicResource BrushTopBarTexto}"
+                                   StrokeThickness="1.5"/>
+                    </Button>
+                    <Button Style="{StaticResource BtnIconoTopBar}"
+                            Click="BtnCerrar_Click" ToolTip="Cerrar">
+                        <Path Data="M 4,4 L 14,14 M 14,4 L 4,14"
+                              Stroke="{DynamicResource BrushTopBarTexto}"
+                              StrokeThickness="1.5"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═════════════════ BODY ═════════════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="72"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── Rail de navegación ─────────────────────────────── -->
+            <Border Grid.Column="0" Background="{DynamicResource BrushSidebar}">
+                <StackPanel Orientation="Vertical">
+                    <RadioButton GroupName="Nav" Style="{StaticResource BtnRail}"
+                                 IsChecked="{Binding EsInicio, Mode=OneWay}"
+                                 Command="{Binding CmdIrInicio}" ToolTip="Inicio">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                            <ContentControl Content="{StaticResource IconoInicio}"/>
+                            <TextBlock Text="Inicio" HorizontalAlignment="Center"
+                                       Margin="0,4,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="Nav" Style="{StaticResource BtnRail}"
+                                 IsChecked="{Binding EsPilotes, Mode=OneWay}"
+                                 Command="{Binding CmdIrPilotes}" ToolTip="Catálogo de Pilotes">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                            <ContentControl Content="{StaticResource IconoPilote}"/>
+                            <TextBlock Text="Pilotes" HorizontalAlignment="Center"
+                                       Margin="0,4,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="Nav" Style="{StaticResource BtnRail}"
+                                 IsChecked="{Binding EsDados, Mode=OneWay}"
+                                 Command="{Binding CmdIrDados}" ToolTip="Catálogo de Dados">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                            <ContentControl Content="{StaticResource IconoDado}"/>
+                            <TextBlock Text="Dados" HorizontalAlignment="Center"
+                                       Margin="0,4,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="Nav" Style="{StaticResource BtnRail}"
+                                 IsChecked="{Binding EsApoyos, Mode=OneWay}"
+                                 Command="{Binding CmdIrApoyos}" ToolTip="Asignación de Apoyos">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                            <ContentControl Content="{StaticResource IconoApoyos}"/>
+                            <TextBlock Text="Apoyos" HorizontalAlignment="Center"
+                                       Margin="0,4,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="Nav" Style="{StaticResource BtnRail}"
+                                 IsChecked="{Binding EsResultados, Mode=OneWay}"
+                                 Command="{Binding CmdIrResultados}" ToolTip="Resultados">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                            <ContentControl Content="{StaticResource IconoResultados}"/>
+                            <TextBlock Text="Resultados" HorizontalAlignment="Center"
+                                       Margin="0,4,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+            </Border>
+
+            <!-- ── Contenido principal ─────────────────────────────── -->
+            <Grid Grid.Column="1">
+
+                <!-- VISTA INICIO -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding EsInicio, Converter={StaticResource BoolVis}}">
+                    <StackPanel Margin="32">
+
+                        <TextBlock Text="Módulo de Pilotes"
+                                   FontFamily="{DynamicResource FuenteDisplay}"
+                                   FontSize="28"
+                                   Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                        <TextBlock Text="Diseño y revisión de grupos de pilotes y micropilotes bajo cabezales rígidos."
+                                   FontSize="14"
+                                   Foreground="{DynamicResource BrushTextoSecundario}"
+                                   Margin="0,4,0,24"/>
+
+                        <!-- Tarjetas KPI -->
+                        <UniformGrid Columns="4" HorizontalAlignment="Stretch">
+
+                            <Border Style="{StaticResource CardKPI}" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <TextBlock Text="TIPOS DE PILOTE" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"
+                                               FontFamily="{DynamicResource FuenteBase}"/>
+                                    <TextBlock Text="{Binding NumTiposPilote}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                                    <TextBlock Text="definidos en el catálogo" FontSize="12"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardKPI}" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <TextBlock Text="TIPOS DE DADO" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <TextBlock Text="{Binding NumTiposDado}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                                    <TextBlock Text="plantillas de cabezal" FontSize="12"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardKPI}" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <TextBlock Text="APOYOS" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <TextBlock Text="{Binding NumApoyos}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                                    <TextBlock Text="dados en el modelo" FontSize="12"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardKPI}">
+                                <StackPanel>
+                                    <TextBlock Text="CUMPLIMIENTO" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding PorcentajeCumplimiento, StringFormat={}{0:0}}"
+                                                   FontSize="36"
+                                                   FontFamily="{DynamicResource FuenteDisplay}"
+                                                   Foreground="{DynamicResource BrushCumple}"/>
+                                        <TextBlock Text="%" FontSize="20" VerticalAlignment="Bottom"
+                                                   Margin="2,0,0,8"
+                                                   Foreground="{DynamicResource BrushCumple}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding NumApoyosCumplen, StringFormat='{}{0} de apoyos cumplen'}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+
+                        </UniformGrid>
+
+                        <!-- Panel de bienvenida con acciones -->
+                        <Border Style="{StaticResource Card}" Margin="0,24,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Empieza por aquí"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               FontSize="16"
+                                               Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                    <TextBlock Margin="0,8,0,0" FontSize="13"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"
+                                               TextWrapping="Wrap">
+                                        <Run Text="1."/> <Run Text="Define tus tipos de pilote (perforado, hincado o micropilote) en el catálogo."/>
+                                        <LineBreak/>
+                                        <Run Text="2."/> <Run Text="Arma uno o varios tipos de dado con geometría arbitraria y disposición de pilotes."/>
+                                        <LineBreak/>
+                                        <Run Text="3."/> <Run Text="Asigna cada apoyo a un tipo de dado para heredar la configuración."/>
+                                        <LineBreak/>
+                                        <Run Text="4."/> <Run Text="ARCO resuelve cabezal rígido (tensor biaxial completo) y entrega C/D por apoyo."/>
+                                    </TextBlock>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                                    <Button Style="{StaticResource BtnPrimario}"
+                                            Content="Ver catálogo de pilotes"
+                                            Command="{Binding CmdIrPilotes}"
+                                            MinWidth="220" Margin="0,0,0,8"/>
+                                    <Button Style="{StaticResource BtnSecundario}"
+                                            Content="Editor de dados"
+                                            Command="{Binding CmdIrDados}"
+                                            MinWidth="220"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Qué trae esta versión"
+                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                           FontSize="16"
+                                           Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <StackPanel Margin="0,12,0,0">
+                                    <TextBlock FontSize="13" Foreground="{DynamicResource BrushTextoSecundario}">
+                                        <Run Text="✓" Foreground="{DynamicResource BrushCumple}"/>
+                                        <Run Text="Catálogo de pilotes con compresión y tracción (micropilotes)."/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource BrushTextoSecundario}">
+                                        <Run Text="✓" Foreground="{DynamicResource BrushCumple}"/>
+                                        <Run Text="Editor de dados con polígono arbitrario, generadores (rectangular, circular, pentagonal, hexagonal), centroide y validaciones."/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource BrushTextoSecundario}">
+                                        <Run Text="✓" Foreground="{DynamicResource BrushCumple}"/>
+                                        <Run Text="Cálculo de fuerzas en pilote por cabezal rígido con tensor de inercia completo (válido para pentágonos y layouts asimétricos)."/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource BrushTextoSecundario}">
+                                        <Run Text="○" Foreground="{DynamicResource BrushTextoDeshabilitado}"/>
+                                        <Run Text="Importación ETABS, vista en planta, reporte Excel y vista 3D vienen en v1.1."/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- VISTA PILOTES -->
+                <Grid Visibility="{Binding EsPilotes, Converter={StaticResource BoolVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="340"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Lista izquierda -->
+                    <Border Grid.Column="0" Background="{DynamicResource BrushSuperficie}"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="0,0,1,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="20,20,20,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Tipos de pilote"
+                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                           FontSize="16"
+                                           Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <Button Grid.Column="1" Style="{StaticResource BtnSecundario}"
+                                        Content="+ Nuevo"
+                                        Command="{Binding CmdNuevoTipoPilote}"/>
+                            </Grid>
+                            <ListBox Grid.Row="1" Margin="12,8,12,8"
+                                     ItemsSource="{Binding TiposPilote}"
+                                     SelectedItem="{Binding TipoPiloteSeleccionado}"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     HorizontalContentAlignment="Stretch"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,2"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="b" Padding="12,10"
+                                                            CornerRadius="6"
+                                                            Background="{TemplateBinding Background}">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="b" Property="Background"
+                                                                    Value="{DynamicResource BrushSuperficieHover}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="b" Property="Background"
+                                                                    Value="{DynamicResource BrushSuperficiePresion}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid Grid.Column="0" Width="36" Height="36" Margin="0,0,10,0">
+                                                <Ellipse Fill="{DynamicResource BrushPiloteRelleno}"/>
+                                                <TextBlock Text="P"
+                                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                                           FontSize="16" Foreground="White"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Nombre}"
+                                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                                           FontSize="13"
+                                                           Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                                <TextBlock Text="{Binding Descripcion}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button Grid.Row="2" Style="{StaticResource BtnSecundario}"
+                                    Content="Eliminar seleccionado"
+                                    Command="{Binding CmdBorrarTipoPilote}"
+                                    Margin="20,8,20,20"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Panel de edición -->
+                    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                        <Grid Margin="32">
+                            <StackPanel>
+                                <TextBlock Text="Propiedades del pilote"
+                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                           FontSize="22"
+                                           Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <TextBlock Text="Define la geometría y la capacidad admisible por pilote."
+                                           FontSize="13"
+                                           Foreground="{DynamicResource BrushTextoSecundario}"
+                                           Margin="0,4,0,20"/>
+
+                                <Border Style="{StaticResource Card}">
+                                    <Grid DataContext="{Binding TipoPiloteSeleccionado}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="NOMBRE" FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontSize="14" Padding="10,8" Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="TIPO" FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                        <ComboBox Grid.Row="1" Grid.Column="2"
+                                                  SelectedItem="{Binding Tipo}"
+                                                  FontSize="14" Padding="10,8" Margin="0,0,0,16">
+                                            <ComboBox.ItemsSource>
+                                                <x:Array Type="{x:Type local:eTipoPilote}">
+                                                    <local:eTipoPilote>Perforado</local:eTipoPilote>
+                                                    <local:eTipoPilote>Hincado</local:eTipoPilote>
+                                                    <local:eTipoPilote>Micropilote</local:eTipoPilote>
+                                                </x:Array>
+                                            </ComboBox.ItemsSource>
+                                        </ComboBox>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="DIÁMETRO [m]" FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                        <!-- UpdateSourceTrigger=LostFocus para numéricos: con PropertyChanged
+                                             la parse falla mientras el usuario escribe un valor parcial
+                                             (vacío, "1.", etc.) y revierte el texto, dando sensación de
+                                             "bloqueado". LostFocus commit al salir del campo. -->
+                                        <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding Diametro, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.000}}"
+                                                 FontSize="14" Padding="10,8" Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="LONGITUD [m]" FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                        <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Longitud, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.00}}"
+                                                 FontSize="14" Padding="10,8" Margin="0,0,0,16"/>
+
+                                        <Separator Grid.Row="4" Grid.ColumnSpan="3" Margin="0,4,0,20"/>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="CAPACIDAD COMPRESIÓN Qc [kN]" FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                        <TextBox Grid.Row="6" Grid.Column="0" Text="{Binding Qc_Admisible, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}"
+                                                 FontSize="14" Padding="10,8" Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="2" Text="CAPACIDAD TRACCIÓN Qt [kN]" FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                        <TextBox Grid.Row="6" Grid.Column="2" Text="{Binding Qt_Admisible, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}"
+                                                 FontSize="14" Padding="10,8" Margin="0,0,0,16"/>
+
+                                        <Border Grid.Row="7" Grid.ColumnSpan="3" Padding="12" CornerRadius="6"
+                                                Background="{DynamicResource BrushSuperficieBanner}"
+                                                Visibility="{Binding EsMicropilote, Converter={StaticResource BoolVis}}">
+                                            <StackPanel>
+                                                <TextBlock Text="Micropilote detectado" FontSize="12"
+                                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                                           Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                                                <TextBlock FontSize="12"
+                                                           Foreground="{DynamicResource BrushTextoSecundario}"
+                                                           TextWrapping="Wrap" Margin="0,4,0,0">
+                                                    Los micropilotes típicamente resisten tracción. Verifica Qt &gt; 0
+                                                    cuando el apoyo tenga combinaciones con FZ negativo.
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- VISTA DADOS (el showpiece) -->
+                <Grid Visibility="{Binding EsDados, Converter={StaticResource BoolVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="320"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Lista de dados -->
+                    <Border Grid.Column="0" Background="{DynamicResource BrushSuperficie}"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="0,0,1,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="20,20,20,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Dados" FontFamily="{DynamicResource FuenteDisplay}"
+                                           FontSize="16" Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <Button Grid.Column="1" Style="{StaticResource BtnSecundario}"
+                                        Content="+ Nuevo" Command="{Binding CmdNuevoTipoDado}"/>
+                            </Grid>
+                            <ListBox Grid.Row="1" Margin="12,8,12,8"
+                                     ItemsSource="{Binding TiposDado}"
+                                     SelectedItem="{Binding TipoDadoSeleccionado}"
+                                     BorderThickness="0" Background="Transparent"
+                                     HorizontalContentAlignment="Stretch">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,2"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="b" Padding="12,10" CornerRadius="6"
+                                                            Background="{TemplateBinding Background}">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="b" Property="Background"
+                                                                    Value="{DynamicResource BrushSuperficieHover}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="b" Property="Background"
+                                                                    Value="{DynamicResource BrushSuperficiePresion}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Nombre}"
+                                                       FontFamily="{DynamicResource FuenteDisplay}"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                            <TextBlock Text="{Binding Resumen}" FontSize="11"
+                                                       Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button Grid.Row="2" Style="{StaticResource BtnSecundario}"
+                                    Content="Eliminar seleccionado"
+                                    Command="{Binding CmdBorrarTipoDado}" Margin="20,8,20,20"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Canvas editor -->
+                    <Grid Grid.Column="1" Background="{DynamicResource BrushCanvasFondo}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Toolbar superior -->
+                        <Border Grid.Row="0" Background="{DynamicResource BrushSuperficie}"
+                                BorderBrush="{DynamicResource BrushBorde}" BorderThickness="0,0,0,1">
+                            <StackPanel Orientation="Horizontal" Margin="16,12">
+                                <TextBlock Text="Generadores:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" FontSize="12"/>
+                                <Button Style="{StaticResource BtnSecundario}" Content="Rectangular 3×3"
+                                        Command="{Binding CmdAplicarGeneradorRectangular}" Margin="0,0,6,0"/>
+                                <Button Style="{StaticResource BtnSecundario}" Content="Circular 6"
+                                        Command="{Binding CmdAplicarGeneradorCircular}" Margin="0,0,6,0"/>
+                                <Button Style="{StaticResource BtnSecundario}" Content="Pentagonal"
+                                        Command="{Binding CmdAplicarGeneradorPentagonal}" Margin="0,0,6,0"/>
+                                <Button Style="{StaticResource BtnSecundario}" Content="Hexagonal"
+                                        Command="{Binding CmdAplicarGeneradorHexagonal}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Canvas de edición -->
+                        <Grid Grid.Row="1" ClipToBounds="True">
+                            <Canvas x:Name="CanvasEditor" Background="Transparent"
+                                    MouseLeftButtonDown="CanvasEditor_MouseLeftButtonDown"
+                                    MouseMove="CanvasEditor_MouseMove"
+                                    MouseWheel="CanvasEditor_MouseWheel"
+                                    SizeChanged="CanvasEditor_SizeChanged">
+                                <Canvas.LayoutTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                </Canvas.LayoutTransform>
+                            </Canvas>
+                            <!-- Overlay: indicador de coordenadas -->
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                    Margin="12" Padding="10,6"
+                                    Background="{DynamicResource BrushSuperficie}"
+                                    BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                                    CornerRadius="4">
+                                <TextBlock x:Name="LblCoords" Text="x: — m    y: — m"
+                                           FontFamily="Consolas" FontSize="12"
+                                           Foreground="{DynamicResource BrushTextoSecundario}"/>
+                            </Border>
+                            <!-- Leyenda -->
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                    Margin="12" Padding="12,8"
+                                    Background="{DynamicResource BrushSuperficie}"
+                                    BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                                    CornerRadius="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="10" Height="10" Fill="{DynamicResource BrushPiloteRelleno}"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Pilote" Margin="5,0,14,0" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <Rectangle Width="10" Height="10" Fill="{DynamicResource BrushDadoRelleno}"
+                                               Stroke="{DynamicResource BrushDadoBorde}" StrokeThickness="1"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Dado" Margin="5,0,14,0" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <Path Data="M -5,0 L 5,0 M 0,-5 L 0,5"
+                                          Stroke="{DynamicResource BrushCentroideGrupo}" StrokeThickness="2"
+                                          VerticalAlignment="Center" Width="12" Height="12"/>
+                                    <TextBlock Text="Centroide grupo" Margin="5,0,0,0" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Status bar -->
+                        <Border Grid.Row="2" Background="{DynamicResource BrushSuperficie}"
+                                BorderBrush="{DynamicResource BrushBorde}" BorderThickness="0,1,0,0"
+                                Padding="16,8">
+                            <TextBlock FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}">
+                                Clic para colocar pilote · Clic derecho sobre pilote para eliminar · Rueda del mouse para zoom
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+
+                    <!-- Panel de propiedades del dado -->
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                                  Background="{DynamicResource BrushSuperficie}">
+                        <Grid Margin="24" DataContext="{Binding TipoDadoSeleccionado}">
+                            <StackPanel>
+                                <TextBlock Text="Propiedades"
+                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                           FontSize="18"
+                                           Foreground="{DynamicResource BrushTextoPrincipal}"
+                                           Margin="0,0,0,16"/>
+
+                                <TextBlock Text="NOMBRE" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="14" Padding="10,8" Margin="0,0,0,14"/>
+
+                                <TextBlock Text="DESCRIPCIÓN" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="13" Padding="10,8" Margin="0,0,0,14"
+                                         TextWrapping="Wrap" AcceptsReturn="True" Height="60"/>
+
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="14"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="ESPESOR [m]" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="0"
+                                             Text="{Binding Espesor, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.00}}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="RECUBRIMIENTO [m]" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="2"
+                                             Text="{Binding Recubrimiento, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.000}}"
+                                             FontSize="13" Padding="10,8"/>
+                                </Grid>
+
+                                <TextBlock Text="RESUMEN DEL GRUPO" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,8,0,8"/>
+                                <Border Padding="14,12" CornerRadius="6"
+                                        Background="{DynamicResource BrushSuperficieBanner}">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Pilotes:" FontSize="12"
+                                                       Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding NumPilotes}" FontSize="12"
+                                                       FontFamily="{DynamicResource FuenteDisplay}"
+                                                       Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="VALIDACIÓN" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}"
+                                           Margin="0,16,0,8"
+                                           DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                <Border Padding="14,12" CornerRadius="6"
+                                        DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource BrushCumpleFondo}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BrushCumple}"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DadoEsValido}" Value="False">
+                                                    <Setter Property="Background" Value="{DynamicResource BrushNoCumpleFondo}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource BrushNoCumple}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal"
+                                                    Visibility="{Binding DadoEsValido, Converter={StaticResource BoolVis}}">
+                                            <TextBlock Text="✓" FontSize="18"
+                                                       Foreground="{DynamicResource BrushCumple}"/>
+                                            <TextBlock Text="Geometría válida" Margin="8,0,0,0"
+                                                       FontFamily="{DynamicResource FuenteDisplay}" FontSize="13"
+                                                       Foreground="{DynamicResource BrushCumple}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding DadoEsValido}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <TextBlock Text="Problemas detectados:"
+                                                       FontFamily="{DynamicResource FuenteDisplay}" FontSize="12"
+                                                       Foreground="{DynamicResource BrushNoCumple}"/>
+                                            <TextBlock Text="{Binding ErroresValidacion, Converter={StaticResource ErroresTxt}}"
+                                                       Margin="0,6,0,0" FontSize="11"
+                                                       Foreground="{DynamicResource BrushTextoPrincipal}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- VISTA APOYOS -->
+                <Grid Visibility="{Binding EsApoyos, Converter={StaticResource BoolVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Encabezado -->
+                    <StackPanel Grid.Row="0" Margin="32,24,32,0">
+                        <TextBlock Text="Apoyos del modelo"
+                                   FontFamily="{DynamicResource FuenteDisplay}" FontSize="22"
+                                   Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                        <TextBlock Text="Cada apoyo trae su label ETABS, coordenadas y combinaciones. El tipo indica cómo se leyeron las fuerzas: Frame → Joint Reactions, Pier → Pier Forces base."
+                                   FontSize="13" Foreground="{DynamicResource BrushTextoSecundario}"
+                                   TextWrapping="Wrap" Margin="0,4,0,16"/>
+                    </StackPanel>
+
+                    <!-- Callout si falta selección de combinaciones -->
+                    <Border Grid.Row="1" Margin="32,8,32,8" Padding="14,10" CornerRadius="6"
+                            Background="#FFF7E3"
+                            BorderBrush="{DynamicResource BrushAdvertencia}" BorderThickness="1"
+                            Visibility="{Binding RequiereSeleccionDeCombos, Converter={StaticResource BoolVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚠" FontSize="16" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource BrushAdvertencia}"/>
+                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="Elige las combinaciones de diseño antes de ver resultados"
+                                           FontFamily="{DynamicResource FuenteDisplay}" FontSize="13"
+                                           Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <TextBlock Text="Las C/D aparecerán en gris hasta que selecciones qué combinaciones participan."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}"/>
+                            </StackPanel>
+                            <Button Content="Seleccionar combinaciones…"
+                                    Command="{Binding CmdSeleccionarCombinaciones}"
+                                    Style="{StaticResource BtnPrimario}" Margin="16,0,0,0"
+                                    VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Toolbar -->
+                    <Border Grid.Row="2" Margin="32,0,32,16" Padding="16,12"
+                            Background="{DynamicResource BrushSuperficie}"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                            CornerRadius="6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource BtnPrimario}"
+                                    Content="Importar desde ETABS…"
+                                    Command="{Binding CmdImportarETABS}"
+                                    MinWidth="200"/>
+                            <Button Grid.Column="1" Style="{StaticResource BtnSecundario}"
+                                    Content="Asignar tipo a todos sin tipo"
+                                    Command="{Binding CmdAsignarTipoDadoATodos}"
+                                    Margin="10,0,0,0"/>
+                            <Button Grid.Column="2" Style="{StaticResource BtnSecundario}"
+                                    Content="Recalcular"
+                                    Command="{Binding CmdRecalcular}" Margin="10,0,0,0"/>
+
+                            <!-- Chip de combos seleccionadas (clickeable abre el selector) -->
+                            <Button Grid.Column="3"
+                                    Command="{Binding CmdSeleccionarCombinaciones}"
+                                    Margin="16,0,0,0"
+                                    Visibility="{Binding NumCombinacionesTotal, Converter={StaticResource BoolVis}}"
+                                    Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0" Padding="0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="chip" Padding="12,6" CornerRadius="14"
+                                                BorderThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#E7F2FB"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource BrushAzulInteraccion}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding NumCombinacionesSeleccionadas}" Value="0">
+                                                            <Setter Property="Background" Value="#FFF3D6"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource BrushAdvertencia}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="⚙" FontSize="12" Margin="0,0,6,0"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                                                <TextBlock Text="{Binding TextoCombinaciones}"
+                                                           FontSize="12"
+                                                           FontFamily="{DynamicResource FuenteDisplay}"
+                                                           Foreground="{DynamicResource BrushTextoPrincipal}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <!-- CTA al dashboard de resultados: solo visible si hay apoyos -->
+                            <Button Grid.Column="4"
+                                    Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}}"
+                                    Command="{Binding CmdIrResultados}"
+                                    Margin="10,0,0,0"
+                                    Cursor="Hand"
+                                    Background="{DynamicResource BrushCumple}"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    FontFamily="{DynamicResource FuenteDisplay}"
+                                    FontSize="13">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="b" Background="{TemplateBinding Background}"
+                                                CornerRadius="6" Padding="18,8">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="📊" FontSize="14" Margin="0,0,8,0"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="Ver dashboard de resultados"
+                                                           Foreground="{TemplateBinding Foreground}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="  ›" FontSize="18" Margin="6,0,0,0"
+                                                           Foreground="{TemplateBinding Foreground}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="b" Property="Background" Value="#228F55"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center"
+                                        Margin="16,0,0,0">
+                                <TextBlock Text="Total:" Foreground="{DynamicResource BrushTextoSecundario}"
+                                           FontSize="12" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding NumApoyos}"
+                                           FontFamily="{DynamicResource FuenteDisplay}" FontSize="16"
+                                           Foreground="{DynamicResource BrushAzulPrincipal}"
+                                           Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Tabla / empty state con panel detalle -->
+                    <Grid Grid.Row="3" Margin="32,0,32,24">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="2*" MinHeight="180"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="1*" MinHeight="180"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Empty state cuando no hay apoyos -->
+                        <StackPanel Grid.Row="0" Grid.RowSpan="3"
+                                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}, ConverterParameter=Invert}">
+                            <Border Width="72" Height="72" CornerRadius="36"
+                                    Background="{DynamicResource BrushSuperficieBanner}">
+                                <TextBlock Text="⇣" FontSize="36"
+                                           Foreground="{DynamicResource BrushAzulInteraccion}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Aún no has importado apoyos"
+                                       FontFamily="{DynamicResource FuenteDisplay}" FontSize="16"
+                                       Foreground="{DynamicResource BrushTextoPrincipal}"
+                                       Margin="0,16,0,8" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Usa 'Importar desde ETABS' para traer apoyos tipo Frame (columnas) y Pier (muros) desde un Excel exportado."
+                                       FontSize="13" Foreground="{DynamicResource BrushTextoSecundario}"
+                                       TextWrapping="Wrap" MaxWidth="440" TextAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Tabla principal de apoyos (row 0) -->
+                        <Border Grid.Row="0"
+                                Background="{DynamicResource BrushSuperficie}"
+                                BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                                CornerRadius="6"
+                                Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}}">
+                            <DataGrid ItemsSource="{Binding Dados}"
+                                      SelectedItem="{Binding DadoSeleccionado, Mode=TwoWay}"
+                                      AutoGenerateColumns="False"
+                                      HeadersVisibility="Column"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      GridLinesVisibility="Horizontal"
+                                      HorizontalGridLinesBrush="{DynamicResource BrushBordeTenue}"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      RowHeight="34"
+                                      FontFamily="{DynamicResource FuenteBase}"
+                                      FontSize="12"
+                                      AlternatingRowBackground="{DynamicResource BrushBordeTenue}">
+                                <DataGrid.Columns>
+
+                                    <!-- Origen: badge Frame / Pier -->
+                                    <DataGridTemplateColumn Header="Origen" Width="90" IsReadOnly="True">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="8,3" CornerRadius="10"
+                                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                        Margin="6,0,0,0">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#E8EEF5"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding EsFrame}" Value="True">
+                                                                    <Setter Property="Background" Value="#DCEBF6"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding EsPier}" Value="True">
+                                                                    <Setter Property="Background" Value="#FBE4CE"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding SourceType}" FontSize="11"
+                                                               FontFamily="{DynamicResource FuenteDisplay}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrushTextoSecundario}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding EsFrame}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#244A68"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding EsPier}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#8A4E13"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <DataGridTextColumn Header="Joint / Pier" Binding="{Binding JointLabel}"
+                                                        Width="110" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="X [m]"
+                                                        Binding="{Binding XGlobal, StringFormat={}{0:0.00}}"
+                                                        Width="70" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Y [m]"
+                                                        Binding="{Binding YGlobal, StringFormat={}{0:0.00}}"
+                                                        Width="70" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Z base"
+                                                        Binding="{Binding ZBase, StringFormat={}{0:0.00}}"
+                                                        Width="70" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="# Comb."
+                                                        Binding="{Binding NumCombinaciones}"
+                                                        Width="70" IsReadOnly="True"/>
+
+                                    <!-- Tipo de dado (editable, combo contra TiposDado) -->
+                                    <DataGridTemplateColumn Header="Tipo de dado" Width="180">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox SelectedValue="{Binding NombreTipoDado, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          ItemsSource="{Binding DataContext.TiposDado, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          DisplayMemberPath="Nombre"
+                                                          SelectedValuePath="Nombre"
+                                                          FontSize="12" Margin="4,2"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <DataGridTextColumn Header="Pu max [kN]"
+                                                        Binding="{Binding Pu_Max, StringFormat={}{0:0}}"
+                                                        Width="90" IsReadOnly="True"/>
+
+                                    <!-- C/D compresión con color -->
+                                    <DataGridTemplateColumn Header="C/D compr" Width="90" IsReadOnly="True">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="8,2" CornerRadius="4"
+                                                        HorizontalAlignment="Center"
+                                                        Background="{Binding CD_Compresion, Converter={StaticResource CDColor}}"
+                                                        Margin="0,4">
+                                                    <TextBlock Text="{Binding CD_Compresion, Converter={StaticResource CDTexto}}"
+                                                               Foreground="White" FontSize="12"
+                                                               FontFamily="{DynamicResource FuenteDisplay}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- C/D tracción con color (sentinela 0 = "—") -->
+                                    <DataGridTemplateColumn Header="C/D tracc" Width="90" IsReadOnly="True">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="8,2" CornerRadius="4"
+                                                        HorizontalAlignment="Center"
+                                                        Background="{Binding CD_Traccion, Converter={StaticResource CDColor}}"
+                                                        Margin="0,4">
+                                                    <TextBlock Text="{Binding CD_Traccion, Converter={StaticResource CDTexto}}"
+                                                               Foreground="White" FontSize="12"
+                                                               FontFamily="{DynamicResource FuenteDisplay}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <DataGridTextColumn Header="Combo gob." Binding="{Binding ComboGobCompresion}"
+                                                        Width="*" IsReadOnly="True"/>
+
+                                    <!-- Blindaje manual -->
+                                    <DataGridCheckBoxColumn Header="Manual"
+                                                            Binding="{Binding AsignacionManual}"
+                                                            Width="60"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+
+                        <!-- Splitter arrastrable entre apoyos y combinaciones -->
+                        <GridSplitter Grid.Row="1" Height="8" HorizontalAlignment="Stretch"
+                                      Background="Transparent"
+                                      ResizeBehavior="PreviousAndNext"
+                                      Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}}"/>
+
+                        <!-- Tabla detalle: combinaciones del apoyo seleccionado -->
+                        <Border Grid.Row="2"
+                                Background="{DynamicResource BrushSuperficie}"
+                                BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                                CornerRadius="6"
+                                Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header del panel detalle: título + toggle para mostrar fuera de selección -->
+                                <Grid Grid.Row="0" Margin="14,10,14,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding TextoHeaderDetalle}"
+                                               FontFamily="{DynamicResource FuenteDisplay}" FontSize="14"
+                                               Foreground="{DynamicResource BrushTextoPrincipal}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <CheckBox Grid.Column="1"
+                                              Content="Mostrar también combinaciones fuera de selección"
+                                              IsChecked="{Binding MostrarCombosFueraDeSeleccion, Mode=TwoWay}"
+                                              Visibility="{Binding TieneApoyoSeleccionado, Converter={StaticResource BoolVis}}"
+                                              FontSize="12"
+                                              Foreground="{DynamicResource BrushTextoSecundario}"
+                                              VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Grilla con las combinaciones crudas -->
+                                <DataGrid Grid.Row="1"
+                                          ItemsSource="{Binding CombinacionesDelSeleccionado}"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False" CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="{DynamicResource BrushBordeTenue}"
+                                          Background="Transparent" BorderThickness="0"
+                                          RowHeight="28" FontSize="12"
+                                          AlternatingRowBackground="{DynamicResource BrushBordeTenue}">
+                                    <DataGrid.RowStyle>
+                                        <Style TargetType="DataGridRow">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding EstaEnSeleccionDiseno}" Value="False">
+                                                    <Setter Property="Foreground" Value="{DynamicResource BrushTextoDeshabilitado}"/>
+                                                    <Setter Property="Background" Value="#FAFAFA"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.RowStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="" Width="24">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Rectangle Width="4" Height="18" Margin="4,0" VerticalAlignment="Center">
+                                                        <Rectangle.Style>
+                                                            <Style TargetType="Rectangle">
+                                                                <Setter Property="Fill" Value="{DynamicResource BrushTextoDeshabilitado}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding EstaEnSeleccionDiseno}" Value="True">
+                                                                        <Setter Property="Fill" Value="{DynamicResource BrushAzulInteraccion}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Rectangle.Style>
+                                                    </Rectangle>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="Combinación"
+                                                            Binding="{Binding LoadCase}" Width="2*"/>
+                                        <DataGridTextColumn Header="FZ [kN]"
+                                                            Binding="{Binding FZ, StringFormat={}{0:0.0}}" Width="*"
+                                                            FontFamily="Consolas"/>
+                                        <DataGridTextColumn Header="VX [kN]"
+                                                            Binding="{Binding VX, StringFormat={}{0:0.0}}" Width="*"
+                                                            FontFamily="Consolas"/>
+                                        <DataGridTextColumn Header="VY [kN]"
+                                                            Binding="{Binding VY, StringFormat={}{0:0.0}}" Width="*"
+                                                            FontFamily="Consolas"/>
+                                        <DataGridTextColumn Header="MX [kN·m]"
+                                                            Binding="{Binding MX, StringFormat={}{0:0.0}}" Width="*"
+                                                            FontFamily="Consolas"/>
+                                        <DataGridTextColumn Header="MY [kN·m]"
+                                                            Binding="{Binding MY, StringFormat={}{0:0.0}}" Width="*"
+                                                            FontFamily="Consolas"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- VISTA RESULTADOS -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding EsResultados, Converter={StaticResource BoolVis}}">
+                    <StackPanel Margin="32">
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Resultados" FontFamily="{DynamicResource FuenteDisplay}"
+                                           FontSize="28" Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <TextBlock Text="Cumplimiento por apoyo y apoyos más críticos. Umbral C/D = 0.90."
+                                           FontSize="14" Foreground="{DynamicResource BrushTextoSecundario}"
+                                           Margin="0,4,0,16"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                        VerticalAlignment="Top" Margin="0,8,0,0">
+                                <Button Style="{StaticResource BtnSecundario}"
+                                        Content="Recalcular todos"
+                                        Command="{Binding CmdRecalcular}"
+                                        Margin="0,0,8,0"/>
+                                <Button Style="{StaticResource BtnPrimario}"
+                                        Content="📊 Exportar a Excel"
+                                        Command="{Binding CmdExportarExcel}"
+                                        ToolTip="Genera un libro Excel con 5 hojas: Resumen, Apoyos, Catálogo Pilotes, Catálogo Dados y Combinaciones."/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- KPIs -->
+                        <UniformGrid Columns="4" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                            <Border Style="{StaticResource CardKPI}" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL APOYOS" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <TextBlock Text="{Binding NumApoyos}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardKPI}" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <TextBlock Text="CUMPLEN" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <TextBlock Text="{Binding NumApoyosCumplen}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushCumple}"/>
+                                    <TextBlock Text="{Binding PorcentajeCumplimiento, StringFormat={}{0:0}% del total}"
+                                               FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardKPI}" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <TextBlock Text="NO CUMPLEN" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <TextBlock Text="{Binding NumNoCumplen}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushNoCumple}"/>
+                                    <TextBlock Text="C/D &lt; 0.90" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardKPI}">
+                                <StackPanel>
+                                    <TextBlock Text="SIN TIPO" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                    <TextBlock Text="{Binding NumSinTipo}" FontSize="36"
+                                               FontFamily="{DynamicResource FuenteDisplay}"
+                                               Foreground="{DynamicResource BrushAdvertencia}"/>
+                                    <TextBlock Text="sin dado asignado" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Planta de cimentación -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Planta de cimentación"
+                                                   FontFamily="{DynamicResource FuenteDisplay}" FontSize="16"
+                                                   Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                        <TextBlock Text="Vista en planta de todos los apoyos del modelo. Color configurable; forma por origen."
+                                                   FontSize="12" Foreground="{DynamicResource BrushTextoSecundario}"
+                                                   Margin="0,4,0,12"/>
+                                    </StackPanel>
+
+                                    <!-- Combo "Colorear por" + Toggles + Leyenda, apilados vertical -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+                                            <CheckBox Content="Malla" IsChecked="{Binding MostrarMallaMetrica, Mode=TwoWay}"
+                                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                                      FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"
+                                                      ToolTip="Mostrar cuadrícula métrica tenue cada 1 m."/>
+                                            <CheckBox Content="Ejes ETABS" IsChecked="{Binding MostrarEjesETABS, Mode=TwoWay}"
+                                                      IsEnabled="{Binding TieneEjesETABS}"
+                                                      VerticalAlignment="Center" Margin="0,0,16,0"
+                                                      FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"
+                                                      ToolTip="Mostrar ejes de referencia del modelo ETABS (A, B, 1, 2, …)."/>
+                                            <TextBlock Text="Colorear por:" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"
+                                                       Margin="0,0,8,0"/>
+                                            <ComboBox ItemsSource="{Binding ModosColorPlanta}"
+                                                      SelectedItem="{Binding ModoColorPlantaLabel, Mode=TwoWay}"
+                                                      MinWidth="160" FontSize="12"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TieneEjesETABS}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <TextBlock Text="⚠ Sin ejes ETABS en el proyecto."
+                                                       VerticalAlignment="Center" FontSize="10.5"
+                                                       Foreground="{DynamicResource BrushAdvertencia}"
+                                                       Margin="0,0,10,0"/>
+                                            <Button Content="Importar ejes…"
+                                                    Command="{Binding CmdImportarEjesETABS}"
+                                                    Padding="10,2" FontSize="11"
+                                                    ToolTip="Lee solo la hoja 'Grid Lines' de un Excel ETABS, sin reimportar los apoyos."/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                                            <Ellipse Width="12" Height="12" Fill="{DynamicResource BrushCumple}"
+                                                     VerticalAlignment="Center"/>
+                                            <TextBlock Text="Cumple" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                                            <Ellipse Width="12" Height="12" Fill="{DynamicResource BrushAdvertencia}"
+                                                     VerticalAlignment="Center"/>
+                                            <TextBlock Text="0.90 &lt; C/D &lt; 1.0" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                                            <Ellipse Width="12" Height="12" Fill="{DynamicResource BrushNoCumple}"
+                                                     VerticalAlignment="Center"/>
+                                            <TextBlock Text="No cumple" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                                            <Ellipse Width="12" Height="12" Fill="{DynamicResource BrushNoAplica}"
+                                                     VerticalAlignment="Center"/>
+                                            <TextBlock Text="Sin tipo" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <Rectangle Width="1" Height="20" Fill="{DynamicResource BrushBorde}" Margin="16,0"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="12" Height="12" Fill="{DynamicResource BrushTextoSecundario}"
+                                                     VerticalAlignment="Center"/>
+                                            <TextBlock Text="Frame" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                                            <Rectangle Width="12" Height="12" Fill="{DynamicResource BrushTextoSecundario}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Text="Pier" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <Rectangle Width="1" Height="20" Fill="{DynamicResource BrushBorde}" Margin="16,0"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle Width="12" Height="12" VerticalAlignment="Center">
+                                                <Rectangle.Fill>
+                                                    <SolidColorBrush Color="#6E7D91" Opacity="0.35"/>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                            <TextBlock Text="Edificio" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                                            <Line X1="0" Y1="6" X2="14" Y2="6" Stroke="#9696A0" StrokeThickness="1"
+                                                  StrokeDashArray="2,2" Width="14" Height="12"
+                                                  VerticalAlignment="Center"/>
+                                            <TextBlock Text="Eje ETABS" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border Height="520" Background="{DynamicResource BrushCanvasFondo}"
+                                        BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                                        CornerRadius="4" ClipToBounds="True">
+                                    <Grid>
+                                        <!-- Background="Transparent" en lugar de null para que el canvas
+                                             reciba los eventos de rueda/botón derecho (si es null, pasan
+                                             al Border padre). -->
+                                        <Canvas x:Name="CanvasPlanta" Background="Transparent"
+                                                SizeChanged="CanvasPlanta_SizeChanged"
+                                                MouseWheel="CanvasPlanta_MouseWheel"
+                                                MouseRightButtonDown="CanvasPlanta_MouseRightButtonDown"
+                                                MouseRightButtonUp="CanvasPlanta_MouseRightButtonUp"
+                                                MouseMove="CanvasPlanta_MouseMove"/>
+                                        <!-- Botón "Ajustar vista" arriba-izquierda -->
+                                        <Button Content="⟲ Ajustar vista"
+                                                Click="BtnAjustarVista_Click"
+                                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                Margin="12" Padding="10,4" FontSize="11"
+                                                ToolTip="Vuelve al encuadre automático. Rueda del mouse: zoom · Botón derecho + arrastrar: mover."/>
+                                        <!-- Indicador de coords y tooltip -->
+                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Margin="12" Padding="10,6"
+                                                Background="{DynamicResource BrushSuperficie}"
+                                                BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                                                CornerRadius="4">
+                                            <TextBlock x:Name="LblInfoPlanta"
+                                                       Text="Rueda: zoom · Clic derecho + arrastrar: mover · Clic apoyo: detalle"
+                                                       FontFamily="Consolas" FontSize="11"
+                                                       Foreground="{DynamicResource BrushTextoSecundario}"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Top 10 críticos -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Top 10 apoyos más críticos"
+                                           FontFamily="{DynamicResource FuenteDisplay}" FontSize="16"
+                                           Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                                <TextBlock Text="Ordenados por menor C/D en compresión. El umbral de cumplimiento es 0.90."
+                                           FontSize="12" Foreground="{DynamicResource BrushTextoSecundario}"
+                                           Margin="0,4,0,16"/>
+
+                                <!-- Empty state -->
+                                <StackPanel Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}, ConverterParameter=Invert}"
+                                            HorizontalAlignment="Center" Margin="0,24">
+                                    <TextBlock Text="Aún no hay apoyos importados"
+                                               FontSize="14" Foreground="{DynamicResource BrushTextoSecundario}"
+                                               HorizontalAlignment="Center"/>
+                                    <Button Style="{StaticResource BtnPrimario}" Content="Ir a Apoyos"
+                                            Command="{Binding CmdIrApoyos}" Margin="0,12,0,0" MinWidth="180"/>
+                                </StackPanel>
+
+                                <DataGrid x:Name="GridTop10"
+                                          ItemsSource="{Binding Top10Criticos}"
+                                          Visibility="{Binding NumApoyos, Converter={StaticResource BoolVis}}"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          SelectionChanged="GridTop10_SelectionChanged"
+                                          MouseDoubleClick="GridTop10_MouseDoubleClick"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="{DynamicResource BrushBordeTenue}"
+                                          Background="Transparent" BorderThickness="0"
+                                          RowHeight="34" FontSize="12"
+                                          AlternatingRowBackground="{DynamicResource BrushBordeTenue}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Joint/Pier" Binding="{Binding JointLabel}" Width="100"/>
+                                        <DataGridTextColumn Header="Origen" Binding="{Binding SourceType}" Width="70"/>
+                                        <DataGridTextColumn Header="Dado" Binding="{Binding NombreTipoDado}" Width="80"/>
+                                        <DataGridTextColumn Header="Pu max [kN]"
+                                                            Binding="{Binding Pu_Max, StringFormat={}{0:0}}" Width="90"/>
+                                        <DataGridTemplateColumn Header="C/D compr" Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="8,2" CornerRadius="4"
+                                                            HorizontalAlignment="Center"
+                                                            Background="{Binding CD_Compresion, Converter={StaticResource CDColor}}"
+                                                            Margin="0,4">
+                                                        <TextBlock Text="{Binding CD_Compresion, Converter={StaticResource CDTexto}}"
+                                                                   Foreground="White" FontSize="12"
+                                                                   FontFamily="{DynamicResource FuenteDisplay}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="C/D tracc" Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="8,2" CornerRadius="4"
+                                                            HorizontalAlignment="Center"
+                                                            Background="{Binding CD_Traccion, Converter={StaticResource CDColor}}"
+                                                            Margin="0,4">
+                                                        <TextBlock Text="{Binding CD_Traccion, Converter={StaticResource CDTexto}}"
+                                                                   Foreground="White" FontSize="12"
+                                                                   FontFamily="{DynamicResource FuenteDisplay}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="C/D estr." Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="8,2" CornerRadius="4"
+                                                            HorizontalAlignment="Center"
+                                                            Background="{Binding CD_Estructural_Minimo, Converter={StaticResource CDColor}}"
+                                                            Margin="0,4"
+                                                            ToolTip="Peor C/D del chequeo estructural axial (compresión y tracción) del pilote crítico del dado.">
+                                                        <TextBlock Text="{Binding CD_Estructural_Minimo, Converter={StaticResource CDTexto}}"
+                                                                   Foreground="White" FontSize="12"
+                                                                   FontFamily="{DynamicResource FuenteDisplay}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="Combo gob."
+                                                            Binding="{Binding ComboGobCompresion}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

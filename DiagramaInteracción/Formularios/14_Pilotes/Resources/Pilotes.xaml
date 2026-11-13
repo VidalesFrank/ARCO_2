@@ -1,0 +1,238 @@
+<!-- Recursos específicos del módulo Pilotes. Se monta sobre Theme.Claro.xaml.
+     Añade: colores de estado (cumple/no cumple), estilos de botón de navegación
+     lateral, estilos de tarjetas KPI, íconos del módulo como geometrías Path. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ══════════════════════════════════════════════════════════
+         ESTADO: colores semáforo C/D (umbral 0.90 unificado del programa)
+         ══════════════════════════════════════════════════════════ -->
+    <SolidColorBrush x:Key="BrushCumple"     Color="#2A9D5F"/>
+    <SolidColorBrush x:Key="BrushAdvertencia" Color="#D7AF5F"/>
+    <SolidColorBrush x:Key="BrushNoCumple"    Color="#C53E3E"/>
+    <SolidColorBrush x:Key="BrushNoAplica"    Color="#8EA6BE"/>
+
+    <SolidColorBrush x:Key="BrushCumpleFondo"     Color="#E7F5EC"/>
+    <SolidColorBrush x:Key="BrushAdvertenciaFondo" Color="#FFF7E3"/>
+    <SolidColorBrush x:Key="BrushNoCumpleFondo"    Color="#FBECEC"/>
+
+    <!-- Específicos del canvas del editor de dado -->
+    <SolidColorBrush x:Key="BrushCanvasFondo"   Color="#F7F9FC"/>
+    <SolidColorBrush x:Key="BrushCanvasGrid"    Color="#DFE5EE"/>
+    <SolidColorBrush x:Key="BrushCanvasGridMayor" Color="#C5D0DD"/>
+    <SolidColorBrush x:Key="BrushDadoRelleno"   Color="#DCEBF6"/>
+    <SolidColorBrush x:Key="BrushDadoBorde"     Color="#244A68"/>
+    <SolidColorBrush x:Key="BrushPiloteRelleno" Color="#3273A8"/>
+    <SolidColorBrush x:Key="BrushPiloteBorde"   Color="#172B3A"/>
+    <SolidColorBrush x:Key="BrushPiloteSelec"   Color="#F2A93B"/>
+    <SolidColorBrush x:Key="BrushCentroideGrupo" Color="#E26F2F"/>
+
+    <!-- ══════════════════════════════════════════════════════════
+         FUENTES locales (fallback a globales)
+         ══════════════════════════════════════════════════════════ -->
+    <FontFamily x:Key="FuenteBase">Segoe UI</FontFamily>
+    <FontFamily x:Key="FuenteDisplay">Segoe UI Semibold</FontFamily>
+    <FontFamily x:Key="FuenteNumero">Segoe UI</FontFamily>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SIDEBAR: botón de navegación (ícono + etiqueta vertical)
+         Estilo "rail" tipo VS Code. Muestra el ícono grande; al expandir,
+         aparece la etiqueta. Mantiene estado activo con una franja izquierda.
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="BtnRail" TargetType="RadioButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushSidebarTextoTenue}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Height" Value="56"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Rectangle x:Name="franja" Grid.Column="0" Fill="Transparent"/>
+                        <ContentPresenter Grid.Column="1"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource BrushSidebarHover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushSidebarTexto}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="franja" Property="Fill" Value="{DynamicResource BrushAzulInteraccion}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Background" Value="{DynamicResource BrushSidebarHover}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TARJETA (CardView) con sombra sutil y borde redondeado
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource BrushSuperficie}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorde}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="20"/>
+        <Setter Property="Effect" Value="{DynamicResource ElevacionBaja}"/>
+    </Style>
+
+    <Style x:Key="CardKPI" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="Padding" Value="20,18"/>
+        <Setter Property="MinWidth" Value="180"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         BOTÓN PRIMARIO (azul relleno) y SECUNDARIO (contorno)
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="BtnPrimario" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource BrushAzulInteraccion}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="borde"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="borde" Property="Background" Value="{DynamicResource BrushAzulPrincipal}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="borde" Property="Background" Value="#1A3A54"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="borde" Property="Background" Value="{DynamicResource BrushTextoDeshabilitado}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="BtnSecundario" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushAzulPrincipal}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="borde"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{DynamicResource BrushBorde}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="borde" Property="Background" Value="{DynamicResource BrushSuperficieHover}"/>
+                            <Setter TargetName="borde" Property="BorderBrush" Value="{DynamicResource BrushAzulInteraccion}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ICONOS (Path geometries). Se usan con un ContentControl:
+           <ContentControl Content="{StaticResource IconoPilote}"/>
+         ══════════════════════════════════════════════════════════ -->
+    <Viewbox x:Key="IconoInicio" x:Shared="False" Width="22" Height="22">
+        <Canvas Width="24" Height="24">
+            <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                  StrokeThickness="2" StrokeLineJoin="Round"
+                  Data="M 3,11 L 12,3 L 21,11 M 5,10 L 5,20 L 19,20 L 19,10"
+                  Fill="Transparent"/>
+        </Canvas>
+    </Viewbox>
+
+    <Viewbox x:Key="IconoPilote" x:Shared="False" Width="22" Height="22">
+        <Canvas Width="24" Height="24">
+            <Ellipse Canvas.Left="4" Canvas.Top="4" Width="16" Height="4"
+                     Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                     StrokeThickness="2" Fill="Transparent"/>
+            <Line X1="4" Y1="6" X2="4" Y2="20"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                  StrokeThickness="2"/>
+            <Line X1="20" Y1="6" X2="20" Y2="20"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                  StrokeThickness="2"/>
+            <Path Data="M 4,20 Q 12,23 20,20"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                  StrokeThickness="2" Fill="Transparent"/>
+        </Canvas>
+    </Viewbox>
+
+    <Viewbox x:Key="IconoDado" x:Shared="False" Width="22" Height="22">
+        <Canvas Width="24" Height="24">
+            <Rectangle Canvas.Left="3" Canvas.Top="5" Width="18" Height="14"
+                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                       StrokeThickness="2" Fill="Transparent" RadiusX="2" RadiusY="2"/>
+            <Ellipse Canvas.Left="6.5" Canvas.Top="8.5" Width="3" Height="3"
+                     Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+            <Ellipse Canvas.Left="14.5" Canvas.Top="8.5" Width="3" Height="3"
+                     Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+            <Ellipse Canvas.Left="6.5" Canvas.Top="14.5" Width="3" Height="3"
+                     Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+            <Ellipse Canvas.Left="14.5" Canvas.Top="14.5" Width="3" Height="3"
+                     Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+        </Canvas>
+    </Viewbox>
+
+    <Viewbox x:Key="IconoApoyos" x:Shared="False" Width="22" Height="22">
+        <Canvas Width="24" Height="24">
+            <Line X1="3" Y1="17" X2="21" Y2="17"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                  StrokeThickness="2"/>
+            <Rectangle Canvas.Left="6" Canvas.Top="9" Width="4" Height="8"
+                       Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+            <Rectangle Canvas.Left="14" Canvas.Top="6" Width="4" Height="11"
+                       Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+        </Canvas>
+    </Viewbox>
+
+    <Viewbox x:Key="IconoResultados" x:Shared="False" Width="22" Height="22">
+        <Canvas Width="24" Height="24">
+            <Polyline Points="3,19 9,13 13,16 21,6"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                      StrokeThickness="2" Fill="Transparent"
+                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Ellipse Canvas.Left="19" Canvas.Top="4" Width="4" Height="4"
+                     Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+        </Canvas>
+    </Viewbox>
+
+    <!-- Converters útiles ───────────────────────────────────────── -->
+    <sys:Double x:Key="LblFontSizeDisplay">28</sys:Double>
+    <sys:Double x:Key="LblFontSizeTitulo">15</sys:Double>
+    <sys:Double x:Key="LblFontSizeSubtitulo">12</sys:Double>
+
+</ResourceDictionary>

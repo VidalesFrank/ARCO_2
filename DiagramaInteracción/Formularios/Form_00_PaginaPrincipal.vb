@@ -295,6 +295,16 @@ Public Class Form_00_PaginaPrincipal
         OpcionesToolStripMenuItem1.DropDownItems.Add(sepE2K)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuE2K)
 
+        ' Módulo 14 — Pilotes. Primer módulo construido 100% en WPF y con
+        ' arquitectura MVVM; prototipo de la futura ARCO 3.0.
+        Dim sepPilotes As New ToolStripSeparator()
+        Dim mnuPilotes As New ToolStripMenuItem("Pilotes (NUEVO · WPF)…")
+        mnuPilotes.BackColor = Color.FromArgb(87, 87, 86)
+        mnuPilotes.ForeColor = Color.White
+        AddHandler mnuPilotes.Click, AddressOf AbrirModuloPilotes_Click
+        OpcionesToolStripMenuItem1.DropDownItems.Add(sepPilotes)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuPilotes)
+
         ' Ícono del botón Muros de Contención (dibujado con GDI+)
         BtnMurosContencion.Image = GenerarIconoMuroContencion(60)
         BtnMurosContencion.ImageAlign = ContentAlignment.MiddleLeft
@@ -350,6 +360,31 @@ Public Class Form_00_PaginaPrincipal
                 .Vigas.Frames = New List(Of cFrame)(f)
             End If
         End With
+    End Sub
+
+    ''' <summary>
+    ''' Abre el módulo 14 — Pilotes (WPF). Primer módulo con MVVM completo;
+    ''' prototipo visual de cómo se verá la plataforma al terminar la migración.
+    ''' </summary>
+    Private Sub AbrirModuloPilotes_Click(sender As Object, e As EventArgs)
+        Try
+            If System.Windows.Application.Current Is Nothing Then
+                Dim wpfApp As New System.Windows.Application()
+                wpfApp.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown
+            End If
+            Dim wnd As New PiloteOverviewWindow(proyecto)
+            ' Interop WinForms↔WPF: cuando una ventana WPF se abre vía Show()
+            ' desde la app WinForms, los mensajes de teclado los sigue tomando
+            ' el bucle de mensajes de Forms y NO llegan a los controles WPF
+            ' (los TextBox reciben foco pero las teclas no entran). Esta llamada
+            ' engancha el message hook que enruta el input del teclado a WPF.
+            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(wnd)
+            wnd.Show()
+        Catch ex As Exception
+            Logger.Error(ex, "Form_00_PaginaPrincipal.AbrirModuloPilotes_Click")
+            MessageBox.Show("No se pudo abrir el módulo de pilotes: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
     Private Sub VisualizadorE2K_Click(sender As Object, e As EventArgs)

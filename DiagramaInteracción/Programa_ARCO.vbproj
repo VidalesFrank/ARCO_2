@@ -198,6 +198,7 @@
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsFormsIntegration" />
     <Reference Include="RBush, Version=4.0.0.0, Culture=neutral, PublicKeyToken=c77e27b81f4d0187, processorArchitecture=MSIL">
       <HintPath>..\packages\RBush.Signed.4.0.0\lib\net47\RBush.dll</HintPath>
     </Reference>
@@ -207,6 +208,9 @@
     <Reference Include="System">
       <HintPath>..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.dll</HintPath>
     </Reference>
+    <!-- Necesario para que MarkupCompilePass1 de las ventanas WPF del módulo
+         de Pilotes resuelva la cadena de dependencias en net472. -->
+    <Reference Include="System.Web" />
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
@@ -757,6 +761,56 @@
     <Compile Include="Reporte\SplashScreen1.vb">
       <SubType>Form</SubType>
     </Compile>
+    <!-- ══════════════════════════════════════════════════════════
+         MÓDULO 14 — PILOTES (nuevo, WPF + MVVM)
+         ══════════════════════════════════════════════════════════ -->
+    <Compile Include="Clases\Pilotes\TipoPilote.vb" />
+    <Compile Include="Clases\Pilotes\PilotePosicion.vb" />
+    <Compile Include="Clases\Pilotes\TipoDado.vb" />
+    <Compile Include="Clases\Pilotes\Dado.vb" />
+    <Compile Include="Clases\Pilotes\cPilotes.vb" />
+    <Compile Include="Formularios\14_Pilotes\Services\DadoGeometria.vb" />
+    <Compile Include="Formularios\14_Pilotes\Services\PiloteService.vb" />
+    <Compile Include="Formularios\14_Pilotes\Services\PiloteImportService.vb" />
+    <Compile Include="Formularios\14_Pilotes\Services\PiloteReporteExcelService.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\ObservableVM.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\RelayCommand.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\TipoPiloteVM.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\TipoDadoVM.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\DadoVM.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\DadoDetalleVM.vb" />
+    <Compile Include="Formularios\14_Pilotes\ViewModels\PiloteOverviewVM.vb" />
+    <Compile Include="Formularios\14_Pilotes\Views\Converters.vb" />
+    <Compile Include="Formularios\14_Pilotes\Views\PiloteOverviewWindow.xaml.vb">
+      <DependentUpon>PiloteOverviewWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Formularios\14_Pilotes\Views\DadoDetalleWindow.xaml.vb">
+      <DependentUpon>DadoDetalleWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Formularios\14_Pilotes\Views\SeleccionarCombinacionesDialog.xaml.vb">
+      <DependentUpon>SeleccionarCombinacionesDialog.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Formularios\14_Pilotes\Resources\Pilotes.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\14_Pilotes\Views\PiloteOverviewWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\14_Pilotes\Views\DadoDetalleWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\14_Pilotes\Views\SeleccionarCombinacionesDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Formularios\02_Columnas\Form_02_01_02_ResultadosModelo.resx">

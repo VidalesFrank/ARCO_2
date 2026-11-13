@@ -1,0 +1,155 @@
+<Window x:Class="SeleccionarCombinacionesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ARCO"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Seleccionar combinaciones de diseño"
+        Width="620" Height="640"
+        MinWidth="520" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BrushFondoApp}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="42"
+                            ResizeBorderThickness="6"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Theme.Claro.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Styles.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/14_Pilotes/Resources/Pilotes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="42"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Topbar -->
+        <Border Grid.Row="0" Background="{DynamicResource BrushTopBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Seleccionar combinaciones de diseño"
+                           FontFamily="{DynamicResource FuenteDisplay}" FontSize="14"
+                           Foreground="{DynamicResource BrushTopBarTexto}"
+                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <Button Grid.Column="1" Style="{StaticResource BtnIconoTopBar}"
+                        Click="BtnCerrar_Click"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Path Data="M 4,4 L 14,14 M 14,4 L 4,14"
+                          Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.5"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Hint ingenieril -->
+            <Border Grid.Row="0" Padding="14,10" CornerRadius="6" Margin="0,0,0,12"
+                    Background="{DynamicResource BrushSuperficieBanner}">
+                <StackPanel>
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource BrushTextoPrincipal}"
+                               TextWrapping="Wrap" FontFamily="{DynamicResource FuenteDisplay}">
+                        Elige las combinaciones que corresponden al chequeo que vas a hacer:
+                    </TextBlock>
+                    <TextBlock FontSize="12" Margin="0,6,0,0"
+                               Foreground="{DynamicResource BrushTextoSecundario}"
+                               TextWrapping="Wrap">
+                        <Run FontFamily="{DynamicResource FuenteDisplay}" Text="• Capacidad del suelo (Q admisible):"/>
+                        <Run Text=" combinaciones de servicio (D+L, sin amplificar, con sismo de servicio si aplica)."/>
+                        <LineBreak/>
+                        <Run FontFamily="{DynamicResource FuenteDisplay}" Text="• Capacidad estructural del pilote (φQn):"/>
+                        <Run Text=" combinaciones últimas (1.2D+1.6L, 1.2D+1.0E, etc.)."/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Buscar -->
+            <TextBox Grid.Row="1" x:Name="TxtBuscar" Padding="10,8" FontSize="13"
+                     TextChanged="TxtBuscar_TextChanged"
+                     Margin="0,0,0,8" />
+
+            <!-- Acciones rápidas -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+                <Button Style="{StaticResource BtnSecundario}" Content="Marcar todas"
+                        Click="BtnMarcarTodas_Click" Margin="0,0,8,0"/>
+                <Button Style="{StaticResource BtnSecundario}" Content="Desmarcar todas"
+                        Click="BtnDesmarcarTodas_Click" Margin="0,0,16,0"/>
+                <TextBlock VerticalAlignment="Center" FontSize="11"
+                           Foreground="{DynamicResource BrushTextoSecundario}">
+                    <Run x:Name="LblContador" Text="0 de 0 seleccionadas"/>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Lista de combinaciones -->
+            <Border Grid.Row="3" BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                    CornerRadius="6" Background="{DynamicResource BrushSuperficie}">
+                <ListBox x:Name="LstCombos" BorderThickness="0" Background="Transparent"
+                         HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Padding="10,6"
+                                                Background="{TemplateBinding Background}">
+                                            <ContentPresenter/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource BrushSuperficieHover}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding Seleccionado, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      Content="{Binding Nombre}" FontSize="12"
+                                      Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Rectangle Grid.Row="4" Height="1" Fill="{DynamicResource BrushBorde}" Margin="0,16,0,12"/>
+
+            <!-- Botones de acción -->
+            <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource BtnSecundario}" Content="Cancelar"
+                        Click="BtnCancelar_Click" Margin="0,0,10,0" MinWidth="110"/>
+                <Button Style="{StaticResource BtnPrimario}" Content="Aplicar y calcular"
+                        Click="BtnAplicar_Click" MinWidth="170"/>
+            </StackPanel>
+
+        </Grid>
+    </Grid>
+</Window>
