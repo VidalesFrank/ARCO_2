@@ -1,618 +1,295 @@
-Imports System.Windows.Forms.DataVisualization.Charting
-
+''' <summary>
+''' Dashboard premium del módulo de Columnas — ALR, Flexo-compresión, Cortante
+''' y Confinamiento NSR-10. Reemplaza el Chart viejo por ScottPlot + tema
+''' Dark/Light compartido. El Designer.vb anterior sigue existiendo con sus
+''' campos, pero no se usan: en Load limpiamos Me.Controls y construimos el
+''' layout premium code-only.
+''' </summary>
 Public Class Form_Graficos
 
     Public Shared Proyecto As Proyecto = Form_00_PaginaPrincipal.proyecto
+
+    Private _tema As DashboardTheme = DashboardTheme.Actual
+    Private _vista As Vista = Vista.Flexo
+
+    Private Enum Vista
+        ALR
+        Flexo
+        Cortante
+        Confinamiento
+    End Enum
 
     Private Sub Form_Graficos_Activated(sender As Object, e As EventArgs) Handles Me.Activated
         Proyecto = Form_00_PaginaPrincipal.proyecto
     End Sub
 
-    ' -----------------------------------------------------------------------
-    ' Paleta corporativa ARCO
-    ' -----------------------------------------------------------------------
-    ' Acento de marca ARCO: gris (87,87,87), el mismo de Form_00_PaginaPrincipal.
-    ' ColAzul/ColAzulClaro se conservan solo como colores de DATOS (series del
-    ' gráfico ALR por combinación), no como acento de marca.
-    Private Shared ReadOnly ColAcento As Color = Color.FromArgb(87, 87, 87)
-    Private Shared ReadOnly ColAzul As Color = Color.FromArgb(31, 73, 125)
-    Private Shared ReadOnly ColAzulClaro As Color = Color.FromArgb(91, 155, 213)
-    Private Shared ReadOnly ColVerde As Color = Color.FromArgb(56, 142, 60)
-    Private Shared ReadOnly ColRojo As Color = Color.FromArgb(198, 40, 40)
-    Private Shared ReadOnly ColNaranja As Color = Color.FromArgb(204, 102, 0)
-    Private Shared ReadOnly ColGris As Color = Color.FromArgb(130, 130, 130)
-    Private Shared ReadOnly ColLimite As Color = Color.FromArgb(170, 0, 0)
+    Private Sub Form_Graficos_Load(sender As Object, e As EventArgs) Handles Me.Load
+        Me.Text = "ARCO · Gráficas Resumen — Columnas"
+        Me.Size = New Size(1480, 920)
+        Me.MinimumSize = New Size(1100, 680)
+        Me.StartPosition = FormStartPosition.CenterParent
+        Me.Font = New Font("Segoe UI", 9.5F)
+        Me.BackColor = _tema.Fondo
+        Me.MenuStrip1.Visible = False  ' Designer dejó el MenuStrip; lo ocultamos
 
-    ' -----------------------------------------------------------------------
-    ' Aplica estilo profesional al área del gráfico y agrega título.
-    ' `nCols` permite rotar las etiquetas del eje X cuando hay muchas columnas
-    ' para que no se encimen y queden ilegibles.
-    ' -----------------------------------------------------------------------
-    Private Sub EstilizarGrafico(titulo As String, tituloY As String,
-                                 Optional tituloX As String = "Columna",
-                                 Optional nCols As Integer = 0)
+        AddHandler DashboardTheme.TemaCambiado, AddressOf OnTemaCambiado
+        AddHandler Me.FormClosed, Sub() RemoveHandler DashboardTheme.TemaCambiado, AddressOf OnTemaCambiado
 
-        Dim area = Grafico.ChartAreas("ChartArea1")
-
-        ' Fondo blanco (apto para reporte)
-        Grafico.BackColor = Color.White
-        area.BackColor = Color.White
-        area.BorderColor = Color.FromArgb(200, 200, 200)
-        area.BorderWidth = 1
-
-        ' Grid: solo horizontal, sutil
-        area.AxisY.MajorGrid.LineColor = Color.FromArgb(215, 215, 215)
-        area.AxisY.MajorGrid.LineDashStyle = ChartDashStyle.Dot
-        area.AxisY.MajorGrid.Enabled = True
-        area.AxisX.MajorGrid.Enabled = False
-        area.AxisX.MajorTickMark.Enabled = False
-        area.AxisX.MinorTickMark.Enabled = False
-
-        ' Fuentes
-        Dim fntLabel As New Font("Segoe UI", 8.5F, FontStyle.Regular)
-        Dim fntAxisTitle As New Font("Segoe UI", 9.5F, FontStyle.Bold)
-
-        area.AxisX.LabelStyle.Font = fntLabel
-        area.AxisY.LabelStyle.Font = fntLabel
-        area.AxisX.LabelStyle.ForeColor = Color.FromArgb(60, 60, 60)
-        area.AxisY.LabelStyle.ForeColor = Color.FromArgb(60, 60, 60)
-
-        ' Con muchas columnas, las etiquetas horizontales se superponen.
-        ' Se rotan a vertical y se fuerza a mostrar todas (Interval = 1).
-        area.AxisX.LabelStyle.Angle = If(nCols > 12, -90, 0)
-        If nCols > 0 Then area.AxisX.LabelStyle.Interval = 1
-
-        area.AxisX.Title = tituloX
-        area.AxisX.TitleFont = fntAxisTitle
-        area.AxisX.TitleForeColor = Color.FromArgb(40, 40, 40)
-
-        area.AxisY.Title = tituloY
-        area.AxisY.TitleFont = fntAxisTitle
-        area.AxisY.TitleForeColor = Color.FromArgb(40, 40, 40)
-        area.AxisY.TextOrientation = TextOrientation.Rotated270
-        area.AxisY.Minimum = 0
-
-        ' Leyenda
-        With Grafico.Legends("Legend1")
-            .Font = New Font("Segoe UI", 8.5F, FontStyle.Regular)
-            .BackColor = Color.Transparent
-            .BorderColor = Color.Transparent
-            .ForeColor = Color.FromArgb(50, 50, 50)
-            .Docking = Docking.Bottom
-            .Alignment = StringAlignment.Center
-        End With
-
-        ' Título del gráfico
-        Grafico.Titles.Clear()
-        Dim t As New Title(titulo)
-        t.Font = New Font("Segoe UI", 12.5F, FontStyle.Bold)
-        t.ForeColor = ColAcento
-        t.Docking = Docking.Top
-        t.Alignment = ContentAlignment.MiddleCenter
-        Grafico.Titles.Add(t)
+        Reconstruir()
     End Sub
 
-    ' -----------------------------------------------------------------------
-    ' Calcula máximo del eje Y con rango mínimo garantizado.
-    ' -----------------------------------------------------------------------
-    Private Shared Function YMax(fmax As Single, minRango As Double) As Double
-        Return Math.Max(minRango, Math.Ceiling(CDbl(fmax) / 0.1 + 1) * 0.1)
+    Private Sub OnTemaCambiado(sender As Object, e As EventArgs)
+        _tema = DashboardTheme.Actual
+        Me.BackColor = _tema.Fondo
+        Reconstruir()
+    End Sub
+
+    ' ─── Composición ───────────────────────────────────────────────────────
+    Private Sub Reconstruir()
+        Me.SuspendLayout()
+        Me.Controls.Clear()
+
+        Dim cuerpo = ArmarCuerpo()
+        Dim barraBotones = ArmarBarraBotones()
+        Dim header = ScottDashboardHelpers.CrearEncabezado(
+            "DASHBOARD DE COLUMNAS",
+            "ALR · Flexo-compresión · Cortante · Confinamiento NSR-10",
+            _tema)
+
+        Me.Controls.Add(cuerpo)
+        Me.Controls.Add(barraBotones)
+        Me.Controls.Add(header)
+
+        Me.ResumeLayout()
+    End Sub
+
+    Private Function ArmarBarraBotones() As FlowLayoutPanel
+        Dim f As New FlowLayoutPanel() With {
+            .Dock = DockStyle.Top, .Height = 48, .BackColor = _tema.Fondo,
+            .Padding = New Padding(14, 8, 14, 4), .WrapContents = False}
+
+        f.Controls.Add(BotonVista("ALR", Vista.ALR))
+        f.Controls.Add(BotonVista("Flexo-compresión", Vista.Flexo))
+        f.Controls.Add(BotonVista("Cortante", Vista.Cortante))
+        f.Controls.Add(BotonVista("Confinamiento", Vista.Confinamiento))
+        Return f
     End Function
 
-    ' -----------------------------------------------------------------------
-    ' Columnas con refuerzo definido y cálculo ejecutado (Button2 en
-    ' Form_02_00_PagInfoColumnas). Las columnas sin refuerzo se omiten de los
-    ' gráficos en vez de mostrarse como una barra en cero (sería engañoso).
-    ' -----------------------------------------------------------------------
-    Private Function ColumnasCalculadas(cols As cColumnas) As List(Of Columna)
-        Return cols.Lista_Columnas.Where(Function(c) c.Ref_Modificado).ToList()
+    Private Function BotonVista(txt As String, v As Vista) As Button
+        Dim activa = (v = _vista)
+        Dim b As New Button() With {
+            .Text = txt,
+            .FlatStyle = FlatStyle.Flat,
+            .Font = New Font("Segoe UI Semibold", 9.0F),
+            .ForeColor = If(activa, Color.White, _tema.Texto),
+            .BackColor = If(activa, _tema.Acento, _tema.Panel),
+            .Size = New Size(170, 32),
+            .Cursor = Cursors.Hand,
+            .Margin = New Padding(0, 2, 8, 0),
+            .Tag = v}
+        b.FlatAppearance.BorderColor = If(activa, _tema.Acento, _tema.Separador)
+        b.FlatAppearance.BorderSize = 1
+        AddHandler b.Click, Sub()
+                                _vista = CType(b.Tag, Vista)
+                                Reconstruir()
+                            End Sub
+        Return b
     End Function
 
-    ' -----------------------------------------------------------------------
-    ' ALR — Relación de Carga Axial
-    ' -----------------------------------------------------------------------
-    Private Sub Boton_ALR_Click(sender As Object, e As EventArgs) Handles Boton_ALR.Click
+    Private Function ArmarCuerpo() As TableLayoutPanel
+        Dim items = DatosParaVista(_vista)
+        Dim validos = items.Where(Function(i) i.Valor >= 0).ToList()
+        Dim sinCalc = items.Count - validos.Count
+        Dim cumplen As Integer
+        Dim noCumplen As Integer
+        Dim prom As Double
+        Dim peor As Double
+        Dim labelPeor As String
 
-        Grafico.Series.Clear()
-
-        Dim cols = Proyecto.Elementos.Columnas
-        If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then
-            MessageBox.Show("No hay columnas cargadas." & vbCrLf &
-                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Dim colsCalc = ColumnasCalculadas(cols)
-        If colsCalc.Count = 0 Then
-            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
-                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Dim combosGrafico As List(Of String) = If(cols.Lista_Combinaciones_Grafico_ALR,
-                                                  New List(Of String))
-        Dim paleta() As Color = {ColAzul, ColVerde, ColGris, ColNaranja, ColAzulClaro}
-        Dim fmax As Single = 0
-        Dim nCols = colsCalc.Count
-
-        If combosGrafico.Count = 0 Then
-            ' ── Modo automático: ALR máxima de todas las combinaciones ────────
-            Dim serie As New Series
-            serie.ChartType = SeriesChartType.Column
-            serie.Color = ColAzul
-            serie.IsValueShownAsLabel = True
-            serie.LabelFormat = "F2"
-            serie.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-            serie.LabelForeColor = Color.FromArgb(40, 40, 40)
-            serie.LegendText = "ALR Máxima (peor combinación)"
-
-            Dim tieneData As Boolean = False
-            For j = 0 To nCols - 1
-                Dim col = colsCalc(j)
-                Dim alrVal As Single = 0
-                Dim comboCritico As String = ""
-
-                ' Prioridad 1: Lista_ALR pre-calculada
-                If col.Lista_ALR IsNot Nothing AndAlso col.Lista_ALR.Count > 0 Then
-                    Dim peor = col.Lista_ALR.OrderByDescending(Function(a) a.ALR).First()
-                    alrVal = peor.ALR
-                    comboCritico = peor.Combinacion
-                    tieneData = True
-                    ' Prioridad 2: calcular en el momento desde fuerzas de los tramos
-                ElseIf col.Lista_Tramos_Columnas IsNot Nothing AndAlso col.Lista_Tramos_Columnas.Count > 0 Then
-                    For Each tramo In col.Lista_Tramos_Columnas
-                        If tramo.Lista_Combinaciones Is Nothing OrElse tramo.Lista_Combinaciones.Count = 0 Then Continue For
-                        Dim Ag As Single = If(tramo.EsCircular,
-                                             CSng(Math.PI * tramo.Diametro ^ 2 / 4),
-                                             tramo.B_Plano * tramo.H_Plano)
-                        If Ag <= 0 OrElse tramo.fc <= 0 Then Continue For
-                        Dim alrTramo = tramo.Lista_Combinaciones.Max(
-                            Function(c) Math.Abs(c.P) / (Ag * tramo.fc * 1000))
-                        If alrTramo > alrVal Then alrVal = CSng(alrTramo)
-                    Next
-                    If alrVal > 0 Then tieneData = True
-                    comboCritico = "Estimado desde fuerzas de tramos"
-                End If
-
-                Dim pt As New DataPoint
-                pt.AxisLabel = col.Name_Label
-                pt.XValue = j + 1
-                pt.YValues(0) = alrVal
-                pt.Color = If(alrVal > 0.3F, ColRojo, ColAzul)
-                pt.LabelForeColor = If(alrVal > 0.3F, ColRojo, Color.FromArgb(40, 40, 40))
-                If comboCritico <> "" Then pt.ToolTip = "Combinación crítica: " & comboCritico
-                If alrVal > fmax Then fmax = alrVal
-                serie.Points.Add(pt)
-            Next
-
-            If Not tieneData Then
-                MessageBox.Show("No se encontraron datos de ALR." & vbCrLf &
-                                "Ejecute el cálculo de columnas primero.",
-                                "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-                Return
-            End If
-            Grafico.Series.Add(serie)
+        If _vista = Vista.ALR Then
+            Dim conValor = validos.Where(Function(i) i.Valor > 0).ToList()
+            cumplen = conValor.Where(Function(i) i.Valor <= 0.3).Count()
+            noCumplen = conValor.Count - cumplen
+            prom = If(conValor.Count = 0, 0.0, conValor.Average(Function(i) i.Valor))
+            peor = If(conValor.Count = 0, 0.0, conValor.Max(Function(i) i.Valor))
+            labelPeor = "máx: " & peor.ToString("F3")
         Else
-            ' ── Modo combinaciones: una serie por combinación seleccionada ────
-            For i = 0 To combosGrafico.Count - 1
-                Dim serie As New Series
-                serie.ChartType = SeriesChartType.Column
-                serie.Color = paleta(i Mod paleta.Length)
-                serie.IsValueShownAsLabel = True
-                serie.LabelFormat = "F2"
-                serie.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-                serie.LabelForeColor = Color.FromArgb(40, 40, 40)
-                serie.LegendText = combosGrafico(i)
+            Dim conValor = validos.Where(Function(i) i.Valor > 0).ToList()
+            cumplen = conValor.Where(Function(i) i.Valor >= DashboardTheme.UMBRAL_CD).Count()
+            noCumplen = conValor.Count - cumplen
+            prom = If(conValor.Count = 0, 0.0, conValor.Average(Function(i) i.Valor))
+            peor = If(conValor.Count = 0, 0.0, conValor.Min(Function(i) i.Valor))
+            labelPeor = "peor: " & peor.ToString("F2")
+        End If
 
-                Dim combNombre = combosGrafico(i)
-                For j = 0 To nCols - 1
-                    Dim col = colsCalc(j)
-                    Dim entrada = If(col.Lista_ALR IsNot Nothing,
-                                    col.Lista_ALR.Find(Function(p) p.Combinacion = combNombre),
-                                    Nothing)
-                    Dim alrVal As Single = If(entrada IsNot Nothing, CSng(entrada.ALR), 0)
+        Dim g As New TableLayoutPanel() With {
+            .Dock = DockStyle.Fill, .BackColor = _tema.Fondo,
+            .ColumnCount = 4, .RowCount = 3, .Padding = New Padding(14)}
+        g.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25))
+        g.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25))
+        g.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25))
+        g.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25))
+        g.RowStyles.Add(New RowStyle(SizeType.Absolute, 108))
+        g.RowStyles.Add(New RowStyle(SizeType.Percent, 60))
+        g.RowStyles.Add(New RowStyle(SizeType.Percent, 40))
 
-                    Dim pt As New DataPoint
-                    pt.AxisLabel = col.Name_Label
-                    pt.XValue = j + 1
-                    pt.YValues(0) = alrVal
-                    pt.ToolTip = combNombre
-                    If alrVal > 0.3F Then
-                        pt.Color = ColRojo
-                        pt.LabelForeColor = ColRojo
-                    Else
-                        pt.Color = paleta(i Mod paleta.Length)
+        Dim txtCumple As String = If(_vista = Vista.ALR, "ALR ≤ 0.30", "C/D ≥ " & DashboardTheme.UMBRAL_CD.ToString("F2"))
+
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("TOTAL COLUMNAS", items.Count.ToString(), _tema.Acento, "evaluadas", _tema), 0, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("CUMPLEN", cumplen.ToString(), _tema.Verde, txtCumple, _tema), 1, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("NO CUMPLEN", noCumplen.ToString(), _tema.Rojo, "requieren revisión", _tema), 2, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi(If(_vista = Vista.ALR, "ALR PROMEDIO", "C/D PROMEDIO"),
+                                                        prom.ToString(If(_vista = Vista.ALR, "F3", "F2")),
+                                                        If(_vista = Vista.ALR, If(prom <= 0.3, _tema.Verde, _tema.Ambar),
+                                                                               If(prom >= DashboardTheme.UMBRAL_CD, _tema.Verde, _tema.Ambar)),
+                                                        labelPeor, _tema), 3, 0)
+
+        Dim principal As ScottPlot.FormsPlot
+        If _vista = Vista.ALR Then
+            principal = ScottDashboardHelpers.BarrasLimiteSuperior(validos, 0.3, _tema, "ALR = P/(fc·Ag)")
+        Else
+            principal = ScottDashboardHelpers.BarrasCDVertical(validos, _tema, "C/D")
+        End If
+        Dim panelBarras = ScottDashboardHelpers.PanelConTitulo(TituloVista(_vista), principal, _tema)
+        g.Controls.Add(panelBarras, 0, 1)
+        g.SetColumnSpan(panelBarras, 3)
+
+        Dim panelDonut = ScottDashboardHelpers.PanelConTitulo("Distribución de cumplimiento",
+                                                               ScottDashboardHelpers.DonutCumplimiento(cumplen, noCumplen, sinCalc, _tema),
+                                                               _tema)
+        g.Controls.Add(panelDonut, 3, 1)
+
+        Dim topPlot As ScottPlot.FormsPlot
+        If _vista = Vista.ALR Then
+            topPlot = ScottDashboardHelpers.TopPeores(validos, 10, _tema, menorEsMejor:=True, umbral:=0.3, formato:="F3")
+        Else
+            topPlot = ScottDashboardHelpers.TopPeores(validos, 10, _tema)
+        End If
+        Dim panelTop = ScottDashboardHelpers.PanelConTitulo("Top 10 peores", topPlot, _tema)
+        g.Controls.Add(panelTop, 0, 2)
+        g.SetColumnSpan(panelTop, 2)
+
+        Dim panelResumen = ScottDashboardHelpers.PanelConTitulo("Resumen por revisión",
+                                                                  ScottDashboardHelpers.BarrasCategorias(CategoriasResumen(), _tema, "C/D promedio × 100"),
+                                                                  _tema)
+        g.Controls.Add(panelResumen, 2, 2)
+        g.SetColumnSpan(panelResumen, 2)
+
+        Return g
+    End Function
+
+    Private Function TituloVista(v As Vista) As String
+        Select Case v
+            Case Vista.ALR : Return "Carga Axial Relativa (ALR)  ·  P / (fc · Ag), límite 0.30"
+            Case Vista.Flexo : Return "Flexo-compresión (C/D)  ·  diagrama de interacción"
+            Case Vista.Cortante : Return "Cortante (C/D)  ·  mínimo entre V2 y V3"
+            Case Else : Return "Confinamiento NSR-10 (C/D)  ·  mínimo Ash largo/corto por tramo"
+        End Select
+    End Function
+
+    ' ─── Datos ─────────────────────────────────────────────────────────────
+    Private Function ObtenerColumnas() As List(Of Columna)
+        Try
+            If Proyecto Is Nothing OrElse Proyecto.Elementos Is Nothing OrElse Proyecto.Elementos.Columnas Is Nothing Then
+                Return New List(Of Columna)
+            End If
+            Dim lst = Proyecto.Elementos.Columnas.Lista_Columnas
+            If lst Is Nothing Then Return New List(Of Columna)
+            Return lst.Where(Function(c) c IsNot Nothing AndAlso c.Ref_Modificado).ToList()
+        Catch ex As Exception
+            Logger.Error(ex, "Form_Graficos.ObtenerColumnas")
+            Return New List(Of Columna)
+        End Try
+    End Function
+
+    Private Function DatosParaVista(v As Vista) As List(Of ItemCD)
+        Dim cols = ObtenerColumnas()
+        Dim res As New List(Of ItemCD)
+
+        For Each col In cols
+            Dim nombre = col.Name_Elemento
+            Select Case v
+                Case Vista.ALR
+                    Dim alr = AlrMaximo(col)
+                    res.Add(New ItemCD(nombre, alr))
+                Case Vista.Flexo
+                    ' Envolvente Bresler ∪ Rel. aceros ETABS. Una columna cumple
+                    ' si cualquiera de los dos criterios pasa (ColumnaService.CDFlexoEnvolvente).
+                    ' Antes se leía Lista_F(0) que es solo el biaxial — por eso
+                    ' una columna con biaxial 0.88 y aceros 0.90 aparecía como
+                    ' no cumple, cuando por envolvente sí cumple.
+                    Dim f = ColumnaService.PeorCDFlexoColumna(col)
+                    res.Add(New ItemCD(nombre, If(f > 0, CDbl(f), -1.0)))
+                Case Vista.Cortante
+                    Dim fV2 = SafeF(col, 1)
+                    Dim fV3 = SafeF(col, 2)
+                    Dim arr = {fV2, fV3}.Where(Function(x) x > 0).ToArray()
+                    res.Add(New ItemCD(nombre, If(arr.Length = 0, -1.0, CDbl(arr.Min()))))
+                Case Else
+                    Dim fMin = Single.MaxValue
+                    If col.Lista_Tramos_Columnas IsNot Nothing Then
+                        For Each tr In col.Lista_Tramos_Columnas
+                            If tr Is Nothing Then Continue For
+                            If tr.F_Ash_Largo > 0 AndAlso tr.F_Ash_Largo < fMin Then fMin = tr.F_Ash_Largo
+                            If tr.F_Ash_Corto > 0 AndAlso tr.F_Ash_Corto < fMin Then fMin = tr.F_Ash_Corto
+                        Next
                     End If
-                    If alrVal > fmax Then fmax = alrVal
-                    serie.Points.Add(pt)
+                    res.Add(New ItemCD(nombre, If(fMin = Single.MaxValue, -1.0, CDbl(fMin))))
+            End Select
+        Next
+        Return res
+    End Function
+
+    Private Function AlrMaximo(col As Columna) As Double
+        Try
+            If col.Lista_ALR IsNot Nothing AndAlso col.Lista_ALR.Count > 0 Then
+                Return col.Lista_ALR.Max(Function(a) CDbl(a.ALR))
+            End If
+            If col.Lista_Tramos_Columnas IsNot Nothing Then
+                Dim mejor = 0.0
+                For Each tr In col.Lista_Tramos_Columnas
+                    If tr Is Nothing OrElse tr.Lista_Combinaciones Is Nothing Then Continue For
+                    If tr.fc <= 0 OrElse tr.B_Plano <= 0 OrElse tr.H_Plano <= 0 Then Continue For
+                    Dim ag = tr.B_Plano * tr.H_Plano
+                    For Each cc In tr.Lista_Combinaciones
+                        If cc Is Nothing Then Continue For
+                        Dim p = Math.Abs(cc.P)
+                        Dim alr = p / (tr.fc * ag * 1000.0)
+                        If alr > mejor Then mejor = alr
+                    Next
                 Next
-                Grafico.Series.Add(serie)
-            Next
-        End If
-
-        ' Línea de límite ALR = 0.30
-        Dim sLim As New Series
-        sLim.ChartType = SeriesChartType.Line
-        sLim.Color = ColLimite
-        sLim.BorderWidth = 2
-        sLim.BorderDashStyle = ChartDashStyle.Dash
-        sLim.IsVisibleInLegend = True
-        sLim.LegendText = "Límite ALR = 0.30"
-        sLim.Points.AddXY(0, 0.3)
-        sLim.Points.AddXY(nCols + 1, 0.3)
-        Grafico.Series.Add(sLim)
-
-        Dim area = Grafico.ChartAreas("ChartArea1")
-        area.AxisX.Minimum = 0
-        area.AxisX.Maximum = nCols + 1
-        Dim ym As Double = YMax(fmax, 0.4)
-        area.AxisY.Maximum = ym
-        area.AxisY.Interval = Math.Round(ym / 8, 2)
-
-        EstilizarGrafico("Relación de Carga Axial (ALR) — Columnas", "ALR = Pu / (Ag · f'c)", "Columna", nCols)
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Flexo-Compresión — C/D biaxial (Bresler)
-    ' -----------------------------------------------------------------------
-    Private Sub Boton_Flexo_Click(sender As Object, e As EventArgs) Handles Boton_Flexo.Click
-
-        Grafico.Series.Clear()
-
-        Dim cols = Proyecto.Elementos.Columnas
-        If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then Return
-
-        Dim colsCalc = ColumnasCalculadas(cols)
-        If colsCalc.Count = 0 Then
-            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
-                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Dim sCumple As New Series
-        Dim sNoCumple As New Series
-        sCumple.ChartType = SeriesChartType.Column
-        sNoCumple.ChartType = SeriesChartType.Column
-        sCumple.Color = ColVerde
-        sNoCumple.Color = ColRojo
-        sCumple.IsValueShownAsLabel = True
-        sNoCumple.IsValueShownAsLabel = True
-        sCumple.LabelFormat = "F2"
-        sNoCumple.LabelFormat = "F2"
-        sCumple.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-        sNoCumple.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-        sCumple.LabelForeColor = Color.FromArgb(30, 100, 30)
-        sNoCumple.LabelForeColor = ColRojo
-        sCumple.LegendText = "C/D ≥ 0.90  (Cumple)"
-        sNoCumple.LegendText = "C/D < 0.90  (No cumple)"
-
-        Dim sLim As New Series
-        sLim.ChartType = SeriesChartType.Line
-        sLim.Color = Color.FromArgb(70, 70, 70)
-        sLim.BorderWidth = 2
-        sLim.BorderDashStyle = ChartDashStyle.DashDot
-        sLim.LegendText = "C/D mínimo = 0.90"
-
-        Dim fmax As Single = 0
-        Dim nCols = colsCalc.Count
-
-        For i = 0 To nCols - 1
-            Dim col = colsCalc(i)
-            If col.Lista_F Is Nothing OrElse col.Lista_F.Count = 0 Then
-                sCumple.Points.AddXY(i + 1, 0)
-                sNoCumple.Points.AddXY(i + 1, 0)
-                Continue For
+                Return mejor
             End If
+        Catch
+        End Try
+        Return -1
+    End Function
 
-            Dim cd As Single = col.Lista_F(0)
-            Dim piso As String = If(col.Lista_F_Piso IsNot Nothing AndAlso col.Lista_F_Piso.Count > 0,
-                                    col.Lista_F_Piso(0), "—")
-            Dim pt As New DataPoint
-            pt.AxisLabel = col.Name_Label
-            pt.XValue = i + 1
-            pt.YValues(0) = cd
-            pt.ToolTip = "Piso crítico: " & piso
+    Private Function SafeF(col As Columna, idx As Integer) As Single
+        Try
+            If col.Lista_F IsNot Nothing AndAlso col.Lista_F.Count > idx Then Return col.Lista_F(idx)
+        Catch
+        End Try
+        Return 0
+    End Function
 
-            If cd >= 0.9F Then
-                sCumple.Points.Add(pt)
-                sNoCumple.Points.AddXY(i + 1, 0)
+    Private Function CategoriasResumen() As List(Of CategoriaConteo)
+        Dim nombres = {"ALR", "Flexo", "Cort.", "Confin."}
+        Dim vistas = {Vista.ALR, Vista.Flexo, Vista.Cortante, Vista.Confinamiento}
+        Dim res As New List(Of CategoriaConteo)
+        For i = 0 To 3
+            Dim items = DatosParaVista(vistas(i))
+            Dim pos = items.Where(Function(x) x.Valor > 0).Select(Function(x) x.Valor).ToList()
+            If vistas(i) = Vista.ALR Then
+                Dim alrProm = If(pos.Count = 0, 0.0, pos.Average())
+                Dim col = If(alrProm <= 0.3, _tema.Verde, If(alrProm <= 0.33, _tema.Ambar, _tema.Rojo))
+                res.Add(New CategoriaConteo(nombres(i), CInt(alrProm * 1000) / 10, col))
             Else
-                sCumple.Points.AddXY(i + 1, 0)
-                sNoCumple.Points.Add(pt)
+                Dim prom = If(pos.Count = 0, 0.0, pos.Average())
+                res.Add(New CategoriaConteo(nombres(i), CInt(prom * 100), _tema.ColorPorCD(prom)))
             End If
-
-            If cd > fmax Then fmax = cd
         Next
-
-        sLim.Points.AddXY(0, 0.9)
-        sLim.Points.AddXY(nCols + 1, 0.9)
-
-        Grafico.Series.Add(sCumple)
-        Grafico.Series.Add(sNoCumple)
-        Grafico.Series.Add(sLim)
-
-        Dim area = Grafico.ChartAreas("ChartArea1")
-        area.AxisX.Minimum = 0
-        area.AxisX.Maximum = nCols + 1
-        Dim ym As Double = YMax(fmax, 1.2)
-        area.AxisY.Maximum = ym
-        area.AxisY.Interval = Math.Round(ym / 8, 2)
-
-        EstilizarGrafico("Flexo-Compresión (C/D) — Columnas",
-                         "C/D  (envolvente: Bresler biaxial ∪ rel. aceros ETABS)",
-                         "Columna", nCols)
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Cortante — φVn/Vu sentidos largo y corto
-    ' -----------------------------------------------------------------------
-    Private Sub Boton_Cortante_Click(sender As Object, e As EventArgs) Handles Boton_Cortante.Click
-
-        Grafico.Series.Clear()
-
-        Dim cols = Proyecto.Elementos.Columnas
-        If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then Return
-
-        Dim colsCalc = ColumnasCalculadas(cols)
-        If colsCalc.Count = 0 Then
-            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
-                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Dim sLargo As New Series
-        Dim sCorto As New Series
-        sLargo.ChartType = SeriesChartType.Column
-        sCorto.ChartType = SeriesChartType.Column
-        sLargo.Color = ColAzul
-        sCorto.Color = ColAzulClaro
-        sLargo.IsValueShownAsLabel = True
-        sCorto.IsValueShownAsLabel = True
-        sLargo.LabelFormat = "F2"
-        sCorto.LabelFormat = "F2"
-        sLargo.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-        sCorto.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-        sLargo.LegendText = "φVn/Vu — Sentido Largo (V2)"
-        sCorto.LegendText = "φVn/Vu — Sentido Corto (V3)"
-
-        Dim sLim As New Series
-        sLim.ChartType = SeriesChartType.Line
-        sLim.Color = Color.FromArgb(70, 70, 70)
-        sLim.BorderWidth = 2
-        sLim.BorderDashStyle = ChartDashStyle.DashDot
-        sLim.LegendText = "C/D mínimo = 0.90"
-
-        Dim fmax As Single = 0
-        Dim nCols = colsCalc.Count
-
-        For i = 0 To nCols - 1
-            Dim col = colsCalc(i)
-            If col.Lista_F Is Nothing OrElse col.Lista_F.Count < 3 Then
-                sLargo.Points.AddXY(i + 1, 0)
-                sCorto.Points.AddXY(i + 1, 0)
-                Continue For
-            End If
-
-            Dim fV2 As Single = col.Lista_F(1)
-            Dim fV3 As Single = col.Lista_F(2)
-            Dim pisoV2 As String = If(col.Lista_F_Piso IsNot Nothing AndAlso col.Lista_F_Piso.Count > 1,
-                                      col.Lista_F_Piso(1), "—")
-            Dim pisoV3 As String = If(col.Lista_F_Piso IsNot Nothing AndAlso col.Lista_F_Piso.Count > 2,
-                                      col.Lista_F_Piso(2), "—")
-
-            Dim ptL As New DataPoint
-            ptL.AxisLabel = col.Name_Label
-            ptL.XValue = i + 1
-            ptL.YValues(0) = fV2
-            ptL.ToolTip = "Piso crítico: " & pisoV2
-            If fV2 < 0.9F Then
-                ptL.Color = ColRojo
-                ptL.LabelForeColor = ColRojo
-            End If
-
-            Dim ptC As New DataPoint
-            ptC.AxisLabel = col.Name_Label
-            ptC.XValue = i + 1
-            ptC.YValues(0) = fV3
-            ptC.ToolTip = "Piso crítico: " & pisoV3
-            If fV3 < 0.9F Then
-                ptC.Color = ColRojo
-                ptC.LabelForeColor = ColRojo
-            End If
-
-            sLargo.Points.Add(ptL)
-            sCorto.Points.Add(ptC)
-
-            If Math.Max(fV2, fV3) > fmax Then fmax = Math.Max(fV2, fV3)
-        Next
-
-        sLim.Points.AddXY(0, 0.9)
-        sLim.Points.AddXY(nCols + 1, 0.9)
-
-        Grafico.Series.Add(sLargo)
-        Grafico.Series.Add(sCorto)
-        Grafico.Series.Add(sLim)
-
-        Dim area = Grafico.ChartAreas("ChartArea1")
-        area.AxisX.Minimum = 0
-        area.AxisX.Maximum = nCols + 1
-        Dim ym As Double = YMax(fmax, 1.2)
-        area.AxisY.Maximum = ym
-        area.AxisY.Interval = Math.Round(ym / 8, 2)
-
-        EstilizarGrafico("Verificación de Cortante (φVn/Vu) — Columnas", "φVn / Vu", "Columna", nCols)
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Confinamiento NSR-10 — Ash (estribos) y L0 (longitud zona confinada)
-    ' Se calcula el peor caso por columna recorriendo todos sus tramos, igual
-    ' que hace Form_02_Reporte_Columnas en su pestaña "Confinamiento NSR-10",
-    ' ya que estos factores no se guardan agregados en Columna.Lista_F.
-    ' -----------------------------------------------------------------------
-    Private Sub Boton_Confinamiento_Click(sender As Object, e As EventArgs) Handles Boton_Confinamiento.Click
-
-        Grafico.Series.Clear()
-
-        Dim cols = Proyecto.Elementos.Columnas
-        If cols Is Nothing OrElse cols.Lista_Columnas.Count = 0 Then Return
-
-        Dim colsCalc = ColumnasCalculadas(cols).Where(
-            Function(c) c.Lista_Tramos_Columnas IsNot Nothing AndAlso c.Lista_Tramos_Columnas.Count > 0).ToList()
-        If colsCalc.Count = 0 Then
-            MessageBox.Show("Ninguna columna tiene refuerzo definido y calculado." & vbCrLf &
-                            "Ejecute el cálculo de columnas (Módulo 02) primero.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Dim sAsh As New Series
-        Dim sL0 As New Series
-        sAsh.ChartType = SeriesChartType.Column
-        sL0.ChartType = SeriesChartType.Column
-        sAsh.Color = ColAzul
-        sL0.Color = ColNaranja
-        sAsh.IsValueShownAsLabel = True
-        sL0.IsValueShownAsLabel = True
-        sAsh.LabelFormat = "F2"
-        sL0.LabelFormat = "F2"
-        sAsh.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-        sL0.Font = New Font("Segoe UI", 7.5F, FontStyle.Regular)
-        sAsh.LegendText = "Ash provisto/requerido (mín. entre sentidos)"
-        sL0.LegendText = "L0 provisto/requerido"
-
-        Dim sLim As New Series
-        sLim.ChartType = SeriesChartType.Line
-        sLim.Color = Color.FromArgb(70, 70, 70)
-        sLim.BorderWidth = 2
-        sLim.BorderDashStyle = ChartDashStyle.DashDot
-        sLim.LegendText = "Mínimo = 0.90"
-
-        Dim fmax As Single = 0
-        Dim nCols = colsCalc.Count
-
-        For i = 0 To nCols - 1
-            Dim col = colsCalc(i)
-            Dim fMinAsh As Single = Single.MaxValue
-            Dim fMinL0 As Single = Single.MaxValue
-            Dim pisoAsh As String = "—"
-            Dim pisoL0 As String = "—"
-
-            For Each tr In col.Lista_Tramos_Columnas
-                If tr.F_Ash_Largo > 0 AndAlso tr.F_Ash_Largo < fMinAsh Then fMinAsh = tr.F_Ash_Largo : pisoAsh = tr.Piso
-                If tr.F_Ash_Corto > 0 AndAlso tr.F_Ash_Corto < fMinAsh Then fMinAsh = tr.F_Ash_Corto : pisoAsh = tr.Piso
-
-                Dim l0Req As Single = Math.Max(tr.L0_L, tr.L0_C)
-                If l0Req > 0 AndAlso tr.L0_Prov > 0 Then
-                    Dim fl0 As Single = CSng(Math.Round(tr.L0_Prov / l0Req, 2))
-                    If fl0 < fMinL0 Then fMinL0 = fl0 : pisoL0 = tr.Piso
-                End If
-            Next
-
-            If fMinAsh = Single.MaxValue Then fMinAsh = 0
-            If fMinL0 = Single.MaxValue Then fMinL0 = 0
-
-            Dim ptAsh As New DataPoint
-            ptAsh.AxisLabel = col.Name_Label
-            ptAsh.XValue = i + 1
-            ptAsh.YValues(0) = fMinAsh
-            ptAsh.ToolTip = "Piso crítico: " & pisoAsh
-            If fMinAsh > 0 AndAlso fMinAsh < 0.9F Then
-                ptAsh.Color = ColRojo
-                ptAsh.LabelForeColor = ColRojo
-            End If
-            sAsh.Points.Add(ptAsh)
-
-            Dim ptL0 As New DataPoint
-            ptL0.AxisLabel = col.Name_Label
-            ptL0.XValue = i + 1
-            ptL0.YValues(0) = fMinL0
-            ptL0.ToolTip = "Piso crítico: " & pisoL0
-            If fMinL0 > 0 AndAlso fMinL0 < 0.9F Then
-                ptL0.Color = ColRojo
-                ptL0.LabelForeColor = ColRojo
-            End If
-            sL0.Points.Add(ptL0)
-
-            If Math.Max(fMinAsh, fMinL0) > fmax Then fmax = Math.Max(fMinAsh, fMinL0)
-        Next
-
-        sLim.Points.AddXY(0, 0.9)
-        sLim.Points.AddXY(nCols + 1, 0.9)
-
-        Grafico.Series.Add(sAsh)
-        Grafico.Series.Add(sL0)
-        Grafico.Series.Add(sLim)
-
-        Dim area = Grafico.ChartAreas("ChartArea1")
-        area.AxisX.Minimum = 0
-        area.AxisX.Maximum = nCols + 1
-        Dim ym As Double = YMax(fmax, 1.2)
-        area.AxisY.Maximum = ym
-        area.AxisY.Interval = Math.Round(ym / 8, 2)
-
-        EstilizarGrafico("Confinamiento NSR-10 (Ash y L0) — Columnas", "Provisto / Requerido", "Columna", nCols)
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Exportar gráfico como PNG o JPEG
-    ' -----------------------------------------------------------------------
-    Private Sub Boton_Exportar_Click(sender As Object, e As EventArgs) Handles Boton_Exportar.Click
-        If Grafico.Series.Count = 0 OrElse
-           Grafico.Series.All(Function(s) s.Points.Count = 0) Then
-            MessageBox.Show("Genere un gráfico antes de exportar.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return
-        End If
-
-        Using dlg As New SaveFileDialog
-            dlg.Filter = "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg"
-            dlg.DefaultExt = "png"
-            dlg.FileName = "Grafico_Columnas_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
-            If dlg.ShowDialog() = DialogResult.OK Then
-                Dim fmt = If(dlg.FilterIndex = 2,
-                             Drawing.Imaging.ImageFormat.Jpeg,
-                             Drawing.Imaging.ImageFormat.Png)
-                Grafico.SaveImage(dlg.FileName, fmt)
-                MessageBox.Show("Imagen guardada correctamente." & vbCrLf & dlg.FileName,
-                                "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            End If
-        End Using
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Combinaciones de análisis para gráfico ALR
-    ' -----------------------------------------------------------------------
-    Private Sub CombinacionesDeAnálisisToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CombinacionesDeAnálisisToolStripMenuItem.Click
-        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
-        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
-
-        Dim alrList = Proyecto.Elementos.Columnas.Lista_Combinaciones_ALR
-        Dim grafList = Proyecto.Elementos.Columnas.Lista_Combinaciones_Grafico_ALR
-        If alrList IsNot Nothing Then
-            For i = 0 To alrList.Count - 1
-                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(alrList(i))
-            Next
-        End If
-        If grafList IsNot Nothing Then
-            For i = 0 To grafList.Count - 1
-                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(grafList(i))
-            Next
-        End If
-
-        ' El diálogo es compartido por todos los módulos (Columnas, Muros, Pilas,
-        ' Vigas...) y decide qué lista guardar según OpcionLlamado. Debe fijarse
-        ' aquí explícitamente y mostrarse modal: de lo contrario, si antes se
-        ' abrió el diálogo desde otro módulo, "Guardar" sobrescribiría la lista
-        ' equivocada (el diálogo conserva el valor de la última vez que se usó).
-        Form_Opciones_Combinaciones.OpcionLlamado = "Columna"
-        If Form_Opciones_Combinaciones.ShowDialog() = DialogResult.OK Then
-            ' Refrescar el gráfico de ALR con la nueva selección de combinaciones
-            Boton_ALR_Click(sender, e)
-        End If
-    End Sub
+        Return res
+    End Function
 
 End Class

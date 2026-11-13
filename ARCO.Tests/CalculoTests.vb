@@ -125,11 +125,14 @@ Public Class CalculoTests
     End Sub
 
     ' =====================================================================
-    ' Vc dentro de la zona de rótula — NSR-10 C.21.5.4.2
+    ' Vc dentro de la zona de rótula — NSR-10 C.21.5.4.2 (DES)
     ' =====================================================================
-    ' Vc = 0 dentro de 2h desde la cara del apoyo cuando se cumplen A LA VEZ:
+    ' Para DES: Vc = 0 dentro de 2h desde la cara del apoyo cuando A LA VEZ:
     '   (a) Ve >= 0.5·Vu   y   (b) Pu < Ag·f'c/20
     ' Fuera de 2h, Vc se conserva íntegro.
+    '
+    ' Para DMO el equivalente C.21.3.4.2 NO exige anular Vc: se retorna
+    ' siempre el nominal.
 
     <TestMethod>
     Public Sub VcEfectivo_FueraDeDosH_ConservaVc()
@@ -139,29 +142,39 @@ Public Class CalculoTests
     End Sub
 
     <TestMethod>
-    Public Sub VcEfectivo_DentroDeDosH_ConAmbasCondiciones_AnulaVc()
+    Public Sub VcEfectivo_DES_DentroDeDosH_ConAmbasCondiciones_AnulaVc()
         ' Ve/Vu = 68/128 = 0.53 >= 0.5 y Pu = 0 < Ag·fc/20 = 157.5 kN
         Dim vc = InvocarVcEfectivo(102.8, 1.0, 0.5, Ve:=68.0, Vu:=128.0, Pu:=0.0, Ag:=0.15, fc:=21.0)
         Assert.AreEqual(0.0, vc, TOL)
     End Sub
 
     <TestMethod>
-    Public Sub VcEfectivo_DentroDeDosH_SiLaGravedadDomina_ConservaVc()
+    Public Sub VcEfectivo_DES_DentroDeDosH_SiLaGravedadDomina_ConservaVc()
         ' Ve/Vu = 68/144.8 = 0.47 < 0.5 → no se cumple (a)
         Dim vc = InvocarVcEfectivo(102.8, 0.44, 0.5, Ve:=68.0, Vu:=144.8, Pu:=0.0, Ag:=0.15, fc:=21.0)
         Assert.AreEqual(102.8, vc, TOL)
     End Sub
 
     <TestMethod>
-    Public Sub VcEfectivo_ConAxialAlta_ConservaVc()
+    Public Sub VcEfectivo_DES_ConAxialAlta_ConservaVc()
         ' Ag·fc/20 = 0.15·21·1000/20 = 157.5 kN; Pu = 200 → no se cumple (b)
         Dim vc = InvocarVcEfectivo(102.8, 1.0, 0.5, Ve:=68.0, Vu:=128.0, Pu:=200.0, Ag:=0.15, fc:=21.0)
         Assert.AreEqual(102.8, vc, TOL)
     End Sub
 
     <TestMethod>
-    Public Sub VcEfectivo_SinDemanda_ConservaVc()
+    Public Sub VcEfectivo_DES_SinDemanda_ConservaVc()
         Dim vc = InvocarVcEfectivo(102.8, 0.44, 0.5, Ve:=68.0, Vu:=0.0, Pu:=0.0, Ag:=0.15, fc:=21.0)
+        Assert.AreEqual(102.8, vc, TOL)
+    End Sub
+
+    <TestMethod>
+    Public Sub VcEfectivo_DMO_IgnoraCriterioAunCumpliendoCondiciones()
+        ' Mismo caso que el DES que SÍ anulaba Vc, pero en DMO el equivalente
+        ' C.21.3.4.2 no exige Vc=0. Hasta 2026-11-05 el programa aplicaba la
+        ' regla de C.21.5.4.2 también a DMO — bug reportado por Frank en
+        ' proyecto DMO con Vc saliendo en 0.
+        Dim vc = InvocarVcEfectivo(102.8, 1.0, 0.5, Ve:=68.0, Vu:=128.0, Pu:=0.0, Ag:=0.15, fc:=21.0, esDES:=False)
         Assert.AreEqual(102.8, vc, TOL)
     End Sub
 
@@ -185,13 +198,17 @@ Public Class CalculoTests
         Return CDbl(m.Invoke(svc, New Object() {As_mm2, fy_dis, fc, b_mm, d_mm}))
     End Function
 
+    ' Default esDES = True preserva la intención de los tests históricos, que
+    ' verifican la regla C.21.5.4.2 (aplicable solo a DES). El caso DMO se
+    ' cubre explícitamente con esDES:=False en su propio test.
     Private Shared Function InvocarVcEfectivo(Vc As Double, distanciaCara As Double, h As Double,
                                               Ve As Double, Vu As Double, Pu As Double,
-                                              Ag As Double, fc As Double) As Double
+                                              Ag As Double, fc As Double,
+                                              Optional esDES As Boolean = True) As Double
         Dim m = GetType(VigaService).GetMethod("VcEfectivo",
                                                BindingFlags.Static Or BindingFlags.NonPublic)
         Assert.IsNotNull(m, "No se encontró VigaService.VcEfectivo (¿cambió de nombre o firma?)")
-        Return CDbl(m.Invoke(Nothing, New Object() {Vc, distanciaCara, h, Ve, Vu, Pu, Ag, fc}))
+        Return CDbl(m.Invoke(Nothing, New Object() {Vc, distanciaCara, h, Ve, Vu, Pu, Ag, fc, esDES}))
     End Function
 
 End Class

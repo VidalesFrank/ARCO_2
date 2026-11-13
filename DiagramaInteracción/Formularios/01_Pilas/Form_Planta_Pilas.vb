@@ -365,13 +365,19 @@ Public Class Form_Planta_Pilas
         Dim sel = TryCast(_canvas.SelectedElement, Elemento_Pila)
         Dim hov = TryCast(_canvas.HoverElement, Elemento_Pila)
 
-        Using fEtiqueta As New Font("Segoe UI", 7.5F, FontStyle.Bold),
+        Using fEtiqueta As New Font("Segoe UI", 10.5F, FontStyle.Bold),
               penBorde As New Pen(Color.FromArgb(70, 70, 70), 1.2F),
               penSelec As New Pen(Color.FromArgb(20, 90, 200), 2.5F),
               penHover As New Pen(Color.FromArgb(255, 140, 0), 2.0F)
 
             For Each p In lista
-                Dim rect = t.W2SRect(p.CoordX, p.CoordY, p.Dc, p.Dc)
+                ' Diámetro de dibujo: Df (fuste) — es lo que ve el ingeniero en el plano
+                ' de fundaciones. Df=0 (legacy sin resolver): fallback a Dc, y si tampoco
+                ' hay, a 0.60 m típico para no desaparecer el símbolo.
+                Dim diamDibujo As Single = p.Df
+                If diamDibujo <= 0 Then diamDibujo = p.Dc
+                If diamDibujo <= 0 Then diamDibujo = 0.6F
+                Dim rect = t.W2SRect(p.CoordX, p.CoordY, diamDibujo, diamDibujo)
                 If rect.Width < 1.0F OrElse rect.Height < 1.0F Then
                     ' Si zoom es muy chico igual mostramos un punto para no perder la pila.
                     rect = New RectangleF(rect.X - 2, rect.Y - 2, 4, 4)

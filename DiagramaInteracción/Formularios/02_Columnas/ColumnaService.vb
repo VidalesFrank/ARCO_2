@@ -948,4 +948,80 @@ Public Class ColumnaService
         Return -1
     End Function
 
+    ''' <summary>
+    ''' Agrupa las filas de "Conc Col Sum - ACI 318-14" por (Piso, Label) y produce
+    ''' una Tramo_Columna por grupo. Bottom = primera fila del grupo (Station mínima
+    ''' del primer sub-frame), Top = última fila del grupo (Station máxima del último
+    ''' sub-frame). ETABS lista los sub-frames de abajo hacia arriba y las stations
+    ''' crecen dentro de cada sub-frame, así que el orden de aparición equivale a la
+    ''' posición física en la columna.
+    '''
+    ''' Por qué agrupar: ETABS parte una columna física en varios sub-frames cuando
+    ''' tiene nodos intermedios (vigas que la atan a mitad de altura). Cada sub-frame
+    ''' exporta 3 stations propias y arranca su Station en 0, así que una columna
+    ''' partida en dos trae 6 filas con el mismo (Piso, Label) pero dos UniqueName
+    ''' distintos. Sin agrupar, el loop original creaba un Tramo_Columna por cada
+    ''' Station=0 y además calculaba As_Top con un look-ahead frágil que leía la
+    ''' fila de la columna siguiente. Cubierto por ColumnaServiceTests.
+    ''' </summary>
+    Public Shared Function ParsearDisenoColumnasFrame(Tabla As DataGridView,
+                                                      Col_Piso As Integer,
+                                                      Col_Label As Integer,
+                                                      Col_Seccion As Integer,
+                                                      Col_Station As Integer,
+                                                      Col_As_Req As Integer) As List(Of Tramo_Columna)
+        Dim resultado As New List(Of Tramo_Columna)
+        If Tabla Is Nothing OrElse Tabla.Rows.Count <= 2 Then Return resultado
+
+        ' Las filas 0 y 1 son encabezados/unidades; los datos empiezan en 2.
+        Dim ordenGrupos As New List(Of String)
+        Dim grupos As New Dictionary(Of String, List(Of Integer))
+        For i = 2 To Tabla.Rows.Count - 1
+            Dim piso As String = LeerCeldaTexto(Tabla, i, Col_Piso)
+            Dim label As String = LeerCeldaTexto(Tabla, i, Col_Label)
+            If piso = "" OrElse label = "" Then Continue For
+            Dim key As String = piso & "||" & label
+            If Not grupos.ContainsKey(key) Then
+                grupos(key) = New List(Of Integer)
+                ordenGrupos.Add(key)
+            End If
+            grupos(key).Add(i)
+        Next
+
+        For Each key In ordenGrupos
+            Dim idxs = grupos(key)
+            Dim iBot As Integer = idxs(0)
+            Dim iTop As Integer = idxs(idxs.Count - 1)
+
+            Dim tramo As New Tramo_Columna
+            tramo.Piso = LeerCeldaTexto(Tabla, iBot, Col_Piso)
+            tramo.Name_Elemento = LeerCeldaTexto(Tabla, iBot, Col_Label)
+            tramo.Seccion = LeerCeldaTexto(Tabla, iBot, Col_Seccion)
+
+            ' E23: As viene en m², convertir a mm².
+            tramo.As_Req_Bottom = LeerCeldaSingle(Tabla, iBot, Col_As_Req) * 1000000
+            tramo.As_Req_Top = LeerCeldaSingle(Tabla, iTop, Col_As_Req) * 1000000
+
+            resultado.Add(tramo)
+        Next
+        Return resultado
+    End Function
+
+    Private Shared Function LeerCeldaTexto(Tabla As DataGridView, fila As Integer, col As Integer) As String
+        If col < 0 OrElse col >= Tabla.Columns.Count Then Return ""
+        Dim v = Tabla.Rows(fila).Cells(col).Value
+        If v Is Nothing OrElse v Is DBNull.Value Then Return ""
+        Return v.ToString().Trim()
+    End Function
+
+    Private Shared Function LeerCeldaSingle(Tabla As DataGridView, fila As Integer, col As Integer) As Single
+        If col < 0 OrElse col >= Tabla.Columns.Count Then Return 0
+        Dim v = Tabla.Rows(fila).Cells(col).Value
+        If v Is Nothing OrElse v Is DBNull.Value Then Return 0
+        Dim d As Single
+        If Single.TryParse(Convert.ToString(v), Globalization.NumberStyles.Float,
+                           Globalization.CultureInfo.InvariantCulture, d) Then Return d
+        Return 0
+    End Function
+
 End Class

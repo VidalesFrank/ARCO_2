@@ -17,6 +17,9 @@ Public Class Form_Informe_Tecnico
     Private _dtpFecha As DateTimePicker
     Private _txtCodigo As TextBox
     Private _clbModulos As CheckedListBox
+    Private _rbDocx As RadioButton
+    Private _rbPdf As RadioButton
+    Private _rbAmbos As RadioButton
     Private _btnGenerar As Button
     Private _lblEstado As Label
 
@@ -111,14 +114,28 @@ Public Class Form_Informe_Tecnico
 
         Dim nPilas = Funciones_Programa.ContarElementosMod("Pilas", _proyecto)
         Dim nCols = Funciones_Programa.ContarElementosMod("Columnas", _proyecto)
+        Dim nMuros = Funciones_Programa.ContarElementosMod("Muros", _proyecto)
         Dim nVigas = Funciones_Programa.ContarElementosMod("Vigas", _proyecto)
         Dim nNervios = Funciones_Programa.ContarElementosMod("Nervios", _proyecto)
+        Dim nZapatas = Funciones_Programa.ContarElementosMod("Zapatas", _proyecto)
 
         _clbModulos.Items.Add($"Pilas ({nPilas})", nPilas > 0)
         _clbModulos.Items.Add($"Columnas ({nCols})", nCols > 0)
+        _clbModulos.Items.Add($"Muros ({nMuros})", nMuros > 0)
         _clbModulos.Items.Add($"Vigas ({nVigas})", nVigas > 0)
         _clbModulos.Items.Add($"Nervios ({nNervios})", nNervios > 0)
-        y += 118
+        _clbModulos.Items.Add($"Zapatas ({nZapatas})", nZapatas > 0)
+        _clbModulos.Height = 150
+        y += 158
+
+        Dim lbFmt = EtiquetaY("Formato de salida")
+        _rbDocx = New RadioButton With {.Text = "Word (.docx)", .Location = New Point(0, y), .AutoSize = True, .Checked = True}
+        _rbPdf = New RadioButton With {.Text = "PDF (.pdf)", .Location = New Point(130, y), .AutoSize = True}
+        _rbAmbos = New RadioButton With {.Text = "Ambos (.docx + .pdf)", .Location = New Point(240, y), .AutoSize = True}
+        AddHandler _rbDocx.CheckedChanged, Sub() ActualizarTextoBoton()
+        AddHandler _rbPdf.CheckedChanged, Sub() ActualizarTextoBoton()
+        AddHandler _rbAmbos.CheckedChanged, Sub() ActualizarTextoBoton()
+        y += 32
 
         _lblEstado = New Label With {
             .Location = New Point(0, y), .Width = 520, .Height = 36,
@@ -131,7 +148,8 @@ Public Class Form_Informe_Tecnico
 
         panelInfo.Controls.AddRange(New Control() {
             lb1, _txtCliente, lb2, _txtResponsable, lb3, _txtAsunto,
-            lb4, lb5, _dtpFecha, _txtCodigo, lb6, _clbModulos, _lblEstado
+            lb4, lb5, _dtpFecha, _txtCodigo, lb6, _clbModulos,
+            lbFmt, _rbDocx, _rbPdf, _rbAmbos, _lblEstado
         })
 
         ' ── Botones ──────────────────────────────────────────────────────────
@@ -194,16 +212,26 @@ Public Class Form_Informe_Tecnico
             .AsuntoProyecto = _txtAsunto.Text.Trim(),
             .IncluirPilas = _clbModulos.GetItemChecked(0),
             .IncluirColumnas = _clbModulos.GetItemChecked(1),
-            .IncluirVigas = _clbModulos.GetItemChecked(2),
-            .IncluirNervios = _clbModulos.GetItemChecked(3)
+            .IncluirMuros = _clbModulos.GetItemChecked(2),
+            .IncluirVigas = _clbModulos.GetItemChecked(3),
+            .IncluirNervios = _clbModulos.GetItemChecked(4),
+            .IncluirZapatas = _clbModulos.GetItemChecked(5)
         }
 
         Dim nombreBase = NombreArchivoBase(opciones)
+        Dim esPdf = _rbPdf.Checked
+        Dim esAmbos = _rbAmbos.Checked
+        Dim filtro As String, ext As String
+        If esPdf Then
+            filtro = "Documento PDF (*.pdf)|*.pdf" : ext = "pdf"
+        Else
+            ' Para "Ambos" el usuario elige el .docx y el .pdf se guarda con mismo nombre base.
+            filtro = "Documento de Word (*.docx)|*.docx" : ext = "docx"
+        End If
+
         Dim ruta As String
         Using dlg As New SaveFileDialog() With {
-            .Filter = "Documento de Word (*.docx)|*.docx",
-            .DefaultExt = "docx",
-            .FileName = nombreBase
+            .Filter = filtro, .DefaultExt = ext, .FileName = nombreBase
         }
             If dlg.ShowDialog(Me) <> DialogResult.OK Then Return
             ruta = dlg.FileName
@@ -211,15 +239,29 @@ Public Class Form_Informe_Tecnico
 
         Me.Cursor = Cursors.WaitCursor
         _btnGenerar.Enabled = False
+        Dim rutasGeneradas As New List(Of String)
         Try
-            InformeTecnicoService.Generar(_proyecto, opciones, ruta)
+            If esPdf Then
+                InformeTecnicoPdfService.Generar(_proyecto, opciones, ruta)
+                rutasGeneradas.Add(ruta)
+            ElseIf esAmbos Then
+                InformeTecnicoService.Generar(_proyecto, opciones, ruta)
+                rutasGeneradas.Add(ruta)
+                Dim rutaPdf = IO.Path.ChangeExtension(ruta, ".pdf")
+                InformeTecnicoPdfService.Generar(_proyecto, opciones, rutaPdf)
+                rutasGeneradas.Add(rutaPdf)
+            Else
+                InformeTecnicoService.Generar(_proyecto, opciones, ruta)
+                rutasGeneradas.Add(ruta)
+            End If
+
             MessageBox.Show(Me,
-                "Informe generado correctamente:" & vbCrLf & ruta,
+                "Informe generado correctamente:" & vbCrLf & String.Join(vbCrLf, rutasGeneradas),
                 "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Try
-                Process.Start(New ProcessStartInfo(ruta) With {.UseShellExecute = True})
+                Process.Start(New ProcessStartInfo(rutasGeneradas.Last()) With {.UseShellExecute = True})
             Catch
-                ' Si Word no está asociado, no es un error del informe.
+                ' Si el visor no está asociado, no es un error del informe.
             End Try
             Me.Close()
         Catch ex As Exception
@@ -231,6 +273,17 @@ Public Class Form_Informe_Tecnico
             Me.Cursor = Cursors.Default
             _btnGenerar.Enabled = True
         End Try
+    End Sub
+
+    Private Sub ActualizarTextoBoton()
+        If _rbPdf Is Nothing OrElse _rbAmbos Is Nothing OrElse _btnGenerar Is Nothing Then Return
+        If _rbPdf.Checked Then
+            _btnGenerar.Text = "Generar informe (.pdf)"
+        ElseIf _rbAmbos.Checked Then
+            _btnGenerar.Text = "Generar informe (.docx + .pdf)"
+        Else
+            _btnGenerar.Text = "Generar informe (.docx)"
+        End If
     End Sub
 
     Private Function NombreArchivoBase(op As OpcionesInformeTecnico) As String

@@ -60,38 +60,15 @@ Partial Public Class Form_02_PagColumnas
                 Dim Col_Piso As Integer = Col_Diseno(0)
                 Dim Col_Label As Integer = Col_Diseno(1)
                 Dim Col_Seccion As Integer = Col_Diseno(2)
-                Dim Salto As Integer = Col_Diseno(3)
                 Dim Col_As_Req As Integer = Col_Diseno(4)
+                ' Station es siempre la columna E (índice 4) en "Conc Col Sum - ACI 318-14".
+                Const Col_Station As Integer = 4
 
-                Dim Section As String = Tabla.Rows(2).Cells(1).Value
-                Dim I0 As Integer = 2
-                Dim Contar As Integer = 0
-
-                For i = 2 To Tabla.Rows.Count() - 1
-                    For j = 1 To 7
-                        If I0 + j >= Tabla.Rows.Count Then Exit For
-                        If Tabla.Rows(I0 + j).Cells(1).Value <> Section Then
-                            Salto = j
-                            Exit For
-                        End If
-                    Next
-
-                    If Tabla.Rows(i).Cells(0).Value <> String.Empty And Tabla.Rows(i).Cells(4).Value = 0 Then
-                        Dim Seccion As New Tramo_Columna
-                        Seccion.Name_Elemento = Tabla.Rows(i).Cells(Col_Label).Value
-                        Seccion.Piso = Tabla.Rows(i).Cells(Col_Piso).Value
-                        Seccion.Seccion = Tabla.Rows(i).Cells(Col_Seccion).Value
-
-                        ' E23: As viene en m², convertir a mm²
-                        Seccion.As_Req_Bottom = Convert.ToSingle(Tabla.Rows(i).Cells(Col_As_Req).Value) * 1000000
-                        Seccion.As_Req_Top = Convert.ToSingle(Tabla.Rows(i + Salto - 1).Cells(Col_As_Req).Value) * 1000000
-
-                        Columna.Lista_Tramos_Columnas.Add(Seccion)
-
-                        Section = Seccion.Name_Elemento
-                        I0 = i
-                    End If
-                Next
+                ' Agrupa por (Piso, Label): un Tramo_Columna por columna física.
+                ' ETABS puede partir una columna con nodo intermedio en varios sub-frames.
+                Columna.Lista_Tramos_Columnas.AddRange(
+                    ColumnaService.ParsearDisenoColumnasFrame(Tabla, Col_Piso, Col_Label,
+                                                              Col_Seccion, Col_Station, Col_As_Req))
 
                 For i = 0 To Columna.Lista_Tramos_Columnas.Count - 1
                     Dim Columna_ As New Columna
@@ -1608,6 +1585,17 @@ SkipPierDiseno:
         AddHandler itemActTodo.Click, AddressOf ActualizarTodo_Click
         OpcionesToolStripMenuItem.DropDownItems.Insert(2, itemActTodo)
 
+        ' Actualizar Modelo preservando refuerzo colocado — alternativa sin recrear
+        ' Lista_Columnas desde cero. Lee secciones + fuerzas + diseño, reconcilia por
+        ' label, y solo toca lo que cambió. "Actualizar Todo" sigue siendo la opción
+        ' destructiva (termina con Button2_Click = Calcular).
+        Dim itemActModelo As New ToolStripMenuItem("Actualizar Modelo (preserva refuerzo)")
+        itemActModelo.ForeColor = Color.White
+        itemActModelo.BackColor = Color.FromArgb(87, 87, 87)
+        itemActModelo.ToolTipText = "Lee un Excel nuevo y actualiza secciones, fuerzas y diseño sin tocar refuerzo, estribos ni distribución personalizada."
+        AddHandler itemActModelo.Click, AddressOf ActualizarModeloPreservandoRefuerzo_Click
+        OpcionesToolStripMenuItem.DropDownItems.Insert(3, itemActModelo)
+
         ' Tipo transversal columnas circulares (persiste en proyecto)
         Dim itemTransCirc As New ToolStripMenuItem("Transversal Circular")
         itemTransCirc.ForeColor = Color.White
@@ -2165,5 +2153,225 @@ SkipPierDiseno:
 
         Return candidatos
     End Function
+
+    ' =====================================================================
+    '  "Actualizar Modelo (preserva refuerzo)"
+    '  Lee un Excel ETABS actualizado y vuelca secciones + fuerzas + diseño
+    '  sobre las columnas ya calculadas, sin recrearlas. Preserva Refuerzo_*,
+    '  estribos, Distribucion_Personalizada y Lista_Barras_Seccion.
+    ' =====================================================================
+
+    Private Sub ActualizarModeloPreservandoRefuerzo_Click(sender As Object, e As EventArgs)
+        If Proyecto.Elementos.Columnas.Lista_Columnas Is Nothing OrElse
+           Proyecto.Elementos.Columnas.Lista_Columnas.Count = 0 Then
+            MessageBox.Show(
+                "No hay columnas calculadas en el proyecto." & vbCrLf & vbCrLf &
+                "Use ""Importar Todo"" + ""Calcular"" primero. Esta opción está pensada " &
+                "para actualizar un proyecto que ya tiene refuerzo colocado.",
+                "Sin columnas", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim ofd As New OpenFileDialog With {
+            .Title = "Actualizar Modelo — Seleccione el Excel ETABS actualizado",
+            .Filter = "Archivos Excel(*.xls;*.xlsx)|*.xls;*.xlsx|Todos los archivos (*.*)|*.*",
+            .Multiselect = False
+        }
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            Dim datos = ActualizadorColumnas.Leer(ofd.FileName)
+
+            If Not datos.TieneDisenoFrame AndAlso Not datos.TieneDisenoPier Then
+                Me.Cursor = Cursors.Arrow
+                MessageBox.Show(
+                    "El archivo no contiene las hojas de diseño (Conc Col Sum / Pier Dgn Sum)." & vbCrLf &
+                    "No hay nada que actualizar.",
+                    "Sin datos de diseño", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Dim rep = ActualizadorColumnas.Reconciliar(datos, Proyecto)
+            Me.Cursor = Cursors.Arrow
+
+            If Not rep.TieneCambios Then
+                MessageBox.Show("El archivo no aporta cambios: mismas secciones, fuerzas y labels.",
+                                "Sin cambios", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            ' Pedir al usuario qué hacer con labels nuevos
+            Dim labelsAceptados As HashSet(Of String) = Nothing
+            Dim res = MostrarDialogoReconciliacionColumnas(rep, labelsAceptados)
+            If res <> DialogResult.OK Then Return
+
+            Me.Cursor = Cursors.WaitCursor
+            ActualizadorColumnas.Aplicar(datos, Proyecto, labelsAceptados)
+            Me.Cursor = Cursors.Arrow
+
+            ' Si llegaron combos nuevos, abrir Form_Opciones_Combinaciones para
+            ' que el usuario las asigne a Design/Cortante/ALR. Las ya existentes
+            ' conservan su selección.
+            If rep.CombinacionesNuevas.Count > 0 Then
+                MessageBox.Show(
+                    $"El archivo trajo {rep.CombinacionesNuevas.Count} combinación(es) nueva(s). " &
+                    "Al cerrar este aviso se abrirá la ventana de selección para asignarlas a " &
+                    "Diseño, Cortante y ALR. Las ya seleccionadas se preservan.",
+                    "Combinaciones nuevas", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                MostrarDialogosCombinaciones()
+            End If
+
+            ' Refrescar combo de elementos si hay columnas nuevas
+            If labelsAceptados IsNot Nothing AndAlso labelsAceptados.Count > 0 Then
+                For Each lbl In labelsAceptados
+                    If Not Combo_Elementos.Items.Contains(lbl) Then Combo_Elementos.Items.Add(lbl)
+                Next
+            End If
+
+            MessageBox.Show(
+                "Actualización aplicada. El refuerzo colocado y la distribución personalizada se " &
+                "preservaron. Abra cada columna en 'Info Columnas' para refrescar el chequeo de " &
+                "flexo-compresión con la sección y las fuerzas nuevas.",
+                "Actualizar Modelo — OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            Me.Cursor = Cursors.Arrow
+            Logger.Error(ex, "Form_02_PagColumnas.ActualizarModeloPreservandoRefuerzo")
+            MessageBox.Show("Error al actualizar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ' Diálogo inline: muestra el reporte de reconciliación con un checklist para
+    ' los labels nuevos (Frame + Pier). Devuelve en labelsAceptados los que el
+    ' usuario marcó. OK sin marcar ninguno equivale a "no agregar columnas nuevas".
+    Private Function MostrarDialogoReconciliacionColumnas(rep As ActualizadorColumnas.ReporteReconciliacion,
+                                                          ByRef labelsAceptados As HashSet(Of String)) As DialogResult
+        labelsAceptados = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        Dim frm As New Form With {
+            .Text = "Actualizar Modelo — Reconciliación",
+            .Size = New Size(640, 540),
+            .StartPosition = FormStartPosition.CenterParent,
+            .FormBorderStyle = FormBorderStyle.FixedDialog,
+            .MinimizeBox = False, .MaximizeBox = False
+        }
+
+        Dim tlp As New TableLayoutPanel With {.Dock = DockStyle.Fill, .ColumnCount = 1, .RowCount = 3}
+        tlp.RowStyles.Add(New RowStyle(SizeType.Absolute, 170))
+        tlp.RowStyles.Add(New RowStyle(SizeType.Percent, 100))
+        tlp.RowStyles.Add(New RowStyle(SizeType.Absolute, 48))
+
+        Dim txtResumen As New RichTextBox With {
+            .Dock = DockStyle.Fill, .ReadOnly = True,
+            .BackColor = Color.FromArgb(30, 30, 30), .ForeColor = Color.FromArgb(220, 220, 220),
+            .Font = New Font("Consolas", 9.5), .Text = rep.Resumen,
+            .BorderStyle = BorderStyle.None
+        }
+        tlp.Controls.Add(txtResumen, 0, 0)
+
+        Dim gbNuevos As New GroupBox With {
+            .Text = "Columnas nuevas en el archivo — marque las que desea agregar al proyecto",
+            .Dock = DockStyle.Fill
+        }
+        Dim clb As New CheckedListBox With {
+            .Dock = DockStyle.Fill, .CheckOnClick = True,
+            .IntegralHeight = False
+        }
+        For Each f In rep.LabelsNuevosFrame
+            clb.Items.Add("Frame · " & f, False)
+        Next
+        For Each p In rep.LabelsNuevosPier
+            clb.Items.Add("Pier · " & p, False)
+        Next
+        If clb.Items.Count = 0 Then
+            clb.Items.Add("(sin labels nuevos)", False)
+            clb.Enabled = False
+        End If
+        gbNuevos.Controls.Add(clb)
+        tlp.Controls.Add(gbNuevos, 0, 1)
+
+        Dim pnlBtns As New FlowLayoutPanel With {
+            .Dock = DockStyle.Fill, .FlowDirection = FlowDirection.RightToLeft,
+            .Padding = New Padding(8)
+        }
+        Dim btnCancel As New Button With {.Text = "Cancelar", .DialogResult = DialogResult.Cancel, .Width = 110}
+        Dim btnOk As New Button With {.Text = "Aplicar actualización", .DialogResult = DialogResult.OK, .Width = 170}
+        pnlBtns.Controls.Add(btnCancel)
+        pnlBtns.Controls.Add(btnOk)
+        tlp.Controls.Add(pnlBtns, 0, 2)
+
+        frm.Controls.Add(tlp)
+        frm.AcceptButton = btnOk
+        frm.CancelButton = btnCancel
+
+        Dim result = frm.ShowDialog(Me)
+        If result = DialogResult.OK Then
+            For i = 0 To clb.CheckedItems.Count - 1
+                Dim txt = Convert.ToString(clb.CheckedItems(i))
+                ' Formato: "Frame · LABEL" o "Pier · LABEL"
+                Dim idx = txt.IndexOf("·"c)
+                If idx > 0 AndAlso idx + 1 < txt.Length Then
+                    labelsAceptados.Add(txt.Substring(idx + 1).Trim())
+                End If
+            Next
+        End If
+        Return result
+    End Function
+
+    ' Abre Form_Opciones_Combinaciones para que el usuario asigne las
+    ' combinaciones nuevas a Diseño / Cortante / ALR. Preserva las que ya
+    ' estaban seleccionadas (es el mismo diálogo que usa Button2).
+    Private Sub MostrarDialogosCombinaciones()
+        Dim col_s = Proyecto.Elementos.Columnas
+
+        ' Diseño
+        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+        For Each c In col_s.Lista_Combinaciones
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(c)
+        Next
+        For Each c In col_s.ListA_Combinaciones_Design
+            If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(c) Then
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(c)
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(c)
+            End If
+        Next
+        Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasDiseño"
+        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones de Diseño"
+        Form_Opciones_Combinaciones.ShowDialog()
+
+        ' Cortante
+        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+        For Each c In col_s.Lista_Combinaciones
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(c)
+        Next
+        For Each c In col_s.Lista_Combinaciones_Cortante
+            If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(c) Then
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(c)
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(c)
+            End If
+        Next
+        Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasCortante"
+        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones Cortante"
+        Form_Opciones_Combinaciones.ShowDialog()
+
+        ' ALR
+        Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Clear()
+        Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Clear()
+        For Each c In col_s.Lista_Combinaciones
+            Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Add(c)
+        Next
+        For Each c In col_s.Lista_Combinaciones_ALR
+            If Not Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Contains(c) Then
+                Form_Opciones_Combinaciones.Lista_Cargas_Design.Items.Add(c)
+                Form_Opciones_Combinaciones.Lista_Combinaciones.Items.Remove(c)
+            End If
+        Next
+        Form_Opciones_Combinaciones.OpcionLlamado = "ColumnasALR"
+        Form_Opciones_Combinaciones.GroupBox2.Text = "Combinaciones ALR"
+        Form_Opciones_Combinaciones.ShowDialog()
+    End Sub
 
 End Class

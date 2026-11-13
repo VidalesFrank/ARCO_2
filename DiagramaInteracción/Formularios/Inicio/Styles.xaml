@@ -1,0 +1,265 @@
+<!-- Estilos reutilizables para la pantalla de inicio. Todos los brushes
+     usan DynamicResource para permitir cambio de tema en caliente. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ══════════════════════════════════════════════════════════
+         FUENTE BASE
+         ══════════════════════════════════════════════════════════ -->
+    <FontFamily x:Key="FuenteBase">Segoe UI</FontFamily>
+    <FontFamily x:Key="FuenteDisplay">Segoe UI Semibold</FontFamily>
+
+    <!-- ══════════════════════════════════════════════════════════
+         BOTÓN DE ICONO EN TOPBAR (36×36, sin borde, hover tenue)
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="BtnIconoTopBar" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="38"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTopBarTexto}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="borde"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushTopBarHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushTopBarDivisor}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         BOTÓN DE TEXTO+ICONO EN TOPBAR (ej: Reportes ▾)
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="BtnTextoTopBar" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTopBarTexto}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="borde"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushTopBarHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushTopBarDivisor}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         BÚSQUEDA ESTILO PILL EN TOPBAR
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="SearchBoxEstilo" TargetType="TextBox">
+        <Setter Property="Background" Value="{DynamicResource BrushTopBarSearchFondo}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTopBarTexto}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource BrushTopBarTexto}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource BrushAzulInteraccion}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="0,0,16,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="borde"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="18"
+                            Padding="14,0,14,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Path Grid.Column="0" Width="16" Height="16"
+                                  Stretch="Uniform"
+                                  Data="{DynamicResource IcoBuscar}"
+                                  Stroke="{DynamicResource BrushTopBarTextoTenue}"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Fill="Transparent"
+                                  VerticalAlignment="Center"/>
+                            <Grid Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock x:Name="placeholder"
+                                           Text="Buscar módulos…"
+                                           Foreground="{DynamicResource BrushTopBarTextoTenue}"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"/>
+                                <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushTopBarSearchFoco}"/>
+                        </Trigger>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="placeholder" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Text" Value=""/>
+                                <Condition Property="IsKeyboardFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="placeholder" Property="Opacity" Value="0.5"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Text" Value="">
+                <Setter Property="Tag" Value="vacio"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Convertidor: cadena no vacía → Collapsed -->
+    <!-- (placeholder se controla por Text="" en el ControlTemplate.Triggers) -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         ITEM DE NAVEGACIÓN LATERAL
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="SidebarItemEstilo" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushSidebarTexto}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="borde"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Margin="8,1,8,1"/>
+                        <Border x:Name="acento"
+                                Width="3"
+                                HorizontalAlignment="Left"
+                                Background="Transparent"
+                                Margin="0,8,0,8"
+                                CornerRadius="0,2,2,0"/>
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                          Margin="16,0,12,0"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushSidebarHover}"/>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="activo">
+                            <Setter TargetName="borde" Property="Background"
+                                    Value="{DynamicResource BrushSidebarHover}"/>
+                            <Setter TargetName="acento" Property="Background"
+                                    Value="{DynamicResource BrushSidebarActivo}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TÍTULO DE SECCIÓN EN SIDEBAR
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="SidebarTituloEstilo" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushSidebarTitulo}"/>
+        <Setter Property="Margin" Value="24,18,16,6"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ESTILOS TIPOGRÁFICOS DEL CONTENIDO
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="H1" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteDisplay}"/>
+        <Setter Property="FontSize" Value="26"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextoPrincipal}"/>
+    </Style>
+
+    <Style x:Key="H1Sub" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextoSecundario}"/>
+    </Style>
+
+    <Style x:Key="H2" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteDisplay}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextoPrincipal}"/>
+    </Style>
+
+    <Style x:Key="CardTitulo" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteDisplay}"/>
+        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextoPrincipal}"/>
+    </Style>
+
+    <Style x:Key="CardDescripcion" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="11.5"/>
+        <Setter Property="LineHeight" Value="16"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextoSecundario}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <Style x:Key="BannerTexto" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextoSecundario}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCROLLBAR SUTIL
+         ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="ScrollViewerSutilEstilo" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="PanningMode" Value="VerticalOnly"/>
+    </Style>
+
+</ResourceDictionary>

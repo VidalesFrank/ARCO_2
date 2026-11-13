@@ -45,17 +45,24 @@
     </application>
   </compatibility>
 
-  <!-- Indica que la aplicación tiene reconocimiento de PPP y Windows no la escalará de forma automática a
-       PPP superiores. Las aplicaciones de Windows Presentation Foundation (WPF) tienen reconocimiento de PPP automático y no necesitan 
-       participar. Las aplicaciones de Windows Forms que apuntan a .NET Framework 4.6 que participan en esta configuración, también 
-       deben establecer la configuración 'EnableWindowsFormsHighDpiAutoResizing' en 'true' en app.config. -->
-  <!--
+  <!-- DPI Awareness explícito a 'unaware' (DPI Unaware).
+       Al agregar WPF al proyecto, el runtime WPF intenta elevar el proceso a
+       System/Per-Monitor DPI Aware automáticamente al mostrar su primera Window.
+       Eso rompe los formularios WinForms existentes, que están diseñados para
+       96 DPI y dependen del bitmap scaling automático de Windows — se ven más
+       pequeños en monitores de alta densidad cuando el escalado automático
+       deja de aplicar.
+       Declarar aquí 'unaware' bloquea la elevación y preserva el tamaño de
+       los formularios existentes. Costo: la Window WPF también pasa por el
+       bitmap scaling, por lo que en pantallas de alta densidad puede verse
+       ligeramente menos nítida que sin este flag. Es el compromiso correcto
+       mientras no se adapten los WinForms a ser DPI aware. -->
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">false</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">unaware</dpiAwareness>
     </windowsSettings>
   </application>
-  -->
 
   <!-- Habilitar los temas para los controles y cuadros de diálogo comunes de Windows (Windows XP y versiones posteriores) -->
   <!--

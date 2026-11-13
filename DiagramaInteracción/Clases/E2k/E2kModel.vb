@@ -13,6 +13,7 @@ Public Class E2kModel
     Public Property Points As New Dictionary(Of String, E2kPoint)(StringComparer.OrdinalIgnoreCase)
     Public Property FrameSections As New Dictionary(Of String, E2kFrameSection)(StringComparer.OrdinalIgnoreCase)
     Public Property PierSections As New Dictionary(Of String, E2kPierSection)(StringComparer.OrdinalIgnoreCase)
+    Public Property ShellSections As New Dictionary(Of String, E2kShellSection)(StringComparer.OrdinalIgnoreCase)
     Public Property Lines As New Dictionary(Of String, E2kLine)(StringComparer.OrdinalIgnoreCase)
     Public Property Areas As New Dictionary(Of String, E2kArea)(StringComparer.OrdinalIgnoreCase)
     Public Property LineAssigns As New List(Of E2kLineAssign)
@@ -124,6 +125,19 @@ Public Class E2kPierSection
     Public Property Name As String = ""
     Public Property Material As String = ""
     Public Property Shapes As New List(Of List(Of PointF))
+End Class
+
+''' <summary>
+''' Sección "shell": muros (WALL), losas (SLAB), decks. ETABS las agrupa bajo
+''' el keyword SHELLPROP con PROPTYPE "Wall" | "Slab" | "Deck", y el espesor
+''' se declara como WALLTHICKNESS / SLABTHICKNESS / DECKSLABDEPTH según el
+''' tipo.
+''' </summary>
+Public Class E2kShellSection
+    Public Property Name As String = ""
+    Public Property PropType As String = ""   ' "Wall" | "Slab" | "Deck"
+    Public Property Thickness As Double = 0.0 ' metros
+    Public Property Material As String = ""
 End Class
 
 Public Class E2kLine

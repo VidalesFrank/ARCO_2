@@ -16,8 +16,10 @@ Public Class OpcionesInformeTecnico
 
     Public Property IncluirPilas As Boolean = True
     Public Property IncluirColumnas As Boolean = True
+    Public Property IncluirMuros As Boolean = True
     Public Property IncluirVigas As Boolean = True
     Public Property IncluirNervios As Boolean = True
+    Public Property IncluirZapatas As Boolean = True
 End Class
 
 ''' <summary>
@@ -123,12 +125,14 @@ Public Class InformeTecnicoService
     ' =========================================================================
     '  Resumen ejecutivo (una fila por módulo)
     ' =========================================================================
-    Private Function ConstruirResumenes(proyecto As Proyecto, opciones As OpcionesInformeTecnico) As List(Of ModuloResumen)
+    Friend Function ConstruirResumenes(proyecto As Proyecto, opciones As OpcionesInformeTecnico) As List(Of ModuloResumen)
         Dim lista As New List(Of ModuloResumen)
         If opciones.IncluirPilas Then AgregarSiTiene(lista, EstadisticasInformeService.Resumen(proyecto, "Pilas"))
         If opciones.IncluirColumnas Then AgregarSiTiene(lista, EstadisticasInformeService.Resumen(proyecto, "Columnas"))
+        If opciones.IncluirMuros Then AgregarSiTiene(lista, EstadisticasInformeService.Resumen(proyecto, "Muros"))
         If opciones.IncluirVigas Then AgregarSiTiene(lista, EstadisticasInformeService.Resumen(proyecto, "Vigas"))
         If opciones.IncluirNervios Then AgregarSiTiene(lista, EstadisticasInformeService.Resumen(proyecto, "Nervios"))
+        If opciones.IncluirZapatas Then AgregarSiTiene(lista, EstadisticasInformeService.Resumen(proyecto, "Zapatas"))
         Return lista
     End Function
 
@@ -173,7 +177,7 @@ Public Class InformeTecnicoService
         body.Append(ReporteRevisionWordHelpers.ParrafoNormal(""))
     End Sub
 
-    Private Shared Function EstadoTexto(r As ModuloResumen) As String
+    Friend Shared Function EstadoTexto(r As ModuloResumen) As String
         If r.NRevisados = 0 Then Return "Sin cálculo"
         If r.NNoCumple = 0 Then Return "Conforme"
         If r.PctCumple >= 95 Then Return "Aceptable"
@@ -213,22 +217,39 @@ Public Class InformeTecnicoService
             End If
         End If
 
-        ' --- Donut premium de cumplimiento -----------------------------------
-        Dim pngDonut = InformeChartsService.DonutCumplimiento(r.NCumple, r.NNoCumple, r.NSinDato,
-                                                               "Cumplimiento global — " & TituloModulo(r.Modulo))
+        ' --- Donut premium (ScottDashboardHelpers, mismo look que el dashboard) -
+        Dim pngDonut = ScottDashboardHelpers.PngDonut(r.NCumple, r.NNoCumple, r.NSinDato,
+                                                       DashboardTheme.TemaLight, 900, 600)
         If pngDonut IsNot Nothing Then
-            body.Append(ReporteRevisionWordHelpers.ImagenCentrada(mainPart, pngDonut, 14.0, 7.5))
+            body.Append(ReporteRevisionWordHelpers.ImagenCentrada(mainPart, pngDonut, 13.0, 8.6))
             body.Append(ReporteRevisionWordHelpers.TituloFiguraEjecutivo(
-                "Distribución de elementos por veredicto de cumplimiento."))
+                "Distribución de elementos por veredicto de cumplimiento — " & TituloModulo(r.Modulo) & "."))
             body.Append(ReporteRevisionWordHelpers.ParrafoNormal(""))
         End If
 
-        ' --- Barras por piso (solo si más de un piso tiene datos) -----------
+        ' --- Top-N peores: barras horizontales premium -----------------------
+        If r.Top10Criticos IsNot Nothing AndAlso r.Top10Criticos.Count > 0 Then
+            Dim itemsPr = r.Top10Criticos.Where(Function(e) e.CD > 0).
+                                          Select(Function(e) New ItemCD(e.Nombre, CDbl(e.CD))).ToList()
+            Dim pngTop = ScottDashboardHelpers.PngTopPeores(itemsPr, 10, DashboardTheme.TemaLight, width:=1100, height:=560)
+            If pngTop IsNot Nothing Then
+                body.Append(ReporteRevisionWordHelpers.ImagenCentrada(mainPart, pngTop, 16.0, 8.0))
+                body.Append(ReporteRevisionWordHelpers.TituloFiguraEjecutivo(
+                    "Elementos con menor C/D — vista premium del dashboard."))
+                body.Append(ReporteRevisionWordHelpers.ParrafoNormal(""))
+            End If
+        End If
+
+        ' --- Barras por piso premium (solo si más de un piso tiene datos) ---
         If r.PorPiso IsNot Nothing AndAlso r.PorPiso.Count >= 2 Then
-            Dim pngBarras = InformeChartsService.BarrasPorPiso(r.PorPiso,
-                                                                "Distribución por piso — " & TituloModulo(r.Modulo))
+            Dim filas = r.PorPiso.Select(Function(p) New ScottDashboardHelpers.PisoFila With {
+                                            .Piso = p.Piso, .Cumple = p.NCumple,
+                                            .NoCumple = p.NNoCumple, .SinCalc = p.NSinDato}).ToList()
+            Dim pngBarras = ScottDashboardHelpers.PngBarrasPorPiso(
+                filas, DashboardTheme.TemaLight,
+                "Distribución por piso — " & TituloModulo(r.Modulo), 1300, 580)
             If pngBarras IsNot Nothing Then
-                body.Append(ReporteRevisionWordHelpers.ImagenCentrada(mainPart, pngBarras, 15.0, 10.0))
+                body.Append(ReporteRevisionWordHelpers.ImagenCentrada(mainPart, pngBarras, 16.0, 7.5))
                 body.Append(ReporteRevisionWordHelpers.TituloFiguraEjecutivo(
                     "Cantidad de elementos que cumplen y que no cumplen, discriminado por piso."))
                 body.Append(ReporteRevisionWordHelpers.ParrafoNormal(""))
@@ -260,7 +281,7 @@ Public Class InformeTecnicoService
     ''' representado en la planta) que presentan incumplimientos. Devuelve "" si
     ''' no hay otros pisos problemáticos — en ese caso no se agrega la nota.
     ''' </summary>
-    Private Shared Function NotaOtrosPisos(r As ModuloResumen) As String
+    Friend Shared Function NotaOtrosPisos(r As ModuloResumen) As String
         If r.PorPiso Is Nothing OrElse r.PorPiso.Count <= 1 Then Return ""
         Dim pisoPrincipal = r.PorPiso.First().Piso
         Dim otros = r.PorPiso.Skip(1).Where(Function(p) p.NNoCumple > 0).ToList()
@@ -275,7 +296,7 @@ Public Class InformeTecnicoService
         Return $"La planta corresponde al piso {pisoPrincipal}. En otros pisos también se detectaron columnas con C/D inferior al umbral: {detalle}. Ver el detalle gráfico en la distribución por piso y la tabla de elementos críticos."
     End Function
 
-    Private Shared Function IntroCapitulo(r As ModuloResumen) As String
+    Friend Shared Function IntroCapitulo(r As ModuloResumen) As String
         Dim mod_ = TituloModulo(r.Modulo).ToLower()
         If r.NRevisados = 0 Then
             Return $"No se encontraron {mod_} con resultados de C/D al momento de generar el informe."
@@ -289,12 +310,14 @@ Public Class InformeTecnicoService
         Return texto
     End Function
 
-    Private Shared Function TituloModulo(modulo As String) As String
+    Friend Shared Function TituloModulo(modulo As String) As String
         Select Case modulo
             Case "Pilas" : Return "Pilas"
             Case "Columnas" : Return "Columnas"
+            Case "Muros" : Return "Muros estructurales"
             Case "Vigas" : Return "Vigas"
             Case "Nervios" : Return "Nervios"
+            Case "Zapatas" : Return "Zapatas"
         End Select
         Return modulo
     End Function
@@ -302,12 +325,51 @@ Public Class InformeTecnicoService
     ' =========================================================================
     '  Render de plantas (delegado al Form_Planta_X correspondiente, headless)
     ' =========================================================================
-    Private Class PlantaRender
+    ''' <summary>
+    ''' Devuelve el nombre del piso con MÁS columnas distintas (que tienen un tramo
+    ''' en ese piso). En empate: el piso más bajo (sótano) que ya viene ordenado
+    ''' por OrdenarPisos. Si no hay info de columnas, cae al primer piso del resumen.
+    ''' </summary>
+    Private Function PisoConMasColumnas(proyecto As Proyecto, r As ModuloResumen) As String
+        Try
+            Dim cols = proyecto?.Elementos?.Columnas?.Lista_Columnas
+            If cols Is Nothing OrElse cols.Count = 0 Then
+                Return If(r.PorPiso?.FirstOrDefault()?.Piso, "")
+            End If
+            Dim conteo As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            For Each c In cols
+                If c Is Nothing OrElse c.Lista_Tramos_Columnas Is Nothing Then Continue For
+                Dim pisosElemento As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                For Each tr In c.Lista_Tramos_Columnas
+                    If tr IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tr.Piso) Then
+                        pisosElemento.Add(tr.Piso)
+                    End If
+                Next
+                For Each p In pisosElemento
+                    If conteo.ContainsKey(p) Then conteo(p) += 1 Else conteo(p) = 1
+                Next
+            Next
+            If conteo.Count = 0 Then Return If(r.PorPiso?.FirstOrDefault()?.Piso, "")
+            Dim maxN = conteo.Values.Max()
+            ' Empate → el que esté primero en r.PorPiso (ya ordenado sótano→cubierta).
+            If r.PorPiso IsNot Nothing Then
+                For Each p In r.PorPiso
+                    If conteo.ContainsKey(p.Piso) AndAlso conteo(p.Piso) = maxN Then Return p.Piso
+                Next
+            End If
+            Return conteo.First(Function(kv) kv.Value = maxN).Key
+        Catch ex As Exception
+            Logger.Error(ex, "InformeTecnicoService.PisoConMasColumnas")
+            Return If(r.PorPiso?.FirstOrDefault()?.Piso, "")
+        End Try
+    End Function
+
+    Friend Class PlantaRender
         Public Property Bmp As Bitmap
         Public Property Caption As String
     End Class
 
-    Private Function RenderPlantasModulo(proyecto As Proyecto, r As ModuloResumen) As List(Of PlantaRender)
+    Friend Function RenderPlantasModulo(proyecto As Proyecto, r As ModuloResumen) As List(Of PlantaRender)
         Dim res As New List(Of PlantaRender)
         Try
             Dim gridlines = proyecto?.Elementos?.Grids?.GridLines
@@ -324,12 +386,13 @@ Public Class InformeTecnicoService
                     End Using
 
                 Case "Columnas"
-                    ' Solo el primer piso para optimizar tamaño del informe. Los demás
-                    ' pisos quedan descritos en una nota textual (ver EscribirCapitulo)
-                    ' y en las barras por piso. Usamos r.PorPiso.First() que ya está
-                    ' ordenado sótano → cubierta por EstadisticasInformeService.OrdenarPisos,
-                    ' para que la nota y la planta coincidan en qué es "el piso principal".
-                    Dim pisoPrincipal = If(r.PorPiso?.FirstOrDefault()?.Piso, "")
+                    ' Elegimos el piso con MÁS columnas distintas: típicamente el primer
+                    ' nivel bajo torre es el que concentra todas las columnas del edificio,
+                    ' mientras que los pisos superiores pueden tener menos (las de borde
+                    ' se cortan). Es la representación "más completa" para el reporte.
+                    ' Si varios pisos empatan en conteo, prioriza el más bajo (sótano→cubierta
+                    ' por EstadisticasInformeService.OrdenarPisos).
+                    Dim pisoPrincipal = PisoConMasColumnas(proyecto, r)
                     If Not String.IsNullOrWhiteSpace(pisoPrincipal) Then
                         Dim bmp As Bitmap = Nothing
                         Using frm As New Form_Planta_Columnas() With {
@@ -346,36 +409,72 @@ Public Class InformeTecnicoService
                 Case "Vigas"
                     Dim diag = DiagramaServiceParaVigas()
                     Dim joints = JointsParaVigas(proyecto)
-                    ' Solo las vigas con cálculo — las sin dato no son incumplimientos pendientes,
-                    ' simplemente están fuera del alcance de la revisión. Pintarlas en gris
-                    ' infla la planta y confunde al cliente.
-                    Dim vigas = proyecto.Elementos.Vigas?.Vigas?.
-                                    Where(Function(v) v.IncluirEnRevision AndAlso VigaService.PeorCDViga(v) > 0).ToList()
-                    If vigas IsNot Nothing AndAlso vigas.Count > 0 AndAlso joints IsNot Nothing Then
-                        Dim bmp = diag.DibujarPlantaBitmap(1400, 1000, vigas, joints, gridlines, Nothing,
-                                                            DiagramaService.ModoChequeoPlanta.PeorGlobal)
-                        If bmp IsNot Nothing Then res.Add(New PlantaRender With {
-                            .Bmp = bmp,
-                            .Caption = $"Planta de vigas revisadas — {vigas.Count} elementos (coloreado por C/D peor global)."})
+                    Dim todasVigas = proyecto.Elementos.Vigas?.Vigas?.
+                                        Where(Function(v) v.IncluirEnRevision AndAlso VigaService.PeorCDViga(v) > 0).ToList()
+                    If todasVigas IsNot Nothing AndAlso todasVigas.Count > 0 AndAlso joints IsNot Nothing Then
+                        Dim grupos = PisosUnicosService.AgruparPisosVigas(proyecto)
+                        If grupos Is Nothing OrElse grupos.Count = 0 Then
+                            ' Fallback: no se pudo agrupar; una sola planta con todas superpuestas.
+                            Dim bmp = diag.DibujarPlantaBitmap(1400, 1000, todasVigas, joints, gridlines, Nothing,
+                                                                DiagramaService.ModoChequeoPlanta.PeorGlobal)
+                            If bmp IsNot Nothing Then res.Add(New PlantaRender With {
+                                .Bmp = bmp,
+                                .Caption = $"Planta de vigas revisadas — {todasVigas.Count} elementos (coloreado por C/D peor global)."})
+                        Else
+                            For Each gr In grupos
+                                Dim pisoRep = gr.PisoRepresentante
+                                Dim vigasPiso = todasVigas.Where(Function(v) v.Piso = pisoRep).ToList()
+                                If vigasPiso.Count = 0 Then Continue For
+                                Dim bmp = diag.DibujarPlantaBitmap(1400, 1000, vigasPiso, joints, gridlines, pisoRep,
+                                                                    DiagramaService.ModoChequeoPlanta.PeorGlobal)
+                                If bmp IsNot Nothing Then res.Add(New PlantaRender With {
+                                    .Bmp = bmp,
+                                    .Caption = $"Planta de vigas — {PisosUnicosService.DescribirGrupo(gr)} ({vigasPiso.Count} vigas, C/D peor global)."})
+                            Next
+                        End If
                     End If
 
                 Case "Nervios"
-                    ' Mismo criterio que Vigas: solo nervios con cálculo.
-                    Dim nervios = proyecto.Elementos.Nervios?.Elementos?.
-                                    Where(Function(n) NervioService.PeorCDNervio(n) > 0).ToList()
+                    ' Pasamos TODOS los nervios del paño (revisados + no revisados).
+                    ' Los no revisados se pintan en gris alpha 90 (ColorSinCalcular),
+                    ' quedando como "sombra" para dar contexto estructural del paño
+                    ' sin saturar visualmente. Los revisados quedan extruidos con su
+                    ' Bw real y coloreados por C/D.
+                    Dim todosNervios = proyecto.Elementos.Nervios?.Elementos?.ToList()
                     Dim joints = JointsParaNervios(proyecto)
-                    If nervios IsNot Nothing AndAlso nervios.Count > 0 AndAlso joints IsNot Nothing Then
-                        Dim bmp As Bitmap = Nothing
-                        Using frm As New Form_PlantaInteractivaNervios() With {
-                            .Nervios = nervios,
-                            .Joints = joints,
-                            .GridLines = gridlines
-                        }
-                            bmp = frm.RenderBitmapPlanta(1400, 1000, Nothing, 0)
-                        End Using
-                        If bmp IsNot Nothing Then res.Add(New PlantaRender With {
-                            .Bmp = bmp,
-                            .Caption = $"Planta de nervios revisados — {nervios.Count} elementos (coloreado por C/D peor global)."})
+                    If todosNervios IsNot Nothing AndAlso todosNervios.Count > 0 AndAlso joints IsNot Nothing Then
+                        Dim grupos = PisosUnicosService.AgruparPisosNervios(proyecto)
+                        If grupos Is Nothing OrElse grupos.Count = 0 Then
+                            Dim bmp As Bitmap = Nothing
+                            Using frm As New Form_PlantaInteractivaNervios() With {
+                                .Nervios = todosNervios, .Joints = joints, .GridLines = gridlines}
+                                bmp = frm.RenderBitmapPlanta(1400, 1000, Nothing, 0)
+                            End Using
+                            If bmp IsNot Nothing Then res.Add(New PlantaRender With {
+                                .Bmp = bmp,
+                                .Caption = $"Planta de nervios revisados — {todosNervios.Count} elementos (coloreado por C/D peor global)."})
+                        Else
+                            For Each gr In grupos
+                                ' Elegir como representante el primer piso del grupo que tenga
+                                ' nervios con refuerzo ingresado. Si el grupo entero está sin
+                                ' calcular, saltarlo — evita plantas vacías en el informe.
+                                Dim pisosConCalculo = gr.Pisos.
+                                    Where(Function(p) todosNervios.Any(Function(n) n.Piso = p AndAlso
+                                                                                    NervioService.PeorCDNervio(n) > 0)).ToList()
+                                If pisosConCalculo.Count = 0 Then Continue For
+                                Dim pisoRep = pisosConCalculo.First()
+                                Dim nervPiso = todosNervios.Where(Function(n) n.Piso = pisoRep).ToList()
+                                If nervPiso.Count = 0 Then Continue For
+                                Dim bmp As Bitmap = Nothing
+                                Using frm As New Form_PlantaInteractivaNervios() With {
+                                    .Nervios = nervPiso, .Joints = joints, .GridLines = gridlines}
+                                    bmp = frm.RenderBitmapPlanta(1400, 1000, pisoRep, 0)
+                                End Using
+                                If bmp IsNot Nothing Then res.Add(New PlantaRender With {
+                                    .Bmp = bmp,
+                                    .Caption = $"Planta de nervios — {PisosUnicosService.DescribirGrupo(gr)} ({nervPiso.Count} nervios, C/D peor global)."})
+                            Next
+                        End If
                     End If
             End Select
         Catch ex As Exception

@@ -46,6 +46,7 @@ Public Class Form_09_Vigas
     Private Const FILA_F_POS = 9
     Private Const FILA_RED_NEG = 10
     Private Const FILA_RED_POS = 11
+    Private Const FILA_CONTROL_SISMICO = 14
 
     Private Const FILA_COR_SECCION = 0
     Private Const FILA_COR_LONGITUD = 1
@@ -144,7 +145,10 @@ Public Class Form_09_Vigas
 
             ' Reaplicar agrupaciones manuales previas del usuario
             If Proyecto.Elementos.Vigas.GruposManual.Count > 0 Then
-                _vigaService.AplicarGruposManual(vigas, Proyecto.Elementos.Vigas.GruposManual, jointsDict)
+                _vigaService.AplicarGruposManual(vigas,
+                                                 Proyecto.Elementos.Vigas.GruposManual,
+                                                 jointsDict,
+                                                 Proyecto.Elementos.Vigas.GruposManualExcluidos)
             End If
 
             ' Reaplicar grupos de réplica patrón/similar
@@ -539,16 +543,104 @@ Public Class Form_09_Vigas
             Dim resp = MessageBox.Show(
                 resumen & vbCrLf & vbCrLf &
                 "¿Desea recalcular ahora con las demandas actualizadas?" & vbCrLf &
-                "(Equivale a presionar 'Procesar'. El refuerzo asignado y los grupos se conservan.)",
+                "Se recalculan fuerzas, diseño y cortante plástico sobre las vigas existentes." & vbCrLf &
+                "La agrupación manual y el refuerzo asignado se preservan.",
                 "Actualizar Demandas", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
 
             If resp = DialogResult.Yes Then
-                Button1_Click(Nothing, EventArgs.Empty)
+                RecalcularConservandoAgrupacion()
             End If
 
         Catch ex As Exception
             MessageBox.Show("Error al actualizar demandas: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
+
+    End Sub
+
+    ''' Recalcula fuerzas, diseño y cortante plástico SOBRE LA LISTA DE VIGAS EXISTENTE
+    ''' — sin pasar por VigaService.GenerarVigas. Esto preserva la agrupación manual
+    ''' del usuario (vigas separadas, vigas unidas a mano, grupos de réplica) que de
+    ''' otra forma se perdería porque la auto-agrupación vuelve a unir frames alineados
+    ''' sin consultar GruposManual (solo conoce los grupos "positivos", no las
+    ''' separaciones implícitas).
+    '''
+    ''' Si el proyecto no tiene vigas calculadas (Vigas.Count = 0, típicamente primera
+    ''' importación), se cae al flujo completo via Button1_Click.
+    Private Sub RecalcularConservandoAgrupacion()
+
+        Dim vigas = Proyecto.Elementos.Vigas.Vigas
+        If vigas Is Nothing OrElse vigas.Count = 0 Then
+            ' Proyecto nunca procesado: no hay agrupación que preservar.
+            Button1_Click(Nothing, EventArgs.Empty)
+            Return
+        End If
+
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            _cargando = True
+
+            Dim jointsDict = Proyecto.Elementos.Vigas.Joints.ToDictionary(Function(j) j.ElementLabel)
+            _vigas = vigas
+            _joints = jointsDict
+
+            ' 1. Envolvente de flexión con las nuevas fuerzas
+            _vigaService.CalcularEnvolventesVigas(vigas,
+                                                  Proyecto.Elementos.Vigas.BeamForces,
+                                                  New HashSet(Of String)(
+                                                      Proyecto.Elementos.Vigas.Lista_Combinaciones_Design.Select(Function(c) NormalizarClaveCombo(c)),
+                                                      StringComparer.OrdinalIgnoreCase))
+
+            Dim diag = _vigaService.DiagnosticarFuerzasAsignadas(vigas)
+            If diag IsNot Nothing Then
+                Logger.Warning("Form_09_Vigas.RecalcularConservandoAgrupacion", diag)
+                MessageBox.Show(diag, "Advertencia — Fuerzas sin asignar",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End If
+
+            ' 2. Diseño de acero longitudinal
+            _vigaService.designVigas(vigas, Proyecto.Elementos.Vigas.Joints, Proyecto.Elementos.Vigas.Recubrimiento)
+
+            ' 3. Refuerzo transversal — preservar estribos ajustados a mano
+            _vigaService.AsignarRefuerzoTransversalAutomatico(vigas, sobrescribir:=False)
+
+            ' 4. Cortante (si hay combinaciones seleccionadas)
+            If Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Count > 0 Then
+                _vigaService.CalcularEnvolventeCortante(vigas,
+                                                        Proyecto.Elementos.Vigas.BeamForces,
+                                                        New HashSet(Of String)(
+                                                            Proyecto.Elementos.Vigas.Lista_Combinaciones_Cortante.Select(Function(c) NormalizarClaveCombo(c)),
+                                                            StringComparer.OrdinalIgnoreCase))
+                _vigaService.CalcularCapacidadCortante(vigas)
+            End If
+
+            ' 5. Cortante plástico
+            TriggerCortantePlastico(vigas)
+
+            ' 6. Refrescar UI sin reconstruir Lista_Pisos/Lista_Vigas (las referencias
+            ' a las cViga siguen siendo las mismas, solo cambiaron sus demandas).
+            _cargando = False
+            Dim vigaSel As cViga = TryCast(Lista_Vigas.SelectedItem, cViga)
+            If vigaSel IsNot Nothing Then
+                _vigaActual = vigaSel
+                Dim grids = Proyecto?.Elementos?.Grids?.GridLines
+                Dim pisoSel = Lista_Pisos.SelectedItem?.ToString()
+                If grids IsNot Nothing AndAlso Not String.IsNullOrEmpty(pisoSel) Then
+                    _DiagramaService.DibujarPlanta(PictureBox1, _vigas, _joints, grids, pisoSel, vigaSel, ModoPlanta)
+                End If
+                CargarVigaCompleta(vigaSel)
+            End If
+            ActualizarTablaCortantePlastico()
+
+            MessageBox.Show("Demandas actualizadas. Agrupación de vigas y refuerzo preservados.",
+                            "OK", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_09_Vigas.RecalcularConservandoAgrupacion")
+            MessageBox.Show(ex.Message, "Error al recalcular", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            _cargando = False
             Me.Cursor = Cursors.Arrow
         End Try
 
@@ -1017,6 +1109,14 @@ Public Class Form_09_Vigas
         AddHandler menuActualizar.Click, AddressOf ActualizarNombresPorEje_Click
         OpcionesToolStripMenuItem.DropDownItems.Add(menuActualizar)
 
+        ' Ajuste masivo de estribos por sección (todas las vigas del edificio)
+        Dim menuEstribosGlobal As New ToolStripMenuItem("Ajustar refuerzo transversal (global por sección)...")
+        menuEstribosGlobal.ForeColor = Color.White
+        menuEstribosGlobal.BackColor = Color.FromArgb(87, 87, 87)
+        menuEstribosGlobal.ToolTipText = "Define el refuerzo transversal (ZC y ZNC) por cada sección del modelo y lo aplica a todas las vigas que la usen; recalcula cortante al terminar."
+        AddHandler menuEstribosGlobal.Click, AddressOf AjustarEstribosGlobal_Click
+        OpcionesToolStripMenuItem.DropDownItems.Add(menuEstribosGlobal)
+
         Dim menuReportes As New ToolStripMenuItem("Reportes")
         menuReportes.ForeColor = Color.White
         menuReportes.BackColor = Color.FromArgb(87, 87, 87)
@@ -1252,7 +1352,8 @@ Public Class Form_09_Vigas
 
         If Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Count = 0 Then Return
 
-        Dim fy_factor As Double = If(Proyecto.Elementos.Vigas.NivelDisipacion = "DES", 1.25, 1.0)
+        Dim esDES As Boolean = (Proyecto.Elementos.Vigas.NivelDisipacion = "DES")
+        Dim fy_factor As Double = If(esDES, 1.25, 1.0)
 
         _vigaService.CalcularCortantePlastico(
             vigas,
@@ -1260,7 +1361,8 @@ Public Class Form_09_Vigas
             New HashSet(Of String)(
                 Proyecto.Elementos.Vigas.Lista_Combinaciones_CortantePlastico.Select(Function(c) NormalizarClaveCombo(c)),
                 StringComparer.OrdinalIgnoreCase),
-            fy_factor)
+            fy_factor,
+            esDES)
 
         ActualizarTablaCortantePlastico()
 
@@ -1297,9 +1399,8 @@ Public Class Form_09_Vigas
 
             For Each frame In viga.Frames
 
-                If frame.CortantePlastico Is Nothing Then Continue For
-
-                Dim cp = frame.CortantePlastico
+                Dim cp = VigaService.CortantePlasticoVigente(frame)
+                If cp Is Nothing Then Continue For
                 Dim r = _dgvPlastico.Rows.Add()
                 Dim row = _dgvPlastico.Rows(r)
 
@@ -1631,6 +1732,25 @@ Public Class Form_09_Vigas
         ActualizarNombresPorEje()
     End Sub
 
+    Private Sub AjustarEstribosGlobal_Click(sender As Object, e As EventArgs)
+        If _vigas Is Nothing OrElse _vigas.Count = 0 Then
+            MessageBox.Show("No hay vigas cargadas. Importe y agrupe las vigas primero.",
+                            "Sin vigas", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        Using frm As New Form_09_AjustarEstribosGlobal(Proyecto, _vigas)
+            If frm.ShowDialog(Me) = DialogResult.OK Then
+                ' Las vigas y RevisionCortante ya fueron actualizadas por el form.
+                ' Refrescar la UI principal.
+                Try
+                    RecalcularRevisionTodo(silencioso:=True)
+                Catch ex As Exception
+                    Logger.Error(ex, "Form_09_Vigas.AjustarEstribosGlobal_Click", "post-aplicar")
+                End Try
+            End If
+        End Using
+    End Sub
+
     ''' Reasigna EjeApoyo_I/J, EjeParalelo y NombrePlano a todas las vigas cargadas.
     ''' Útil después de definir ejes manualmente o al abrir proyectos viejos.
     Private Sub ActualizarNombresPorEje()
@@ -1825,13 +1945,47 @@ Public Class Form_09_Vigas
         ' Re-ordenar la viga editada
         _vigaService.OrdenarFramesViga(_vigaActual, _joints)
 
-        ' Persistir el grupo manual (reemplaza si ya existía para esta viga)
+        ' Persistir la nueva agrupación manual.
+        '
+        ' Grupo "positivo" = labels que QUEDARON en la viga editada. Grupos
+        ' "singletes" = cada label que fue descartado (labelsQuitar); el usuario
+        ' expresó que ese frame NO va con sus vecinos. Sin los singletes, al
+        ' próximo Procesar la auto-agrupación de GenerarVigas une de nuevo los
+        ' residuales con sus vecinos alineados — bug reportado por Frank.
+        '
+        ' Removemos primero cualquier grupo preexistente que contenga alguno de
+        ' los labels afectados (edición + residuales) para que no queden grupos
+        ' zombi solapados con la nueva composición.
         Dim gruposManual = Proyecto.Elementos.Vigas.GruposManual
         Dim currentLabels = _vigaActual.Frames.Select(Function(f) f.ObjectLabel).ToList()
-        gruposManual.RemoveAll(Function(g) g.Any(Function(lbl) currentLabels.Contains(lbl)))
+        Dim labelsAfectados As New HashSet(Of String)(currentLabels, StringComparer.OrdinalIgnoreCase)
+        For Each lbl In labelsQuitar : labelsAfectados.Add(lbl) : Next
+        gruposManual.RemoveAll(Function(g) g.Any(Function(lbl) labelsAfectados.Contains(lbl)))
+
         If currentLabels.Count > 0 Then
             gruposManual.Add(currentLabels)
         End If
+        For Each lbl In labelsQuitar
+            gruposManual.Add(New List(Of String) From {lbl})
+        Next
+
+        ' Memoria de "excluir de revisión" para los residuales. Al replay en
+        ' AplicarGruposManual la viga nueva que contenga uno de estos labels
+        ' nace con ExcluirDeRevision=True — así la decisión del usuario sobrevive
+        ' al próximo Procesar.
+        Dim excluidos = Proyecto.Elementos.Vigas.GruposManualExcluidos
+        For Each lbl In labelsQuitar
+            If excluirResiduales Then
+                excluidos.Add(lbl)
+            Else
+                excluidos.Remove(lbl)
+            End If
+        Next
+        ' Los labels que vuelven a estar dentro de una viga "positiva" dejan de
+        ' ser residuales — se limpian del set.
+        For Each lbl In currentLabels
+            excluidos.Remove(lbl)
+        Next
 
         ' Recalcular todas las vigas afectadas
         RecalcularListaVigas(_vigas)
@@ -2428,7 +2582,8 @@ Public Class Form_09_Vigas
         "Redistribución (-)",
         "Redistribución (+)",
         "F_Final (-)",
-        "F_Final (+)"
+        "F_Final (+)",
+        "Tipo de control"
     }
 
         For Each nombre In nombresFilas
@@ -3376,6 +3531,7 @@ Public Class Form_09_Vigas
 
         Dim dgv As DataGridView = Tabla_Resultados_Flexion
         Dim colBase As Integer = 0
+        Dim frameIdx As Integer = 0
 
         For Each frame In viga.Frames
 
@@ -3401,21 +3557,38 @@ Public Class Form_09_Vigas
                 PintarCelda(dgv.Rows(8).Cells(colBase), res.RatioSup)
                 PintarCelda(dgv.Rows(9).Cells(colBase), res.RatioInf)
 
-                Dim factor As Double = Math.Round(revision.FactorRedistribucion, 2)
-
                 ' Limpiar primero (evita basura visual)
                 dgv.Rows(10).Cells(colBase).Value = ""
                 dgv.Rows(11).Cells(colBase).Value = ""
 
-                Select Case pos
+                ' Celdas editables de redistribución según tipo de control.
+                '
+                ' Gravitacional: apoyo edita M⁻ (fila 10), centro edita M⁺ (fila 11);
+                '   las complementarias quedan inactivas.
+                ' Sísmica: apoyo edita M⁻ (fila 10) y M⁺ (fila 11) — los dos
+                '   factores son independientes y se mueven diagonal al otro apoyo.
+                '   Centro no participa, ambas celdas se desactivan.
+                Dim esApoyo = (pos = PosicionTramoViga.Izquierda OrElse pos = PosicionTramoViga.Derecha)
+                Dim fNeg As Double = Math.Round(revision.FactorRedistribucion, 2)
+                Dim fPos As Double = Math.Round(revision.FactorRedPosApoyo, 2)
 
-                    Case PosicionTramoViga.Izquierda, PosicionTramoViga.Derecha
-                        dgv.Rows(10).Cells(colBase).Value = factor
-
-                    Case PosicionTramoViga.Centro
-                        dgv.Rows(11).Cells(colBase).Value = factor
-
-                End Select
+                If frame.EsControladoPorSismo Then
+                    If esApoyo Then
+                        HabilitarCeldaRedistribucion(dgv.Rows(10).Cells(colBase), fNeg)
+                        HabilitarCeldaRedistribucion(dgv.Rows(11).Cells(colBase), fPos)
+                    Else
+                        DimmarCeldaRedistribucion(dgv.Rows(10).Cells(colBase))
+                        DimmarCeldaRedistribucion(dgv.Rows(11).Cells(colBase))
+                    End If
+                Else
+                    If esApoyo Then
+                        HabilitarCeldaRedistribucion(dgv.Rows(10).Cells(colBase), fNeg)
+                        DimmarCeldaRedistribucion(dgv.Rows(11).Cells(colBase))
+                    Else
+                        DimmarCeldaRedistribucion(dgv.Rows(10).Cells(colBase))
+                        HabilitarCeldaRedistribucion(dgv.Rows(11).Cells(colBase), fNeg)
+                    End If
+                End If
 
                 Dim res_act = revision.ResultadoActual
 
@@ -3430,8 +3603,56 @@ Public Class Form_09_Vigas
 
             Next
 
+            ' Fila "Tipo de control": combobox en la columna del centro del frame
+            ' con dos opciones. Las celdas izq y der del frame muestran el mismo
+            ' texto en modo lectura para que el usuario vea el valor sin ambigüedad.
+            PintarCeldasControlPorSismo(dgv, frameIdx, frame)
+            frameIdx += 1
+
         Next
 
+    End Sub
+
+    Private Sub PintarCeldasControlPorSismo(dgv As DataGridView, frameIdx As Integer, frame As cFrame)
+        Dim colIzq = frameIdx * 3
+        Dim colCen = frameIdx * 3 + 1
+        Dim colDer = frameIdx * 3 + 2
+        Dim etiqueta = If(frame.EsControladoPorSismo, "Sísmica", "Gravitacional")
+
+        Dim cb As New DataGridViewComboBoxCell()
+        cb.Items.Add("Gravitacional")
+        cb.Items.Add("Sísmica")
+        cb.Value = etiqueta
+        cb.FlatStyle = FlatStyle.Flat
+        dgv.Rows(FILA_CONTROL_SISMICO).Cells(colCen) = cb
+
+        dgv.Rows(FILA_CONTROL_SISMICO).Cells(colIzq).Value = etiqueta
+        dgv.Rows(FILA_CONTROL_SISMICO).Cells(colDer).Value = etiqueta
+        dgv.Rows(FILA_CONTROL_SISMICO).Cells(colIzq).ReadOnly = True
+        dgv.Rows(FILA_CONTROL_SISMICO).Cells(colDer).ReadOnly = True
+
+        ' Visual: distinguir la fila con un azul suave (vs amarillo de redistribución)
+        For Each col In {colIzq, colCen, colDer}
+            dgv.Rows(FILA_CONTROL_SISMICO).Cells(col).Style.BackColor = Color.FromArgb(220, 235, 250)
+            dgv.Rows(FILA_CONTROL_SISMICO).Cells(col).Style.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+        Next
+    End Sub
+
+    ' Celda de redistribución activa: amarilla, editable, muestra el factor.
+    Private Sub HabilitarCeldaRedistribucion(cell As DataGridViewCell, factor As Double)
+        cell.ReadOnly = False
+        cell.Value = factor
+        cell.Style.BackColor = Color.FromArgb(255, 248, 220)
+        cell.Style.ForeColor = Color.Black
+    End Sub
+
+    ' Celda de redistribución inactiva: gris, ReadOnly, vacía.
+    ' El esquema (gravitacional/sísmico) dicta cuáles pueden editarse por posición.
+    Private Sub DimmarCeldaRedistribucion(cell As DataGridViewCell)
+        cell.ReadOnly = True
+        cell.Value = ""
+        cell.Style.BackColor = Color.FromArgb(230, 230, 230)
+        cell.Style.ForeColor = Color.Gray
     End Sub
 
     Private Sub PintarCelda(cell As DataGridViewCell, val As Double)
@@ -3643,6 +3864,35 @@ Public Class Form_09_Vigas
 
     Private Sub Tabla_Resultados_Flexion_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles Tabla_Resultados_Flexion.CellEndEdit
 
+        If e.RowIndex = FILA_CONTROL_SISMICO Then
+            ' Solo la columna del centro de cada frame tiene el combo editable.
+            If e.ColumnIndex Mod 3 <> 1 Then Exit Sub
+            Dim frameIndex As Integer = e.ColumnIndex \ 3
+            If _vigaActual Is Nothing OrElse frameIndex >= _vigaActual.Frames.Count Then Exit Sub
+
+            Dim valor = Tabla_Resultados_Flexion.Rows(e.RowIndex).Cells(e.ColumnIndex).Value?.ToString()
+            Dim frame = _vigaActual.Frames(frameIndex)
+            Dim nuevoEsSismico = (valor = "Sísmica")
+            frame.ControlPorSismoManual = True
+
+            If frame.EsControladoPorSismo <> nuevoEsSismico Then
+                frame.EsControladoPorSismo = nuevoEsSismico
+                ' Cambió el esquema: la lógica de RecalcularRedistribucion es
+                ' distinta entre los dos modos, hay que rehacer ResultadoActual
+                ' y rediseñar acero. Los factores guardados por zona se
+                ' preservan (en el otro esquema simplemente dejan de usarse).
+                _vigaService.RedistribuirFrame(frame)
+                _vigaService.CalcularFlexionViga(_vigaActual)
+                MostrarResultadosFlexion(_vigaActual)
+            Else
+                ' Sin cambio real de esquema; solo refrescar el texto izq/der.
+                PintarCeldasControlPorSismo(Tabla_Resultados_Flexion, frameIndex, frame)
+            End If
+
+            HayCambios = True
+            Exit Sub
+        End If
+
         If e.RowIndex = FILA_RED_NEG Or e.RowIndex = FILA_RED_POS Then
 
             Dim val As Double = 0
@@ -3688,6 +3938,16 @@ Public Class Form_09_Vigas
 
             _vigaService.CalcularFlexionViga(viga)
             MostrarResultadosFlexion(viga)
+
+            ' Advertencia NSR-10 C.21.5.2 (DES) / C.21.3.4.1 (DMO) — no bloquea,
+            ' solo informa que el refuerzo colocado quedó por debajo del mínimo
+            ' relativo exigido (ratio Mn⁺/Mn⁻ o Mn_seccion/Mn⁻_max_apoyo).
+            Dim esDES As Boolean = (Proyecto.Elementos.Vigas.NivelDisipacion = "DES")
+            Dim advC21 = _vigaService.ValidarC21_5_2(frame, esDES)
+            If advC21 IsNot Nothing Then
+                MessageBox.Show(advC21, "Advertencia NSR-10 C.21.5.2",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
 
             HayCambios = True
 

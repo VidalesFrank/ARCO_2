@@ -638,7 +638,7 @@ Public Class Form_Planta_Columnas
         Dim sel = TryCast(_canvas.SelectedElement, Columna)
         Dim hov = TryCast(_canvas.HoverElement, Columna)
 
-        Using fEtiqueta As New Font("Segoe UI", 7.5F, FontStyle.Bold),
+        Using fEtiqueta As New Font("Segoe UI", 12.5F, FontStyle.Bold),
               penBorde As New Pen(Color.FromArgb(70, 70, 70), 1.2F),
               penSelec As New Pen(Color.FromArgb(20, 90, 200), 2.5F),
               penHover As New Pen(Color.FromArgb(255, 140, 0), 2.0F)

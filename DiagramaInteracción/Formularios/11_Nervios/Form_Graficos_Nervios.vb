@@ -1,370 +1,326 @@
-Imports System.Windows.Forms.DataVisualization.Charting
-
 ''' <summary>
-''' Dashboard de gráficas resumen del módulo 11 (Nervios / Losas Nervadas).
-''' Completa la réplica a los cinco módulos: Columnas, Pilas, Muros, Vigas y
-''' Nervios.
-'''
-''' No recalcula nada: lee los C/D que ya dejó el cálculo del módulo en
-''' cFrameNervio, con los mismos criterios de "calculado" que usa
-''' Form_Reporte_Resumen_Nervios, para que gráfica y reporte no se contradigan.
-'''
-''' Como en Vigas, incluye filtro por piso: una losa nervada tiene muchos más
-''' elementos que columnas o muros y con todos a la vez el eje X es ilegible.
+''' Dashboard premium del módulo de Nervios — Flexión Mn, Acero As, Cortante
+''' y Estado General, con filtro por piso. Mismo look y toggle Dark/Light que
+''' los demás módulos. Agrega por nervio tomando el frame más crítico.
 ''' </summary>
 Public Class Form_Graficos_Nervios
     Inherits Form
 
     Public Property Nervios As cNervios
 
-    Private ReadOnly _grafico As Chart
-    Private WithEvents _cboPiso As ComboBox
-    Private WithEvents _btnFlexion As Button
-    Private WithEvents _btnAcero As Button
-    Private WithEvents _btnCortante As Button
-    Private WithEvents _btnEstado As Button
-    Private WithEvents _btnExportar As Button
+    Private _tema As DashboardTheme = DashboardTheme.Actual
+    Private _vista As Vista = Vista.Flexion
+    Private _pisoSel As String = "<Todos>"
+    Private _cboPiso As ComboBox
 
-    Private _vistaActual As String = "Flexion"
-    Private _cargando As Boolean = False
+    Private Enum Vista
+        Flexion
+        Acero
+        Cortante
+        Estado
+    End Enum
 
     Public Sub New()
-
-        Me.Text = "Gráficas Resumen — Nervios"
-        Me.Size = New Size(1180, 700)
-        Me.MinimumSize = New Size(900, 540)
+        Me.Text = "ARCO · Gráficas Resumen — Nervios"
+        Me.Size = New Size(1480, 920)
+        Me.MinimumSize = New Size(1100, 680)
         Me.StartPosition = FormStartPosition.CenterParent
-        Me.BackColor = Color.White
         Me.Font = New Font("Segoe UI", 9.5F)
+        Me.BackColor = _tema.Fondo
 
-        _grafico = GraficosResumen.CrearChart()
+        AddHandler Me.Shown, Sub() Reconstruir()
+        AddHandler DashboardTheme.TemaCambiado, AddressOf OnTemaCambiado
+        AddHandler Me.FormClosed, Sub() RemoveHandler DashboardTheme.TemaCambiado, AddressOf OnTemaCambiado
+    End Sub
 
-        Dim barra As New Panel() With {
-            .Dock = DockStyle.Top,
-            .Height = 44,
-            .BackColor = Color.FromArgb(245, 245, 245)
-        }
-        Dim lbl As New Label() With {
-            .Text = "Piso:",
-            .AutoSize = True,
-            .Location = New Point(12, 14),
-            .ForeColor = GraficosResumen.ColAcento,
-            .Font = New Font("Segoe UI", 9.5F, FontStyle.Bold)
-        }
+    Private Sub OnTemaCambiado(sender As Object, e As EventArgs)
+        _tema = DashboardTheme.Actual
+        Me.BackColor = _tema.Fondo
+        Reconstruir()
+    End Sub
+
+    Private Sub Reconstruir()
+        Me.SuspendLayout()
+        Me.Controls.Clear()
+
+        Dim cuerpo = ArmarCuerpo()
+        Dim barraBotones = ArmarBarraBotones()
+        Dim header = ScottDashboardHelpers.CrearEncabezado(
+            "DASHBOARD DE NERVIOS",
+            "Flexión (Mn) · Acero (As) · Cortante · Estado",
+            _tema)
+
+        Me.Controls.Add(cuerpo)
+        Me.Controls.Add(barraBotones)
+        Me.Controls.Add(header)
+
+        Me.ResumeLayout()
+    End Sub
+
+    Private Function ArmarBarraBotones() As FlowLayoutPanel
+        Dim f As New FlowLayoutPanel() With {
+            .Dock = DockStyle.Top, .Height = 48, .BackColor = _tema.Fondo,
+            .Padding = New Padding(14, 8, 14, 4), .WrapContents = False}
+        f.Controls.Add(BotonVista("Flexión Mn", Vista.Flexion))
+        f.Controls.Add(BotonVista("Acero As", Vista.Acero))
+        f.Controls.Add(BotonVista("Cortante", Vista.Cortante))
+        f.Controls.Add(BotonVista("Estado General", Vista.Estado))
+
+        Dim sep As New Panel() With {.Width = 20, .Height = 1, .BackColor = Color.Transparent}
+        f.Controls.Add(sep)
+
+        Dim lblPiso As New Label() With {
+            .Text = "Piso:", .Font = New Font("Segoe UI", 9.5F),
+            .ForeColor = _tema.TextoTenue, .AutoSize = True,
+            .TextAlign = ContentAlignment.MiddleLeft,
+            .Margin = New Padding(0, 9, 6, 0), .BackColor = Color.Transparent}
+        f.Controls.Add(lblPiso)
+
         _cboPiso = New ComboBox() With {
             .DropDownStyle = ComboBoxStyle.DropDownList,
-            .Location = New Point(56, 10),
-            .Width = 220,
-            .Font = New Font("Segoe UI", 9.5F)
-        }
-        barra.Controls.Add(lbl)
-        barra.Controls.Add(_cboPiso)
-
-        Dim panel = GraficosResumen.CrearPanelLateral()
-        _btnFlexion = GraficosResumen.AgregarBotonCategoria(panel, "Flexión (Mn)", 0)
-        _btnAcero = GraficosResumen.AgregarBotonCategoria(panel, "Acero (As)", 1)
-        _btnCortante = GraficosResumen.AgregarBotonCategoria(panel, "Cortante", 2)
-        _btnEstado = GraficosResumen.AgregarBotonCategoria(panel, "Estado General", 3)
-        _btnExportar = GraficosResumen.AgregarBotonCategoria(panel, "Exportar Imagen", 5, secundario:=True)
-
-        Me.Controls.Add(_grafico)
-        Me.Controls.Add(barra)
-        Me.Controls.Add(panel)
-
-        AddHandler Me.Load, AddressOf Form_Load
-
-    End Sub
-
-    Private Sub Form_Load(sender As Object, e As EventArgs)
-        CargarPisos()
-        Redibujar()
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Origen de datos
-    ' -----------------------------------------------------------------------
-    Private Sub CargarPisos()
-
-        _cargando = True
-        _cboPiso.Items.Clear()
-        _cboPiso.Items.Add("Todos los pisos")
-
-        If Nervios IsNot Nothing AndAlso Nervios.Elementos IsNot Nothing Then
-            Dim pisos = Nervios.Elementos.Select(Function(n) n.Piso) _
-                                         .Where(Function(p) Not String.IsNullOrWhiteSpace(p)) _
-                                         .Distinct() _
-                                         .OrderBy(Function(p) p) _
-                                         .ToList()
-            For Each p In pisos
-                _cboPiso.Items.Add(p)
-            Next
-        End If
-
-        _cboPiso.SelectedIndex = 0
-        _cargando = False
-
-    End Sub
-
-    Private Function NerviosFiltrados() As List(Of cNervio)
-
-        If Nervios Is Nothing OrElse Nervios.Elementos Is Nothing Then Return New List(Of cNervio)
-
-        Dim lista = Nervios.Elementos.ToList()
-
-        If _cboPiso IsNot Nothing AndAlso _cboPiso.SelectedIndex > 0 Then
-            Dim piso As String = _cboPiso.SelectedItem.ToString()
-            lista = lista.Where(Function(n) n.Piso = piso).ToList()
-        End If
-
-        Return lista
-
+            .Font = New Font("Segoe UI", 9.5F),
+            .ForeColor = _tema.Texto, .BackColor = _tema.Panel,
+            .FlatStyle = FlatStyle.Flat,
+            .Width = 160, .Margin = New Padding(0, 4, 0, 0)}
+        _cboPiso.Items.Add("<Todos>")
+        For Each p In PisosDisponibles()
+            _cboPiso.Items.Add(p)
+        Next
+        _cboPiso.SelectedItem = If(_cboPiso.Items.Contains(_pisoSel), _pisoSel, "<Todos>")
+        AddHandler _cboPiso.SelectedIndexChanged, Sub()
+                                                      _pisoSel = _cboPiso.SelectedItem.ToString()
+                                                      Reconstruir()
+                                                  End Sub
+        f.Controls.Add(_cboPiso)
+        Return f
     End Function
 
-    Private Function HayNervios(lista As List(Of cNervio)) As Boolean
-        If lista Is Nothing OrElse lista.Count = 0 Then
-            MessageBox.Show("No hay nervios para mostrar." & vbCrLf &
-                            "Importe y calcule el módulo de Nervios primero.",
-                            "ARCO", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Return False
+    Private Function BotonVista(txt As String, v As Vista) As Button
+        Dim activa = (v = _vista)
+        Dim b As New Button() With {
+            .Text = txt, .FlatStyle = FlatStyle.Flat,
+            .Font = New Font("Segoe UI Semibold", 9.0F),
+            .ForeColor = If(activa, Color.White, _tema.Texto),
+            .BackColor = If(activa, _tema.Acento, _tema.Panel),
+            .Size = New Size(140, 32), .Cursor = Cursors.Hand,
+            .Margin = New Padding(0, 2, 8, 0), .Tag = v}
+        b.FlatAppearance.BorderColor = If(activa, _tema.Acento, _tema.Separador)
+        b.FlatAppearance.BorderSize = 1
+        AddHandler b.Click, Sub()
+                                _vista = CType(b.Tag, Vista)
+                                Reconstruir()
+                            End Sub
+        Return b
+    End Function
+
+    Private Function ArmarCuerpo() As TableLayoutPanel
+        Dim g As New TableLayoutPanel() With {
+            .Dock = DockStyle.Fill, .BackColor = _tema.Fondo,
+            .ColumnCount = 4, .RowCount = 3, .Padding = New Padding(14)}
+        For i = 0 To 3 : g.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25)) : Next
+        g.RowStyles.Add(New RowStyle(SizeType.Absolute, 108))
+        g.RowStyles.Add(New RowStyle(SizeType.Percent, 60))
+        g.RowStyles.Add(New RowStyle(SizeType.Percent, 40))
+
+        If _vista = Vista.Estado Then
+            ArmarVistaEstado(g)
+        Else
+            ArmarVistaNumerica(g)
         End If
-        Return True
+        Return g
+    End Function
+
+    Private Sub ArmarVistaNumerica(g As TableLayoutPanel)
+        Dim items = DatosParaVista(_vista)
+        Dim validos = items.Where(Function(i) i.Valor > 0).ToList()
+        Dim sinCalc = items.Count - validos.Count
+        Dim cumplen = validos.Where(Function(i) i.Valor >= DashboardTheme.UMBRAL_CD).Count()
+        Dim noCumplen = validos.Count - cumplen
+        Dim prom = If(validos.Count = 0, 0.0, validos.Average(Function(i) i.Valor))
+        Dim peor = If(validos.Count = 0, 0.0, validos.Min(Function(i) i.Valor))
+
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("TOTAL NERVIOS", items.Count.ToString(), _tema.Acento, "evaluados", _tema), 0, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("CUMPLEN", cumplen.ToString(), _tema.Verde, "C/D ≥ " & DashboardTheme.UMBRAL_CD.ToString("F2"), _tema), 1, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("NO CUMPLEN", noCumplen.ToString(), _tema.Rojo, "requieren revisión", _tema), 2, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("C/D PROMEDIO", prom.ToString("F2"),
+                                                        If(prom >= DashboardTheme.UMBRAL_CD, _tema.Verde, _tema.Ambar),
+                                                        "peor: " & peor.ToString("F2"), _tema), 3, 0)
+
+        Dim panelBarras = ScottDashboardHelpers.PanelConTitulo(TituloVista(_vista),
+                                                                ScottDashboardHelpers.BarrasCDVertical(validos, _tema, "C/D"),
+                                                                _tema)
+        g.Controls.Add(panelBarras, 0, 1)
+        g.SetColumnSpan(panelBarras, 3)
+
+        g.Controls.Add(ScottDashboardHelpers.PanelConTitulo("Distribución de cumplimiento",
+                                                             ScottDashboardHelpers.DonutCumplimiento(cumplen, noCumplen, sinCalc, _tema),
+                                                             _tema), 3, 1)
+
+        Dim panelTop = ScottDashboardHelpers.PanelConTitulo("Top 10 peores",
+                                                             ScottDashboardHelpers.TopPeores(validos, 10, _tema),
+                                                             _tema)
+        g.Controls.Add(panelTop, 0, 2)
+        g.SetColumnSpan(panelTop, 2)
+
+        Dim panelResumen = ScottDashboardHelpers.PanelConTitulo("Resumen por revisión",
+                                                                 ScottDashboardHelpers.BarrasCategorias(CategoriasResumen(), _tema, "C/D promedio × 100"),
+                                                                 _tema)
+        g.Controls.Add(panelResumen, 2, 2)
+        g.SetColumnSpan(panelResumen, 2)
+    End Sub
+
+    Private Sub ArmarVistaEstado(g As TableLayoutPanel)
+        Dim cat = ConteoEstado()
+        Dim total = cat.Sum(Function(c) c.Conteo)
+        Dim ok = cat.FirstOrDefault(Function(c) c.Etiqueta = "Cumple")?.Conteo
+        Dim flex = cat.FirstOrDefault(Function(c) c.Etiqueta.StartsWith("Rev. flex"))?.Conteo
+        Dim cort = cat.FirstOrDefault(Function(c) c.Etiqueta.StartsWith("Rev. cort"))?.Conteo
+
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("TOTAL NERVIOS", total.ToString(), _tema.Acento, "evaluados", _tema), 0, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("CUMPLE", If(ok.HasValue, ok.Value, 0).ToString(), _tema.Verde, "flex + cort OK", _tema), 1, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("REV. FLEXIÓN", If(flex.HasValue, flex.Value, 0).ToString(), _tema.Ambar, "Mn o As < umbral", _tema), 2, 0)
+        g.Controls.Add(ScottDashboardHelpers.TarjetaKpi("REV. CORTANTE", If(cort.HasValue, cort.Value, 0).ToString(), _tema.Rojo, "φVn/Vu < umbral", _tema), 3, 0)
+
+        Dim panel = ScottDashboardHelpers.PanelConTitulo("Estado General — distribución",
+                                                           ScottDashboardHelpers.BarrasCategorias(cat, _tema, "cantidad"),
+                                                           _tema)
+        g.Controls.Add(panel, 0, 1)
+        g.SetColumnSpan(panel, 4)
+        g.SetRowSpan(panel, 2)
+    End Sub
+
+    ' ─── Datos ─────────────────────────────────────────────────────────────
+    Private Function ObtenerNervios() As List(Of cNervio)
+        Try
+            If Nervios Is Nothing OrElse Nervios.Elementos Is Nothing Then Return New List(Of cNervio)
+            Dim res = Nervios.Elementos.Where(Function(n) n IsNot Nothing AndAlso
+                                                         n.Frames IsNot Nothing AndAlso n.Frames.Count > 0).ToList()
+            If _pisoSel IsNot Nothing AndAlso _pisoSel <> "<Todos>" Then
+                res = res.Where(Function(n) n.Piso = _pisoSel).ToList()
+            End If
+            Return res
+        Catch ex As Exception
+            Logger.Error(ex, "Form_Graficos_Nervios.ObtenerNervios")
+            Return New List(Of cNervio)
+        End Try
+    End Function
+
+    Private Function PisosDisponibles() As List(Of String)
+        Try
+            If Nervios Is Nothing OrElse Nervios.Elementos Is Nothing Then Return New List(Of String)
+            Return Nervios.Elementos.Where(Function(n) Not String.IsNullOrEmpty(n.Piso)).
+                                     Select(Function(n) n.Piso).Distinct().OrderBy(Function(s) s).ToList()
+        Catch
+            Return New List(Of String)
+        End Try
     End Function
 
     Private Function NombreNervio(n As cNervio) As String
-        Return If(String.IsNullOrWhiteSpace(n.NombrePlano), n.Nombre, n.NombrePlano)
+        If Not String.IsNullOrWhiteSpace(n.NombrePlano) Then Return n.NombrePlano
+        Return n.Nombre
     End Function
 
-    ' Mismos criterios de "calculado" que Form_Reporte_Resumen_Nervios.
-    Private Function CalculadoFlex(fn As cFrameNervio) As Boolean
-        Return fn.PhiMn_Sup_I > 0 OrElse fn.PhiMn_Inf_C > 0 OrElse fn.PhiMn_Sup_D > 0
+    Private Function DatosParaVista(v As Vista) As List(Of ItemCD)
+        Dim res As New List(Of ItemCD)
+        For Each n In ObtenerNervios()
+            Dim etiq = NombreNervio(n)
+            Dim val As Double = -1
+            Try
+                Select Case v
+                    Case Vista.Flexion : val = PeorFlexion(n)
+                    Case Vista.Acero : val = PeorAcero(n)
+                    Case Vista.Cortante : val = PeorCortante(n)
+                End Select
+            Catch
+            End Try
+            res.Add(New ItemCD(etiq, val))
+        Next
+        Return res
     End Function
 
-    Private Function CalculadoCortante(fn As cFrameNervio) As Boolean
-        Return fn.PhiVn_I > 0 OrElse fn.PhiVn_D > 0
-    End Function
-
-    ' Etiqueta del tramo, igual que Form_Reporte_Resumen_Nervios: ejes de apoyo
-    ' si los hay, y si no el label del objeto ETABS.
-    Private Function TramoLabel(fn As cFrameNervio) As String
-        If Not String.IsNullOrWhiteSpace(fn.EjeApoyo_I) OrElse
-           Not String.IsNullOrWhiteSpace(fn.EjeApoyo_D) Then
-            Return $"{fn.EjeApoyo_I}-{fn.EjeApoyo_D}"
-        End If
-        Return fn.ObjectLabel
-    End Function
-
-    ''' <summary>
-    ''' Peor C/D del nervio entre todos sus tramos y posiciones. Devuelve -1 si
-    ''' ninguno está calculado — GraficosResumen omite esos elementos en vez de
-    ''' dibujarlos como una barra en cero.
-    ''' </summary>
-    Private Function PeorCD(n As cNervio,
-                            calculado As Func(Of cFrameNervio, Boolean),
-                            valores As Func(Of cFrameNervio, Double()),
-                            ByRef tramoCritico As String) As Double
-
+    Private Function PeorFlexion(n As cNervio) As Double
         Dim peor As Double = Double.MaxValue
-        tramoCritico = "—"
-
-        If n.Frames Is Nothing Then Return -1
-
         For Each fn In n.Frames
-            If Not calculado(fn) Then Continue For
-            For Each v In valores(fn)
-                If v > 0 AndAlso v < peor Then
-                    peor = v
-                    tramoCritico = TramoLabel(fn)
-                End If
+            If fn Is Nothing Then Continue For
+            For Each cd In {fn.CD_M_Sup_I, fn.CD_M_Inf_C, fn.CD_M_Sup_D}
+                If cd > 0 AndAlso cd < peor Then peor = cd
             Next
         Next
-
-        Return If(peor = Double.MaxValue, -1, peor)
-
+        Return If(peor = Double.MaxValue, -1.0, peor)
     End Function
 
-    ' -----------------------------------------------------------------------
-    ' Flexión — C/D por momento: φMn / Mu en apoyo izq, centro y apoyo der
-    ' -----------------------------------------------------------------------
-    Private Sub MostrarFlexion()
-
-        Dim lista = NerviosFiltrados()
-        If Not HayNervios(lista) Then Return
-
-        Dim items As New List(Of GraficosResumen.ItemCD)
-
-        For Each n In lista
-            Dim tramo As String = "—"
-            Dim v = PeorCD(n, AddressOf CalculadoFlex,
-                           Function(fn) New Double() {fn.CD_M_Sup_I, fn.CD_M_Inf_C, fn.CD_M_Sup_D},
-                           tramo)
-
-            Dim tip As String = "Piso: " & n.Piso
-            If v >= 0 Then tip &= vbCrLf & "Tramo crítico: " & tramo
-
-            items.Add(New GraficosResumen.ItemCD(NombreNervio(n), v, tip))
+    Private Function PeorAcero(n As cNervio) As Double
+        Dim peor As Double = Double.MaxValue
+        For Each fn In n.Frames
+            If fn Is Nothing Then Continue For
+            For Each cd In {fn.CD_As_Sup_I, fn.CD_As_Inf_C, fn.CD_As_Sup_D}
+                If cd > 0 AndAlso cd < peor Then peor = cd
+            Next
         Next
+        Return If(peor = Double.MaxValue, -1.0, peor)
+    End Function
 
-        GraficosResumen.DibujarBarrasCD(_grafico, items,
-                                        "Flexión (C/D por momento) — Nervios",
-                                        "C/D = φMn / Mu",
-                                        "Nervio")
-
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Acero — C/D por área: As colocado / As requerido
-    ' -----------------------------------------------------------------------
-    Private Sub MostrarAcero()
-
-        Dim lista = NerviosFiltrados()
-        If Not HayNervios(lista) Then Return
-
-        Dim items As New List(Of GraficosResumen.ItemCD)
-
-        For Each n In lista
-            Dim tramo As String = "—"
-            Dim v = PeorCD(n, AddressOf CalculadoFlex,
-                           Function(fn) New Double() {fn.CD_As_Sup_I, fn.CD_As_Inf_C, fn.CD_As_Sup_D},
-                           tramo)
-
-            Dim tip As String = "Piso: " & n.Piso
-            If v >= 0 Then tip &= vbCrLf & "Tramo crítico: " & tramo
-
-            items.Add(New GraficosResumen.ItemCD(NombreNervio(n), v, tip))
+    Private Function PeorCortante(n As cNervio) As Double
+        Dim peor As Double = Double.MaxValue
+        For Each fn In n.Frames
+            If fn Is Nothing Then Continue For
+            For Each cd In {fn.CD_Cortante_I, fn.CD_Cortante_D}
+                If cd > 0 AndAlso cd < peor Then peor = cd
+            Next
         Next
+        Return If(peor = Double.MaxValue, -1.0, peor)
+    End Function
 
-        GraficosResumen.DibujarBarrasCD(_grafico, items,
-                                        "Acero a Flexión (C/D por área) — Nervios",
-                                        "C/D = As colocado / As requerido",
-                                        "Nervio")
-
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Cortante — φVn / Vu en los dos apoyos
-    ' -----------------------------------------------------------------------
-    Private Sub MostrarCortante()
-
-        Dim lista = NerviosFiltrados()
-        If Not HayNervios(lista) Then Return
-
-        Dim items As New List(Of GraficosResumen.ItemCD)
-
-        For Each n In lista
-            Dim tramo As String = "—"
-            Dim v = PeorCD(n, AddressOf CalculadoCortante,
-                           Function(fn) New Double() {fn.CD_Cortante_I, fn.CD_Cortante_D},
-                           tramo)
-
-            Dim tip As String = "Piso: " & n.Piso
-            If v >= 0 Then tip &= vbCrLf & "Tramo crítico: " & tramo
-
-            items.Add(New GraficosResumen.ItemCD(NombreNervio(n), v, tip))
-        Next
-
-        GraficosResumen.DibujarBarrasCD(_grafico, items,
-                                        "Cortante (C/D) — Nervios",
-                                        "C/D = φVn / Vu",
-                                        "Nervio")
-
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Estado general — conteo por motivo de revisión
-    ' -----------------------------------------------------------------------
-    Private Sub MostrarEstado()
-
-        Dim lista = NerviosFiltrados()
-        If Not HayNervios(lista) Then Return
-
-        Dim nOK As Integer = 0
-        Dim nFlex As Integer = 0
-        Dim nCor As Integer = 0
-        Dim nAmbas As Integer = 0
-        Dim nSin As Integer = 0
-
-        For Each n In lista
-            Dim t As String = ""
-            Dim vFlex = PeorCD(n, AddressOf CalculadoFlex,
-                               Function(fn) New Double() {fn.CD_M_Sup_I, fn.CD_M_Inf_C, fn.CD_M_Sup_D,
-                                                          fn.CD_As_Sup_I, fn.CD_As_Inf_C, fn.CD_As_Sup_D}, t)
-            Dim vCor = PeorCD(n, AddressOf CalculadoCortante,
-                              Function(fn) New Double() {fn.CD_Cortante_I, fn.CD_Cortante_D}, t)
-
-            If vFlex < 0 AndAlso vCor < 0 Then
-                nSin += 1
+    Private Function ConteoEstado() As List(Of CategoriaConteo)
+        Dim ok = 0, revF = 0, revC = 0, revAmbos = 0, sinC = 0
+        For Each n In ObtenerNervios()
+            Dim fFlex = PeorFlexion(n)
+            Dim fAs = PeorAcero(n)
+            Dim fCort = PeorCortante(n)
+            Dim fPeor = {fFlex, fAs}.Where(Function(x) x > 0).DefaultIfEmpty(-1).Min()
+            If fPeor <= 0 AndAlso fCort <= 0 Then
+                sinC += 1
                 Continue For
             End If
-
-            Dim okFlex = (vFlex < 0) OrElse (vFlex >= GraficosResumen.UMBRAL_CD)
-            Dim okCor = (vCor < 0) OrElse (vCor >= GraficosResumen.UMBRAL_CD)
-
-            If okFlex AndAlso okCor Then
-                nOK += 1
-            ElseIf Not okFlex AndAlso Not okCor Then
-                nAmbas += 1
+            Dim okFlex = (fPeor > 0 AndAlso fPeor >= DashboardTheme.UMBRAL_CD)
+            Dim okCort = (fCort > 0 AndAlso fCort >= DashboardTheme.UMBRAL_CD)
+            If okFlex AndAlso okCort Then
+                ok += 1
+            ElseIf Not okFlex AndAlso Not okCort Then
+                revAmbos += 1
             ElseIf Not okFlex Then
-                nFlex += 1
+                revF += 1
             Else
-                nCor += 1
+                revC += 1
             End If
         Next
+        Return New List(Of CategoriaConteo) From {
+            New CategoriaConteo("Cumple", ok, _tema.Verde),
+            New CategoriaConteo("Rev. flexión", revF, _tema.Ambar),
+            New CategoriaConteo("Rev. cortante", revC, _tema.Rojo),
+            New CategoriaConteo("Rev. ambas", revAmbos, _tema.Rojo),
+            New CategoriaConteo("Sin cálculo", sinC, _tema.TextoTenue)}
+    End Function
 
-        Dim categorias As New List(Of String) From {"Cumple", "Revisar flexión", "Revisar cortante",
-                                                    "Revisar ambas", "Sin calcular"}
-        Dim conteos As New List(Of Integer) From {nOK, nFlex, nCor, nAmbas, nSin}
-        Dim colores As New List(Of Color) From {GraficosResumen.ColVerde,
-                                                GraficosResumen.ColNaranja,
-                                                GraficosResumen.ColNaranja,
-                                                GraficosResumen.ColRojo,
-                                                GraficosResumen.ColGris}
+    Private Function CategoriasResumen() As List(Of CategoriaConteo)
+        Dim nombres = {"Flex", "Acero", "Cort."}
+        Dim vistas = {Vista.Flexion, Vista.Acero, Vista.Cortante}
+        Dim res As New List(Of CategoriaConteo)
+        For i = 0 To 2
+            Dim items = DatosParaVista(vistas(i))
+            Dim pos = items.Where(Function(x) x.Valor > 0).Select(Function(x) x.Valor).ToList()
+            Dim prom = If(pos.Count = 0, 0.0, pos.Average())
+            res.Add(New CategoriaConteo(nombres(i), CInt(prom * 100), _tema.ColorPorCD(prom)))
+        Next
+        Return res
+    End Function
 
-        GraficosResumen.DibujarBarrasCategorias(_grafico, categorias, conteos, colores,
-                                                "Estado General — Nervios",
-                                                "Cantidad de nervios",
-                                                "Resultado de la revisión")
-
-    End Sub
-
-    ' -----------------------------------------------------------------------
-    ' Eventos
-    ' -----------------------------------------------------------------------
-    Private Sub Redibujar()
-        If _cargando Then Return
-        Select Case _vistaActual
-            Case "Acero" : MostrarAcero()
-            Case "Cortante" : MostrarCortante()
-            Case "Estado" : MostrarEstado()
-            Case Else : MostrarFlexion()
+    Private Function TituloVista(v As Vista) As String
+        Select Case v
+            Case Vista.Flexion : Return "Flexión (Mn)  ·  C/D entre I–C–D, peor frame"
+            Case Vista.Acero : Return "Acero (As)  ·  C/D = As_prov / As_req, peor frame"
+            Case Else : Return "Cortante  ·  C/D = φVn / Vu, peor frame"
         End Select
-    End Sub
-
-    Private Sub _cboPiso_SelectedIndexChanged(sender As Object, e As EventArgs) Handles _cboPiso.SelectedIndexChanged
-        Redibujar()
-    End Sub
-
-    Private Sub _btnFlexion_Click(sender As Object, e As EventArgs) Handles _btnFlexion.Click
-        _vistaActual = "Flexion"
-        Redibujar()
-    End Sub
-
-    Private Sub _btnAcero_Click(sender As Object, e As EventArgs) Handles _btnAcero.Click
-        _vistaActual = "Acero"
-        Redibujar()
-    End Sub
-
-    Private Sub _btnCortante_Click(sender As Object, e As EventArgs) Handles _btnCortante.Click
-        _vistaActual = "Cortante"
-        Redibujar()
-    End Sub
-
-    Private Sub _btnEstado_Click(sender As Object, e As EventArgs) Handles _btnEstado.Click
-        _vistaActual = "Estado"
-        Redibujar()
-    End Sub
-
-    Private Sub _btnExportar_Click(sender As Object, e As EventArgs) Handles _btnExportar.Click
-        GraficosResumen.ExportarImagen(_grafico, "Grafico_Nervios")
-    End Sub
+    End Function
 
 End Class

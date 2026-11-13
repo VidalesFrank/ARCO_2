@@ -20,8 +20,12 @@ Partial Public Class Funciones_00_Varias
     ''' Completo" de vigas y las de columnas/muros del Reporte de Proyecto
     ''' Completo usaban 1.0 mientras el resto usaba 0.9: el mismo elemento con
     ''' C/D entre 0.90 y 0.99 salía "CUMPLE" en una vista y "Revisar" en otra.
+    '''
+    ''' El umbral efectivo es 0.895 — equivalente a redondear a 2 cifras y
+    ''' comparar contra 0.90. Así C/D = 0.89842 (que la UI redondea a "0.90")
+    ''' queda como cumple, y el usuario no ve 0.90 marcado como no cumple.
     ''' </summary>
-    Public Const UMBRAL_CD As Double = 0.9
+    Public Const UMBRAL_CD As Double = 0.895
 
     ''' <summary>Normaliza claves E17 ("Envolvente Min/Max") al formato canónico "Envolvente (Min/Max)".</summary>
     Public Shared Function NormalizarClaveCombo(nombre As String) As String

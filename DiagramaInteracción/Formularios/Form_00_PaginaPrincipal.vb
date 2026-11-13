@@ -271,6 +271,23 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuInformeTecnico.Click, Sub(s, ev) Form_Informe_Tecnico.Mostrar(proyecto)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuInformeTecnico)
 
+        ' Agregar ítem "Informe Inicial (tablas .xlsx)..." en menú Opciones.
+        ' Exporta las 11 tablas de verificación (T11-T28 de la plantilla I001) a Excel,
+        ' listas para copiar/pegar al .docx del informe. Lista TODOS los elementos y
+        ' los ordena de piso inferior → superior. Ver InformeInicialExcelService.
+        Dim mnuInformeInicial As New ToolStripMenuItem("Informe Inicial (tablas .xlsx)…")
+        mnuInformeInicial.BackColor = Color.FromArgb(87, 87, 86)
+        mnuInformeInicial.ForeColor = Color.White
+        AddHandler mnuInformeInicial.Click, Sub(s, ev) Form_Informe_Inicial.Mostrar(proyecto)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuInformeInicial)
+
+        ' Módulo 15 — Relación Viga-Columna (NSR-10 C.21.6.2).
+        Dim mnuRVC As New ToolStripMenuItem("Relación Viga-Columna…")
+        mnuRVC.BackColor = Color.FromArgb(87, 87, 86)
+        mnuRVC.ForeColor = Color.White
+        AddHandler mnuRVC.Click, Sub(s, ev) Form_15_RelacionVigaColumna.Mostrar(proyecto)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuRVC)
+
         ' Análisis de Sección independiente (Módulo 10) — se expone la v2 (Pro).
         ' La v1 (Form_10_AnalisisSeccion) se conserva compilada pero oculta del
         ' menú: sigue accesible por reflexión / código si se necesita revisar
@@ -294,6 +311,16 @@ Public Class Form_00_PaginaPrincipal
         AddHandler mnuE2K.Click, AddressOf VisualizadorE2K_Click
         OpcionesToolStripMenuItem1.DropDownItems.Add(sepE2K)
         OpcionesToolStripMenuItem1.DropDownItems.Add(mnuE2K)
+
+        ' Vista previa de la nueva interfaz (WPF). La pantalla principal
+        ' actual queda intacta; esta entrada abre la propuesta en paralelo.
+        Dim sepPreview As New ToolStripSeparator()
+        Dim mnuPreview As New ToolStripMenuItem("Vista previa nueva interfaz…")
+        mnuPreview.BackColor = Color.FromArgb(87, 87, 86)
+        mnuPreview.ForeColor = Color.White
+        AddHandler mnuPreview.Click, AddressOf VistaPreviaNuevaUI_Click
+        OpcionesToolStripMenuItem1.DropDownItems.Add(sepPreview)
+        OpcionesToolStripMenuItem1.DropDownItems.Add(mnuPreview)
 
         ' Módulo 14 — Pilotes. Primer módulo construido 100% en WPF y con
         ' arquitectura MVVM; prototipo de la futura ARCO 3.0.
@@ -363,6 +390,27 @@ Public Class Form_00_PaginaPrincipal
     End Sub
 
     ''' <summary>
+    ''' Abre la Window WPF que muestra la propuesta de nueva interfaz de
+    ''' inicio. No altera la pantalla principal actual. La primera invocación
+    ''' crea una <c>System.Windows.Application</c> con ShutdownMode OnExplicitShutdown
+    ''' para que al cerrar la Window el resto de la app WinForms no se vea afectada.
+    ''' </summary>
+    Private Sub VistaPreviaNuevaUI_Click(sender As Object, e As EventArgs)
+        Try
+            If System.Windows.Application.Current Is Nothing Then
+                Dim wpfApp As New System.Windows.Application()
+                wpfApp.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown
+            End If
+            Dim win As New Form_00_Home_Preview()
+            win.Show()
+        Catch ex As Exception
+            Logger.Error(ex, "Form_00_PaginaPrincipal.VistaPreviaNuevaUI_Click")
+            MessageBox.Show("No se pudo abrir la vista previa: " & ex.Message, "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ''' <summary>
     ''' Abre el módulo 14 — Pilotes (WPF). Primer módulo con MVVM completo;
     ''' prototipo visual de cómo se verá la plataforma al terminar la migración.
     ''' </summary>
@@ -402,8 +450,12 @@ Public Class Form_00_PaginaPrincipal
                                 "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
-            Dim frm As New Form_VisualizadorE2K(model)
-            frm.Show()
+            If System.Windows.Application.Current Is Nothing Then
+                Dim app As New System.Windows.Application()
+                app.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown
+            End If
+            Dim win As New Form_VisualizadorE2K_WPF(model)
+            win.Show()
         Catch ex As Exception
             Cursor = Cursors.Default
             Logger.Error(ex, "Form_00_PaginaPrincipal.VisualizadorE2K_Click")

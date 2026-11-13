@@ -208,8 +208,8 @@
     <Reference Include="System">
       <HintPath>..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.dll</HintPath>
     </Reference>
-    <!-- Necesario para que MarkupCompilePass1 de las ventanas WPF del módulo
-         de Pilotes resuelva la cadena de dependencias en net472. -->
+    <!-- Necesario para que MarkupCompilePass1 resuelva System.Web, que es
+         arrastrado transitivamente por Microsoft.ReportViewer.* y similares. -->
     <Reference Include="System.Web" />
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
@@ -225,8 +225,62 @@
     <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.7.0\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Drawing.Common, Version=4.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Drawing.Common.4.7.2\lib\net461\System.Drawing.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\netstandard2.0\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\netstandard2.0\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="HarfBuzzSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=1a26c7f68a2eb1e7, processorArchitecture=MSIL">
+      <HintPath>..\packages\HarfBuzzSharp.7.3.0.3\lib\net462\HarfBuzzSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="SkiaSharp, Version=2.88.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\SkiaSharp.2.88.9\lib\net462\SkiaSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="SkiaSharp.HarfBuzz, Version=2.88.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\SkiaSharp.HarfBuzz.2.88.9\lib\net462\SkiaSharp.HarfBuzz.dll</HintPath>
+    </Reference>
+    <Reference Include="SkiaSharp.Views.Desktop.Common, Version=2.88.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\SkiaSharp.Views.Desktop.Common.2.88.9\lib\net462\SkiaSharp.Views.Desktop.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="SkiaSharp.Views.WindowsForms, Version=2.88.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\SkiaSharp.Views.WindowsForms.2.88.9\lib\net462\SkiaSharp.Views.WindowsForms.dll</HintPath>
+    </Reference>
+    <Reference Include="ScottPlot, Version=4.1.74.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ScottPlot.4.1.74\lib\net472\ScottPlot.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp-MigraDoc.1.50.5147\lib\net20\PdfSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.Charting, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp-MigraDoc.1.50.5147\lib\net20\PdfSharp.Charting.dll</HintPath>
+    </Reference>
+    <Reference Include="MigraDoc.DocumentObjectModel, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp-MigraDoc.1.50.5147\lib\net20\MigraDoc.DocumentObjectModel.dll</HintPath>
+    </Reference>
+    <Reference Include="MigraDoc.Rendering, Version=1.50.5147.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp-MigraDoc.1.50.5147\lib\net20\MigraDoc.Rendering.dll</HintPath>
+    </Reference>
+    <Reference Include="ScottPlot.WinForms, Version=4.1.74.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ScottPlot.WinForms.4.1.74\lib\net472\ScottPlot.WinForms.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenTK, Version=3.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenTK.3.1.0\lib\net20\OpenTK.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenTK.GLControl, Version=3.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenTK.GLControl.3.1.0\lib\net20\OpenTK.GLControl.dll</HintPath>
     </Reference>
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
@@ -385,6 +439,9 @@
     </Compile>
     <Compile Include="Formularios\09_Vigas\GeometryService.vb" />
     <Compile Include="Formularios\09_Vigas\VigaService.vb" />
+    <Compile Include="Formularios\09_Vigas\Form_09_AjustarEstribosGlobal.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\09_Vigas\Form_Graficos_Vigas.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -395,13 +452,9 @@
     <Compile Include="Formularios\11_Nervios\NervioDiagramaService.vb" />
     <Compile Include="Formularios\12_MurosContencion\MuroContencionService.vb" />
     <Compile Include="Formularios\12_MurosContencion\MuroContencionReporteService.vb" />
-    <Compile Include="Formularios\12_MurosContencion\Form_12_MuroContencion.vb">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Formularios\12_MurosContencion\Form_12_MuroContencion.vb" />
     <Compile Include="Formularios\13_MuroCortina\MuroCortinaService.vb" />
-    <Compile Include="Formularios\13_MuroCortina\Form_13_MuroCortina.vb">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Formularios\13_MuroCortina\Form_13_MuroCortina.vb" />
     <Compile Include="Formularios\11_Nervios\Form_AgrupacionManualNervios.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -487,6 +540,9 @@
     <Compile Include="Formularios\Form_Informe_Tecnico.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Form_Informe_Inicial.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Formularios\Form_Reporte_Zapatas.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -554,6 +610,8 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formularios\Complementos\GraficosResumen.vb" />
+    <Compile Include="Formularios\Complementos\DashboardTheme.vb" />
+    <Compile Include="Formularios\Complementos\ScottDashboardHelpers.vb" />
     <Compile Include="Formularios\Complementos\PlantaCanvas.vb" />
     <Compile Include="Formularios\Complementos\Form_ALR.Designer.vb">
       <DependentUpon>Form_ALR.vb</DependentUpon>
@@ -715,6 +773,7 @@
     <Compile Include="Servicios\ExcelExportService.vb" />
     <Compile Include="Funciones\Logger.vb" />
     <Compile Include="Formularios\02_Columnas\ColumnaService.vb" />
+    <Compile Include="Formularios\02_Columnas\ActualizadorColumnas.vb" />
     <Compile Include="Formularios\02_Columnas\Form_02_PagColumnas.XLSXReader.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -723,7 +782,14 @@
     <Compile Include="Funciones\EstadisticasInformeService.vb" />
     <Compile Include="Funciones\InformeChartsService.vb" />
     <Compile Include="Funciones\InformeTecnicoService.vb" />
+    <Compile Include="Funciones\InformeTecnicoPdfService.vb" />
+    <Compile Include="Funciones\PisosUnicosService.vb" />
     <Compile Include="Funciones\ReporteRevisionService.vb" />
+    <Compile Include="Funciones\InformeInicialExcelService.vb" />
+    <Compile Include="Formularios\15_RelacionVigaColumna\RelacionVigaColumnaService.vb" />
+    <Compile Include="Formularios\15_RelacionVigaColumna\Form_15_RelacionVigaColumna.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Funciones\ReporteRevisionWordHelpers.vb" />
     <Compile Include="Funciones\Funciones_Reportes_PDF.vb" />
     <Compile Include="Funciones\Funciones_Zapatas.vb" />
@@ -761,6 +827,22 @@
     <Compile Include="Reporte\SplashScreen1.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Formularios\Inicio\ModuleCatalog.vb" />
+    <Compile Include="Formularios\Inicio\ModuleCard.xaml.vb">
+      <DependentUpon>ModuleCard.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Formularios\Inicio\Form_00_Home_Preview.xaml.vb">
+      <DependentUpon>Form_00_Home_Preview.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Formularios\E2k\E2k3DPalette.vb" />
+    <Compile Include="Formularios\E2k\OrbitalCameraController.vb" />
+    <Compile Include="Formularios\E2k\E2kSceneBuilder.vb" />
+    <Compile Include="Formularios\E2k\Form_VisualizadorE2K_WPF.xaml.vb">
+      <DependentUpon>Form_VisualizadorE2K_WPF.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <!-- ══════════════════════════════════════════════════════════
          MÓDULO 14 — PILOTES (nuevo, WPF + MVVM)
          ══════════════════════════════════════════════════════════ -->
@@ -795,6 +877,34 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Formularios\E2k\Form_VisualizadorE2K_WPF.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\Inicio\Theme.Claro.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\Inicio\Theme.Oscuro.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\Inicio\ModuleIcons.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\Inicio\Styles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\Inicio\ModuleCard.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\Inicio\Form_00_Home_Preview.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Formularios\14_Pilotes\Resources\Pilotes.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1099,14 +1209,31 @@
     <Folder Include="Formularios\08_V_Fundacion\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <!-- Microsoft.WinFx.targets se importa automáticamente desde
+       Microsoft.NETFramework.CurrentVersion.targets cuando hay referencias
+       WPF (PresentationCore/Framework/System.Xaml/WindowsBase), así que no
+       requiere Import explícito. -->
+  <Import Project="..\packages\SkiaSharp.NativeAssets.Win32.2.88.9\build\net462\SkiaSharp.NativeAssets.Win32.targets" Condition="Exists('..\packages\SkiaSharp.NativeAssets.Win32.2.88.9\build\net462\SkiaSharp.NativeAssets.Win32.targets')" />
+  <Import Project="..\packages\HarfBuzzSharp.NativeAssets.Win32.7.3.0.3\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets" Condition="Exists('..\packages\HarfBuzzSharp.NativeAssets.Win32.7.3.0.3\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets')" />
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
+  <!-- Copia los nativos de SkiaSharp/HarfBuzz desde x64/ a la raíz del output.
+       En .NET Framework packages.config el loader P/Invoke solo busca junto al .exe,
+       no en la subcarpeta x64/ donde el .targets de SkiaSharp los deja por defecto. -->
+  <Target Name="FlattenSkiaSharpNatives" AfterTargets="AfterBuild">
+    <ItemGroup>
+      <_SkiaNativos Include="$(OutDir)x64\libSkiaSharp.dll;$(OutDir)x64\libHarfBuzzSharp.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_SkiaNativos)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('%(_SkiaNativos.FullPath)')" />
+  </Target>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>Este proyecto hace referencia a los paquetes NuGet que faltan en este equipo. Use la restauración de paquetes NuGet para descargarlos. Para obtener más información, consulte http://go.microsoft.com/fwlink/?LinkID=322105. El archivo que falta es {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.SqlServer.Types.160.1000.6\build\net462\Microsoft.SqlServer.Types.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.SqlServer.Types.160.1000.6\build\net462\Microsoft.SqlServer.Types.props'))" />
+    <Error Condition="!Exists('..\packages\SkiaSharp.NativeAssets.Win32.2.88.9\build\net462\SkiaSharp.NativeAssets.Win32.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SkiaSharp.NativeAssets.Win32.2.88.9\build\net462\SkiaSharp.NativeAssets.Win32.targets'))" />
+    <Error Condition="!Exists('..\packages\HarfBuzzSharp.NativeAssets.Win32.7.3.0.3\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\HarfBuzzSharp.NativeAssets.Win32.7.3.0.3\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets'))" />
   </Target>
 </Project>

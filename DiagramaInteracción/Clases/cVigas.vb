@@ -42,6 +42,27 @@ Public Class MiembroGrupoViga
 
 End Class
 
+''' <summary>
+''' Refuerzo transversal definido por el usuario para una sección específica.
+''' Se usa en <see cref="VigaService.AsignarRefuerzoDesdePreferencias"/> para
+''' aplicar el mismo set a todas las vigas que compartan sección.
+'''
+''' La longitud de confinamiento Lo queda totalmente controlada por el usuario:
+''' Lo = 0.05 + (NumEstribosZC − 1) · SepZC. La ZNC se auto-calcula a partir
+''' de la longitud restante del frame y SepZNC.
+''' </summary>
+<Serializable>
+Public Class PreferenciasEstribosSeccion
+    Public Property NombreSeccion As String = ""
+    Public Property BarraZC As Integer = 3
+    Public Property RamasZC As Integer = 2
+    Public Property NumEstribosZC As Integer = 10
+    Public Property SepZC As Double = 0.1
+    Public Property BarraZNC As Integer = 3
+    Public Property RamasZNC As Integer = 2
+    Public Property SepZNC As Double = 0.2
+End Class
+
 <Serializable>
 Public Class cVigas
 
@@ -71,8 +92,23 @@ Public Class cVigas
     ''' <summary>
     ''' Agrupaciones manuales de frames. Cada elemento es la lista de ObjectLabels
     ''' que forman una viga continua según el usuario. Se aplica después del auto-agrupamiento.
+    '''
+    ''' Incluye tanto grupos positivos (varios labels unidos por el usuario) como
+    ''' singletes (un label que el usuario separó de una auto-agrupación). Los
+    ''' singletes son clave para que al Procesar un proyecto, la auto-agrupación
+    ''' de GenerarVigas no vuelva a unir frames alineados que el usuario ya separó.
     ''' </summary>
     Public Property GruposManual As New List(Of List(Of String))
+
+    ''' <summary>
+    ''' Labels de frames que el usuario marcó como "excluir de la revisión" al
+    ''' separarlos de un grupo. Al replay en AplicarGruposManual, la viga nueva
+    ''' que contenga cualquier label aquí nace con ExcluirDeRevision=True — así
+    ''' las vigas residuales (fragmentos que no son vigas reales) siguen filtrándose
+    ''' en reportes, plantas y dashboards tras cada Procesar.
+    ''' </summary>
+    <OptionalField>
+    Public GruposManualExcluidos As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
     <OptionalField>
     Private _GruposReplica As List(Of GrupoReplicaViga)
@@ -88,6 +124,14 @@ Public Class cVigas
     End Property
 
     ' Backing fields con OptionalField para compatibilidad con archivos .esm anteriores
+    ''' <summary>
+    ''' Preferencias de estribos por sección (clave = cSeccion.Nombre). Vacío
+    ''' significa "usar refuerzo automático en todas las secciones". Se persiste
+    ''' con el .esm para que el usuario no las vuelva a ingresar.
+    ''' </summary>
+    <OptionalField>
+    Public PreferenciasEstribos As Dictionary(Of String, PreferenciasEstribosSeccion)
+
     <OptionalField>
     Private _Frames As List(Of cFrame)
     <OptionalField>
@@ -124,9 +168,13 @@ Public Class cVigas
         If BeamForces Is Nothing Then BeamForces = New List(Of cCombinacionBeamForce)
         If SeccionesSeleccionadas Is Nothing Then SeccionesSeleccionadas = New List(Of String)
         If GruposManual Is Nothing Then GruposManual = New List(Of List(Of String))
+        If GruposManualExcluidos Is Nothing Then GruposManualExcluidos = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         If _GruposReplica Is Nothing Then _GruposReplica = New List(Of GrupoReplicaViga)
         If _Frames Is Nothing Then _Frames = New List(Of cFrame)
         If _Joints Is Nothing Then _Joints = New List(Of cJoint)
+        If PreferenciasEstribos Is Nothing Then
+            PreferenciasEstribos = New Dictionary(Of String, PreferenciasEstribosSeccion)(StringComparer.OrdinalIgnoreCase)
+        End If
     End Sub
 
 End Class

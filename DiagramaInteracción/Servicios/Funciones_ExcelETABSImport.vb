@@ -61,7 +61,13 @@ Partial Public Class Funciones_00_Varias
             Next
 
         Catch ex As Exception
-            MessageBox.Show("Error leyendo la hoja '" & nombreHoja & "': " & ex.Message)
+            ' Antes mostraba MessageBox. Esto convertía una hoja ausente del Excel
+            ' (patrón normal — no todo proyecto tiene Pier Forces, Joint Reactions,
+            ' etc.) en un popup de error que daba impresión de que algo rompió.
+            ' El contrato ahora es: devolvemos DataTable vacío; el caller decide
+            ' qué hacer verificando dt.Rows.Count > 0.
+            Logger.Warning("LeerHojaExcel",
+                           $"Hoja '{nombreHoja}' no pudo leerse (ausente o inválida): {ex.Message}")
         End Try
 
         Return dt

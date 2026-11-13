@@ -169,7 +169,7 @@ Public Class Form_PlantaInteractivaNervios
 
         _panel = New BufferedPanel With {
             .Dock = DockStyle.Fill,
-            .BackColor = Color.FromArgb(245, 248, 252),
+            .BackColor = Color.White,
             .Cursor = Cursors.Hand
         }
 
@@ -403,7 +403,7 @@ Public Class Form_PlantaInteractivaNervios
         Dim g = e.Graphics
         g.SmoothingMode = SmoothingMode.AntiAlias
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit
-        g.Clear(Color.FromArgb(245, 248, 252))
+        g.Clear(Color.White)
 
         If Joints Is Nothing OrElse Joints.Count = 0 Then
             Using fMsg As New Font("Segoe UI", 12)
@@ -458,8 +458,8 @@ Public Class Form_PlantaInteractivaNervios
                 g.DrawRectangle(penB, ox, oy, boxW, boxH)
             End Using
 
-            Using fntTit As New Font("Segoe UI", 8.5F, FontStyle.Bold),
-                  fntItem As New Font("Segoe UI", 8),
+            Using fntTit As New Font("Segoe UI", 13.5F, FontStyle.Bold),
+                  fntItem As New Font("Segoe UI", 13),
                   brTit As New SolidBrush(Color.FromArgb(50, 50, 60)),
                   brTxt As New SolidBrush(Color.FromArgb(40, 40, 40))
 
@@ -548,9 +548,9 @@ Public Class Form_PlantaInteractivaNervios
     Private Sub DibujarNervios(g As Graphics)
         If Nervios Is Nothing OrElse Joints Is Nothing Then Return
 
-        Using fontLabel As New Font("Segoe UI", 7.5F),
-              fontEje As New Font("Segoe UI", 7.5F, FontStyle.Bold),
-              fontNombre As New Font("Segoe UI", 8, FontStyle.Bold)
+        Using fontLabel As New Font("Segoe UI", 10.5F),
+              fontEje As New Font("Segoe UI", 10.5F, FontStyle.Bold),
+              fontNombre As New Font("Segoe UI", 11, FontStyle.Bold)
 
             For idx As Integer = 0 To Nervios.Count - 1
                 Dim n = Nervios(idx)
@@ -659,7 +659,10 @@ Public Class Form_PlantaInteractivaNervios
                     End If
                 Next
 
-                If n.Frames.Count > 0 AndAlso _zoom > 6 Then
+                ' Nombre del nervio: solo para los REVISADOS (PeorCDNervio > 0).
+                ' Marcar todos vuelve denso el gráfico; los no revisados ya se
+                ' identifican visualmente por el gris de sombra.
+                If n.Frames.Count > 0 AndAlso _zoom > 6 AndAlso NervioService.PeorCDNervio(n) > 0 Then
                     Dim fn0 = n.Frames(0)
                     Dim ji As cJoint = Nothing
                     If Joints.TryGetValue(fn0.JointI, ji) Then

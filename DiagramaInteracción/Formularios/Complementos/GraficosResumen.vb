@@ -31,7 +31,7 @@ Public NotInheritable Class GraficosResumen
     Public Shared ReadOnly ColTexto As Color = Color.FromArgb(40, 40, 40)
 
     ''' <summary>Umbral universal de cumplimiento C/D (ver CLAUDE.md).</summary>
-    Public Const UMBRAL_CD As Double = 0.9
+    Public Const UMBRAL_CD As Double = 0.895   ' ver Funciones_00_Varias.UMBRAL_CD
 
     ' -----------------------------------------------------------------------
     ' Ítem genérico de un gráfico de barras por elemento.

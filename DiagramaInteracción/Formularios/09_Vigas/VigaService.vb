@@ -13,6 +13,61 @@ Public Class VigaService
     End Sub
 
     ' ═══════════════════════════════════════════════════════════════════════════
+    '  Detección de control sísmico por geometría de la envolvente
+    ' ═══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Un apoyo con |M⁺| / |M⁻| ≥ este ratio se considera "invertido", señal
+    ''' característica de dominio sísmico (en gravedad pura M⁺ en apoyo es ~0).
+    ''' Umbral calibrado con Frank el 2026-11-04 — ajustar contra proyectos reales.
+    ''' </summary>
+    Public Const UmbralInversionApoyo As Double = 0.30
+
+    ''' <summary>
+    ''' Si |M⁺_apoyo_max| supera este ratio del |M⁺_centro|, el positivo del
+    ''' apoyo ya rivaliza con el del centro y la viga es de control sísmico.
+    ''' </summary>
+    Public Const UmbralPositivoApoyoVsCentro As Double = 0.50
+
+    ''' <summary>
+    ''' Clasifica el frame por la forma de su envolvente: True si hay señales
+    ''' sísmicas (inversión de signo en al menos un apoyo O positivo apoyo
+    ''' comparable al positivo del centro). Trabaja sobre ResultadoBase para que
+    ''' el resultado no dependa de redistribuciones previas aplicadas al ActualX.
+    '''
+    ''' No distingue "controlado por sismo" de "con participación sísmica": el
+    ''' propósito es habilitar los esquemas de redistribución diagonal, que solo
+    ''' tienen sentido cuando hay inversión real.
+    ''' </summary>
+    Public Shared Function ClasificarControlPorSismo(frame As cFrame) As Boolean
+        If frame Is Nothing OrElse frame.RevisionFlexion Is Nothing Then Return False
+        Dim zIzq = frame.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+        Dim zDer = frame.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+        Dim zCen = frame.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Centro)
+        If zIzq Is Nothing OrElse zDer Is Nothing OrElse zCen Is Nothing Then Return False
+
+        ' Ratio de inversión por apoyo: |M⁺| / |M⁻|. Apoyo sin M⁻ no contribuye.
+        Dim rIzq = RatioInversion(zIzq)
+        Dim rDer = RatioInversion(zDer)
+        If Math.Max(rIzq, rDer) >= UmbralInversionApoyo Then Return True
+
+        ' Positivo del apoyo (el mayor de los dos) vs positivo del centro.
+        Dim mPosApoyoMax = Math.Max(Math.Abs(zIzq.ResultadoBase.MomentoPositivo),
+                                    Math.Abs(zDer.ResultadoBase.MomentoPositivo))
+        Dim mPosCentro = Math.Abs(zCen.ResultadoBase.MomentoPositivo)
+        If mPosCentro > 0 AndAlso mPosApoyoMax / mPosCentro >= UmbralPositivoApoyoVsCentro Then Return True
+
+        Return False
+    End Function
+
+    Private Shared Function RatioInversion(zonaApoyo As cRevisionFlexionZona) As Double
+        Dim mNeg = Math.Abs(zonaApoyo.ResultadoBase.MomentoNegativo)
+        Dim mPos = Math.Abs(zonaApoyo.ResultadoBase.MomentoPositivo)
+        If mNeg <= 0 Then Return 0
+        Return mPos / mNeg
+    End Function
+
+    ' ═══════════════════════════════════════════════════════════════════════════
     '  Cuantías NSR-10 para el chequeo de "cuantía > máxima"
     ' ═══════════════════════════════════════════════════════════════════════════
 
@@ -274,6 +329,13 @@ Public Class VigaService
                 zonaDer.ResultadoActual.MomentoNegativo = zonaDer.ResultadoBase.MomentoNegativo
 
                 frame.RevisionFlexion.Add(zonaDer)
+
+                ' Con las tres zonas armadas, clasificamos por forma de envolvente
+                ' para habilitar los esquemas de redistribución diagonal. Respetamos
+                ' la decisión manual si el usuario ya la fijó desde la UI.
+                If Not frame.ControlPorSismoManual Then
+                    frame.EsControladoPorSismo = ClasificarControlPorSismo(frame)
+                End If
 
             Next
 
@@ -589,61 +651,45 @@ Public Class VigaService
                                           factor As Double,
                                           esNegativo As Boolean) As String
 
-        'Dim viga As cViga = CType(Form_09_Vigas.Lista_Vigas.SelectedItem, cViga)
-
         Dim zona = frame.RevisionFlexion.FirstOrDefault(Function(x) x.Posicion = posicion)
         If zona Is Nothing Then Return "No se encontró la zona correspondiente."
 
-        ' Guardar factor
-        zona.FactorRedistribucion = factor
+        ' Guardar factor en el slot correcto.
+        '
+        ' Gravitacional: el UI sólo deja editar NEG en apoyos y POS en centro;
+        ' en ambos casos el factor vive en FactorRedistribucion y la lógica de
+        ' RecalcularRedistribucionGravitacional lo lee desde ahí.
+        '
+        ' Sísmica: cada apoyo tiene dos factores independientes — M⁻ va en
+        ' FactorRedistribucion y M⁺ en FactorRedPosApoyo. Centro no participa
+        ' pero si llega una edición ahí la dejamos pasar sin efecto en el
+        ' cálculo (RecalcularRedistribucionSismica no lee centro).
+        Dim esApoyo = (posicion = PosicionTramoViga.Izquierda OrElse posicion = PosicionTramoViga.Derecha)
+        If frame.EsControladoPorSismo AndAlso esApoyo AndAlso Not esNegativo Then
+            zona.FactorRedPosApoyo = factor
+        Else
+            zona.FactorRedistribucion = factor
+        End If
 
         ' 🔹 Buscar zonas claves
         Dim zonaIzq = frame.RevisionFlexion.FirstOrDefault(Function(x) x.Posicion = PosicionTramoViga.Izquierda)
         Dim zonaCentro = frame.RevisionFlexion.FirstOrDefault(Function(x) x.Posicion = PosicionTramoViga.Centro)
         Dim zonaDer = frame.RevisionFlexion.FirstOrDefault(Function(x) x.Posicion = PosicionTramoViga.Derecha)
 
-        Dim toleranciaVoladizo As Double = 5.0
-
-        ' =========================================
-        ' 🔥 VALIDACIÓN DE VOLADIZO
-        ' =========================================
-
-        'If posicion = PosicionTramoViga.Derecha Then
-
-        '    If zonaIzq IsNot Nothing Then
-        '        Dim M_izq = Math.Abs(zonaIzq.ResultadoBase.MomentoNegativo)
-
-        '        If M_izq < toleranciaVoladizo Then
-        '            MessageBox.Show("No se puede aplicar redistribución en el apoyo derecho porque el apoyo izquierdo se comporta como voladizo.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-        '            Exit Sub
-        '        End If
-        '    End If
-
-        'ElseIf posicion = PosicionTramoViga.Izquierda Then
-
-        '    If zonaDer IsNot Nothing Then
-        '        Dim M_der = Math.Abs(zonaDer.ResultadoBase.MomentoNegativo)
-
-        '        If M_der < toleranciaVoladizo Then
-        '            MessageBox.Show("No se puede aplicar redistribución en el apoyo izquierdo porque el apoyo derecho se comporta como voladizo.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-        '            Exit Sub
-        '        End If
-        '    End If
-
-        'End If
-        ' 🔹 VALIDACIÓN
-        If posicion = PosicionTramoViga.Derecha AndAlso zonaIzq IsNot Nothing Then
-
-            If Math.Abs(zonaIzq.ResultadoBase.MomentoNegativo) < toleranciaVoladizo Then
-                Return "No se puede redistribuir en apoyo derecho (voladizo en izquierda)"
+        ' Validación de voladizo — solo aplica a gravitacional. En sísmica el
+        ' M⁻ del otro apoyo puede estar cerca de 0 sin que eso sea un voladizo
+        ' (es la propia envolvente invertida).
+        If Not frame.EsControladoPorSismo Then
+            Dim toleranciaVoladizo As Double = 5.0
+            If posicion = PosicionTramoViga.Derecha AndAlso zonaIzq IsNot Nothing Then
+                If Math.Abs(zonaIzq.ResultadoBase.MomentoNegativo) < toleranciaVoladizo Then
+                    Return "No se puede redistribuir en apoyo derecho (voladizo en izquierda)"
+                End If
+            ElseIf posicion = PosicionTramoViga.Izquierda AndAlso zonaDer IsNot Nothing Then
+                If Math.Abs(zonaDer.ResultadoBase.MomentoNegativo) < toleranciaVoladizo Then
+                    Return "No se puede redistribuir en apoyo izquierdo (voladizo en derecha)"
+                End If
             End If
-
-        ElseIf posicion = PosicionTramoViga.Izquierda AndAlso zonaDer IsNot Nothing Then
-
-            If Math.Abs(zonaDer.ResultadoBase.MomentoNegativo) < toleranciaVoladizo Then
-                Return "No se puede redistribuir en apoyo izquierdo (voladizo en derecha)"
-            End If
-
         End If
 
         ' 🔥 Recalcular TODO correctamente
@@ -659,11 +705,18 @@ Public Class VigaService
 
         Return Nothing ' todo OK
 
-        'CalcularFlexionViga(viga)
-
-        'MostrarResultadosFlexion(viga)
-
     End Function
+
+    ' Aplica la redistribución guardada en el frame (factores por zona ya seteados)
+    ' y rediseña el acero. Se usa cuando cambió algo que afecta el esquema completo
+    ' — típicamente el flag EsControladoPorSismo — sin que la UI pase una
+    ' (posicion, factor) nueva que justifique llamar AplicarRedistribucion.
+    Public Sub RedistribuirFrame(frame As cFrame)
+        RecalcularRedistribucion(frame)
+        For Each zona In frame.RevisionFlexion
+            DesignZona(frame, zona, TipoResultadoFlexionViga.Actual)
+        Next
+    End Sub
 
     Public Sub RecalcularRedistribucion(frame As cFrame)
 
@@ -677,58 +730,94 @@ Public Class VigaService
             z.ResultadoActual.MomentoPositivo = z.ResultadoBase.MomentoPositivo
         Next
 
-        ' =========================================
-        ' 🔥 NEGATIVOS → CENTRO
-        ' =========================================
+        If frame.EsControladoPorSismo Then
+            RecalcularRedistribucionSismica(zonaIzq, zonaDer)
+        Else
+            RecalcularRedistribucionGravitacional(zonaIzq, zonaCentro, zonaDer)
+        End If
 
+    End Sub
+
+    ' ═══════════════════════════════════════════════════════════════════════════
+    '  Esquema gravitacional (apoyo ↔ centro)
+    '  M⁻izq y M⁻der suman magnitud a M⁺centro. M⁺centro se reparte por mitades
+    '  como magnitud a |M⁻izq| y |M⁻der|.
+    ' ═══════════════════════════════════════════════════════════════════════════
+    Private Sub RecalcularRedistribucionGravitacional(zonaIzq As cRevisionFlexionZona,
+                                                      zonaCentro As cRevisionFlexionZona,
+                                                      zonaDer As cRevisionFlexionZona)
         Dim aporteCentro As Double = 0.0
 
         If zonaIzq IsNot Nothing Then
             Dim f = zonaIzq.FactorRedistribucion
             Dim M = zonaIzq.ResultadoBase.MomentoNegativo
-            Dim delta = M * f
-
             zonaIzq.ResultadoActual.MomentoNegativo = M * (1 - f)
-
-            aporteCentro += Math.Abs(delta)
-
+            aporteCentro += Math.Abs(M * f)
         End If
 
         If zonaDer IsNot Nothing Then
             Dim f = zonaDer.FactorRedistribucion
             Dim M = zonaDer.ResultadoBase.MomentoNegativo
-            Dim delta = M * f
-
             zonaDer.ResultadoActual.MomentoNegativo = M * (1 - f)
-
-            aporteCentro += Math.Abs(delta)
-
+            aporteCentro += Math.Abs(M * f)
         End If
-
-        ' =========================================
-        ' 🔥 POSITIVO → APOYOS
-        ' =========================================
 
         If zonaCentro IsNot Nothing Then
             Dim f = zonaCentro.FactorRedistribucion
             Dim M = zonaCentro.ResultadoBase.MomentoPositivo
             Dim delta = M * f
 
-            Dim M_Reducido = M * (1 - f)
-
-            zonaCentro.ResultadoActual.MomentoPositivo = M_Reducido + aporteCentro
+            zonaCentro.ResultadoActual.MomentoPositivo = M * (1 - f) + aporteCentro
 
             Dim mitad = delta / 2.0
-
-            If zonaIzq IsNot Nothing Then
-                zonaIzq.ResultadoActual.MomentoNegativo -= mitad
-            End If
-
-            If zonaDer IsNot Nothing Then
-                zonaDer.ResultadoActual.MomentoNegativo -= mitad
-            End If
+            If zonaIzq IsNot Nothing Then zonaIzq.ResultadoActual.MomentoNegativo -= mitad
+            If zonaDer IsNot Nothing Then zonaDer.ResultadoActual.MomentoNegativo -= mitad
         End If
+    End Sub
 
+    ' ═══════════════════════════════════════════════════════════════════════════
+    '  Esquema sísmico (apoyo ↔ apoyo diagonal, con inversión de signo)
+    '
+    '  Bajo volteo cíclico la demanda migra entre apoyos de la viga invirtiendo
+    '  signo — reducir M⁻ en un apoyo se refleja como aumento de M⁺ en el
+    '  opuesto, y análogamente para M⁺. Cuatro transferencias independientes:
+    '
+    '      M⁻izq  → M⁺der   (factor = zonaIzq.FactorRedistribucion)
+    '      M⁻der  → M⁺izq   (factor = zonaDer.FactorRedistribucion)
+    '      M⁺izq  → M⁻der   (factor = zonaIzq.FactorRedPosApoyo)
+    '      M⁺der  → M⁻izq   (factor = zonaDer.FactorRedPosApoyo)
+    '
+    '  Se calculan los deltas desde los valores BASE para que las cuatro
+    '  operaciones no se interfieran al escribirse sobre ResultadoActual.
+    '  Centro no participa en este esquema.
+    ' ═══════════════════════════════════════════════════════════════════════════
+    Private Sub RecalcularRedistribucionSismica(zonaIzq As cRevisionFlexionZona,
+                                                zonaDer As cRevisionFlexionZona)
+        If zonaIzq Is Nothing OrElse zonaDer Is Nothing Then Return
+
+        Dim mNegIzqBase = zonaIzq.ResultadoBase.MomentoNegativo
+        Dim mPosIzqBase = zonaIzq.ResultadoBase.MomentoPositivo
+        Dim mNegDerBase = zonaDer.ResultadoBase.MomentoNegativo
+        Dim mPosDerBase = zonaDer.ResultadoBase.MomentoPositivo
+
+        Dim fNegIzq = zonaIzq.FactorRedistribucion
+        Dim fPosIzq = zonaIzq.FactorRedPosApoyo
+        Dim fNegDer = zonaDer.FactorRedistribucion
+        Dim fPosDer = zonaDer.FactorRedPosApoyo
+
+        ' Magnitudes transferidas (positivas)
+        Dim dNegIzq = Math.Abs(mNegIzqBase) * fNegIzq   ' aporta a M⁺der
+        Dim dPosIzq = Math.Abs(mPosIzqBase) * fPosIzq   ' aporta a |M⁻der|
+        Dim dNegDer = Math.Abs(mNegDerBase) * fNegDer   ' aporta a M⁺izq
+        Dim dPosDer = Math.Abs(mPosDerBase) * fPosDer   ' aporta a |M⁻izq|
+
+        ' Cada apoyo: reduce en origen por su propio factor y aumenta por el
+        ' aporte diagonal del apoyo opuesto. M⁻ es negativo → restar aporte
+        ' lo hace más negativo (mayor magnitud).
+        zonaIzq.ResultadoActual.MomentoNegativo = mNegIzqBase * (1 - fNegIzq) - dPosDer
+        zonaIzq.ResultadoActual.MomentoPositivo = mPosIzqBase * (1 - fPosIzq) + dNegDer
+        zonaDer.ResultadoActual.MomentoNegativo = mNegDerBase * (1 - fNegDer) - dPosIzq
+        zonaDer.ResultadoActual.MomentoPositivo = mPosDerBase * (1 - fPosDer) + dNegIzq
     End Sub
 
     Public Sub CalcularFlexionViga(viga As cViga)
@@ -856,9 +945,12 @@ Public Class VigaService
     Private _bfCortante As List(Of cCombinacionBeamForce)
     Private _combosCortante As HashSet(Of String)
 
-    ' Último contexto de cortante plástico (combos + fy_factor), mismo propósito.
+    ' Último contexto de cortante plástico (combos + fy_factor + DES/DMO),
+    ' mismo propósito que arriba. _esDESPlastico decide si VcEfectivo puede
+    ' anular Vc por C.21.5.4.2 (solo DES) — en DMO Vc se conserva íntegro.
     Private _combosPlastico As HashSet(Of String)
     Private _fyFactorPlastico As Double = 1.0
+    Private _esDESPlastico As Boolean = False
 
     Public Sub CalcularEnvolventeCortante(vigas As List(Of cViga),
                                           beamForces As List(Of cCombinacionBeamForce),
@@ -996,7 +1088,7 @@ Public Class VigaService
         ' 4) Cortante plástico (solo si ya se calculó alguna vez en esta sesión)
         If incluirPlastico AndAlso bf IsNot Nothing AndAlso
            _combosPlastico IsNot Nothing AndAlso _combosPlastico.Count > 0 Then
-            CalcularCortantePlastico(vigas, bf, _combosPlastico, _fyFactorPlastico)
+            CalcularCortantePlastico(vigas, bf, _combosPlastico, _fyFactorPlastico, _esDESPlastico)
         End If
 
     End Sub
@@ -1164,6 +1256,9 @@ Public Class VigaService
     ' cualquier viga, independientemente del resultado del chequeo estándar.
     '
     ' fy_factor: 1.0 para DMO, 1.25 para DES
+    ' esDES:     True en DES, False en DMO. Afecta solo si Vc puede anularse
+    '            dentro de 2h por C.21.5.4.2 (DES). En DMO el equivalente
+    '            C.21.3.4.2 no requiere Vc = 0, así que se conserva íntegro.
     '
     ' Convenio de signos para Vg (de ETABS, con signo):
     '   Zona Izq (a d de la cara izq): Vg_izq ≈ +|V| (positivo, sentido de reacción)
@@ -1181,7 +1276,8 @@ Public Class VigaService
     Public Sub CalcularCortantePlastico(vigas As List(Of cViga),
                                         beamForces As List(Of cCombinacionBeamForce),
                                         combinaciones As HashSet(Of String),
-                                        fy_factor As Double)
+                                        fy_factor As Double,
+                                        esDES As Boolean)
 
         Const phi As Double = 0.75
 
@@ -1191,6 +1287,7 @@ Public Class VigaService
         _bfCortante = If(_bfCortante, beamForces)
         _combosPlastico = combinaciones
         _fyFactorPlastico = fy_factor
+        _esDESPlastico = esDES
 
         Dim lookup = beamForces _
             .Where(Function(r) combinaciones.Contains(r.LoadCaseKey)) _
@@ -1209,10 +1306,20 @@ Public Class VigaService
 
         For Each viga In vigas
 
-            Dim tieneRef = viga.Frames.Any(Function(f) f.RefuerzoSuperior.Any() OrElse f.RefuerzoInferior.Any())
-            If Not tieneRef Then Continue For
+            ' Early-exit: si ninguno de sus frames tiene refuerzo real, salta la viga
+            ' entera. El filtro por frame (abajo) sigue siendo la fuente de verdad.
+            If Not viga.Frames.Any(AddressOf TieneRefuerzoFlexion) Then Continue For
 
             For Each frame In viga.Frames
+
+                ' Regla única del módulo (ver TieneRefuerzoFlexion): sin refuerzo real
+                ' arriba Y abajo, el chequeo plástico no aplica. Limpia también
+                ' cualquier resultado viejo por si el frame perdió refuerzo entre
+                ' corridas.
+                If Not TieneRefuerzoFlexion(frame) Then
+                    frame.CortantePlastico = Nothing
+                    Continue For
+                End If
 
                 Dim sec = frame.Section
                 Dim b_mm As Double = sec.b * 1000.0
@@ -1294,7 +1401,7 @@ Public Class VigaService
                     .Vu_diseno = Vu_dis_izq
                     ' Ve que gobierna esta zona (la parte sísmica del caso crítico)
                     Dim VeGobIzq = If(Math.Abs(Vu_A_izq) >= Math.Abs(Vu_B_izq), Ve_A, Ve_B)
-                    .Vc = VcEfectivo(Vc, d, sec.h, VeGobIzq, Vu_dis_izq, Pu_comp, Ag, fc)
+                    .Vc = VcEfectivo(Vc, d, sec.h, VeGobIzq, Vu_dis_izq, Pu_comp, Ag, fc, esDES)
                     Dim refIzq = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
                     If refIzq IsNot Nothing Then
                         Dim Av = refIzq.CantEstribos * AreaRefuerzo("#" & refIzq.NumeroBarra)
@@ -1360,7 +1467,7 @@ Public Class VigaService
                         ' dentro de la zona de rótula y a Vc también le aplica C.21.5.4.2.
                         Dim distCen As Double = If(Math.Abs(VgCenReport - Vg_cen_i) < 0.000001, zcIzq, zcDer)
                         Dim VeGobCen = If(Math.Abs(Ve_A + VgCenReport) >= Math.Abs(-Ve_B + VgCenReport), Ve_A, Ve_B)
-                        .Vc = VcEfectivo(Vc, distCen, sec.h, VeGobCen, Vu_dis_cen, Pu_comp, Ag, fc)
+                        .Vc = VcEfectivo(Vc, distCen, sec.h, VeGobCen, Vu_dis_cen, Pu_comp, Ag, fc, esDES)
                         Dim Av = refCen.CantEstribos * AreaRefuerzo("#" & refCen.NumeroBarra)
                         .Vs = Av * fy * sec.d / refCen.Separacion / 1000.0
                         .phiVn = phi * (.Vc + .Vs)
@@ -1378,7 +1485,7 @@ Public Class VigaService
                     .Vu_B = Vu_B_der
                     .Vu_diseno = Vu_dis_der
                     Dim VeGobDer = If(Math.Abs(Vu_A_der) >= Math.Abs(Vu_B_der), Ve_A, Ve_B)
-                    .Vc = VcEfectivo(Vc, d, sec.h, VeGobDer, Vu_dis_der, Pu_comp, Ag, fc)
+                    .Vc = VcEfectivo(Vc, d, sec.h, VeGobDer, Vu_dis_der, Pu_comp, Ag, fc, esDES)
                     Dim refDer = frame.RefuerzoTransversal.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
                     If refDer IsNot Nothing Then
                         Dim Av = refDer.CantEstribos * AreaRefuerzo("#" & refDer.NumeroBarra)
@@ -1397,14 +1504,20 @@ Public Class VigaService
     End Sub
 
     ''' <summary>
-    ''' Vc efectivo según NSR-10 C.21.5.4.2: dentro de la longitud 2h medida desde la
-    ''' cara del apoyo se debe tomar Vc = 0 cuando se cumplen A LA VEZ:
+    ''' Vc efectivo según NSR-10 C.21.5.4.2 — DES ÚNICAMENTE. Dentro de la
+    ''' longitud 2h medida desde la cara del apoyo se debe tomar Vc = 0 cuando
+    ''' se cumplen A LA VEZ:
     '''   (a) el cortante inducido por el sismo Ve representa la mitad o más del
     '''       cortante máximo requerido en esa longitud, y
     '''   (b) la fuerza axial de compresión mayorada Pu es menor que Ag·f'c/20.
     '''
-    ''' Fuera de 2h (la zona central de un vano normal) Vc se conserva íntegro: ahí no
-    ''' se espera la rótula plástica que degrada el aporte del concreto.
+    ''' Para DMO el equivalente C.21.3.4.2 NO requiere anular Vc; el aporte del
+    ''' concreto se conserva íntegro. Hasta 2026-11-05 la regla se aplicaba a
+    ''' cualquier viga y en proyectos DMO Vc salía en 0 sin fundamento normativo.
+    '''
+    ''' Fuera de 2h (la zona central de un vano normal) Vc se conserva íntegro
+    ''' incluso en DES: ahí no se espera la rótula plástica que degrada el
+    ''' aporte del concreto.
     '''
     ''' En vigas Pu suele ser prácticamente nulo, así que (b) casi siempre se cumple y
     ''' quien decide es (a). Convención de signo: en ETABS la compresión en frames es
@@ -1412,18 +1525,106 @@ Public Class VigaService
     ''' </summary>
     ''' <param name="distanciaCara">Distancia del punto evaluado a la cara del apoyo (m).</param>
     ''' <param name="Pu_comp">Compresión axial mayorada, positiva (kN). 0 si no hay.</param>
+    ''' <param name="esDES">True solo para pórticos DES; en DMO devuelve Vc sin recortar.</param>
     Private Shared Function VcEfectivo(Vc As Double,
                                        distanciaCara As Double, h As Double,
                                        Ve As Double, Vu As Double,
-                                       Pu_comp As Double, Ag As Double, fc As Double) As Double
+                                       Pu_comp As Double, Ag As Double, fc As Double,
+                                       esDES As Boolean) As Double
 
-        If distanciaCara > 2.0 * h Then Return Vc      ' fuera de la zona de rótula
+        If Not esDES Then Return Vc                     ' DMO/otros: Vc nominal íntegro
+        If distanciaCara > 2.0 * h Then Return Vc       ' fuera de la zona de rótula
         If Vu <= 0 Then Return Vc
 
         Dim condA As Boolean = Math.Abs(Ve) >= 0.5 * Vu
         Dim condB As Boolean = Pu_comp < Ag * fc * 1000.0 / 20.0   ' Ag[m²]·fc[MPa]·1000 = kN
 
         Return If(condA AndAlso condB, 0.0, Vc)
+
+    End Function
+
+    ''' <summary>
+    ''' Valida los requisitos de refuerzo mínimo relativo de NSR-10:
+    '''   • C.21.5.2.2 (DES, pórticos especiales):
+    '''       - En apoyos: Mn⁺ ≥ Mn⁻ / 2
+    '''       - En cualquier sección: Mn ≥ max(Mn⁻_apoyos) / 4
+    '''   • C.21.3.4.1 (DMO, pórticos intermedios), más laxo:
+    '''       - En apoyos: Mn⁺ ≥ Mn⁻ / 3
+    '''       - En cualquier sección: Mn ≥ max(Mn⁻_apoyos) / 5
+    '''
+    ''' Se usa Mn del refuerzo colocado (AsProvSup/AsProvInf del ResultadoActual),
+    ''' no del requerido — la norma habla de capacidad, no de demanda. Si aún no
+    ''' hay refuerzo colocado en apoyos retorna Nothing (nada que validar).
+    '''
+    ''' No bloquea: el objetivo es advertir al ingeniero que el refuerzo definido
+    ''' viola el reglamento; la decisión final es suya. El chequeo típicamente se
+    ''' dispara después de una redistribución que haya reducido el acero inferior
+    ''' en apoyos o aumentado el superior sin compensar.
+    ''' </summary>
+    Public Function ValidarC21_5_2(frame As cFrame, esDES As Boolean) As String
+
+        If frame Is Nothing OrElse frame.Section Is Nothing Then Return Nothing
+        If frame.RevisionFlexion Is Nothing OrElse frame.RevisionFlexion.Count = 0 Then Return Nothing
+
+        Dim zIzq = frame.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Izquierda)
+        Dim zCen = frame.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Centro)
+        Dim zDer = frame.RevisionFlexion.FirstOrDefault(Function(z) z.Posicion = PosicionTramoViga.Derecha)
+        If zIzq Is Nothing OrElse zDer Is Nothing Then Return Nothing
+
+        Dim sec = frame.Section
+        Dim fy = sec.fy
+        Dim fc = sec.fc
+        Dim b_mm = sec.b * 1000.0
+        Dim d_mm = sec.d * 1000.0
+
+        ' Mn nominal (φ = 1.0, fy sin amplificar) — el ratio Mn⁺/Mn⁻ es invariante
+        ' al fy_factor, así que no importa si trabajamos con 1.0 o 1.25.
+        Dim MnIzqNeg = CalcularMnNominal(zIzq.ResultadoActual.AsProvSup, fy, fc, b_mm, d_mm)
+        Dim MnIzqPos = CalcularMnNominal(zIzq.ResultadoActual.AsProvInf, fy, fc, b_mm, d_mm)
+        Dim MnDerNeg = CalcularMnNominal(zDer.ResultadoActual.AsProvSup, fy, fc, b_mm, d_mm)
+        Dim MnDerPos = CalcularMnNominal(zDer.ResultadoActual.AsProvInf, fy, fc, b_mm, d_mm)
+        Dim MnCenNeg As Double = 0, MnCenPos As Double = 0
+        If zCen IsNot Nothing Then
+            MnCenNeg = CalcularMnNominal(zCen.ResultadoActual.AsProvSup, fy, fc, b_mm, d_mm)
+            MnCenPos = CalcularMnNominal(zCen.ResultadoActual.AsProvInf, fy, fc, b_mm, d_mm)
+        End If
+
+        ' Sin refuerzo en apoyos no hay capacidad plástica que respetar
+        If MnIzqNeg <= 0 AndAlso MnDerNeg <= 0 Then Return Nothing
+
+        Dim factorApoyo As Double = If(esDES, 2.0, 3.0)
+        Dim factorSeccion As Double = If(esDES, 4.0, 5.0)
+        Dim nivel As String = If(esDES, "DES — C.21.5.2.2", "DMO — C.21.3.4.1")
+
+        Dim mensajes As New List(Of String)
+
+        ' (a) En apoyos: Mn⁺ ≥ Mn⁻ / factorApoyo
+        If MnIzqNeg > 0 AndAlso MnIzqPos < MnIzqNeg / factorApoyo Then
+            mensajes.Add($"Apoyo izq: Mn⁺ = {MnIzqPos:F1} kN·m  <  Mn⁻ / {factorApoyo:F0} = {MnIzqNeg / factorApoyo:F1} kN·m")
+        End If
+        If MnDerNeg > 0 AndAlso MnDerPos < MnDerNeg / factorApoyo Then
+            mensajes.Add($"Apoyo der: Mn⁺ = {MnDerPos:F1} kN·m  <  Mn⁻ / {factorApoyo:F0} = {MnDerNeg / factorApoyo:F1} kN·m")
+        End If
+
+        ' (b) En cualquier sección: Mn ≥ max(Mn⁻_apoyos) / factorSeccion.
+        ' El chequeo sobre centro solo aplica a la cara que tenga refuerzo colocado;
+        ' si Mn = 0 (el usuario no armó esa cara) se omite — la norma pide que
+        ' el acero existente tenga una capacidad mínima, no que haya acero.
+        Dim mnMaxApoyo = Math.Max(MnIzqNeg, MnDerNeg)
+        If mnMaxApoyo > 0 AndAlso zCen IsNot Nothing Then
+            Dim minSeccion = mnMaxApoyo / factorSeccion
+            If MnCenPos > 0 AndAlso MnCenPos < minSeccion Then
+                mensajes.Add($"Centro: Mn⁺ = {MnCenPos:F1} kN·m  <  Mn⁻_max / {factorSeccion:F0} = {minSeccion:F1} kN·m")
+            End If
+            If MnCenNeg > 0 AndAlso MnCenNeg < minSeccion Then
+                mensajes.Add($"Centro: Mn⁻ = {MnCenNeg:F1} kN·m  <  Mn⁻_max / {factorSeccion:F0} = {minSeccion:F1} kN·m")
+            End If
+        End If
+
+        If mensajes.Count = 0 Then Return Nothing
+
+        Return $"NSR-10 {nivel} — el refuerzo colocado no cumple:" & vbCrLf &
+               String.Join(vbCrLf, mensajes.Select(Function(m) "  • " & m))
 
     End Function
 
@@ -1529,6 +1730,76 @@ Public Class VigaService
 
     End Sub
 
+    ''' <summary>
+    ''' Asigna refuerzo transversal a todas las vigas usando las preferencias
+    ''' definidas por el usuario (por nombre de sección). Si una sección no
+    ''' tiene preferencia, cae al refuerzo automático de siempre
+    ''' (<see cref="AsignarRefuerzoTransversalAutomatico"/>).
+    '''
+    ''' Diferencias con el auto:
+    ''' - El usuario controla NumEstribos ZC (y por tanto Lo = 0.05+(N−1)·s).
+    ''' - El usuario elige diámetro de barra, ramas y separación en ZC y ZNC.
+    ''' - Los estribos de la ZNC se auto-calculan de la longitud restante del frame.
+    ''' </summary>
+    Public Sub AsignarRefuerzoDesdePreferencias(
+            vigas As List(Of cViga),
+            prefs As Dictionary(Of String, PreferenciasEstribosSeccion),
+            Optional sobrescribir As Boolean = True)
+
+        If prefs Is Nothing Then prefs = New Dictionary(Of String, PreferenciasEstribosSeccion)(StringComparer.OrdinalIgnoreCase)
+
+        For Each viga In vigas
+            For Each frame In viga.Frames
+                If Not sobrescribir AndAlso frame.RefuerzoTransversal.Count > 0 Then Continue For
+
+                Dim sec = frame.Section
+                If sec Is Nothing OrElse String.IsNullOrWhiteSpace(sec.Nombre) Then Continue For
+
+                Dim pref As PreferenciasEstribosSeccion = Nothing
+                If Not prefs.TryGetValue(sec.Nombre, pref) OrElse pref Is Nothing Then
+                    ' Sección sin preferencia → auto, mismo criterio que el método original.
+                    Dim b As Double = sec.b
+                    Dim d As Double = sec.d
+                    Dim h As Double = sec.h
+                    Dim cantConfinadaAuto As Integer = If(b <= 0.45, 2, 3)
+                    Dim sepConfinadaAuto As Double = Math.Round(d / 4.0, 3)
+                    Dim numEstribosConfinadoAuto As Integer = Math.Max(CInt(Math.Ceiling(2.0 * h / sepConfinadaAuto)), 1)
+                    Dim sepCentroAuto As Double = Math.Round(d / 2.0, 3)
+                    pref = New PreferenciasEstribosSeccion With {
+                        .NombreSeccion = sec.Nombre,
+                        .BarraZC = 3, .RamasZC = cantConfinadaAuto,
+                        .NumEstribosZC = numEstribosConfinadoAuto, .SepZC = sepConfinadaAuto,
+                        .BarraZNC = 3, .RamasZNC = 2, .SepZNC = sepCentroAuto}
+                End If
+
+                ' Longitud de ZC controlada 100 % por el usuario: Lo = 0.05 + (N−1)·s.
+                ' El Vu de la ZNC depende de dónde empieza, que es a Lo del apoyo.
+                Dim zoneConLen As Double = 0.05 + (CDbl(Math.Max(1, pref.NumEstribosZC)) - 1.0) * pref.SepZC
+                Dim lzCentral As Double = frame.Longitud - 2.0 * zoneConLen
+                Dim numEstriboCentro As Integer = If(lzCentral > pref.SepZNC AndAlso pref.SepZNC > 0,
+                                                     Math.Max(1, CInt(Math.Floor(lzCentral / pref.SepZNC)) - 1),
+                                                     0)
+
+                frame.RefuerzoTransversal.Clear()
+                For Each pos In {PosicionTramoViga.Izquierda, PosicionTramoViga.Centro, PosicionTramoViga.Derecha}
+                    Dim zona As New cRefuerzoTransversalZona With {.Posicion = pos}
+                    If pos = PosicionTramoViga.Centro Then
+                        zona.NumeroBarra = pref.BarraZNC
+                        zona.CantEstribos = pref.RamasZNC
+                        zona.Separacion = pref.SepZNC
+                        zona.NumEstribos = numEstriboCentro
+                    Else
+                        zona.NumeroBarra = pref.BarraZC
+                        zona.CantEstribos = pref.RamasZC
+                        zona.Separacion = pref.SepZC
+                        zona.NumEstribos = pref.NumEstribosZC
+                    End If
+                    frame.RefuerzoTransversal.Add(zona)
+                Next
+            Next
+        Next
+    End Sub
+
     Public Function SonVigasCompatibles(v1 As cViga, v2 As cViga) As Boolean
 
         If v1.Frames.Count <> v2.Frames.Count Then Return False
@@ -1550,10 +1821,20 @@ Public Class VigaService
     ''' Aplica agrupaciones manuales definidas por el usuario sobre las vigas ya auto-generadas.
     ''' Para cada grupo manual, extrae los frames de sus vigas actuales y los une en una nueva viga.
     ''' Las vigas que quedan vacías se eliminan y todas se renumeran al final.
+    '''
+    ''' Grupos singletes (un solo label) son esperables — representan frames que
+    ''' el usuario separó de una auto-agrupación y deben quedar como viga aparte
+    ''' en cada Procesar; sin ellos, la auto-agrupación de GenerarVigas los
+    ''' reuniría con sus vecinos alineados.
+    '''
+    ''' Si <paramref name="excluidos"/> contiene algún label del grupo, la viga
+    ''' nueva nace con ExcluirDeRevision = True — así la decisión del usuario
+    ''' de "excluir de revisión" sobrevive al Procesar.
     ''' </summary>
     Public Sub AplicarGruposManual(vigas As List(Of cViga),
                                     gruposManual As List(Of List(Of String)),
-                                    jointsDict As Dictionary(Of String, cJoint))
+                                    jointsDict As Dictionary(Of String, cJoint),
+                                    Optional excluidos As HashSet(Of String) = Nothing)
 
         If gruposManual Is Nothing OrElse gruposManual.Count = 0 Then Return
 
@@ -1592,6 +1873,14 @@ Public Class VigaService
             Dim dir = _geo.VectorFrame(framesGrupo.First(), jointsDict)
             dir.Normalize()
             nuevaViga.Direccion = dir
+
+            ' Heredar la marca de exclusión si algún label del grupo está marcado
+            ' por el usuario como residual-a-excluir. En la práctica esto solo
+            ' aplica a singletes (residuales de separaciones manuales).
+            If excluidos IsNot Nothing AndAlso excluidos.Count > 0 AndAlso
+               grupo.Any(Function(lbl) excluidos.Contains(lbl)) Then
+                nuevaViga.ExcluirDeRevision = True
+            End If
 
             OrdenarFramesViga(nuevaViga, jointsDict)
             vigas.Add(nuevaViga)
@@ -2098,6 +2387,45 @@ Public Class VigaService
     End Structure
 
     ''' <summary>
+    ''' Regla única del módulo: un frame tiene refuerzo a flexión si tiene AL
+    ''' MENOS una barra real arriba Y al menos una barra real abajo. Sin eso
+    ''' Mn⁻ o Mn⁺ queda en cero y el mecanismo de volteo plástico no existe,
+    ''' así que el chequeo por capacidad no aplica. Punto.
+    '''
+    ''' "Al menos una barra" se mide sobre el diccionario Barras — no sobre
+    ''' la lista RefuerzoSuperior/Inferior. En .esm viejos puede quedar un
+    ''' cRefuerzoTramo con Barras vacío (por un Guardar sin datos, por
+    ''' ejemplo), y ese tramo no representa refuerzo real.
+    ''' </summary>
+    Public Shared Function TieneRefuerzoFlexion(frame As cFrame) As Boolean
+        If frame Is Nothing Then Return False
+        Dim tieneSup = frame.RefuerzoSuperior IsNot Nothing AndAlso
+                       frame.RefuerzoSuperior.Any(Function(t) t IsNot Nothing AndAlso
+                                                              t.Barras IsNot Nothing AndAlso
+                                                              t.Barras.Values.Any(Function(n) n > 0))
+        If Not tieneSup Then Return False
+        Dim tieneInf = frame.RefuerzoInferior IsNot Nothing AndAlso
+                       frame.RefuerzoInferior.Any(Function(t) t IsNot Nothing AndAlso
+                                                              t.Barras IsNot Nothing AndAlso
+                                                              t.Barras.Values.Any(Function(n) n > 0))
+        Return tieneInf
+    End Function
+
+    ''' <summary>
+    ''' Devuelve CortantePlastico del frame solo si TieneRefuerzoFlexion es True.
+    ''' Protege contra resultados que quedaron serializados en .esm anteriores al
+    ''' 2026-11-04 (antes de que el filtro por frame existiera) y contra cualquier
+    ''' otro flujo que haya asignado CortantePlastico a un frame sin refuerzo real.
+    ''' Todos los consumidores de frame.CortantePlastico (reportes, grids,
+    ''' planta interactiva, Word, Excel) deben pasar por acá.
+    ''' </summary>
+    Public Shared Function CortantePlasticoVigente(frame As cFrame) As cResultadoCortantePlasticoFrame
+        If frame Is Nothing OrElse frame.CortantePlastico Is Nothing Then Return Nothing
+        If Not TieneRefuerzoFlexion(frame) Then Return Nothing
+        Return frame.CortantePlastico
+    End Function
+
+    ''' <summary>
     ''' Evalúa el C/D (Def) por zona y devuelve la zona gobernante (menor C/D_Def)
     ''' junto con la etiqueta agregada del frame.
     '''  - "Revisar"    si alguna zona no cumple ni por plástico
@@ -2114,7 +2442,7 @@ Public Class VigaService
             Return res
         End If
 
-        Dim cp = frame.CortantePlastico
+        Dim cp = CortantePlasticoVigente(frame)
         For Each zTip In frame.RevisionCortante
             Dim zPla As cRevisionCortantePlasticoZona = Nothing
             If cp IsNot Nothing Then
@@ -2246,6 +2574,32 @@ Public Class VigaService
         Dim vals = v.Frames.Select(AddressOf CDFlexionFrame).Where(Function(x) x > 0).ToList()
         If vals.Count = 0 Then Return 0
         Return vals.Min()
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D de cortante del frame (menor Factor entre las 3 zonas con cálculo).
+    ''' 0 = sin cálculo. Usada para colorear la planta frame-a-frame.
+    ''' </summary>
+    Public Shared Function CDCortanteFrame(f As cFrame) As Double
+        If f Is Nothing OrElse f.RevisionCortante Is Nothing Then Return 0
+        Dim vals = f.RevisionCortante.
+            Where(Function(z) z IsNot Nothing AndAlso z.Factor > 0 AndAlso z.phiVn > 0).
+            Select(Function(z) z.Factor).ToList()
+        If vals.Count = 0 Then Return 0
+        Return Math.Round(vals.Min(), 2)
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D global del frame (flexión + cortante). 0 = sin cálculo.
+    ''' Es el equivalente por frame de <see cref="PeorCDViga"/>.
+    ''' </summary>
+    Public Shared Function CDPeorFrame(f As cFrame) As Double
+        Dim fx = CDFlexionFrame(f)
+        Dim cr = CDCortanteFrame(f)
+        If fx > 0 AndAlso cr > 0 Then Return Math.Min(fx, cr)
+        If fx > 0 Then Return fx
+        If cr > 0 Then Return cr
+        Return 0
     End Function
 
     ''' <summary>C/D envolvente de cortante de la viga. 0 = sin cálculo (SinDatos).</summary>

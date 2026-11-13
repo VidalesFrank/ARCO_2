@@ -24,6 +24,23 @@ Public Class cFrame
     Public Property RevisionCortante As New List(Of cRevisionCortanteZona)
     Public Property CortantePlastico As cResultadoCortantePlasticoFrame
 
+    ''' <summary>
+    ''' True si el frame es controlado por sismo. Al importar se asigna por el
+    ''' heurístico (VigaService.ClasificarControlPorSismo); el usuario puede
+    ''' sobreescribirlo desde la UI. Habilita los esquemas de redistribución
+    ''' diagonal. Default False para proyectos .esm viejos hasta que se recalculen.
+    ''' </summary>
+    <OptionalField>
+    Public EsControladoPorSismo As Boolean
+
+    ''' <summary>
+    ''' True cuando el usuario fijó EsControladoPorSismo desde la UI. Bloquea
+    ''' el pisado por el heurístico en recálculos posteriores — una vez el
+    ''' ingeniero decide, su criterio manda. Ver VigaService.CalcularEnvolventesVigas.
+    ''' </summary>
+    <OptionalField>
+    Public ControlPorSismoManual As Boolean
+
     ' Eje estructural más cercano al apoyo (GridID de ETABS, ej. "A", "1")
     <OptionalField>
     Private _ejeApoyoI As String
@@ -90,7 +107,15 @@ Public Class cRevisionFlexionZona
     Public Property ResultadoActual As New cResultadoFlexion
 
     ' 🔹 Factor de redistribución
+    ' En gravitacional: reduce M⁻ si Posicion = Izquierda/Derecha, o M⁺ si = Centro.
+    ' En sísmica: reduce M⁻ del apoyo (se mueve diagonal a M⁺ del apoyo opuesto).
     Public Property FactorRedistribucion As Double = 0
+
+    ' 🔹 Factor de redistribución del M⁺ en apoyo — solo sísmica, solo apoyos
+    ' (Izquierda/Derecha). En Centro queda en 0; el esquema diagonal no lo usa.
+    ' Default 0 preserva comportamiento para .esm viejos.
+    <OptionalField>
+    Public FactorRedPosApoyo As Double = 0
 
 End Class
 

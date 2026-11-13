@@ -1,0 +1,60 @@
+<!-- Tema OSCURO — mismas keys que Theme.Claro.xaml para permitir switch en caliente.
+     En v1 no se aplica; queda cableado para habilitar después. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ── Superficies ──────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushFondoApp"           Color="#141B23"/>
+    <SolidColorBrush x:Key="BrushSuperficie"         Color="#1D2732"/>
+    <SolidColorBrush x:Key="BrushSuperficieHover"    Color="#283646"/>
+    <SolidColorBrush x:Key="BrushSuperficiePresion"  Color="#324155"/>
+    <SolidColorBrush x:Key="BrushSuperficieBanner"   Color="#1A2430"/>
+
+    <!-- ── Sidebar ──────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushSidebar"            Color="#101820"/>
+    <SolidColorBrush x:Key="BrushSidebarHover"       Color="#1A2836"/>
+    <SolidColorBrush x:Key="BrushSidebarActivo"      Color="#65A6D8"/>
+    <SolidColorBrush x:Key="BrushSidebarTitulo"      Color="#8294AA"/>
+    <SolidColorBrush x:Key="BrushSidebarSeparador"   Color="#22303E"/>
+    <SolidColorBrush x:Key="BrushSidebarTexto"       Color="#E2ECF6"/>
+    <SolidColorBrush x:Key="BrushSidebarTextoTenue"  Color="#8CA0B8"/>
+
+    <!-- ── TopBar ──────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushTopBar"             Color="#101820"/>
+    <SolidColorBrush x:Key="BrushTopBarTexto"        Color="#F0F4F8"/>
+    <SolidColorBrush x:Key="BrushTopBarTextoTenue"   Color="#96AABE"/>
+    <SolidColorBrush x:Key="BrushTopBarHover"        Color="#202E3C"/>
+    <SolidColorBrush x:Key="BrushTopBarDivisor"      Color="#263646"/>
+    <SolidColorBrush x:Key="BrushTopBarSearchFondo"  Color="#1C2834"/>
+    <SolidColorBrush x:Key="BrushTopBarSearchFoco"   Color="#263646"/>
+
+    <!-- ── Marca y acento ──────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushAzulPrincipal"      Color="#65A6D8"/>
+    <SolidColorBrush x:Key="BrushAzulInteraccion"    Color="#65A6D8"/>
+    <SolidColorBrush x:Key="BrushAzulTenue"          Color="#486580"/>
+
+    <!-- ── Texto ────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushTextoPrincipal"     Color="#F0F4F8"/>
+    <SolidColorBrush x:Key="BrushTextoSecundario"    Color="#A6B4C2"/>
+    <SolidColorBrush x:Key="BrushTextoDeshabilitado" Color="#687786"/>
+    <SolidColorBrush x:Key="BrushTextoPlaceholder"   Color="#6E8296"/>
+
+    <!-- ── Bordes ──────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushBorde"              Color="#34414E"/>
+    <SolidColorBrush x:Key="BrushBordeHover"         Color="#65A6D8"/>
+    <SolidColorBrush x:Key="BrushBordeTenue"         Color="#283646"/>
+
+    <!-- ── Badges ─────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushBadgeFondo"         Color="#3E3218"/>
+    <SolidColorBrush x:Key="BrushBadgeBorde"         Color="#A5823C"/>
+    <SolidColorBrush x:Key="BrushBadgeTexto"         Color="#F5D28C"/>
+
+    <!-- ── Sombra ──────────────────────────────────────────────── -->
+    <DropShadowEffect x:Key="ElevacionBaja"
+                      Color="#000000" Opacity="0.35"
+                      BlurRadius="12" ShadowDepth="2" Direction="270"/>
+    <DropShadowEffect x:Key="ElevacionMedia"
+                      Color="#000000" Opacity="0.50"
+                      BlurRadius="18" ShadowDepth="4" Direction="270"/>
+
+</ResourceDictionary>

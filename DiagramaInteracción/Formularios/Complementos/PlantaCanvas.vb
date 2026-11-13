@@ -116,7 +116,7 @@ Public Class PlantaCanvas
     Private _onAvisoClick As Action
 
     ' ─── Paleta ────────────────────────────────────────────────
-    Private Shared ReadOnly ColorFondo As Color = Color.FromArgb(245, 248, 252)
+    Private Shared ReadOnly ColorFondo As Color = Color.White
     Private Shared ReadOnly ColorToolBar As Color = Color.FromArgb(87, 87, 87)
     Private Shared ReadOnly GrisARCO As Color = Color.FromArgb(87, 87, 87)
     Private Shared ReadOnly ColorBoton As Color = Color.FromArgb(224, 224, 224)
@@ -599,7 +599,9 @@ Public Class PlantaCanvas
     Private Sub DibujarGridLines(g As Graphics, w As Integer, h As Integer)
         If GridLines Is Nothing OrElse GridLines.Count = 0 Then Return
 
-        Using penGrid As New Pen(Color.FromArgb(160, 190, 190, 200), 1)
+        ' Grid gris medio sobre fondo blanco: subimos opacidad y oscurecemos
+        ' el gris para que las líneas estructurales no desaparezcan.
+        Using penGrid As New Pen(Color.FromArgb(200, 150, 150, 160), 1)
             penGrid.DashStyle = DashStyle.Dash
 
             Dim wxMin As Double = 0, wyMin As Double = 0, wxMax As Double = 0, wyMax As Double = 0
@@ -640,12 +642,13 @@ Public Class PlantaCanvas
                 End If
 
                 Try
-                    Using fGrid As New Font("Segoe UI", 7.5F, FontStyle.Bold)
+                    Using fGrid As New Font("Segoe UI", 10.5F, FontStyle.Bold),
+                          bTexto As New SolidBrush(Color.FromArgb(70, 85, 110))
                         Dim sz = g.MeasureString(gl.GridID, fGrid)
-                        Using bBg As New SolidBrush(Color.FromArgb(200, Color.White))
-                            g.FillEllipse(bBg, pt.X - 2, pt.Y, sz.Width + 4, sz.Height)
+                        Using bBg As New SolidBrush(Color.FromArgb(230, Color.White))
+                            g.FillEllipse(bBg, pt.X - 3, pt.Y - 1, sz.Width + 6, sz.Height + 2)
                         End Using
-                        g.DrawString(gl.GridID, fGrid, Brushes.SlateGray, pt.X, pt.Y)
+                        g.DrawString(gl.GridID, fGrid, bTexto, pt.X, pt.Y)
                     End Using
                 Catch ex As OverflowException
                 End Try
@@ -712,7 +715,7 @@ Public Class PlantaCanvas
         End Try
         If items Is Nothing OrElse items.Count = 0 Then Return
 
-        Using f As New Font("Segoe UI", 8)
+        Using f As New Font("Segoe UI", 11.5F, FontStyle.Regular)
 
             Dim ancho As Single = 0
             For Each it In items
@@ -720,30 +723,30 @@ Public Class PlantaCanvas
                 ancho = Math.Max(ancho, g.MeasureString(txt, f).Width)
             Next
 
-            Dim altoLinea As Single = f.Height + 4
-            Dim wBox As Single = ancho + 34
-            Dim hBox As Single = items.Count * altoLinea + 10
+            Dim altoLinea As Single = f.Height + 6
+            Dim wBox As Single = ancho + 44
+            Dim hBox As Single = items.Count * altoLinea + 14
             Dim x As Single = w - wBox - 12
             Dim y As Single = 12
 
             ' Sombra sutil
-            Using bSombra As New SolidBrush(Color.FromArgb(30, 0, 0, 0))
+            Using bSombra As New SolidBrush(Color.FromArgb(40, 0, 0, 0))
                 g.FillRectangle(bSombra, x + 2, y + 2, wBox, hBox)
             End Using
 
-            Using bFondo As New SolidBrush(Color.FromArgb(230, 255, 255, 255)),
-                  pen As New Pen(Color.FromArgb(150, 87, 87, 87), 1)
+            Using bFondo As New SolidBrush(Color.FromArgb(238, 255, 255, 255)),
+                  pen As New Pen(Color.FromArgb(170, 87, 87, 87), 1)
                 g.FillRectangle(bFondo, x, y, wBox, hBox)
                 g.DrawRectangle(pen, x, y, wBox, hBox)
             End Using
 
-            Dim cy As Single = y + 5
+            Dim cy As Single = y + 7
             For Each it In items
                 Using b As New SolidBrush(it.Color)
-                    g.FillRectangle(b, x + 7, cy + 3, 14, 10)
+                    g.FillRectangle(b, x + 9, cy + 4, 18, 13)
                 End Using
-                g.DrawRectangle(Pens.DimGray, x + 7, cy + 3, 14, 10)
-                g.DrawString(ArmarTextoLeyenda(it), f, Brushes.Black, x + 26, cy)
+                g.DrawRectangle(Pens.DimGray, x + 9, cy + 4, 18, 13)
+                g.DrawString(ArmarTextoLeyenda(it), f, Brushes.Black, x + 32, cy)
                 cy += altoLinea
             Next
         End Using

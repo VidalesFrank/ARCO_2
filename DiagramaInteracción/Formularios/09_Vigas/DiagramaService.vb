@@ -125,7 +125,7 @@ Public Class DiagramaService
         Dim penGrid As New Pen(Color.Gray, 1)
         penGrid.DashStyle = Drawing2D.DashStyle.Dash
 
-        Dim fontGrid As New Font("Segoe UI", 8.5F, FontStyle.Bold)
+        Dim fontGrid As New Font("Segoe UI", 10.5F, FontStyle.Bold)
         Dim brushText As Brush = Brushes.Black
         Dim brushBubble As Brush = Brushes.White
         Dim penBubble As New Pen(Color.Gray, 1)
@@ -198,7 +198,9 @@ Public Class DiagramaService
                                    textoBrush As Brush,
                                    Gl_Dir As String)
 
-        Dim radio As Single = 10
+        ' Burbuja más grande para que el GridID (fuente 10.5) quepa cómodo y los
+        ' ejes se identifiquen claramente en el reporte.
+        Dim radio As Single = 16
 
         Dim Sig_Dir = 1
 
@@ -254,19 +256,18 @@ Public Class DiagramaService
                             Optional seleccionada As Boolean = False,
                             Optional modo As ModoChequeoPlanta = ModoChequeoPlanta.Ninguno)
 
-        Dim font As New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        Dim font As New Font("Segoe UI", 11.0F, FontStyle.Bold)
         Dim brushTexto As Brush = Brushes.Black
 
         ' Color por chequeo cuando hay modo activo; azul plano cuando no.
+        ' Importante: con modo activo el color se calcula POR FRAME (ver loop
+        ' siguiente) para que un solo tramo malo no tiña roja toda la viga
+        ' continua — el usuario quiere seguir exactamente qué frame no cumple.
         Dim colorViga As Color = Color.DarkBlue
         Dim espesor As Single = 2
 
-        If modo <> ModoChequeoPlanta.Ninguno Then
-            colorViga = ColorPorModo(viga, modo)
-        End If
-
-        ' Vigas excluidas de la revisión se dibujan en gris claro, pisando el
-        ' color por modo. La selección (rojo) sigue teniendo prioridad.
+        ' Vigas excluidas de la revisión se dibujan en gris claro (mismo color
+        ' para todos los frames). La selección (rojo) sigue teniendo prioridad.
         If Not viga.IncluirEnRevision Then
             colorViga = Color.FromArgb(180, 180, 180)
         End If
@@ -283,14 +284,11 @@ Public Class DiagramaService
             (pictureBox.Width - 2 * margin) / Math.Max(bbox.Width, 0.001F),
             (pictureBox.Height - 2 * margin) / Math.Max(bbox.Height, 0.001F)))
 
-        ' Borde más oscuro para el polígono (misma tonalidad pero más saturada).
-        Dim colorBorde As Color = Color.FromArgb(
-            Math.Max(0, CInt(colorViga.R) - 40),
-            Math.Max(0, CInt(colorViga.G) - 40),
-            Math.Max(0, CInt(colorViga.B) - 40))
-
         ' =====================================================
         ' 🔹 Dibujar frames de la viga con extrusión (b real)
+        '    Color POR FRAME: cada tramo se colorea según su propio C/D cuando
+        '    hay modo activo. Así una viga continua con un tramo malo queda
+        '    solo ese tramo en rojo y los demás en verde/ámbar según corresponda.
         ' =====================================================
         For Each f In viga.Frames
 
@@ -299,6 +297,17 @@ Public Class DiagramaService
 
             Dim p1 As PointF = Transformar(New Vector3(ji.GlobalX, ji.GlobalY, 0), bbox, pictureBox.Width, pictureBox.Height)
             Dim p2 As PointF = Transformar(New Vector3(jj.GlobalX, jj.GlobalY, 0), bbox, pictureBox.Width, pictureBox.Height)
+
+            ' Color de este frame: con modo activo usamos su C/D propio;
+            ' sin modo o viga seleccionada/excluida, hereda el color general.
+            Dim colorFrame As Color = colorViga
+            If modo <> ModoChequeoPlanta.Ninguno AndAlso viga.IncluirEnRevision AndAlso Not seleccionada Then
+                colorFrame = ColorPorModoFrame(f, modo)
+            End If
+            Dim colorBorde As Color = Color.FromArgb(
+                Math.Max(0, CInt(colorFrame.R) - 40),
+                Math.Max(0, CInt(colorFrame.G) - 40),
+                Math.Max(0, CInt(colorFrame.B) - 40))
 
             ' Ancho real de la sección (b en metros → píxeles). Si falta Section
             ' o b, caemos a línea plana con el espesor nominal.
@@ -316,7 +325,7 @@ Public Class DiagramaService
                         g.DrawLine(penHalo, p1, p2)
                     End Using
                 End If
-                Using pen As New Pen(colorViga, espesor)
+                Using pen As New Pen(colorFrame, espesor)
                     g.DrawLine(pen, p1, p2)
                 End Using
             Else
@@ -342,7 +351,7 @@ Public Class DiagramaService
                     End Using
                 End If
 
-                Using brRelleno As New SolidBrush(colorViga),
+                Using brRelleno As New SolidBrush(colorFrame),
                       penBorde As New Pen(colorBorde, 1.0F)
                     g.FillPolygon(brRelleno, pts)
                     g.DrawPolygon(penBorde, pts)
@@ -393,7 +402,15 @@ Public Class DiagramaService
         g.TranslateTransform(pMid.X, pMid.Y)
         g.RotateTransform(angle)
 
-        Dim size = g.MeasureString(viga.Nombre, font)
+        ' Nombre a dibujar: el que ajusta el usuario (NombrePlano). Si está
+        ' vacío cae al ID del modelo. Antes se usaba viga.Nombre directo,
+        ' ignorando el renombre del usuario y la planta mostraba códigos
+        ' del modelo en vez de los nombres de los planos estructurales.
+        Dim nombreDibujo As String =
+            If(Not String.IsNullOrWhiteSpace(viga.NombrePlano), viga.NombrePlano,
+               If(Not String.IsNullOrWhiteSpace(viga.Nombre), viga.Nombre, viga.Name_Beam))
+
+        Dim size = g.MeasureString(nombreDibujo, font)
 
         Dim rectTexto As New RectangleF(
         -size.Width / 2,
@@ -406,7 +423,7 @@ Public Class DiagramaService
             g.FillRectangle(brushFondo, rectTexto)
         End Using
 
-        g.DrawString(viga.Nombre, font, brushTexto, rectTexto.Location)
+        g.DrawString(nombreDibujo, font, brushTexto, rectTexto.Location)
 
         g.ResetTransform()
 
@@ -1167,7 +1184,25 @@ Public Class DiagramaService
             Case ModoChequeoPlanta.Cortante : cd = VigaService.CDCortanteViga(v)
             Case Else                        : cd = VigaService.PeorCDViga(v)
         End Select
+        Return ColorPorCD(cd)
+    End Function
 
+    ''' <summary>
+    ''' Color de un frame individual según su propio C/D en el modo activo.
+    ''' Permite que la planta coloree tramo-a-tramo en vez de pintar toda la
+    ''' viga continua con el peor de sus frames.
+    ''' </summary>
+    Private Shared Function ColorPorModoFrame(f As cFrame, modo As ModoChequeoPlanta) As Color
+        Dim cd As Double
+        Select Case modo
+            Case ModoChequeoPlanta.Flexion  : cd = VigaService.CDFlexionFrame(f)
+            Case ModoChequeoPlanta.Cortante : cd = VigaService.CDCortanteFrame(f)
+            Case Else                        : cd = VigaService.CDPeorFrame(f)
+        End Select
+        Return ColorPorCD(cd)
+    End Function
+
+    Private Shared Function ColorPorCD(cd As Double) As Color
         If cd <= 0 Then Return Color.FromArgb(90, 150, 150, 150)
         If cd < Funciones_00_Varias.UMBRAL_CD Then Return Color.FromArgb(227, 73, 72)
         If cd < 1.15 Then Return Color.FromArgb(237, 161, 0)

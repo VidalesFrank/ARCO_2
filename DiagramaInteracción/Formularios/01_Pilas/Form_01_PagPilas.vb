@@ -813,6 +813,7 @@ Public Class Form_01_PagPilas
 
         EadmEst.Text = Proyecto.Elementos.Pilas.Esf_Adm_Est
         EadmDin.Text = Proyecto.Elementos.Pilas.Esf_Adm_Din
+        Esf_Friccion.Text = Proyecto.Elementos.Pilas.Esf_Frccion
 
     End Sub
     Public Sub BorrarDatos()
@@ -875,11 +876,81 @@ Public Class Form_01_PagPilas
     End Function
 
     Private Sub ActualizarDemandasToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ActualizarDemandasToolStripMenuItem.Click
-        If Proyecto.Elementos.Pilas.Lista_Combinaciones.Count = 0 Then
-            MsgBox("No hay combinaciones cargadas. Importe las demandas primero.", MsgBoxStyle.Exclamation)
+        If Proyecto.Elementos.Pilas Is Nothing OrElse
+           Proyecto.Elementos.Pilas.ListaElementos Is Nothing OrElse
+           Proyecto.Elementos.Pilas.ListaElementos.Count = 0 Then
+            MsgBox("No hay pilas cargadas. Importe las pilas primero desde Importar → ETABS Frame + Pier.",
+                   MsgBoxStyle.Exclamation)
             Return
         End If
-        MostrarSelectorCombinacionesPilas()
+
+        ' Pedir el Excel con las nuevas solicitaciones. El flujo lee tanto
+        ' 'Joint Reactions' (pilas tipo Frame) como 'Pier Forces' (pilas tipo
+        ' Pier), e INVIERTE el P de ETABS en los dos casos para dejar
+        ' FZ positivo = compresión en toda la lista — así el Chequeo 5
+        ' (tracción) solo se activa cuando realmente hay FZ_min negativo.
+        Dim ofd As New OpenFileDialog() With {
+            .Title = "Seleccionar archivo ETABS con las nuevas solicitaciones",
+            .Filter = "Archivos Excel (*.xls;*.xlsx)|*.xls;*.xlsx|Todos (*.*)|*.*",
+            .Multiselect = False}
+        If ofd.ShowDialog() <> DialogResult.OK Then Return
+
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            ' DetectarCandidatosETABS lee Joint Reactions + Pier Forces y arma
+            ' candidatos con sus Reactions ya con el convenio correcto. Nosotros
+            ' no re-detectamos pilas: solo tomamos sus reacciones y reemplazamos.
+            Dim candidatos = DetectarCandidatosETABS(ofd.FileName)
+            If candidatos Is Nothing OrElse candidatos.Count = 0 Then
+                MessageBox.Show("No se detectaron solicitaciones en el archivo." & vbCrLf &
+                                "Verifique que contenga 'Joint Reactions' y/o 'Pier Forces'.",
+                                "Sin solicitaciones", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim nuevas As New List(Of cCombinacionPila)
+            For Each cand In candidatos
+                If cand.Reactions Is Nothing Then Continue For
+                For Each rxn In cand.Reactions
+                    rxn.X = cand.X : rxn.Y = cand.Y : rxn.Z = cand.Z
+                    nuevas.Add(rxn)
+                Next
+            Next
+
+            Proyecto.Elementos.Pilas.Reactions = nuevas
+            Proyecto.Elementos.Pilas.Lista_Combinaciones =
+                nuevas.Select(Function(r) r.LoadCase).
+                       Where(Function(lc) Not String.IsNullOrWhiteSpace(lc)).
+                       Distinct().OrderBy(Function(lc) lc).ToList()
+
+            _hayCambiosPilas = True
+
+            Dim nFrames = nuevas.Where(Function(r) r.SourceType = "Frame").
+                                 Select(Function(r) r.JointLabel).Distinct().Count()
+            Dim nPiers = nuevas.Where(Function(r) r.SourceType = "Pier").
+                                Select(Function(r) r.JointLabel).Distinct().Count()
+            MessageBox.Show(
+                "Solicitaciones actualizadas." & vbCrLf & vbCrLf &
+                "  - Pilas tipo Frame: " & nFrames & vbCrLf &
+                "  - Pilas tipo Pier:  " & nPiers & vbCrLf &
+                "  - Combinaciones:    " & Proyecto.Elementos.Pilas.Lista_Combinaciones.Count & vbCrLf & vbCrLf &
+                "A continuación revise la clasificación de combinaciones (servicio/diseño/sísmicas/tracción).",
+                "Demandas actualizadas", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+            MostrarSelectorCombinacionesPilas()
+
+            ' Abrir Info Pilas para que el usuario revise configuración y
+            ' lance "OK → calcular" con las demandas nuevas ya cargadas.
+            Form_01_00_PagInfoPilas.Show()
+            Form_01_00_PagInfoPilas.BringToFront()
+
+        Catch ex As Exception
+            Logger.Error(ex, "Form_01_PagPilas.ActualizarDemandas", ofd.FileName)
+            MessageBox.Show("Error al actualizar demandas:" & vbCrLf & ex.Message,
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            Me.Cursor = Cursors.Arrow
+        End Try
     End Sub
 
     Private Sub MostrarSelectorCombinacionesPilas()
@@ -1081,6 +1152,7 @@ Public Class Form_01_PagPilas
         itemPlantaPilas.ToolTipText = "Vista en planta con las pilas escaladas y coloreadas según su C/D"
         AddHandler itemPlantaPilas.Click, AddressOf PlantaPilas_Click
         VerToolStripMenuItem.DropDownItems.Add(itemPlantaPilas)
+
 
         ' Igual que Columnas: el Designer deja Ver=False hasta calcular, pero la
         ' planta soporta estado vacío y debe estar siempre accesible.

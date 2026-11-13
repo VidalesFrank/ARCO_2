@@ -895,31 +895,33 @@ Public Class Form_PlantaInteractiva
             Dim esSelec = VigaSeleccionada IsNot Nothing AndAlso v.Name_Beam = VigaSeleccionada.Name_Beam
             Dim esHover = (v Is _hoveredViga)
 
-            Dim cd = CDPorModo(v)
-            Dim sinCalculo = (cd <= 0)
-            Dim colorBase = ColorPorCD(cd)
-
-            Dim colorElemento As Color
-            Dim grosor As Single
-
-            Select Case True
-                Case esSelec
-                    colorElemento = Color.FromArgb(210, 50, 50)
-                    grosor = 4.5F
-                Case esHover
-                    colorElemento = Color.FromArgb(30, 130, 220)
-                    grosor = 3.5F
-                Case Else
-                    colorElemento = colorBase
-                    grosor = If(sinCalculo, 1.6F, 2.4F)
-            End Select
-
             For Each f In v.Frames
                 If Not Joints.ContainsKey(f.JointI) OrElse Not Joints.ContainsKey(f.JointJ) Then Continue For
 
                 Dim ji = Joints(f.JointI), jj = Joints(f.JointJ)
                 Dim p1 = W2S(ji.GlobalX, ji.GlobalY)
                 Dim p2 = W2S(jj.GlobalX, jj.GlobalY)
+
+                ' Color POR FRAME: así una viga continua con un solo tramo malo
+                ' deja ese tramo rojo y los demás verde/ámbar según corresponda.
+                ' La selección/hover y "sin cálculo" se decide por frame también.
+                Dim cdFrame = CDPorModoFrame(f)
+                Dim sinCalculoFrame = (cdFrame <= 0)
+                Dim colorBaseFrame = ColorPorCD(cdFrame)
+
+                Dim colorElemento As Color
+                Dim grosor As Single
+                Select Case True
+                    Case esSelec
+                        colorElemento = Color.FromArgb(210, 50, 50)
+                        grosor = 4.5F
+                    Case esHover
+                        colorElemento = Color.FromArgb(30, 130, 220)
+                        grosor = 3.5F
+                    Case Else
+                        colorElemento = colorBaseFrame
+                        grosor = If(sinCalculoFrame, 1.6F, 2.4F)
+                End Select
 
                 DibujarFrame(g, p1, p2, f, colorElemento, grosor, esSelec, esHover)
 
@@ -933,9 +935,12 @@ Public Class Form_PlantaInteractiva
                 apoyos.Add((p2, f.EjeApoyo_J, esSelec OrElse esHover, esHover))
             Next
 
-            ' Nombre de la viga (zoom medio) — las sin cálculo quedan más atenuadas
+            ' Nombre de la viga (zoom medio) — la viga está "sin cálculo"
+            ' solo cuando NINGÚN frame tiene C/D; si al menos uno tiene,
+            ' la viga se marca normal.
             If _zoom > 15 Then
-                DibujarNombreViga(g, v, esSelec, esHover, sinCalculo)
+                Dim sinCalculoViga = v.Frames.All(Function(f) CDPorModoFrame(f) <= 0)
+                DibujarNombreViga(g, v, esSelec, esHover, sinCalculoViga)
             End If
         Next
 
@@ -1080,6 +1085,17 @@ Public Class Form_PlantaInteractiva
             Case DiagramaService.ModoChequeoPlanta.Flexion  : Return VigaService.CDFlexionViga(v)
             Case DiagramaService.ModoChequeoPlanta.Cortante : Return VigaService.CDCortanteViga(v)
             Case Else                                        : Return VigaService.PeorCDViga(v)
+        End Select
+    End Function
+
+    ' C/D de un frame según el modo activo — paralelo a CDPorModo pero por frame.
+    ' Permite colorear la planta tramo-a-tramo en vez de pintar toda la viga
+    ' continua con el peor de sus frames.
+    Private Function CDPorModoFrame(f As cFrame) As Double
+        Select Case Modo
+            Case DiagramaService.ModoChequeoPlanta.Flexion  : Return VigaService.CDFlexionFrame(f)
+            Case DiagramaService.ModoChequeoPlanta.Cortante : Return VigaService.CDCortanteFrame(f)
+            Case Else                                        : Return VigaService.CDPeorFrame(f)
         End Select
     End Function
 

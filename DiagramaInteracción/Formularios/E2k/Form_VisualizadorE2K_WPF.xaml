@@ -1,0 +1,648 @@
+<Window x:Class="Form_VisualizadorE2K_WPF"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="ARCO — Visualizador 3D de modelo ETABS"
+        Width="1440" Height="880"
+        MinWidth="1080" MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BrushFondoApp}"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="52"
+                            ResizeBorderThickness="6"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Theme.Claro.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/ModuleIcons.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Estilo local: CheckBox de filtro en sidebar -->
+            <Style x:Key="FiltroEstilo" TargetType="CheckBox">
+                <Setter Property="Margin" Value="20,4,16,4"/>
+                <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushSidebarTexto}"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="ChipPresetEstilo" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Height" Value="34"/>
+                <Setter Property="Margin" Value="8,2,8,2"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushSidebarTexto}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="borde"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6"
+                                    Padding="12,0">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="borde" Property="Background"
+                                            Value="{DynamicResource BrushSidebarHover}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- Segmented button (mode switcher en TopBar) -->
+            <Style x:Key="SegmentoEstilo" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="14,0"/>
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontFamily" Value="{DynamicResource FuenteBase}"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushTopBarTextoTenue}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="b"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="5"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="b" Property="Background"
+                                            Value="{DynamicResource BrushTopBarHover}"/>
+                                </Trigger>
+                                <Trigger Property="Tag" Value="activo">
+                                    <Setter TargetName="b" Property="Background"
+                                            Value="{DynamicResource BrushTopBarDivisor}"/>
+                                    <Setter Property="Foreground"
+                                            Value="{DynamicResource BrushTopBarTexto}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Color de muestra en leyenda -->
+            <Style x:Key="LeyendaMuestraEstilo" TargetType="Rectangle">
+                <Setter Property="Width" Value="12"/>
+                <Setter Property="Height" Value="12"/>
+                <Setter Property="RadiusX" Value="2"/>
+                <Setter Property="RadiusY" Value="2"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,0,8,0"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═════════════════ TOPBAR ═════════════════ -->
+        <Border Grid.Row="0" Background="{DynamicResource BrushTopBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Marca -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="20,0,0,0">
+                    <Grid Width="28" Height="28" Margin="0,0,10,0">
+                        <Ellipse Fill="{DynamicResource BrushAzulInteraccion}"/>
+                        <Path Data="M 6,18 Q 14,2 22,18"
+                              Stroke="White" StrokeThickness="2.4"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Fill="Transparent"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Text="Visualizador ETABS"
+                               FontFamily="{DynamicResource FuenteDisplay}" FontSize="15"
+                               Foreground="{DynamicResource BrushTopBarTexto}"
+                               VerticalAlignment="Center"/>
+                    <Rectangle Width="1" Height="22"
+                               Fill="{DynamicResource BrushTopBarDivisor}"
+                               Margin="14,0,14,0"/>
+                    <TextBlock x:Name="LblNombreModelo"
+                               Text="(modelo)"
+                               FontFamily="{DynamicResource FuenteBase}" FontSize="13"
+                               Foreground="{DynamicResource BrushTopBarTextoTenue}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Mode switcher centrado -->
+                <Border Grid.Column="1"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource BrushTopBarHover}"
+                        CornerRadius="7" Padding="4"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="BtnModo3D"
+                                Style="{StaticResource SegmentoEstilo}"
+                                Content="3D"
+                                Tag="activo"
+                                Click="BtnModo3D_Click"/>
+                        <Button x:Name="BtnModoPlanta"
+                                Style="{StaticResource SegmentoEstilo}"
+                                Content="Planta"
+                                Click="BtnModoPlanta_Click"/>
+                        <Button x:Name="BtnModoAlzado"
+                                Style="{StaticResource SegmentoEstilo}"
+                                Content="Alzado"
+                                Click="BtnModoAlzado_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Acciones -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="0,0,8,0"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{DynamicResource BtnIconoTopBar}" ToolTip="Abrir otro modelo .e2k"
+                            Click="BtnAbrir_Click">
+                        <Path Data="{StaticResource IcoAbrir}" Width="18" Height="18"
+                              Stretch="Uniform"
+                              Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.8"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Fill="Transparent"/>
+                    </Button>
+                    <Button Style="{DynamicResource BtnIconoTopBar}" ToolTip="Centrar vista"
+                            Click="BtnReset_Click">
+                        <Path Width="18" Height="18" Stretch="Uniform"
+                              Data="M 12,3 L 12,7 M 12,17 L 12,21 M 3,12 L 7,12 M 17,12 L 21,12 M 12,8 A 4,4 0 1 1 12,16 A 4,4 0 1 1 12,8"
+                              Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.8"
+                              Fill="Transparent"/>
+                    </Button>
+                    <Button Style="{DynamicResource BtnIconoTopBar}" ToolTip="Exportar imagen"
+                            Click="BtnExportar_Click">
+                        <Path Width="18" Height="18" Stretch="Uniform"
+                              Data="M 4,4 L 20,4 L 20,20 L 4,20 Z M 4,16 L 9,11 L 13,15 L 17,10 L 20,13 M 7,8 A 1.5,1.5 0 1 1 7,9 A 1.5,1.5 0 1 1 7,8"
+                              Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.6"
+                              Fill="Transparent" StrokeLineJoin="Round"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Controles de ventana -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{DynamicResource BtnIconoTopBar}"
+                            Width="46" Height="52" Click="BtnMinimize_Click" ToolTip="Minimizar">
+                        <Rectangle Width="11" Height="1.5" Fill="{DynamicResource BrushTopBarTexto}"/>
+                    </Button>
+                    <Button Style="{DynamicResource BtnIconoTopBar}"
+                            Width="46" Height="52" Click="BtnMaximize_Click" ToolTip="Maximizar">
+                        <Rectangle Width="11" Height="11"
+                                   Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.3"
+                                   Fill="Transparent"/>
+                    </Button>
+                    <Button Width="46" Height="52" Click="BtnClose_Click" ToolTip="Cerrar"
+                            Cursor="Hand" BorderThickness="0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="b" Background="Transparent">
+                                    <Grid Width="12" Height="12">
+                                        <Line X1="0" Y1="0" X2="12" Y2="12"
+                                              Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.3"/>
+                                        <Line X1="0" Y1="12" X2="12" Y2="0"
+                                              Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.3"/>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="b" Property="Background" Value="#E81123"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═════════════════ CUERPO ═════════════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar -->
+            <Border Grid.Column="0" Background="{DynamicResource BrushSidebar}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <!-- Vistas predefinidas -->
+                        <TextBlock Text="VISTAS" Style="{DynamicResource SidebarTituloEstilo}"
+                                   Margin="20,20,16,6"/>
+                        <Button Style="{StaticResource ChipPresetEstilo}" Content="Isométrica"
+                                Click="BtnVistaIso_Click"/>
+                        <Button Style="{StaticResource ChipPresetEstilo}" Content="Planta superior"
+                                Click="BtnVistaTop_Click"/>
+                        <Button Style="{StaticResource ChipPresetEstilo}" Content="Elevación X"
+                                Click="BtnVistaX_Click"/>
+                        <Button Style="{StaticResource ChipPresetEstilo}" Content="Elevación Y"
+                                Click="BtnVistaY_Click"/>
+
+                        <!-- Filtros -->
+                        <TextBlock Text="MOSTRAR" Style="{DynamicResource SidebarTituloEstilo}"
+                                   Margin="20,18,16,6"/>
+                        <CheckBox x:Name="ChkColumnas" Content="Columnas" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+                        <CheckBox x:Name="ChkVigas" Content="Vigas" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+                        <CheckBox x:Name="ChkNervios" Content="Nervios" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+                        <CheckBox x:Name="ChkMuros" Content="Muros" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+                        <CheckBox x:Name="ChkLosas" Content="Losas" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+                        <CheckBox x:Name="ChkGrids" Content="Ejes (grids)" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+                        <CheckBox x:Name="ChkPisoBase" Content="Plano suelo" Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="Filtro_Changed" Unchecked="Filtro_Changed"/>
+
+                        <!-- Etiquetas sobre los elementos (2D) -->
+                        <TextBlock Text="ETIQUETAS (2D)" Style="{DynamicResource SidebarTituloEstilo}"
+                                   Margin="20,14,16,6"/>
+                        <CheckBox x:Name="ChkEtqFrames" Content="Frames (col/viga/nervio)"
+                                  Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="False" Checked="EtqFrames_Changed" Unchecked="EtqFrames_Changed"/>
+                        <CheckBox x:Name="ChkEtqPiers" Content="Muros / Piers"
+                                  Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="False" Checked="EtqFrames_Changed" Unchecked="EtqFrames_Changed"/>
+                        <CheckBox x:Name="ChkEtqJoints" Content="Nodos (joints)"
+                                  Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="False" Checked="EtqFrames_Changed" Unchecked="EtqFrames_Changed"/>
+                        <CheckBox x:Name="ChkEtqEjes" Content="Nombres de ejes"
+                                  Style="{StaticResource FiltroEstilo}"
+                                  IsChecked="True" Checked="EtqEjes_Changed" Unchecked="EtqEjes_Changed"/>
+
+                        <!-- Modo de representación -->
+                        <TextBlock Text="DIBUJO" Style="{DynamicResource SidebarTituloEstilo}"
+                                   Margin="20,14,16,6"/>
+                        <RadioButton x:Name="RbExtruido" Content="Extruido (dim. reales)"
+                                     GroupName="ModoDibujo"
+                                     Margin="20,2,16,2"
+                                     FontFamily="{DynamicResource FuenteBase}" FontSize="12"
+                                     Foreground="{DynamicResource BrushSidebarTexto}"
+                                     IsChecked="True"
+                                     Checked="DibujoModo_Changed"/>
+                        <RadioButton x:Name="RbLineas" Content="Líneas (ejes centrales)"
+                                     GroupName="ModoDibujo"
+                                     Margin="20,2,16,6"
+                                     FontFamily="{DynamicResource FuenteBase}" FontSize="12"
+                                     Foreground="{DynamicResource BrushSidebarTexto}"
+                                     Checked="DibujoModo_Changed"/>
+
+                        <!-- Piso (para Planta y Alzado) -->
+                        <Grid x:Name="PanelPiso" Margin="0,12,0,0" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="PISO" Style="{DynamicResource SidebarTituloEstilo}"
+                                           Margin="20,0,16,6"/>
+                                <ComboBox x:Name="CbPiso" Margin="20,0,16,8" Height="28"
+                                          SelectionChanged="CbPiso_SelectionChanged"
+                                          FontFamily="{DynamicResource FuenteBase}" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid x:Name="PanelDireccion" Margin="0,8,0,0" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="DIRECCIÓN DE ALZADO" Style="{DynamicResource SidebarTituloEstilo}"
+                                           Margin="20,0,16,6"/>
+                                <ComboBox x:Name="CbDireccion" Margin="20,0,16,8" Height="28"
+                                          SelectionChanged="CbDireccion_SelectionChanged"
+                                          FontFamily="{DynamicResource FuenteBase}" FontSize="12">
+                                    <ComboBoxItem Content="Vista X (ejes paralelos a Y)" IsSelected="True"/>
+                                    <ComboBoxItem Content="Vista Y (ejes paralelos a X)"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Estadísticas del modelo -->
+                        <TextBlock Text="ESTADÍSTICAS" Style="{DynamicResource SidebarTituloEstilo}"
+                                   Margin="20,18,16,6"/>
+                        <Grid Margin="20,0,16,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/><RowDefinition/><RowDefinition/>
+                                <RowDefinition/><RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Pisos"
+                                       Foreground="{DynamicResource BrushSidebarTextoTenue}" FontSize="11"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="LblPisos" Text="–"
+                                       Foreground="{DynamicResource BrushSidebarTexto}" FontSize="11"
+                                       FontFamily="{DynamicResource FuenteDisplay}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Nodos"
+                                       Foreground="{DynamicResource BrushSidebarTextoTenue}" FontSize="11"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LblNodos" Text="–"
+                                       Foreground="{DynamicResource BrushSidebarTexto}" FontSize="11"
+                                       FontFamily="{DynamicResource FuenteDisplay}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Frames"
+                                       Foreground="{DynamicResource BrushSidebarTextoTenue}" FontSize="11"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="LblFrames" Text="–"
+                                       Foreground="{DynamicResource BrushSidebarTexto}" FontSize="11"
+                                       FontFamily="{DynamicResource FuenteDisplay}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Áreas"
+                                       Foreground="{DynamicResource BrushSidebarTextoTenue}" FontSize="11"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="LblAreas" Text="–"
+                                       Foreground="{DynamicResource BrushSidebarTexto}" FontSize="11"
+                                       FontFamily="{DynamicResource FuenteDisplay}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Ejes"
+                                       Foreground="{DynamicResource BrushSidebarTextoTenue}" FontSize="11"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="LblEjes" Text="–"
+                                       Foreground="{DynamicResource BrushSidebarTexto}" FontSize="11"
+                                       FontFamily="{DynamicResource FuenteDisplay}"/>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="{DynamicResource BrushSidebarSeparador}"
+                                   Margin="16,8,16,8"/>
+                        <TextBlock Text="Arrastrar = orbitar · Shift+arrastrar = pan · rueda = zoom"
+                                   Foreground="{DynamicResource BrushSidebarTextoTenue}"
+                                   FontSize="10"
+                                   TextWrapping="Wrap"
+                                   Margin="20,0,16,16"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Viewport area -->
+            <Grid Grid.Column="1" Background="{DynamicResource BrushFondoApp}" ClipToBounds="True">
+
+                <!-- 3D Viewport -->
+                <!-- Background="Transparent" en Panel3D: fuerza que el Grid sea
+                     hittable incluso en zonas sin geometría 3D visible. De lo
+                     contrario, al apagar categorías con los filtros, Viewport3D
+                     deja de recibir eventos de mouse sobre los huecos y la
+                     cámara se congela. -->
+                <Grid x:Name="Panel3D" Background="Transparent"
+                      MouseMove="Panel3D_MouseMove"
+                      MouseLeave="Panel3D_MouseLeave"
+                      MouseDown="Panel3D_MouseDown">
+                    <Viewport3D x:Name="Viewport3D" ClipToBounds="True">
+                        <Viewport3D.Camera>
+                            <PerspectiveCamera x:Name="Camara"
+                                               FieldOfView="45"
+                                               Position="30,20,30"
+                                               LookDirection="-1,-0.5,-1"
+                                               UpDirection="0,1,0"/>
+                        </Viewport3D.Camera>
+                        <ModelVisual3D x:Name="LucesVisual">
+                            <ModelVisual3D.Content>
+                                <Model3DGroup>
+                                    <AmbientLight Color="#546276"/>
+                                    <DirectionalLight Color="#FFFFFF" Direction="-0.3,-0.7,-0.2"/>
+                                    <DirectionalLight Color="#4F586A" Direction="0.3,0.5,0.2"/>
+                                </Model3DGroup>
+                            </ModelVisual3D.Content>
+                        </ModelVisual3D>
+                        <ModelVisual3D x:Name="EscenaVisual"/>
+                        <ModelVisual3D x:Name="HoverVisual"/>
+                        <ModelVisual3D x:Name="SeleccionVisual"/>
+                    </Viewport3D>
+
+                    <!-- Overlay 2D con las etiquetas de ejes proyectadas.
+                         IsHitTestVisible=False para no interceptar mouse. -->
+                    <Canvas x:Name="OverlayEjes3D"
+                            IsHitTestVisible="False"
+                            Background="Transparent"
+                            SizeChanged="OverlayEjes3D_SizeChanged"/>
+
+                    <!-- Leyenda flotante -->
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Margin="0,16,16,0"
+                            Background="#F2FFFFFF"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="14,10">
+                        <StackPanel>
+                            <TextBlock Text="LEYENDA"
+                                       FontFamily="{DynamicResource FuenteBase}" FontSize="10" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"
+                                       Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <Rectangle Style="{StaticResource LeyendaMuestraEstilo}" Fill="#244A68"/>
+                                <TextBlock Text="Columnas" FontSize="11"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <Rectangle Style="{StaticResource LeyendaMuestraEstilo}" Fill="#2A9D5F"/>
+                                <TextBlock Text="Vigas" FontSize="11"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <Rectangle Style="{StaticResource LeyendaMuestraEstilo}" Fill="#D69E2E"/>
+                                <TextBlock Text="Nervios" FontSize="11"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <Rectangle Style="{StaticResource LeyendaMuestraEstilo}" Fill="#D69E2E" Opacity="0.73"/>
+                                <TextBlock Text="Muros" FontSize="11"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <Rectangle Style="{StaticResource LeyendaMuestraEstilo}" Fill="#87A0B6" Opacity="0.47"/>
+                                <TextBlock Text="Losas" FontSize="11"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Info card flotante (hover 3D) -->
+                    <Border x:Name="InfoCard3D"
+                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Margin="16,16,0,0"
+                            Background="#F2FFFFFF"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,9"
+                            Visibility="Collapsed"
+                            IsHitTestVisible="False"
+                            MaxWidth="260">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Rectangle x:Name="InfoCardChip3D" Width="10" Height="10"
+                                           RadiusX="2" RadiusY="2" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="InfoCardTipo3D"
+                                           FontFamily="{DynamicResource FuenteBase}" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushTextoSecundario}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="InfoCardLabel3D"
+                                       FontFamily="{DynamicResource FuenteDisplay}" FontSize="15"
+                                       Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                            <TextBlock x:Name="InfoCardSeccion3D"
+                                       FontFamily="{DynamicResource FuenteBase}" FontSize="11.5"
+                                       Foreground="{DynamicResource BrushTextoPrincipal}"
+                                       Margin="0,2,0,0"/>
+                            <TextBlock x:Name="InfoCardExtra3D"
+                                       FontFamily="{DynamicResource FuenteBase}" FontSize="11"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"
+                                       Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Compass / orientación -->
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                            Margin="0,0,16,16"
+                            Width="72" Height="72"
+                            Background="#F2FFFFFF"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                            CornerRadius="36">
+                        <Grid>
+                            <Line X1="36" Y1="12" X2="36" Y2="60"
+                                  Stroke="{DynamicResource BrushTextoSecundario}" StrokeThickness="1"/>
+                            <Line X1="12" Y1="36" X2="60" Y2="36"
+                                  Stroke="{DynamicResource BrushTextoSecundario}" StrokeThickness="1"/>
+                            <TextBlock Text="N" FontSize="10" FontWeight="Bold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0"
+                                       Foreground="{DynamicResource BrushAzulPrincipal}"/>
+                            <TextBlock Text="S" FontSize="10"
+                                       HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"/>
+                            <TextBlock Text="E" FontSize="10"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"/>
+                            <TextBlock Text="O" FontSize="10"
+                                       HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- 2D Canvas (Planta / Alzado) -->
+                <Grid x:Name="Panel2D" Visibility="Collapsed">
+                    <Border Margin="12" Background="White"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                            CornerRadius="8">
+                        <Canvas x:Name="Lienzo2D" ClipToBounds="True"
+                                Background="Transparent"
+                                MouseDown="Lienzo_MouseDown" MouseMove="Lienzo_MouseMove"
+                                MouseUp="Lienzo_MouseUp" MouseWheel="Lienzo_MouseWheel"
+                                MouseLeave="Lienzo_MouseLeave">
+                            <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="LienzoZoom" ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform x:Name="LienzoPan" X="0" Y="0"/>
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
+                        </Canvas>
+                    </Border>
+
+                    <!-- Info card flotante (hover 2D) -->
+                    <Border x:Name="InfoCard2D"
+                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Margin="24,24,0,0"
+                            Background="#F2FFFFFF"
+                            BorderBrush="{DynamicResource BrushBorde}" BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,9"
+                            Visibility="Collapsed"
+                            IsHitTestVisible="False"
+                            MaxWidth="260">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Rectangle x:Name="InfoCardChip2D" Width="10" Height="10"
+                                           RadiusX="2" RadiusY="2" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="InfoCardTipo2D"
+                                           FontFamily="{DynamicResource FuenteBase}" FontSize="10" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushTextoSecundario}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="InfoCardLabel2D"
+                                       FontFamily="{DynamicResource FuenteDisplay}" FontSize="15"
+                                       Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                            <TextBlock x:Name="InfoCardSeccion2D"
+                                       FontFamily="{DynamicResource FuenteBase}" FontSize="11.5"
+                                       Foreground="{DynamicResource BrushTextoPrincipal}"
+                                       Margin="0,2,0,0"/>
+                            <TextBlock x:Name="InfoCardExtra2D"
+                                       FontFamily="{DynamicResource FuenteBase}" FontSize="11"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"
+                                       Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Panel persistente de selección (visible en 3D y 2D) -->
+                <Border x:Name="PanelSeleccion"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="0,16,16,0"
+                        Background="#F8FFFFFF"
+                        BorderBrush="#FFAA3C" BorderThickness="1.5"
+                        CornerRadius="8"
+                        Padding="14,11"
+                        Visibility="Collapsed"
+                        MaxWidth="280">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2"
+                                           Fill="#FFAA3C" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="SELECCIONADO"
+                                           FontFamily="{DynamicResource FuenteBase}" FontSize="10" FontWeight="Bold"
+                                           Foreground="#C87A1E"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="×" Width="20" Height="20"
+                                    FontSize="13" Padding="0" Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="#C87A1E"
+                                    ToolTip="Deseleccionar"
+                                    Click="BtnDeseleccionar_Click"/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <Rectangle x:Name="SelChip" Width="10" Height="10"
+                                       RadiusX="2" RadiusY="2" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="SelTipo"
+                                       FontFamily="{DynamicResource FuenteBase}" FontSize="10" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextoSecundario}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="SelLabel"
+                                   FontFamily="{DynamicResource FuenteDisplay}" FontSize="16"
+                                   Foreground="{DynamicResource BrushTextoPrincipal}"/>
+                        <TextBlock x:Name="SelSeccion"
+                                   FontFamily="{DynamicResource FuenteBase}" FontSize="12"
+                                   Foreground="{DynamicResource BrushTextoPrincipal}"
+                                   Margin="0,3,0,0"/>
+                        <TextBlock x:Name="SelExtra"
+                                   FontFamily="{DynamicResource FuenteBase}" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}"
+                                   Margin="0,1,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Status bar flotante abajo -->
+                <TextBlock x:Name="LblEstado"
+                           HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                           Margin="20,0,0,10"
+                           FontFamily="{DynamicResource FuenteBase}" FontSize="11"
+                           Foreground="{DynamicResource BrushTextoSecundario}"
+                           Text=""/>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

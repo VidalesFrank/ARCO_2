@@ -29,6 +29,16 @@ Public Class CDDefCortanteTests
         }
     End Function
 
+    ' Frames mock que traen CortantePlastico asignado necesitan refuerzo sup e inf
+    ' mínimos para que CortantePlasticoVigente() los acepte. La regla del módulo
+    ' (TieneRefuerzoFlexion) exige al menos UNA BARRA REAL — un cRefuerzoTramo
+    ' con Barras vacío no basta.
+    Private Function RefMin() As List(Of cRefuerzoTramo)
+        Dim t As New cRefuerzoTramo With {.Posicion = PosicionTramoViga.Izquierda}
+        t.Barras("#5") = 1
+        Return New List(Of cRefuerzoTramo) From {t}
+    End Function
+
     ' ── Zona: reglas de envolvente ────────────────────────────────────────
 
     <TestMethod>
@@ -130,7 +140,8 @@ Public Class CDDefCortanteTests
                 ZTip(PosicionTramoViga.Centro, 1.30),
                 ZTip(PosicionTramoViga.Derecha, 1.50)
             },
-            .CortantePlastico = cp
+            .CortantePlastico = cp,
+            .RefuerzoSuperior = RefMin(), .RefuerzoInferior = RefMin()
         }
         Dim r = VigaService.EvaluarCDDefFrame(f)
         Assert.AreEqual(VigaService.EstadoEnvolventeCortante.CumplePlastico, r.Estado)
@@ -176,7 +187,8 @@ Public Class CDDefCortanteTests
                 ZTip(PosicionTramoViga.Centro, 0.75),
                 ZTip(PosicionTramoViga.Derecha, 1.20)
             },
-            .CortantePlastico = cp
+            .CortantePlastico = cp,
+            .RefuerzoSuperior = RefMin(), .RefuerzoInferior = RefMin()
         }
         Dim r = VigaService.EvaluarCDDefFrame(f)
         Assert.AreEqual(VigaService.EstadoEnvolventeCortante.CumplePlastico, r.Estado)
@@ -227,7 +239,8 @@ Public Class CDDefCortanteTests
             .RevisionCortante = New List(Of cRevisionCortanteZona) From {ZTip(PosicionTramoViga.Derecha, 0.85)},
             .CortantePlastico = New cResultadoCortantePlasticoFrame With {
                 .ZonaDer = ZPla(PosicionTramoViga.Derecha, 1.15)
-            }
+            },
+            .RefuerzoSuperior = RefMin(), .RefuerzoInferior = RefMin()
         }
         Dim v As New cViga With {.Frames = New List(Of cFrame) From {f1, f2}}
         Dim r = VigaService.EvaluarCDDefViga(v)

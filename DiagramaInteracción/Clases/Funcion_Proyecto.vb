@@ -77,7 +77,7 @@ Public Class Funciones_Programa
                 Case "Nervios"
                     Return If(p.Elementos.Nervios?.Elementos?.Count, 0)
                 Case "Zapatas"
-                    Return 0
+                    Return If(p.Elementos.Zapatas?.Tipos?.Count, 0)
                 Case Else
                     Return 0
             End Select

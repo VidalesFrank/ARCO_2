@@ -78,8 +78,8 @@ Public Class EstadisticasInformeService
     Private Const UMBRAL As Double = Funciones_00_Varias.UMBRAL_CD
 
     ''' <summary>Entrada estándar: genera el resumen del módulo pedido. Nombres válidos:
-    ''' "Pilas", "Columnas", "Vigas", "Nervios". Si el módulo está vacío, devuelve un
-    ''' ModuloResumen con NTotal = 0.</summary>
+    ''' "Pilas", "Columnas", "Muros", "Vigas", "Nervios", "Zapatas". Si el módulo está vacío,
+    ''' devuelve un ModuloResumen con NTotal = 0.</summary>
     Public Shared Function Resumen(proyecto As Proyecto, modulo As String) As ModuloResumen
         Dim r As New ModuloResumen With {.Modulo = modulo}
         If proyecto Is Nothing OrElse proyecto.Elementos Is Nothing Then Return r
@@ -87,11 +87,13 @@ Public Class EstadisticasInformeService
         Select Case modulo
             Case "Pilas"     : LlenarPilas(proyecto, r)
             Case "Columnas"  : LlenarColumnas(proyecto, r)
+            Case "Muros"     : LlenarMuros(proyecto, r)
             Case "Vigas"     : LlenarVigas(proyecto, r)
             Case "Nervios"   : LlenarNervios(proyecto, r)
+            Case "Zapatas"   : LlenarZapatas(proyecto, r)
         End Select
 
-        OrdenarPisos(r)
+        OrdenarPisos(r, proyecto)
         TomarTop10(r)
         Return r
     End Function
@@ -155,37 +157,71 @@ Public Class EstadisticasInformeService
 
         Dim porPiso As New Dictionary(Of String, PisoResumen)(StringComparer.OrdinalIgnoreCase)
 
+        ' Granularidad: UNA entrada por COLUMNA (no por tramo). El dashboard
+        ' premium y la vista del módulo cuentan columnas; antes el informe
+        ' contaba tramos e inflaba el total ×N, dando totales que no cuadraban
+        ' con lo que el usuario ve en el módulo.
+        '
+        ' Por piso: la columna cuenta una vez en cada piso donde tiene al
+        ' menos un tramo. El C/D de la columna en ese piso = peor entre los
+        ' tramos de esa columna en ese piso. El criterio del Top-10 se toma
+        ' del tramo gobernante (el que da el peor C/D global de la columna).
         For Each c In cols
             If c Is Nothing OrElse c.Lista_Tramos_Columnas Is Nothing Then Continue For
+            r.NTotal += 1
+
+            ' CD global de la columna (peor entre todos sus tramos) para el veredicto global.
+            Dim peorCDGlobal As Double = -1
+            Dim tramoPeor As Tramo_Columna = Nothing
             For Each tr In c.Lista_Tramos_Columnas
                 If tr Is Nothing Then Continue For
-                r.NTotal += 1
-                Dim piso As String = If(String.IsNullOrWhiteSpace(tr.Piso), "(Sin piso)", tr.Piso)
-                Dim pr As PisoResumen = Nothing
-                If Not porPiso.TryGetValue(piso, pr) Then
-                    pr = New PisoResumen With {.Piso = piso}
-                    porPiso(piso) = pr
+                Dim cdTr = ColumnaService.PeorCDGlobalTramo(tr)
+                If cdTr > 0 AndAlso (peorCDGlobal < 0 OrElse cdTr < peorCDGlobal) Then
+                    peorCDGlobal = cdTr
+                    tramoPeor = tr
                 End If
+            Next
 
-                Dim cd = ColumnaService.PeorCDGlobalTramo(tr)
-                If cd <= 0 Then
-                    r.NSinDato += 1
-                    pr.NSinDato += 1
-                    Continue For
-                End If
-                If cd >= UMBRAL Then
-                    r.NCumple += 1
-                    pr.NCumple += 1
-                Else
-                    r.NNoCumple += 1
-                    pr.NNoCumple += 1
-                End If
+            If peorCDGlobal <= 0 Then
+                r.NSinDato += 1
+            ElseIf peorCDGlobal >= UMBRAL Then
+                r.NCumple += 1
+            Else
+                r.NNoCumple += 1
+            End If
+
+            If peorCDGlobal > 0 AndAlso tramoPeor IsNot Nothing Then
                 r.Top10Criticos.Add(New ElementoCritico With {
                     .Nombre = c.Name_Elemento,
-                    .Piso = piso,
-                    .CD = cd,
-                    .Criterio = CriterioColumna(tr)
+                    .Piso = If(String.IsNullOrWhiteSpace(tramoPeor.Piso), "(Sin piso)", tramoPeor.Piso),
+                    .CD = peorCDGlobal,
+                    .Criterio = CriterioColumna(tramoPeor)
                 })
+            End If
+
+            ' Agrupar tramos por piso; una entrada por columna-por-piso con el
+            ' peor CD de esta columna EN ese piso.
+            Dim gruposPorPiso = c.Lista_Tramos_Columnas.
+                Where(Function(tr) tr IsNot Nothing).
+                GroupBy(Function(tr) If(String.IsNullOrWhiteSpace(tr.Piso), "(Sin piso)", tr.Piso))
+            For Each gp In gruposPorPiso
+                Dim pr As PisoResumen = Nothing
+                If Not porPiso.TryGetValue(gp.Key, pr) Then
+                    pr = New PisoResumen With {.Piso = gp.Key}
+                    porPiso(gp.Key) = pr
+                End If
+                Dim peorEnPiso As Double = -1
+                For Each tr In gp
+                    Dim cdTr = ColumnaService.PeorCDGlobalTramo(tr)
+                    If cdTr > 0 AndAlso (peorEnPiso < 0 OrElse cdTr < peorEnPiso) Then peorEnPiso = cdTr
+                Next
+                If peorEnPiso <= 0 Then
+                    pr.NSinDato += 1
+                ElseIf peorEnPiso >= UMBRAL Then
+                    pr.NCumple += 1
+                Else
+                    pr.NNoCumple += 1
+                End If
             Next
         Next
 
@@ -312,9 +348,25 @@ Public Class EstadisticasInformeService
     ' =====================================================================
     ' Post-proceso
     ' =====================================================================
-    Private Shared Sub OrdenarPisos(r As ModuloResumen)
-        ' Mismo criterio que ReporteRevisionService: sótano→cubierta por nombre.
-        r.PorPiso = r.PorPiso.OrderBy(Function(pr) OrdenPiso(pr.Piso)).ToList()
+    Private Shared Sub OrdenarPisos(r As ModuloResumen, proyecto As Proyecto)
+        ' Preferimos ordenar por Z real de proyecto.Pisos (CoorZ) — así "S1"
+        ' queda abajo aunque alfabéticamente iría al final. Si un piso del
+        ' módulo no está en proyecto.Pisos (modelos legacy o Excel sin lista),
+        ' cae al OrdenPiso por regex. Siempre al final: pisos sin match (MaxValue).
+        Dim zPorPiso As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
+        If proyecto IsNot Nothing AndAlso proyecto.Pisos IsNot Nothing Then
+            For Each cp In proyecto.Pisos
+                If cp Is Nothing OrElse String.IsNullOrWhiteSpace(cp.Nombre) Then Continue For
+                zPorPiso(cp.Nombre.Trim()) = CDbl(cp.CoorZ)
+            Next
+        End If
+
+        r.PorPiso = r.PorPiso.
+            OrderBy(Function(pr) If(zPorPiso.ContainsKey(pr.Piso), 0, 1)).
+            ThenBy(Function(pr)
+                       Dim z As Double
+                       Return If(zPorPiso.TryGetValue(pr.Piso, z), z, CDbl(OrdenPiso(pr.Piso)))
+                   End Function).ToList()
     End Sub
 
     Private Shared Sub TomarTop10(r As ModuloResumen)
@@ -332,6 +384,11 @@ Public Class EstadisticasInformeService
         Dim mSot = System.Text.RegularExpressions.Regex.Match(n, "S[OÓ]?TANO?\s*(\d+)")
         If mSot.Success Then Return -CInt(mSot.Groups(1).Value)
 
+        ' "S1", "S2", "SS1" (sótano abreviado) → sótano negativo. Debe ir ANTES del
+        ' regex de "P + número" para que "S1" no caiga en el default (MaxValue).
+        Dim mSotCorto = System.Text.RegularExpressions.Regex.Match(n, "^\s*S{1,2}\s*(\d+)\s*$")
+        If mSotCorto.Success Then Return -CInt(mSotCorto.Groups(1).Value)
+
         Dim mPiso = System.Text.RegularExpressions.Regex.Match(n, "^\s*(?:PISO|PLANTA|STORY|NIVEL|P)\s*(\d+)")
         If mPiso.Success Then Return CInt(mPiso.Groups(1).Value)
 
@@ -340,5 +397,97 @@ Public Class EstadisticasInformeService
 
         Return Integer.MaxValue
     End Function
+
+    ' =====================================================================
+    ' Muros — una entrada por Muro (peor sección de toda la altura).
+    ' MurosResumenService.CalcularFila devuelve FilaMuro con FFlexMin, FCortMin,
+    ' Cumple y los pisos críticos; esos son los mismos valores que usan los
+    ' dashboards y el reporte ejecutivo de muros.
+    ' =====================================================================
+    Private Shared Sub LlenarMuros(proyecto As Proyecto, r As ModuloResumen)
+        Dim lista = proyecto.Elementos.Muros?.Lista_Muros
+        If lista Is Nothing OrElse lista.Count = 0 Then Return
+
+        Dim pisos As New Dictionary(Of String, PisoResumen)(StringComparer.OrdinalIgnoreCase)
+
+        For Each m In lista
+            If m Is Nothing Then Continue For
+            r.NTotal += 1
+
+            Dim f = MurosResumenService.CalcularFila(m)
+            Dim arr = {CDbl(f.FFlexMin), CDbl(f.FCortMin)}.Where(Function(v) v > 0).ToArray()
+            Dim cd = If(arr.Length = 0, 0.0, arr.Min())
+            Dim pisoKey = If(Not String.IsNullOrWhiteSpace(f.PisoCriticoFlex), f.PisoCriticoFlex,
+                             If(Not String.IsNullOrWhiteSpace(f.PisoCriticoCort), f.PisoCriticoCort, "—"))
+
+            If Not pisos.ContainsKey(pisoKey) Then pisos(pisoKey) = New PisoResumen With {.Piso = pisoKey}
+            Dim pr = pisos(pisoKey)
+
+            If cd <= 0 Then
+                r.NSinDato += 1
+                pr.NSinDato += 1
+                Continue For
+            End If
+            If cd >= UMBRAL Then
+                r.NCumple += 1
+                pr.NCumple += 1
+            Else
+                r.NNoCumple += 1
+                pr.NNoCumple += 1
+            End If
+
+            Dim criterio = If(f.FFlexMin > 0 AndAlso (f.FCortMin <= 0 OrElse f.FFlexMin <= f.FCortMin),
+                              "Flexo-compresión", "Cortante")
+            r.Top10Criticos.Add(New ElementoCritico With {
+                .Nombre = If(Not String.IsNullOrWhiteSpace(f.Label), f.Label, m.Label),
+                .Piso = pisoKey,
+                .CD = cd,
+                .Criterio = criterio & " · " & If(f.Direccion, "")
+            })
+        Next
+
+        For Each p In pisos.Values
+            r.PorPiso.Add(p)
+        Next
+    End Sub
+
+    ' =====================================================================
+    ' Zapatas — una entrada por cZapata (tipo); todas en piso "Cimentación".
+    ' ZapataService.Resumir ya consolida el peor factor y el .Cumple.
+    ' =====================================================================
+    Private Shared Sub LlenarZapatas(proyecto As Proyecto, r As ModuloResumen)
+        Dim lista = proyecto.Elementos.Zapatas?.Tipos
+        If lista Is Nothing OrElse lista.Count = 0 Then Return
+
+        Dim pisoCim = "Cimentación"
+        Dim pr As New PisoResumen With {.Piso = pisoCim}
+
+        For Each z In lista
+            If z Is Nothing Then Continue For
+            r.NTotal += 1
+
+            Dim res = ZapataService.Resumir(z)
+            If Not res.TieneResultados OrElse res.PeorFactor <= 0 Then
+                r.NSinDato += 1
+                pr.NSinDato += 1
+                Continue For
+            End If
+            If res.Cumple Then
+                r.NCumple += 1
+                pr.NCumple += 1
+            Else
+                r.NNoCumple += 1
+                pr.NNoCumple += 1
+            End If
+            r.Top10Criticos.Add(New ElementoCritico With {
+                .Nombre = If(Not String.IsNullOrWhiteSpace(z.Nombre), z.Nombre, z.Label_joint),
+                .Piso = pisoCim,
+                .CD = res.PeorFactor,
+                .Criterio = If(Not String.IsNullOrWhiteSpace(res.Revision), res.Revision, "Peor global")
+            })
+        Next
+
+        r.PorPiso.Add(pr)
+    End Sub
 
 End Class

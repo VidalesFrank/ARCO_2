@@ -77,6 +77,13 @@ Public Class E2kParser
                     Case "SECTION DESIGNER SECTIONS"
                         ParseSDSection(tok, model, sdCorners)
 
+                    Case "WALL PROPERTIES"
+                        ParseShellSection(tok, model, "Wall")
+                    Case "SLAB PROPERTIES"
+                        ParseShellSection(tok, model, "Slab")
+                    Case "DECK PROPERTIES"
+                        ParseShellSection(tok, model, "Deck")
+
                     Case "LINE CONNECTIVITIES"
                         If kw = "LINE" AndAlso tok.Length >= 5 Then
                             Dim ln As New E2kLine() With {.ID = tok(1)}
@@ -176,6 +183,34 @@ Public Class E2kParser
             End Select
         Next i
         model.Grids.Add(g)
+    End Sub
+
+    ''' <summary>
+    ''' Parsea una línea SHELLPROP de $ WALL/SLAB/DECK PROPERTIES. ETABS puede
+    ''' emitir varias líneas para la misma sección (p.ej. una con geometría y
+    ''' otra con modificadores Fmod/Mmod); por eso acumulamos en el mismo
+    ''' entry en vez de reemplazar.
+    ''' </summary>
+    Private Shared Sub ParseShellSection(tok() As String, model As E2kModel, propType As String)
+        If tok(0).ToUpper() <> "SHELLPROP" OrElse tok.Length < 2 Then Return
+        Dim sn = tok(1)
+        Dim fs As E2kShellSection = Nothing
+        If Not model.ShellSections.TryGetValue(sn, fs) Then
+            fs = New E2kShellSection() With {.Name = sn, .PropType = propType}
+            model.ShellSections(sn) = fs
+        End If
+        If String.IsNullOrEmpty(fs.PropType) Then fs.PropType = propType
+        For i = 2 To tok.Length - 2
+            Select Case tok(i).ToUpper()
+                Case "WALLTHICKNESS", "SLABTHICKNESS", "DECKSLABDEPTH"
+                    Dim t = ToD(tok(i + 1))
+                    If t > 0 Then fs.Thickness = t
+                Case "PROPTYPE"
+                    fs.PropType = tok(i + 1)
+                Case "MATERIAL"
+                    fs.Material = tok(i + 1)
+            End Select
+        Next i
     End Sub
 
     Private Shared Sub ParseFrameSection(tok() As String, model As E2kModel)
