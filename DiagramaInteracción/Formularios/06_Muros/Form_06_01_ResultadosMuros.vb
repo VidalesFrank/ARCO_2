@@ -762,7 +762,32 @@ Public Class Form_06_01_ResultadosMuros
 
     End Sub
 
+    ''' <summary>
+    ''' Texto del aviso al exportar: cuántos muros salieron y cuáles quedaron
+    ''' fuera por no tener refuerzo guardado. Lista hasta 15 nombres.
+    ''' </summary>
+    Private Shared Function AvisoMurosSinCalcular(nExportados As Integer, sinCalcular As List(Of Muro)) As String
+        Const MAX_LISTA As Integer = 15
+        Dim total = nExportados + sinCalcular.Count
+        Dim nombres = sinCalcular.Take(MAX_LISTA).Select(Function(m) "  • " & m.Label)
+        Dim texto = $"Se exportaron {nExportados} de {total} muros." & vbCrLf &
+                    $"{sinCalcular.Count} no tienen refuerzo asignado y no se incluyeron:" & vbCrLf & vbCrLf &
+                    String.Join(vbCrLf, nombres)
+        If sinCalcular.Count > MAX_LISTA Then texto &= vbCrLf & $"  … y {sinCalcular.Count - MAX_LISTA} más."
+        Return texto & vbCrLf & vbCrLf & "Asígneles refuerzo en Info Muros para incluirlos en el reporte."
+    End Function
+
     Private Sub ToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem1.Click
+
+        Dim murosCalculados = MurosResumenService.MurosCalculados(proyecto.Elementos.Muros.Lista_Muros)
+        Dim murosSinCalcular = proyecto.Elementos.Muros.Lista_Muros.Where(Function(m) m IsNot Nothing AndAlso Not m.Ref_Modificado_Muros).ToList()
+
+        If murosCalculados.Count = 0 Then
+            MessageBox.Show("No hay muros calculados para exportar." & vbCrLf &
+                            "Asigne refuerzo a los muros en Info Muros.",
+                            "Reporte Completo", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
 
         Me.Cursor = Cursors.WaitCursor
 
@@ -785,42 +810,73 @@ Public Class Form_06_01_ResultadosMuros
 
         Hoja_Resultados.Name = "Revisión de Capacidad"
 
-        'Hoja_Resultados.Range("E1:F1").Merge(True)
-        'Hoja_Resultados.Range("B1:D1").Merge(True)
-        Hoja_Resultados.Range("A1:A2").MergeCells = True
-        Hoja_Resultados.Range("B1:B2").MergeCells = True
-        Hoja_Resultados.Range("C1:C2").MergeCells = True
-        'Hoja_Resultados.Range("B1:B2").MergeCells = True
-        'Hoja_Resultados.Range("C1:C2").MergeCells = True
-        Hoja_Resultados.Range("A1:Z2").Interior.Color = Color_Interior
-        Hoja_Resultados.Range("A1:Z10000").Font.Name = "Arial"
-        Hoja_Resultados.Range("A1:Z2").Font.Bold = True
-        Hoja_Resultados.Range("A1:Z2").Font.Size = 11
-        Hoja_Resultados.Range("A3:Z10000").Font.Size = 10
-        Hoja_Resultados.Range("A1:Z10000").HorizontalAlignment = Excel.XlVAlign.xlVAlignCenter
-        Hoja_Resultados.Range("A1:Z10000").VerticalAlignment = Excel.XlVAlign.xlVAlignCenter
-        Hoja_Resultados.Range("A:Z").ColumnWidth = 15
+        ' ── Columnas ──────────────────────────────────────────────────────────
+        ' Índices calculados (no letras fijas): agregar una columna en un bloque
+        ' corre los siguientes sin descuadrar formatos ni colores.
+        Const Col_Flexo As Integer = 4
+        Const N_Flexo As Integer = 5        ' As Col, ρ Col, As Req, ρ Req, C/D
+        Const Col_Cortante As Integer = Col_Flexo + N_Flexo
+        Const N_Cortante As Integer = 3
+        Const Col_EB As Integer = Col_Cortante + N_Cortante
+        Const N_EB As Integer = 17
+        Const Col_Ultima As Integer = Col_EB + N_EB - 1
+
+        Dim Celda = Function(fila As Integer, col As Integer) DirectCast(Hoja_Resultados.Cells(fila, col), Excel.Range)
+        Dim Rango = Function(f1 As Integer, c1 As Integer, f2 As Integer, c2 As Integer) Hoja_Resultados.Range(Celda(f1, c1), Celda(f2, c2))
+
+        Dim ColorOKFondo As Color = Color.FromArgb(198, 239, 206)
+        Dim ColorOKTexto As Color = Color.FromArgb(0, 97, 0)
+        Dim ColorMalFondo As Color = Color.FromArgb(255, 199, 206)
+        Dim ColorMalTexto As Color = Color.FromArgb(156, 0, 6)
+        ' Factor colocado/requerido con semáforo. NaN o Infinity (sin requerido)
+        ' se escribe "-" sin color: Interop los volcaría como texto basura y
+        ' pintarlos afirmaría un veredicto que no se calculó.
+        Dim EscribirFactor = Sub(c As Excel.Range, f As Double)
+                                 If Double.IsNaN(f) OrElse Double.IsInfinity(f) Then
+                                     c.Value = "-"
+                                     Return
+                                 End If
+                                 c.Value = Math.Round(f, 2)
+                                 Dim cumple = f >= UMBRAL_CD
+                                 c.Font.Color = If(cumple, ColorOKTexto, ColorMalTexto)
+                                 c.Interior.Color = If(cumple, ColorOKFondo, ColorMalFondo)
+                             End Sub
+        Dim EscribirChequeo = Sub(c As Excel.Range, cumple As Boolean)
+                                  c.Value = If(cumple, "Cumple", "No cumple")
+                                  c.Interior.Color = If(cumple, ColorOKFondo, ColorMalFondo)
+                              End Sub
+
+        Rango(1, 1, 2, 1).MergeCells = True
+        Rango(1, 2, 2, 2).MergeCells = True
+        Rango(1, 3, 2, 3).MergeCells = True
+        Rango(1, 1, 2, Col_Ultima).Interior.Color = Color_Interior
+        Rango(1, 1, 10000, Col_Ultima).Font.Name = "Arial"
+        Rango(1, 1, 2, Col_Ultima).Font.Bold = True
+        Rango(1, 1, 2, Col_Ultima).Font.Size = 11
+        Rango(3, 1, 10000, Col_Ultima).Font.Size = 10
+        Rango(1, 1, 10000, Col_Ultima).HorizontalAlignment = Excel.XlVAlign.xlVAlignCenter
+        Rango(1, 1, 10000, Col_Ultima).VerticalAlignment = Excel.XlVAlign.xlVAlignCenter
+        Rango(1, 1, 1, Col_Ultima).EntireColumn.ColumnWidth = 15
 
         Hoja_Resultados.Cells(1, 1) = "Nombre Muro - REV"
         Hoja_Resultados.Cells(1, 2) = "Nombre Muro - DIS"
         Hoja_Resultados.Cells(1, 3) = "Piso"
 
-        Dim Col_Flexo As Int16 = 4
         Hoja_Resultados.Cells(1, Col_Flexo) = "Flexo-Compresión"
-        Hoja_Resultados.Cells(2, Col_Flexo) = "Cuantía Colocada"
-        Hoja_Resultados.Cells(2, Col_Flexo + 1) = "Cuantía Requerida"
-        Hoja_Resultados.Cells(2, Col_Flexo + 2) = "Capacidad/Demanda"
-        Hoja_Resultados.Range("D1:F1").Merge(True)
+        Hoja_Resultados.Cells(2, Col_Flexo) = "As Colocado (mm2)"
+        Hoja_Resultados.Cells(2, Col_Flexo + 1) = "Cuantía Colocada (%)"
+        Hoja_Resultados.Cells(2, Col_Flexo + 2) = "As Requerido (mm2)"
+        Hoja_Resultados.Cells(2, Col_Flexo + 3) = "Cuantía Requerida (%)"
+        Hoja_Resultados.Cells(2, Col_Flexo + 4) = "Capacidad/Demanda"
+        Rango(1, Col_Flexo, 1, Col_Flexo + N_Flexo - 1).Merge(True)
 
-        Dim Col_Cortante As Int16 = Col_Flexo + 3
         Hoja_Resultados.Cells(1, Col_Cortante) = "Revisión Cortante"
         Hoja_Resultados.Cells(2, Col_Cortante) = "Av Req (mm2/m)"
         Hoja_Resultados.Cells(2, Col_Cortante + 1) = "Av Col (mm2/m)"
         Hoja_Resultados.Cells(2, Col_Cortante + 2) = "Av Col/Req"
-        Hoja_Resultados.Range("G1:I1").Merge(True)
+        Rango(1, Col_Cortante, 1, Col_Cortante + N_Cortante - 1).Merge(True)
 
-        Dim Col_EB As Int16 = Col_Cortante + 3
-        Hoja_Resultados.Range("J1:Z1").MergeCells = True
+        Rango(1, Col_EB, 1, Col_Ultima).MergeCells = True
         Hoja_Resultados.Cells(1, Col_EB) = "Chequeo Elemento de Borde"
         Hoja_Resultados.Cells(2, Col_EB) = "Chequeo"
         Hoja_Resultados.Cells(2, Col_EB + 1) = "LH I Col (m)"
@@ -843,59 +899,33 @@ Public Class Form_06_01_ResultadosMuros
         Hoja_Resultados.Cells(2, Col_EB + 16) = "Chequeo EB D"
 
         Dim g As Integer = 3
-        Dim R_Ash_Min As Single = 1
-        Dim Fc_Max As Single = 35
 
-        For i = 0 To proyecto.Elementos.Muros.Lista_Muros.Count - 1
-            Dim Muro = proyecto.Elementos.Muros.Lista_Muros(i)
-
-            Hoja_Resultados.Cells(g, 1) = Muro.Name
-            Hoja_Resultados.Cells(g, 2) = Muro.Label
-
-            Dim F As Single = 100
-            Dim Cuantia_Col As Single
-            Dim Cuantia_Req As Single
+        ' Solo muros con refuerzo guardado: uno sin calcular saldría entero en
+        ' rojo (colocado = 0) y no se distinguiría de uno que no cumple.
+        For Each Muro In murosCalculados
 
             For j = 0 To Muro.Lista_Secciones.Count - 1
 
                 Dim Tramo = Muro.Lista_Secciones(j)
 
-                If (Tramo.Cuantia_Top_Col / Tramo.Cuantia_Top_Req) <= (Tramo.Cuantia_Bot_Col / Tramo.Cuantia_Bot_Req) Then
-                    F = Tramo.Cuantia_Top_Col / Tramo.Cuantia_Top_Req
-                    Cuantia_Col = Tramo.Cuantia_Top_Col
-                    Cuantia_Req = Tramo.Cuantia_Top_Req
-                Else
-                    F = Tramo.Cuantia_Bot_Col / Tramo.Cuantia_Bot_Req
-                    Cuantia_Col = Tramo.Cuantia_Bot_Col
-                    Cuantia_Req = Tramo.Cuantia_Bot_Req
-                End If
-
+                ' Nombre del muro en TODAS las filas: así la tabla se puede
+                ' filtrar y ordenar en Excel sin perder a qué muro pertenece.
+                Hoja_Resultados.Cells(g, 1) = Muro.Name
+                Hoja_Resultados.Cells(g, 2) = Muro.Label
                 Hoja_Resultados.Cells(g, 3) = Tramo.Piso
 
-                Hoja_Resultados.Cells(g, 4) = Convert.ToString(Math.Round(Cuantia_Col * Tramo.Lw_Planos * Tramo.tw_Planos * 10000, 2) & " - (" & Math.Round(Cuantia_Col, 2) & " %)")
-                Hoja_Resultados.Cells(g, 5) = Convert.ToString(Math.Round(Cuantia_Req * Tramo.Lw_Planos * Tramo.tw_Planos * 10000, 2) & " - (" & Math.Round(Cuantia_Req, 2) & " %)")
-                Hoja_Resultados.Cells(g, 6) = Math.Round(F, 2)
+                ' Extremo que gobierna y As con AgM (el área con que se calculó
+                ' la cuantía colocada). Sin requerido -> F = NaN -> "-".
+                Dim Flex = MurosResumenService.FlexionGobernante(Tramo)
+                Hoja_Resultados.Cells(g, Col_Flexo) = Math.Round(Flex.AsCol, 2)
+                Hoja_Resultados.Cells(g, Col_Flexo + 1) = Math.Round(Flex.CuantiaCol, 3)
+                Hoja_Resultados.Cells(g, Col_Flexo + 2) = Math.Round(Flex.AsReq, 2)
+                Hoja_Resultados.Cells(g, Col_Flexo + 3) = Math.Round(Flex.CuantiaReq, 3)
+                EscribirFactor(Celda(g, Col_Flexo + 4), Flex.F)
 
-                If F < 0.9 Then
-                    Hoja_Resultados.Range("F" & g).Font.Color = Color.FromArgb(156, 0, 6)
-                    Hoja_Resultados.Range("F" & g).Interior.Color = Color.FromArgb(255, 199, 206)
-                Else
-                    Hoja_Resultados.Range("F" & g).Font.Color = Color.FromArgb(0, 97, 0)
-                    Hoja_Resultados.Range("F" & g).Interior.Color = Color.FromArgb(198, 239, 206)
-                End If
-
-
-                Hoja_Resultados.Cells(g, 7) = Math.Round(Tramo.AsH_Req_Top, 2)
-                Hoja_Resultados.Cells(g, 8) = Math.Round(Tramo.AsH_Col, 2)
-                Hoja_Resultados.Cells(g, 9) = Math.Round(Tramo.AsH_Col / Tramo.AsH_Req_Top, 2)
-
-                If Tramo.AsH_Col < 0.9 * Tramo.AsH_Req_Top Then
-                    Hoja_Resultados.Range("I" & g).Font.Color = Color.FromArgb(156, 0, 6)
-                    Hoja_Resultados.Range("I" & g).Interior.Color = Color.FromArgb(255, 199, 206)
-                Else
-                    Hoja_Resultados.Range("I" & g).Font.Color = Color.FromArgb(0, 97, 0)
-                    Hoja_Resultados.Range("I" & g).Interior.Color = Color.FromArgb(198, 239, 206)
-                End If
+                Hoja_Resultados.Cells(g, Col_Cortante) = Math.Round(Tramo.AsH_Req_Top, 2)
+                Hoja_Resultados.Cells(g, Col_Cortante + 1) = Math.Round(Tramo.AsH_Col, 2)
+                EscribirFactor(Celda(g, Col_Cortante + 2), MurosResumenService.RelacionCuantia(Tramo.AsH_Col, Tramo.AsH_Req_Top))
 
                 If Tramo.Chequeo_EB_I_Top_Esf = "No requiere" And
                     Tramo.Chequeo_EB_D_Top_Esf = "No requiere" And
@@ -906,71 +936,57 @@ Public Class Form_06_01_ResultadosMuros
                     Tramo.Chequeo_EB_D_Top_Def = "No requiere" And
                     Tramo.Chequeo_EB_D_Bot_Def = "No requiere" Then
 
-                    Hoja_Resultados.Cells(g, 10) = "No requiere"
+                    Hoja_Resultados.Cells(g, Col_EB) = "No requiere"
 
                 ElseIf (Tramo.Chequeo_EB_I_Bot_Esf = "Requiere" And Tramo.Chequeo_EB_I_Bot_Def = "Requiere") Or
                     (Tramo.Chequeo_EB_D_Bot_Esf = "Requiere" And Tramo.Chequeo_EB_D_Bot_Def = "Requiere") Then
 
-                    Hoja_Resultados.Cells(g, 10) = "Requiere por ambos"
+                    Hoja_Resultados.Cells(g, Col_EB) = "Requiere por ambos"
 
                 ElseIf (Tramo.Chequeo_EB_I_Bot_Esf = "Requiere" And Tramo.Chequeo_EB_I_Bot_Def = "No requiere") Or
                     (Tramo.Chequeo_EB_D_Bot_Esf = "Requiere" And Tramo.Chequeo_EB_D_Bot_Def = "No requiere") Then
 
-                    Hoja_Resultados.Cells(g, 10) = "Requiere por esfuerzos"
+                    Hoja_Resultados.Cells(g, Col_EB) = "Requiere por esfuerzos"
 
                 ElseIf (Tramo.Chequeo_EB_I_Bot_Esf = "No requiere" And Tramo.Chequeo_EB_I_Bot_Def = "Requiere") Or
                     (Tramo.Chequeo_EB_D_Bot_Esf = "No requiere" And Tramo.Chequeo_EB_D_Bot_Def = "Requiere") Then
 
-                    Hoja_Resultados.Cells(g, 10) = "Requiere por deformaciones"
+                    Hoja_Resultados.Cells(g, Col_EB) = "Requiere por deformaciones"
                 End If
 
-                Hoja_Resultados.Cells(g, 11) = Math.Round(Tramo.EB_I_Bot.L_EB, 2)
-                Hoja_Resultados.Cells(g, 12) = Math.Round(Tramo.EB_I_Bot.L_EB_Req, 2)
-                If Tramo.EB_I_Bot.L_EB >= 0.9 * Tramo.EB_I_Bot.L_EB_Req Then
-                    Hoja_Resultados.Cells(g, 13) = "Cumple"
-                    Hoja_Resultados.Range("M" & g).Interior.Color = Color.FromArgb(198, 239, 206)
-                Else
-                    Hoja_Resultados.Cells(g, 13) = "No cumple"
-                    Hoja_Resultados.Range("M" & g).Interior.Color = Color.FromArgb(255, 199, 206)
-                End If
+                Hoja_Resultados.Cells(g, Col_EB + 1) = Math.Round(Tramo.EB_I_Bot.L_EB, 2)
+                Hoja_Resultados.Cells(g, Col_EB + 2) = Math.Round(Tramo.EB_I_Bot.L_EB_Req, 2)
+                EscribirChequeo(Celda(g, Col_EB + 3), Tramo.EB_I_Bot.L_EB >= UMBRAL_CD * Tramo.EB_I_Bot.L_EB_Req)
 
-                Hoja_Resultados.Cells(g, 14) = Math.Round(Tramo.EB_D_Bot.L_EB, 2)
-                Hoja_Resultados.Cells(g, 15) = Math.Round(Tramo.EB_D_Bot.L_EB_Req, 2)
-                If Tramo.EB_D_Bot.L_EB >= 0.9 * Tramo.EB_D_Bot.L_EB_Req Then
-                    Hoja_Resultados.Cells(g, 16) = "Cumple"
-                    Hoja_Resultados.Range("P" & g).Interior.Color = Color.FromArgb(198, 239, 206)
-                Else
-                    Hoja_Resultados.Cells(g, 16) = "No cumple"
-                    Hoja_Resultados.Range("P" & g).Interior.Color = Color.FromArgb(255, 199, 206)
-                End If
+                Hoja_Resultados.Cells(g, Col_EB + 4) = Math.Round(Tramo.EB_D_Bot.L_EB, 2)
+                Hoja_Resultados.Cells(g, Col_EB + 5) = Math.Round(Tramo.EB_D_Bot.L_EB_Req, 2)
+                EscribirChequeo(Celda(g, Col_EB + 6), Tramo.EB_D_Bot.L_EB >= UMBRAL_CD * Tramo.EB_D_Bot.L_EB_Req)
 
-                Hoja_Resultados.Cells(g, 17) = Tramo.EB_I_Bot.Tipo_EB_Req
-                Hoja_Resultados.Cells(g, 18) = Tramo.EB_I_Bot.Tipo_EB_Col
-                Hoja_Resultados.Cells(g, 19) = Tramo.EB_I_Bot.RefH_Req
-                Hoja_Resultados.Cells(g, 20) = Tramo.EB_I_Bot.RefH.Acero_T
-                If Tramo.EB_I_Bot.RefH_Req * 0.9 <= Tramo.EB_I_Bot.RefH.Acero_T Then
-                    Hoja_Resultados.Cells(g, 21) = "Cumple"
-                    Hoja_Resultados.Range("U" & g).Interior.Color = Color.FromArgb(198, 239, 206)
-                Else
-                    Hoja_Resultados.Cells(g, 21) = "No cumple"
-                    Hoja_Resultados.Range("U" & g).Interior.Color = Color.FromArgb(255, 199, 206)
-                End If
+                Hoja_Resultados.Cells(g, Col_EB + 7) = Tramo.EB_I_Bot.Tipo_EB_Req
+                Hoja_Resultados.Cells(g, Col_EB + 8) = Tramo.EB_I_Bot.Tipo_EB_Col
+                Hoja_Resultados.Cells(g, Col_EB + 9) = Tramo.EB_I_Bot.RefH_Req
+                Hoja_Resultados.Cells(g, Col_EB + 10) = Tramo.EB_I_Bot.RefH.Acero_T
+                EscribirChequeo(Celda(g, Col_EB + 11), Tramo.EB_I_Bot.RefH_Req * UMBRAL_CD <= Tramo.EB_I_Bot.RefH.Acero_T)
 
-                Hoja_Resultados.Cells(g, 22) = Tramo.EB_D_Bot.Tipo_EB_Req
-                Hoja_Resultados.Cells(g, 23) = Tramo.EB_D_Bot.Tipo_EB_Col
-                Hoja_Resultados.Cells(g, 24) = Tramo.EB_D_Bot.RefH_Req
-                Hoja_Resultados.Cells(g, 25) = Tramo.EB_D_Bot.RefH.Acero_T
-                If Tramo.EB_D_Bot.RefH_Req * 0.9 <= Tramo.EB_D_Bot.RefH.Acero_T Then
-                    Hoja_Resultados.Cells(g, 26) = "Cumple"
-                    Hoja_Resultados.Range("Z" & g).Interior.Color = Color.FromArgb(198, 239, 206)
-                Else
-                    Hoja_Resultados.Cells(g, 26) = "No cumple"
-                    Hoja_Resultados.Range("Z" & g).Interior.Color = Color.FromArgb(255, 199, 206)
-                End If
+                Hoja_Resultados.Cells(g, Col_EB + 12) = Tramo.EB_D_Bot.Tipo_EB_Req
+                Hoja_Resultados.Cells(g, Col_EB + 13) = Tramo.EB_D_Bot.Tipo_EB_Col
+                Hoja_Resultados.Cells(g, Col_EB + 14) = Tramo.EB_D_Bot.RefH_Req
+                Hoja_Resultados.Cells(g, Col_EB + 15) = Tramo.EB_D_Bot.RefH.Acero_T
+                EscribirChequeo(Celda(g, Col_EB + 16), Tramo.EB_D_Bot.RefH_Req * UMBRAL_CD <= Tramo.EB_D_Bot.RefH.Acero_T)
 
                 g += 1
             Next
         Next
+
+        ' Formato numérico de las columnas de acero y cuantía
+        If g > 3 Then
+            Rango(3, Col_Flexo, g - 1, Col_Flexo).NumberFormat = "0.00"
+            Rango(3, Col_Flexo + 1, g - 1, Col_Flexo + 1).NumberFormat = "0.000"
+            Rango(3, Col_Flexo + 2, g - 1, Col_Flexo + 2).NumberFormat = "0.00"
+            Rango(3, Col_Flexo + 3, g - 1, Col_Flexo + 3).NumberFormat = "0.000"
+            Rango(3, Col_Flexo + 4, g - 1, Col_Flexo + 4).NumberFormat = "0.00"
+            Rango(3, Col_Cortante + 2, g - 1, Col_Cortante + 2).NumberFormat = "0.00"
+        End If
 
         Dim saveFileDialog1 As New SaveFileDialog()
         saveFileDialog1.Title = "Guardar documento Excel"
@@ -980,6 +996,13 @@ Public Class Form_06_01_ResultadosMuros
         wbXL.SaveAs(saveFileDialog1.FileName)
         appXL.Workbooks.Close()
         appXL.Quit()
+
+        If murosSinCalcular.Count > 0 Then
+            Cursor = Cursors.Arrow
+            MessageBox.Show(AvisoMurosSinCalcular(murosCalculados.Count, murosSinCalcular),
+                            "Reporte Completo — muros sin calcular", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
+
         System.Diagnostics.Process.Start(saveFileDialog1.FileName)
         Catch ex As Exception
             Logger.Error(ex, "Form_06_01_ResultadosMuros", "Error al exportar a Excel")

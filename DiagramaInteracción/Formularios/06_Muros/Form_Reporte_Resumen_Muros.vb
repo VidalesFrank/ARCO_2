@@ -80,11 +80,36 @@ Public Class Form_Reporte_Resumen_Muros
 
     Private Sub CargarTodo()
         If Muros Is Nothing Then Return
+        _filas = ConstruirFilas()
         CargarFlexion()
         CargarCortante()
         CargarEB()
         CargarCompleto()
     End Sub
+
+    ''' <summary>
+    ''' Una fila por sección de los muros ya calculados. Grilla y Excel leen de
+    ''' aquí: así no pueden volver a mostrar valores o estados distintos.
+    ''' </summary>
+    Private Function ConstruirFilas() As List(Of FilaSeccionMuro)
+        Dim filas As New List(Of FilaSeccionMuro)
+        For Each muro In MurosResumenService.MurosCalculados(Muros)
+            For Each sec In muro.Lista_Secciones
+                filas.Add(MurosResumenService.CalcularFilaSeccion(muro, sec))
+            Next
+        Next
+        Return filas
+    End Function
+
+    Private _filas As New List(Of FilaSeccionMuro)
+
+    Private Shared Function TextoEstado(e As EstadoChequeoMuro, textoRevisar As String) As String
+        Select Case e
+            Case EstadoChequeoMuro.OK : Return "OK"
+            Case EstadoChequeoMuro.SinDato : Return "Sin dato"
+            Case Else : Return textoRevisar
+        End Select
+    End Function
 
     ' ── FLEXO-COMPRESIÓN ──────────────────────────────────────────────────────
 
@@ -99,33 +124,22 @@ Public Class Form_Reporte_Resumen_Muros
         ACol(dgv, "Estado", "Estado", 90)
 
         Dim idx As Integer = 0
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                Dim fTop = If(sec.Cuantia_Top_Req > 0, Math.Round(sec.Cuantia_Top_Col / sec.Cuantia_Top_Req, 2), 0.0)
-                Dim fBot = If(sec.Cuantia_Bot_Req > 0, Math.Round(sec.Cuantia_Bot_Col / sec.Cuantia_Bot_Req, 2), 0.0)
-                Dim fDI = Math.Min(sec.Factor_Demanda_Flexo_Top, sec.Factor_Demanda_Flexo_Bot)
-                Dim combCrit = If(sec.Factor_Demanda_Flexo_Top <= sec.Factor_Demanda_Flexo_Bot,
-                                  sec.Combinacion_Demanda_Flexo_Top, sec.Combinacion_Demanda_Flexo_Bot)
+        For Each f In _filas
+            Dim row = dgv.Rows(dgv.Rows.Add())
+            row.Cells("Muro").Value = f.Muro
+            row.Cells("Piso").Value = f.Piso
+            row.Cells("tw").Value = Math.Round(f.tw, 3)
+            row.Cells("Lw").Value = Math.Round(f.Lw, 2)
+            row.Cells("CTop").Value = Math.Round(f.CuantiaTopReq, 3)
+            row.Cells("CBot").Value = Math.Round(f.CuantiaBotReq, 3)
+            AsignarFactor(row.Cells("FTop"), f.FTop)
+            AsignarFactor(row.Cells("FBot"), f.FBot)
+            If f.FDI > 0 Then AsignarFactor(row.Cells("FDI"), f.FDI) Else row.Cells("FDI").Value = "-"
+            row.Cells("CombCrit").Value = f.CombCritica
+            PintarEstado(row.Cells("Estado"), TextoEstado(f.EstadoFlexion, "Revisar"))
 
-                Dim r = dgv.Rows.Add()
-                Dim row = dgv.Rows(r)
-                row.Cells("Muro").Value = muro.Label
-                row.Cells("Piso").Value = sec.Piso
-                row.Cells("tw").Value = Math.Round(sec.tw_Planos, 3)
-                row.Cells("Lw").Value = Math.Round(sec.Lw_Planos, 2)
-                row.Cells("CTop").Value = Math.Round(sec.Cuantia_Top_Req, 3)
-                row.Cells("CBot").Value = Math.Round(sec.Cuantia_Bot_Req, 3)
-                AsignarFactor(row.Cells("FTop"), fTop)
-                AsignarFactor(row.Cells("FBot"), fBot)
-                If fDI > 0 Then AsignarFactor(row.Cells("FDI"), fDI) Else row.Cells("FDI").Value = "-"
-                row.Cells("CombCrit").Value = If(String.IsNullOrEmpty(combCrit), "-", combCrit)
-
-                Dim ok = fTop >= 0.9 AndAlso fBot >= 0.9
-                AplicarEstado(row.Cells("Estado"), If(ok, "OK", "Revisar"), If(ok, ColorOK, ColorMal), If(ok, ColorOKTexto, ColorMalTexto))
-
-                If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
-                idx += 1
-            Next
+            If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
+            idx += 1
         Next
     End Sub
 
@@ -141,64 +155,53 @@ Public Class Form_Reporte_Resumen_Muros
         ACol(dgv, "FCor", "F Cortante", 90) : ACol(dgv, "Estado", "Estado", 80)
 
         Dim idx As Integer = 0
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                Dim r = dgv.Rows.Add()
-                Dim row = dgv.Rows(r)
-                row.Cells("Muro").Value = muro.Label
-                row.Cells("Piso").Value = sec.Piso
-                row.Cells("tw").Value = Math.Round(sec.tw_Planos, 3)
-                row.Cells("Lw").Value = Math.Round(sec.Lw_Planos, 2)
-                row.Cells("Vu").Value = Math.Round(sec.Vu, 1)
-                row.Cells("Vc").Value = Math.Round(sec.Vc, 1)
-                row.Cells("Vs").Value = Math.Round(sec.Vs, 1)
-                row.Cells("Vn").Value = Math.Round(sec.Vn, 1)
-                AsignarFactor(row.Cells("FCor"), Math.Round(sec.F_Cortante, 2))
-                Dim ok = sec.F_Cortante >= 0.9
-                AplicarEstado(row.Cells("Estado"), If(ok, "OK", "Revisar"), If(ok, ColorOK, ColorMal), If(ok, ColorOKTexto, ColorMalTexto))
-                If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
-                idx += 1
-            Next
+        For Each f In _filas
+            Dim row = dgv.Rows(dgv.Rows.Add())
+            row.Cells("Muro").Value = f.Muro
+            row.Cells("Piso").Value = f.Piso
+            row.Cells("tw").Value = Math.Round(f.tw, 3)
+            row.Cells("Lw").Value = Math.Round(f.Lw, 2)
+            row.Cells("Vu").Value = Math.Round(f.Vu, 1)
+            row.Cells("Vc").Value = Math.Round(f.Vc, 1)
+            row.Cells("Vs").Value = Math.Round(f.Vs, 1)
+            row.Cells("Vn").Value = Math.Round(f.Vn, 1)
+            AsignarFactor(row.Cells("FCor"), f.FCortante)
+            PintarEstado(row.Cells("Estado"), If(f.CumpleCortante, "OK", "Revisar"))
+            If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
+            idx += 1
         Next
     End Sub
 
     ' ── ELEMENTOS DE BORDE ────────────────────────────────────────────────────
+    ' Cada chequeo es el peor de los extremos superior e inferior de la sección.
 
     Private Sub CargarEB()
         Dim dgv = DgvEB
         dgv.Columns.Clear() : dgv.Rows.Clear()
         ACol(dgv, "Muro", "Muro", 120) : ACol(dgv, "Piso", "Piso", 80)
         ACol(dgv, "CLim", "C límite (m)", 90)
-        ACol(dgv, "CI_Top", "C_I Top (m)", 90) : ACol(dgv, "CD_Top", "C_D Top (m)", 90)
+        ACol(dgv, "CI", "C_I máx (m)", 90) : ACol(dgv, "CD", "C_D máx (m)", 90)
         ACol(dgv, "EB_I_Esf", "EB Izq Esf.", 100) : ACol(dgv, "EB_D_Esf", "EB Der Esf.", 100)
         ACol(dgv, "EB_I_Def", "EB Izq Def.", 100) : ACol(dgv, "EB_D_Def", "EB Der Def.", 100)
         ACol(dgv, "Estado", "Estado", 90)
 
         Dim idx As Integer = 0
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                Dim r = dgv.Rows.Add()
-                Dim row = dgv.Rows(r)
-                row.Cells("Muro").Value = muro.Label
-                row.Cells("Piso").Value = sec.Piso
-                row.Cells("CLim").Value = Math.Round(sec.C_Limite, 3)
-                row.Cells("CI_Top").Value = Math.Round(sec.C_I_Top, 3)
-                row.Cells("CD_Top").Value = Math.Round(sec.C_D_Top, 3)
+        For Each f In _filas
+            Dim row = dgv.Rows(dgv.Rows.Add())
+            row.Cells("Muro").Value = f.Muro
+            row.Cells("Piso").Value = f.Piso
+            row.Cells("CLim").Value = Math.Round(f.CLimite, 3)
+            row.Cells("CI").Value = Math.Round(f.C_I, 3)
+            row.Cells("CD").Value = Math.Round(f.C_D, 3)
 
-                PintarChequeoEB(row.Cells("EB_I_Esf"), sec.Chequeo_EB_I_Top_Esf)
-                PintarChequeoEB(row.Cells("EB_D_Esf"), sec.Chequeo_EB_D_Top_Esf)
-                PintarChequeoEB(row.Cells("EB_I_Def"), sec.Chequeo_EB_I_Top_Def)
-                PintarChequeoEB(row.Cells("EB_D_Def"), sec.Chequeo_EB_D_Top_Def)
+            PintarChequeoEB(row.Cells("EB_I_Esf"), f.EB_I_Esf)
+            PintarChequeoEB(row.Cells("EB_D_Esf"), f.EB_D_Esf)
+            PintarChequeoEB(row.Cells("EB_I_Def"), f.EB_I_Def)
+            PintarChequeoEB(row.Cells("EB_D_Def"), f.EB_D_Def)
+            PintarEstado(row.Cells("Estado"), If(f.RequiereEB, "Rev. EB", "OK"))
 
-                Dim requiereEB = sec.Chequeo_EB_I_Top_Esf = "Requiere" OrElse sec.Chequeo_EB_D_Top_Esf = "Requiere" OrElse
-                                 sec.Chequeo_EB_I_Top_Def = "Requiere" OrElse sec.Chequeo_EB_D_Top_Def = "Requiere"
-                AplicarEstado(row.Cells("Estado"), If(Not requiereEB, "OK", "Rev. EB"),
-                              If(Not requiereEB, ColorOK, ColorAlerta),
-                              If(Not requiereEB, ColorOKTexto, ColorAlertaTexto))
-
-                If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
-                idx += 1
-            Next
+            If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
+            idx += 1
         Next
     End Sub
 
@@ -221,43 +224,29 @@ Public Class Form_Reporte_Resumen_Muros
         ACol(dgv, "EstEB", "EB", 80) : ACol(dgv, "Estado", "Estado", 90)
 
         Dim idx As Integer = 0
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                Dim fTop = If(sec.Cuantia_Top_Req > 0, sec.Cuantia_Top_Col / sec.Cuantia_Top_Req, 9.99)
-                Dim fBot = If(sec.Cuantia_Bot_Req > 0, sec.Cuantia_Bot_Col / sec.Cuantia_Bot_Req, 9.99)
-                Dim fFlexMin = Math.Min(fTop, fBot)
-                Dim okFlex = fFlexMin >= 0.9
-                Dim okCor = sec.F_Cortante >= 0.9
-                Dim requiereEB = sec.Chequeo_EB_I_Top_Esf = "Requiere" OrElse sec.Chequeo_EB_D_Top_Esf = "Requiere" OrElse
-                                 sec.Chequeo_EB_I_Top_Def = "Requiere" OrElse sec.Chequeo_EB_D_Top_Def = "Requiere"
+        For Each f In _filas
+            Dim row = dgv.Rows(dgv.Rows.Add())
+            row.Cells("Muro").Value = f.Muro
+            row.Cells("Piso").Value = f.Piso
+            row.Cells("tw").Value = Math.Round(f.tw, 3)
+            row.Cells("Lw").Value = Math.Round(f.Lw, 2)
+            AsignarFactor(row.Cells("FFlex"), f.FFlexMin)
+            AsignarFactor(row.Cells("FCor"), f.FCortante)
+            PintarEstado(row.Cells("EstFlex"), TextoEstado(f.EstadoFlexion, "Rev."))
+            PintarEstado(row.Cells("EstCor"), If(f.CumpleCortante, "OK", "Rev."))
+            PintarEstado(row.Cells("EstEB"), If(f.RequiereEB, "Rev. EB", "OK"))
+            PintarEstado(row.Cells("Estado"), f.EstadoGlobal)
 
-                Dim r = dgv.Rows.Add()
-                Dim row = dgv.Rows(r)
-                row.Cells("Muro").Value = muro.Label
-                row.Cells("Piso").Value = sec.Piso
-                row.Cells("tw").Value = Math.Round(sec.tw_Planos, 3)
-                row.Cells("Lw").Value = Math.Round(sec.Lw_Planos, 2)
-                AsignarFactor(row.Cells("FFlex"), Math.Round(fFlexMin, 2))
-                AsignarFactor(row.Cells("FCor"), Math.Round(sec.F_Cortante, 2))
-                AplicarEstado(row.Cells("EstFlex"), If(okFlex, "OK", "Rev."), If(okFlex, ColorOK, ColorMal), If(okFlex, ColorOKTexto, ColorMalTexto))
-                AplicarEstado(row.Cells("EstCor"), If(okCor, "OK", "Rev."), If(okCor, ColorOK, ColorMal), If(okCor, ColorOKTexto, ColorMalTexto))
-                AplicarEstado(row.Cells("EstEB"), If(Not requiereEB, "OK", "Rev. EB"), If(Not requiereEB, ColorOK, ColorAlerta), If(Not requiereEB, ColorOKTexto, ColorAlertaTexto))
-
-                Dim estadoOK = okFlex AndAlso okCor AndAlso Not requiereEB
-                AplicarEstado(row.Cells("Estado"), If(estadoOK, "OK", "Revisar"),
-                              If(estadoOK, ColorOK, ColorMal), If(estadoOK, ColorOKTexto, ColorMalTexto))
-
-                If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
-                idx += 1
-            Next
+            If idx Mod 2 = 1 Then row.DefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248)
+            idx += 1
         Next
     End Sub
 
     ' ── EXPORTAR EXCEL ────────────────────────────────────────────────────────
 
     Private Sub BtnExportar_Click(sender As Object, e As EventArgs)
-        If Muros Is Nothing OrElse Muros.Count = 0 Then
-            MessageBox.Show("No hay datos para exportar.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        If _filas Is Nothing OrElse _filas.Count = 0 Then
+            MessageBox.Show("No hay muros calculados para exportar.", "Sin datos", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Return
         End If
         Dim dlg As New SaveFileDialog() With {
@@ -279,6 +268,7 @@ Public Class Form_Reporte_Resumen_Muros
             MessageBox.Show("Reporte exportado correctamente." & vbCrLf & dlg.FileName, "Exportar", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             Me.Cursor = Cursors.Default
+            Logger.Error(ex, "Form_Reporte_Resumen_Muros.BtnExportar_Click", dlg.FileName)
             MessageBox.Show("Error al exportar: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
@@ -288,21 +278,16 @@ Public Class Form_Reporte_Resumen_Muros
         Dim enc = {"Muro", "Piso", "tw (m)", "Lw (m)", "ρ_req Top", "ρ_req Bot", "F Top", "F Bot", "F Diagrama I.", "Comb. Crítica", "Estado"}
         EscribirEncabezados(ws, 1, enc)
         Dim fila = 2
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                Dim fTop = If(sec.Cuantia_Top_Req > 0, sec.Cuantia_Top_Col / sec.Cuantia_Top_Req, 0.0)
-                Dim fBot = If(sec.Cuantia_Bot_Req > 0, sec.Cuantia_Bot_Col / sec.Cuantia_Bot_Req, 0.0)
-                Dim fDI = Math.Min(sec.Factor_Demanda_Flexo_Top, sec.Factor_Demanda_Flexo_Bot)
-                ws.Cell(fila, 1).Value = muro.Label : ws.Cell(fila, 2).Value = sec.Piso
-                ws.Cell(fila, 3).Value = sec.tw_Planos : ws.Cell(fila, 4).Value = sec.Lw_Planos
-                ws.Cell(fila, 5).Value = sec.Cuantia_Top_Req : ws.Cell(fila, 6).Value = sec.Cuantia_Bot_Req
-                EscribirFactor(ws.Cell(fila, 7), fTop) : EscribirFactor(ws.Cell(fila, 8), fBot)
-                If fDI > 0 Then EscribirFactor(ws.Cell(fila, 9), fDI) Else ws.Cell(fila, 9).Value = "-"
-                ws.Cell(fila, 10).Value = If(String.IsNullOrEmpty(sec.Combinacion_Demanda_Flexo_Top), "-", sec.Combinacion_Demanda_Flexo_Top)
-                EscribirEstadoXL(ws.Cell(fila, 11), If(fTop >= 0.9 AndAlso fBot >= 0.9, "OK", "Revisar"))
-                EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1)
-                fila += 1
-            Next
+        For Each f In _filas
+            ws.Cell(fila, 1).Value = f.Muro : ws.Cell(fila, 2).Value = f.Piso
+            ws.Cell(fila, 3).Value = f.tw : ws.Cell(fila, 4).Value = f.Lw
+            ws.Cell(fila, 5).Value = f.CuantiaTopReq : ws.Cell(fila, 6).Value = f.CuantiaBotReq
+            EscribirFactor(ws.Cell(fila, 7), f.FTop) : EscribirFactor(ws.Cell(fila, 8), f.FBot)
+            If f.FDI > 0 Then EscribirFactor(ws.Cell(fila, 9), f.FDI) Else ws.Cell(fila, 9).Value = "-"
+            ws.Cell(fila, 10).Value = f.CombCritica
+            EscribirEstadoXL(ws.Cell(fila, 11), TextoEstado(f.EstadoFlexion, "Revisar"))
+            EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1)
+            fila += 1
         Next
         AjustarColumnas(ws, enc.Length)
         AgregarBordes(ws, 1, fila - 1, enc.Length)
@@ -313,40 +298,34 @@ Public Class Form_Reporte_Resumen_Muros
         Dim enc = {"Muro", "Piso", "tw (m)", "Lw (m)", "Vu (kN)", "Vc (kN)", "Vs (kN)", "Vn (kN)", "F Cortante", "Estado"}
         EscribirEncabezados(ws, 1, enc)
         Dim fila = 2
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                ws.Cell(fila, 1).Value = muro.Label : ws.Cell(fila, 2).Value = sec.Piso
-                ws.Cell(fila, 3).Value = sec.tw_Planos : ws.Cell(fila, 4).Value = sec.Lw_Planos
-                ws.Cell(fila, 5).Value = Math.Round(sec.Vu, 1) : ws.Cell(fila, 6).Value = Math.Round(sec.Vc, 1)
-                ws.Cell(fila, 7).Value = Math.Round(sec.Vs, 1) : ws.Cell(fila, 8).Value = Math.Round(sec.Vn, 1)
-                EscribirFactor(ws.Cell(fila, 9), sec.F_Cortante)
-                EscribirEstadoXL(ws.Cell(fila, 10), If(sec.F_Cortante >= 0.9, "OK", "Revisar"))
-                EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1)
-                fila += 1
-            Next
+        For Each f In _filas
+            ws.Cell(fila, 1).Value = f.Muro : ws.Cell(fila, 2).Value = f.Piso
+            ws.Cell(fila, 3).Value = f.tw : ws.Cell(fila, 4).Value = f.Lw
+            ws.Cell(fila, 5).Value = Math.Round(f.Vu, 1) : ws.Cell(fila, 6).Value = Math.Round(f.Vc, 1)
+            ws.Cell(fila, 7).Value = Math.Round(f.Vs, 1) : ws.Cell(fila, 8).Value = Math.Round(f.Vn, 1)
+            EscribirFactor(ws.Cell(fila, 9), f.FCortante)
+            EscribirEstadoXL(ws.Cell(fila, 10), If(f.CumpleCortante, "OK", "Revisar"))
+            EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1)
+            fila += 1
         Next
         AjustarColumnas(ws, enc.Length) : AgregarBordes(ws, 1, fila - 1, enc.Length)
     End Sub
 
     Private Sub ExportarHojaEB(wb As XLWorkbook)
         Dim ws = wb.Worksheets.Add("Elementos de Borde")
-        Dim enc = {"Muro", "Piso", "C límite (m)", "C_I Top (m)", "C_D Top (m)", "EB Izq Esf.", "EB Der Esf.", "EB Izq Def.", "EB Der Def.", "Estado"}
+        Dim enc = {"Muro", "Piso", "C límite (m)", "C_I máx (m)", "C_D máx (m)", "EB Izq Esf.", "EB Der Esf.", "EB Izq Def.", "EB Der Def.", "Estado"}
         EscribirEncabezados(ws, 1, enc)
         Dim fila = 2
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                ws.Cell(fila, 1).Value = muro.Label : ws.Cell(fila, 2).Value = sec.Piso
-                ws.Cell(fila, 3).Value = Math.Round(sec.C_Limite, 3) : ws.Cell(fila, 4).Value = Math.Round(sec.C_I_Top, 3)
-                ws.Cell(fila, 5).Value = Math.Round(sec.C_D_Top, 3)
-                EscribirChequeoEB_XL(ws.Cell(fila, 6), sec.Chequeo_EB_I_Top_Esf)
-                EscribirChequeoEB_XL(ws.Cell(fila, 7), sec.Chequeo_EB_D_Top_Esf)
-                EscribirChequeoEB_XL(ws.Cell(fila, 8), sec.Chequeo_EB_I_Top_Def)
-                EscribirChequeoEB_XL(ws.Cell(fila, 9), sec.Chequeo_EB_D_Top_Def)
-                Dim req = sec.Chequeo_EB_I_Top_Esf = "Requiere" OrElse sec.Chequeo_EB_D_Top_Esf = "Requiere" OrElse
-                          sec.Chequeo_EB_I_Top_Def = "Requiere" OrElse sec.Chequeo_EB_D_Top_Def = "Requiere"
-                EscribirEstadoXL(ws.Cell(fila, 10), If(Not req, "OK", "Rev. EB"))
-                EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1) : fila += 1
-            Next
+        For Each f In _filas
+            ws.Cell(fila, 1).Value = f.Muro : ws.Cell(fila, 2).Value = f.Piso
+            ws.Cell(fila, 3).Value = Math.Round(f.CLimite, 3) : ws.Cell(fila, 4).Value = Math.Round(f.C_I, 3)
+            ws.Cell(fila, 5).Value = Math.Round(f.C_D, 3)
+            EscribirChequeoEB_XL(ws.Cell(fila, 6), f.EB_I_Esf)
+            EscribirChequeoEB_XL(ws.Cell(fila, 7), f.EB_D_Esf)
+            EscribirChequeoEB_XL(ws.Cell(fila, 8), f.EB_I_Def)
+            EscribirChequeoEB_XL(ws.Cell(fila, 9), f.EB_D_Def)
+            EscribirEstadoXL(ws.Cell(fila, 10), If(f.RequiereEB, "Rev. EB", "OK"))
+            EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1) : fila += 1
         Next
         AjustarColumnas(ws, enc.Length) : AgregarBordes(ws, 1, fila - 1, enc.Length)
     End Sub
@@ -356,23 +335,15 @@ Public Class Form_Reporte_Resumen_Muros
         Dim enc = {"Muro", "Piso", "tw (m)", "Lw (m)", "F Flex mín", "F Cortante", "Flexión", "Cortante", "EB", "Estado"}
         EscribirEncabezados(ws, 1, enc)
         Dim fila = 2
-        For Each muro In Muros
-            For Each sec In muro.Lista_Secciones
-                Dim fTop = If(sec.Cuantia_Top_Req > 0, sec.Cuantia_Top_Col / sec.Cuantia_Top_Req, 9.99)
-                Dim fBot = If(sec.Cuantia_Bot_Req > 0, sec.Cuantia_Bot_Col / sec.Cuantia_Bot_Req, 9.99)
-                Dim fFlex = Math.Min(fTop, fBot)
-                Dim okF = fFlex >= 0.9 : Dim okC = sec.F_Cortante >= 0.9
-                Dim req = sec.Chequeo_EB_I_Top_Esf = "Requiere" OrElse sec.Chequeo_EB_D_Top_Esf = "Requiere" OrElse
-                          sec.Chequeo_EB_I_Top_Def = "Requiere" OrElse sec.Chequeo_EB_D_Top_Def = "Requiere"
-                ws.Cell(fila, 1).Value = muro.Label : ws.Cell(fila, 2).Value = sec.Piso
-                ws.Cell(fila, 3).Value = sec.tw_Planos : ws.Cell(fila, 4).Value = sec.Lw_Planos
-                EscribirFactor(ws.Cell(fila, 5), fFlex) : EscribirFactor(ws.Cell(fila, 6), sec.F_Cortante)
-                EscribirEstadoXL(ws.Cell(fila, 7), If(okF, "OK", "Rev."))
-                EscribirEstadoXL(ws.Cell(fila, 8), If(okC, "OK", "Rev."))
-                EscribirEstadoXL(ws.Cell(fila, 9), If(Not req, "OK", "Rev. EB"))
-                EscribirEstadoXL(ws.Cell(fila, 10), If(okF AndAlso okC AndAlso Not req, "OK", "Revisar"))
-                EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1) : fila += 1
-            Next
+        For Each f In _filas
+            ws.Cell(fila, 1).Value = f.Muro : ws.Cell(fila, 2).Value = f.Piso
+            ws.Cell(fila, 3).Value = f.tw : ws.Cell(fila, 4).Value = f.Lw
+            EscribirFactor(ws.Cell(fila, 5), f.FFlexMin) : EscribirFactor(ws.Cell(fila, 6), f.FCortante)
+            EscribirEstadoXL(ws.Cell(fila, 7), TextoEstado(f.EstadoFlexion, "Rev."))
+            EscribirEstadoXL(ws.Cell(fila, 8), If(f.CumpleCortante, "OK", "Rev."))
+            EscribirEstadoXL(ws.Cell(fila, 9), If(f.RequiereEB, "Rev. EB", "OK"))
+            EscribirEstadoXL(ws.Cell(fila, 10), f.EstadoGlobal)
+            EstilarFila(ws, fila, enc.Length, fila Mod 2 = 1) : fila += 1
         Next
         AjustarColumnas(ws, enc.Length) : AgregarBordes(ws, 1, fila - 1, enc.Length)
     End Sub
@@ -397,7 +368,7 @@ Public Class Form_Reporte_Resumen_Muros
             Case "OK"
                 cell.Style.Fill.BackgroundColor = XlOKFondo
                 cell.Style.Font.FontColor = XlOKTexto
-            Case "Rev. EB"
+            Case "Rev. EB", "Sin dato"
                 cell.Style.Fill.BackgroundColor = XlAlertaFondo
                 cell.Style.Font.FontColor = XlAlertaTexto
             Case Else
@@ -458,10 +429,20 @@ Public Class Form_Reporte_Resumen_Muros
     End Sub
 
     Private Sub AsignarFactor(cell As DataGridViewCell, valor As Double)
-        Dim v = Math.Round(Math.Min(valor, 9.99), 2)
-        cell.Value = v.ToString("F2")
-        cell.Style.BackColor = If(v >= 0.9, ColorOK, ColorMal)
-        cell.Style.ForeColor = If(v >= 0.9, ColorOKTexto, ColorMalTexto)
+        ' Semáforo con el umbral único (UMBRAL_CD); NaN = sin dato -> "—".
+        ReporteGridHelpers.AsignarCD(cell, valor)
+    End Sub
+
+    ''' <summary>Pinta un estado con el mismo código de color que el Excel.</summary>
+    Private Sub PintarEstado(cell As DataGridViewCell, texto As String)
+        Select Case texto
+            Case "OK"
+                AplicarEstado(cell, texto, ColorOK, ColorOKTexto)
+            Case "Rev. EB", "Sin dato"
+                AplicarEstado(cell, texto, ColorAlerta, ColorAlertaTexto)
+            Case Else
+                AplicarEstado(cell, texto, ColorMal, ColorMalTexto)
+        End Select
     End Sub
 
     Private Sub AplicarEstado(cell As DataGridViewCell, texto As String, fondo As Color, textoColor As Color)
