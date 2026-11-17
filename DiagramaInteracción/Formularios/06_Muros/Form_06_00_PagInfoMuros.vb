@@ -460,19 +460,20 @@ Public Class Form_06_00_PagInfoMuros
             Dim mallaString As String = Tabla_Info_Seccion.Rows(i).Cells(15).Value.ToString()
             Dim mallaTipo As MallaTipo = StringToMallaTipo(mallaString)
 
-            Seccion(i / 2).AsT_Top_Col = AsT_Top + (AceroMallas(mallaTipo) * Seccion(i / 2).Malla.Capas * Seccion(i / 2).Lw_Planos)
-            Seccion(i / 2).AsT_Bot_Col = AsT_Bot + (AceroMallas(mallaTipo) * Seccion(i / 2).Malla.Capas * Seccion(i / 2).Lw_Planos)
-            Seccion(i / 2).Cuantia_Top_Col = (Seccion(i / 2).AsT_Top_Col / (Seccion(i / 2).AgM * 1000000)) * 100
-            Seccion(i / 2).Cuantia_Bot_Col = (Seccion(i / 2).AsT_Bot_Col / (Seccion(i / 2).AgM * 1000000)) * 100
-
-            'Seccion(i / 2).Cuantia_Top_Col = (AsT_Top / (Seccion(i / 2).AgM * 1000000) + CalculoCuantia(Seccion(i / 2).tw_Planos, Seccion(i / 2).Malla.Malla, Seccion(i / 2).Malla.Capas, 1, Seccion(i / 2).RefH_W_Col.Acero, 1, 0)) * 100
-            'Seccion(i / 2).Cuantia_Bot_Col = (AsT_Bot / (Seccion(i / 2).AgM * 1000000) + CalculoCuantia(Seccion(i / 2).tw_Planos, Seccion(i / 2).Malla.Malla, Seccion(i / 2).Malla.Capas, 1, Seccion(i / 2).RefH_W_Col.Acero, 1, 0)) * 100
-
-
+            ' La malla se lee de la tabla ANTES de sumarla al acero vertical. Antes se usaba
+            ' Malla.Capas guardado (0 en el primer guardado, o el valor anterior si se cambiaba),
+            ' y la malla no entraba en la cuantía longitudinal.
             Seccion(i / 2).Malla.Tipo_Malla = mallaTipo
             Seccion(i / 2).Malla.Malla = mallaString
             Seccion(i / 2).Malla.Capas = Convert.ToInt16(Tabla_Info_Seccion.Rows(i).Cells(16).Value)
             Seccion(i / 2).Malla.Acero_T = AceroMallas(mallaTipo) * Seccion(i / 2).Malla.Capas
+
+            ' AceroMallas está en mm²/m por capa → × Lw [m] = mm² de malla vertical en la sección
+            Dim As_Malla_Vertical As Single = Seccion(i / 2).Malla.Acero_T * Seccion(i / 2).Lw_Planos
+            Seccion(i / 2).AsT_Top_Col = AsT_Top + As_Malla_Vertical
+            Seccion(i / 2).AsT_Bot_Col = AsT_Bot + As_Malla_Vertical
+            Seccion(i / 2).Cuantia_Top_Col = (Seccion(i / 2).AsT_Top_Col / (Seccion(i / 2).AgM * 1000000)) * 100
+            Seccion(i / 2).Cuantia_Bot_Col = (Seccion(i / 2).AsT_Bot_Col / (Seccion(i / 2).AgM * 1000000)) * 100
 
             Seccion(i / 2).RefH_W_Col.Acero = Tabla_Info_Seccion.Rows(i).Cells(17).Value
             Seccion(i / 2).RefH_W_Col.Separacion = Convert.ToSingle(Tabla_Info_Seccion.Rows(i).Cells(18).Value)

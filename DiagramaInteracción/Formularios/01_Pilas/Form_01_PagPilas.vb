@@ -172,11 +172,12 @@ Public Class Form_01_PagPilas
     Public Sub DatosAExcelToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles Exportar_Excel.Click
         Me.Cursor = Cursors.WaitCursor
         Dim Archivo As String = "Revisión"
+        Dim appXL As Microsoft.Office.Interop.Excel.Application = Nothing
 
         Try
             Dim c As Color = Color.FromArgb(200, 200, 200)
             Dim c1 As Color = Color.FromArgb(220, 220, 220)
-            Dim appXL As New Microsoft.Office.Interop.Excel.Application
+            appXL = New Microsoft.Office.Interop.Excel.Application
             Dim wbXL As Excel.Workbook
             'Dim shXL As Excel.Worksheet
             Dim shxl4 As Excel.Worksheet
@@ -362,19 +363,24 @@ Public Class Form_01_PagPilas
             saveFileDialog1.Filter = "Excel File|*.xlsx"
             saveFileDialog1.FileName = Convert.ToString(Archivo & "_Proyecto.Elementos -" & PagInfoGeneral.NameProject.Text)
             If saveFileDialog1.ShowDialog() <> DialogResult.OK OrElse String.IsNullOrWhiteSpace(saveFileDialog1.FileName) Then
-                appXL.Workbooks.Close()
-                appXL.Quit()
                 Return
             End If
             wbXL.SaveAs(saveFileDialog1.FileName)
-            appXL.Workbooks.Close()
-            appXL.Quit()
             System.Diagnostics.Process.Start(saveFileDialog1.FileName)
         Catch ex As Exception
             Logger.Error(ex, "Form_01_PagPilas.DatosAExcelToolStripMenuItem_Click")
             MessageBox.Show("Error al exportar los datos a Excel." & Environment.NewLine & Environment.NewLine & ex.Message,
                             "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
+            ' Cierra Excel en todos los caminos (guardado, cancelado o error): antes, un
+            ' error a mitad de la exportación dejaba un EXCEL.EXE huérfano.
+            If appXL IsNot Nothing Then
+                appXL.DisplayAlerts = False
+                appXL.Workbooks.Close()
+                appXL.Quit()
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(appXL)
+                GC.Collect()
+            End If
             Cursor = Cursors.Arrow
         End Try
     End Sub

@@ -617,10 +617,10 @@ Public Class ReporteRevisionService
             For Each s In m.Lista_Secciones
                 If s.Rho_Min_L <= 0 Then Continue For
                 If s.Cuantia_Top_Col > 0 AndAlso s.Cuantia_Top_Col < s.Rho_Min_L Then
-                    noCuantiaMin.Add({s.Piso, m.Name, "Top", FNum(s.Cuantia_Top_Col * 100, 2) & "%", "El refuerzo vertical (Top) no alcanza la cuantía mínima requerida."})
+                    noCuantiaMin.Add({s.Piso, m.Name, "Top", FNum(s.Cuantia_Top_Col, 2) & "%", "El refuerzo vertical (Top) no alcanza la cuantía mínima requerida."})
                 End If
                 If s.Cuantia_Bot_Col > 0 AndAlso s.Cuantia_Bot_Col < s.Rho_Min_L Then
-                    noCuantiaMin.Add({s.Piso, m.Name, "Bot", FNum(s.Cuantia_Bot_Col * 100, 2) & "%", "El refuerzo vertical (Bot) no alcanza la cuantía mínima requerida."})
+                    noCuantiaMin.Add({s.Piso, m.Name, "Bot", FNum(s.Cuantia_Bot_Col, 2) & "%", "El refuerzo vertical (Bot) no alcanza la cuantía mínima requerida."})
                 End If
             Next
         Next
