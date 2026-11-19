@@ -1134,14 +1134,14 @@ Public Class Form_06_01_ResultadosMuros
                     Cuantia_Req = Tramo.Cuantia_Top_Req
 
                     As_Col = Tramo.AsT_Top_Col
-                    As_Req = Tramo.As_Top_Req / 100
+                    As_Req = Tramo.As_Top_Req
                 Else
                     F = Tramo.Cuantia_Bot_Col / Tramo.Cuantia_Bot_Req
                     Cuantia_Col = Tramo.Cuantia_Bot_Col
                     Cuantia_Req = Tramo.Cuantia_Bot_Req
 
                     As_Col = Tramo.AsT_Bot_Col
-                    As_Req = Tramo.As_Bot_Req / 100
+                    As_Req = Tramo.As_Bot_Req
                 End If
 
                 If F < 0.9 Then
