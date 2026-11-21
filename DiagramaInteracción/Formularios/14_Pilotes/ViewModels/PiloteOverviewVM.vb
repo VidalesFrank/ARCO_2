@@ -99,6 +99,7 @@ Public Class PiloteOverviewVM
     '''   CDMin        · Peor C/D entre compresión y tracción (default).
     '''   CDCompresion · Solo C/D compresión.
     '''   CDTraccion   · Solo C/D tracción (muchos apoyos quedarán grises por N/A).
+    '''   CDSTM        · Peor C/D del modelo puntal-tensor (puntal/tensores/nodo).
     '''   PuMax        · Gradiente azul por magnitud de Pu máximo.
     '''   TipoDado     · Colores categóricos: un color distinto por NombreTipoDado.
     ''' </summary>
@@ -106,6 +107,7 @@ Public Class PiloteOverviewVM
         "C/D mínimo",
         "C/D compresión",
         "C/D tracción",
+        "C/D STM",
         "Pu máximo",
         "Tipo de dado"
     }
@@ -134,6 +136,7 @@ Public Class PiloteOverviewVM
         Select Case label
             Case "C/D compresión" : Return "CDCompresion"
             Case "C/D tracción" : Return "CDTraccion"
+            Case "C/D STM" : Return "CDSTM"
             Case "Pu máximo" : Return "PuMax"
             Case "Tipo de dado" : Return "TipoDado"
             Case Else : Return "CDMin"
@@ -144,6 +147,7 @@ Public Class PiloteOverviewVM
         Select Case clave
             Case "CDCompresion" : Return "C/D compresión"
             Case "CDTraccion" : Return "C/D tracción"
+            Case "CDSTM" : Return "C/D STM"
             Case "PuMax" : Return "Pu máximo"
             Case "TipoDado" : Return "Tipo de dado"
             Case Else : Return "C/D mínimo"
@@ -176,7 +180,7 @@ Public Class PiloteOverviewVM
         CmdAplicarGeneradorHexagonal = New RelayCommand(AddressOf AplicarGeneradorHexagonal,
                                                         Function() TipoDadoSeleccionado IsNot Nothing)
         CmdRecalcular = New RelayCommand(Sub()
-                                             PiloteService.EvaluarTodos(Modelo)
+                                             PiloteService.EvaluarTodos(Modelo) : STMService.EvaluarTodos(Modelo)
                                              RefrescarDadosVM()
                                              OnPropertyChanged(NameOf(NumApoyosCumplen))
                                              OnPropertyChanged(NameOf(PorcentajeCumplimiento))
@@ -506,7 +510,7 @@ Public Class PiloteOverviewVM
             Modelo.ListA_Combinaciones_Design.Add(nombre)
         Next
 
-        PiloteService.EvaluarTodos(Modelo)
+        PiloteService.EvaluarTodos(Modelo) : STMService.EvaluarTodos(Modelo)
         RefrescarDadosVM()
         OnPropertyChanged(NameOf(NumCombinacionesSeleccionadas))
         OnPropertyChanged(NameOf(TextoCombinaciones))
@@ -603,7 +607,7 @@ Public Class PiloteOverviewVM
                     nAutoAsignados += 1
                 End If
             Next
-            PiloteService.EvaluarTodos(Modelo)
+            PiloteService.EvaluarTodos(Modelo) : STMService.EvaluarTodos(Modelo)
         End If
 
         RefrescarDadosVM()
@@ -778,7 +782,7 @@ Public Class PiloteOverviewVM
             End If
         Next
 
-        PiloteService.EvaluarTodos(Modelo)
+        PiloteService.EvaluarTodos(Modelo) : STMService.EvaluarTodos(Modelo)
         RefrescarDadosVM()
         OnPropertyChanged(NameOf(NumApoyosCumplen))
         OnPropertyChanged(NameOf(NumNoCumplen))

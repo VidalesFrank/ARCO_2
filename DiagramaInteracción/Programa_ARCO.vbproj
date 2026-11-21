@@ -127,6 +127,10 @@
     <Reference Include="ClosedXML, Version=0.105.0.0, Culture=neutral, PublicKeyToken=fd1eb21b62ae805b, processorArchitecture=MSIL">
       <HintPath>..\packages\ClosedXML.0.105.0\lib\netstandard2.0\ClosedXML.dll</HintPath>
     </Reference>
+    <Reference Include="HelixToolkit.Wpf">
+      <HintPath>..\packages\HelixToolkit.Wpf.2.25.0\lib\net462\HelixToolkit.Wpf.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
     <Reference Include="ClosedXML.Parser, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1d5f7376574c51ec, processorArchitecture=MSIL">
       <HintPath>..\packages\ClosedXML.Parser.2.0.0\lib\netstandard2.0\ClosedXML.Parser.dll</HintPath>
     </Reference>
@@ -855,6 +859,8 @@
     <Compile Include="Formularios\14_Pilotes\Services\PiloteService.vb" />
     <Compile Include="Formularios\14_Pilotes\Services\PiloteImportService.vb" />
     <Compile Include="Formularios\14_Pilotes\Services\PiloteReporteExcelService.vb" />
+    <Compile Include="Formularios\14_Pilotes\Services\STMModelo.vb" />
+    <Compile Include="Formularios\14_Pilotes\Services\STMService.vb" />
     <Compile Include="Formularios\14_Pilotes\ViewModels\ObservableVM.vb" />
     <Compile Include="Formularios\14_Pilotes\ViewModels\RelayCommand.vb" />
     <Compile Include="Formularios\14_Pilotes\ViewModels\TipoPiloteVM.vb" />
@@ -873,6 +879,10 @@
     </Compile>
     <Compile Include="Formularios\14_Pilotes\Views\SeleccionarCombinacionesDialog.xaml.vb">
       <DependentUpon>SeleccionarCombinacionesDialog.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Formularios\14_Pilotes\Views\GenerarDadoDialog.xaml.vb">
+      <DependentUpon>GenerarDadoDialog.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -918,6 +928,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Formularios\14_Pilotes\Views\SeleccionarCombinacionesDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Formularios\14_Pilotes\Views\GenerarDadoDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1198,9 +1212,12 @@
     <Content Include="Logo3.ico" />
     <Content Include="LogoColumnaSinFondo_1.ico" />
     <None Include="Resources\Im.png" />
-    <None Include="Resources\ARCO_ICONOGRIS.ico" />
+    <!-- Embebidos como Resource además del .resx para que las ventanas WPF
+         los puedan cargar vía pack://application:,,,/Resources/… Solo los dos
+         usados en WPF; el resto queda como None. -->
+    <Resource Include="Resources\ARCO_ICONOGRIS.ico" />
+    <Resource Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_ICONOVERDE.ico" />
-    <None Include="Resources\ARCO_LOGOGRIS.png" />
     <None Include="Resources\ARCO_LOGOVerde.png" />
     <None Include="Resources\PlantillaReporteRevision.docx" />
   </ItemGroup>

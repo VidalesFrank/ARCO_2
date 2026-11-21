@@ -43,6 +43,12 @@ Partial Public Class PiloteOverviewWindow
     Private _centroCanvasX As Double = 0
     Private _centroCanvasY As Double = 0
 
+    ' ── Drag de vértices / pilotes ────────────────────────────────
+    Private _arrastrando As Boolean = False
+    Private _tipoArrastre As String = ""        ' "vertice" o "pilote"
+    Private _indiceArrastre As Integer = -1
+    Private Const SNAP_METROS As Double = 0.05  ' snap de drag y clic
+
     Public Sub New(proyecto As Proyecto)
         InitializeComponent()
         _vm = New PiloteOverviewVM(proyecto)
@@ -83,12 +89,21 @@ Partial Public Class PiloteOverviewWindow
         If _hookedDado IsNot Nothing Then
             RemoveHandler _hookedDado.Pilotes.CollectionChanged, AddressOf OnPilotesCollectionChanged
             RemoveHandler _hookedDado.Vertices.CollectionChanged, AddressOf OnVerticesCollectionChanged
+            RemoveHandler _hookedDado.GeometriaCambiada, AddressOf OnGeometriaCambiada
         End If
         _hookedDado = _vm.TipoDadoSeleccionado
         If _hookedDado IsNot Nothing Then
             AddHandler _hookedDado.Pilotes.CollectionChanged, AddressOf OnPilotesCollectionChanged
             AddHandler _hookedDado.Vertices.CollectionChanged, AddressOf OnVerticesCollectionChanged
+            AddHandler _hookedDado.GeometriaCambiada, AddressOf OnGeometriaCambiada
         End If
+    End Sub
+
+    Private Sub OnGeometriaCambiada(sender As Object, e As EventArgs)
+        ' Dispara cuando el usuario edita X/Y de un vértice o pilote en la
+        ' tabla, o cuando se agrega/borra desde los botones laterales.
+        RedibujarCanvas()
+        _vm.OnPropertyChangedProxy(NameOf(PiloteOverviewVM.ErroresValidacion))
     End Sub
 
     Private Sub OnPilotesCollectionChanged(sender As Object, e As NotifyCollectionChangedEventArgs)
@@ -242,18 +257,27 @@ Partial Public Class PiloteOverviewWindow
             .Points = pts,
             .Opacity = 0.9
         }
+        ' Doble clic en el polígono inserta un vértice sobre la arista más
+        ' cercana al punto del click. Útil para pasar de un cuadrado a una L.
+        AddHandler poly.MouseLeftButtonDown, AddressOf Poligono_MouseLeftButtonDown
         CanvasEditor.Children.Add(poly)
 
-        ' Marcadores de vértices
-        For Each v In dado.Modelo.Poligono
+        ' Marcadores de vértices arrastrables (Tag = índice en la lista).
+        For i = 0 To dado.Modelo.Poligono.Count - 1
+            Dim v = dado.Modelo.Poligono(i)
             Dim cx = MundoACanvasX(v.X), cy = MundoACanvasY(v.Y)
             Dim el As New Ellipse With {
-                .Width = 8, .Height = 8,
+                .Width = 10, .Height = 10,
                 .Fill = BuscarBrush("BrushDadoBorde"),
-                .Stroke = Brushes.White, .StrokeThickness = 2
+                .Stroke = Brushes.White, .StrokeThickness = 2,
+                .Tag = i,
+                .Cursor = Cursors.SizeAll,
+                .ToolTip = $"Vértice {i + 1} ({v.X:0.00}, {v.Y:0.00}) m — arrastra para mover, clic derecho para eliminar"
             }
-            Canvas.SetLeft(el, cx - 4)
-            Canvas.SetTop(el, cy - 4)
+            AddHandler el.MouseLeftButtonDown, AddressOf Vertice_MouseLeftButtonDown
+            AddHandler el.MouseRightButtonDown, AddressOf Vertice_MouseRightButtonDown
+            Canvas.SetLeft(el, cx - 5)
+            Canvas.SetTop(el, cy - 5)
             CanvasEditor.Children.Add(el)
         Next
     End Sub
@@ -273,8 +297,10 @@ Partial Public Class PiloteOverviewWindow
                 .Stroke = BuscarBrush("BrushPiloteBorde"),
                 .StrokeThickness = 2,
                 .Tag = i,
-                .Cursor = Cursors.Hand
+                .Cursor = Cursors.SizeAll,
+                .ToolTip = $"Pilote {i + 1} ({p.X_Local:0.00}, {p.Y_Local:0.00}) m — arrastra para mover, clic derecho para eliminar"
             }
+            AddHandler el.MouseLeftButtonDown, AddressOf Pilote_MouseLeftButtonDown
             AddHandler el.MouseRightButtonDown, AddressOf PiloteBorrar_MouseRightButtonDown
             Canvas.SetLeft(el, cx - radioPx)
             Canvas.SetTop(el, cy - radioPx)
@@ -330,6 +356,193 @@ Partial Public Class PiloteOverviewWindow
         Dim mx = CanvasAMundoX(p.X)
         Dim my = CanvasAMundoY(p.Y)
         LblCoords.Text = $"x: {mx:+0.000;-0.000} m    y: {my:+0.000;-0.000} m"
+
+        If _arrastrando AndAlso _vm.TipoDadoSeleccionado IsNot Nothing AndAlso _indiceArrastre >= 0 Then
+            Dim mxS = Math.Round(mx / SNAP_METROS) * SNAP_METROS
+            Dim myS = Math.Round(my / SNAP_METROS) * SNAP_METROS
+            If _tipoArrastre = "vertice" Then
+                Dim poli = _vm.TipoDadoSeleccionado.Modelo.Poligono
+                If _indiceArrastre < poli.Count Then
+                    poli(_indiceArrastre).X = mxS
+                    poli(_indiceArrastre).Y = myS
+                    RedibujarCanvas()
+                End If
+            ElseIf _tipoArrastre = "pilote" Then
+                Dim pilotes = _vm.TipoDadoSeleccionado.Modelo.Pilotes
+                If _indiceArrastre < pilotes.Count Then
+                    pilotes(_indiceArrastre).X_Local = mxS
+                    pilotes(_indiceArrastre).Y_Local = myS
+                    RedibujarCanvas()
+                End If
+            End If
+        End If
+    End Sub
+
+    ''' <summary>
+    ''' Click izquierdo sobre un vértice. Si es doble clic, se trata como
+    ''' intención de borrar vía doble clic (redundante con clic derecho,
+    ''' pero WPF no distingue bien doble clic en Ellipse). El click simple
+    ''' inicia el arrastre.
+    ''' </summary>
+    Private Sub Vertice_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs)
+        Dim el = TryCast(sender, Ellipse)
+        If el Is Nothing OrElse el.Tag Is Nothing Then Return
+        Dim idx As Integer
+        If Not Integer.TryParse(el.Tag.ToString(), idx) Then Return
+        _arrastrando = True
+        _tipoArrastre = "vertice"
+        _indiceArrastre = idx
+        CanvasEditor.CaptureMouse()
+        e.Handled = True
+    End Sub
+
+    Private Sub Vertice_MouseRightButtonDown(sender As Object, e As MouseButtonEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then Return
+        Dim el = TryCast(sender, Ellipse)
+        If el Is Nothing OrElse el.Tag Is Nothing Then Return
+        Dim idx As Integer
+        If Not Integer.TryParse(el.Tag.ToString(), idx) Then Return
+        Dim vertices = _vm.TipoDadoSeleccionado.Vertices
+        If idx < 0 OrElse idx >= vertices.Count Then Return
+        If Not _vm.TipoDadoSeleccionado.BorrarVertice(vertices(idx)) Then
+            MessageBox.Show("El polígono necesita al menos 3 vértices.", "No se puede eliminar",
+                            MessageBoxButton.OK, MessageBoxImage.Information)
+        End If
+        RedibujarCanvas()
+        e.Handled = True
+    End Sub
+
+    Private Sub Pilote_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs)
+        Dim el = TryCast(sender, Ellipse)
+        If el Is Nothing OrElse el.Tag Is Nothing Then Return
+        Dim idx As Integer
+        If Not Integer.TryParse(el.Tag.ToString(), idx) Then Return
+        _arrastrando = True
+        _tipoArrastre = "pilote"
+        _indiceArrastre = idx
+        CanvasEditor.CaptureMouse()
+        e.Handled = True
+    End Sub
+
+    ''' <summary>
+    ''' Click izquierdo sobre el polígono (no sobre un vértice). Un clic
+    ''' simple no hace nada; el doble clic inserta un vértice nuevo sobre
+    ''' la arista más cercana al punto, lo que permite pasar un cuadrado a
+    ''' una L sin regenerar toda la geometría.
+    ''' </summary>
+    Private Sub Poligono_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then Return
+        If e.ClickCount < 2 Then Return
+
+        Dim p = e.GetPosition(CanvasEditor)
+        Dim mx = CanvasAMundoX(p.X), my = CanvasAMundoY(p.Y)
+        mx = Math.Round(mx / SNAP_METROS) * SNAP_METROS
+        my = Math.Round(my / SNAP_METROS) * SNAP_METROS
+
+        Dim poli = _vm.TipoDadoSeleccionado.Modelo.Poligono
+        If poli.Count < 3 Then Return
+
+        ' Busca la arista más cercana al punto del click (segmento).
+        Dim mejor As Integer = -1
+        Dim mejorD As Double = Double.MaxValue
+        Dim pxA As Double, pyA As Double
+        For i = 0 To poli.Count - 1
+            Dim a = poli(i)
+            Dim b = poli((i + 1) Mod poli.Count)
+            Dim pR = PuntoMasCercanoEnSegmento(mx, my, a.X, a.Y, b.X, b.Y)
+            Dim dd = (pR.X - mx) * (pR.X - mx) + (pR.Y - my) * (pR.Y - my)
+            If dd < mejorD Then
+                mejorD = dd : mejor = i : pxA = pR.X : pyA = pR.Y
+            End If
+        Next
+        If mejor < 0 Then Return
+        _vm.TipoDadoSeleccionado.InsertarVertice(mejor, pxA, pyA)
+        RedibujarCanvas()
+        e.Handled = True
+    End Sub
+
+    Private Function PuntoMasCercanoEnSegmento(px As Double, py As Double,
+                                               ax As Double, ay As Double,
+                                               bx As Double, by As Double) As Point
+        Dim dx = bx - ax, dy = by - ay
+        Dim L2 = dx * dx + dy * dy
+        If L2 < 1.0E-9 Then Return New Point(ax, ay)
+        Dim t = ((px - ax) * dx + (py - ay) * dy) / L2
+        t = Math.Max(0, Math.Min(1, t))
+        Return New Point(ax + t * dx, ay + t * dy)
+    End Function
+
+    Private Sub CanvasEditor_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs)
+        If Not _arrastrando Then Return
+        _arrastrando = False
+        _tipoArrastre = ""
+        _indiceArrastre = -1
+        CanvasEditor.ReleaseMouseCapture()
+        _vm.OnPropertyChangedProxy(NameOf(PiloteOverviewVM.ErroresValidacion))
+    End Sub
+
+    ' ─────────────────────────────────────────────────────────────
+    ' Tablas de vértices y pilotes (panel de propiedades)
+    ' ─────────────────────────────────────────────────────────────
+
+    Private Sub BtnAgregarVertice_Click(sender As Object, e As RoutedEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then Return
+        _vm.TipoDadoSeleccionado.AgregarVerticeAlFinal()
+    End Sub
+
+    Private Sub BtnBorrarVertice_Click(sender As Object, e As RoutedEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then Return
+        Dim btn = TryCast(sender, Button)
+        Dim vm = TryCast(btn?.DataContext, VerticeVM)
+        If vm Is Nothing Then Return
+        If Not _vm.TipoDadoSeleccionado.BorrarVertice(vm) Then
+            MessageBox.Show("El polígono necesita al menos 3 vértices.", "No se puede eliminar",
+                            MessageBoxButton.OK, MessageBoxImage.Information)
+        End If
+    End Sub
+
+    Private Sub BtnAgregarPilote_Click(sender As Object, e As RoutedEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then Return
+        Dim nombreTp = _vm.TiposPilote.FirstOrDefault()?.Nombre
+        If nombreTp Is Nothing Then
+            MessageBox.Show("Primero define al menos un tipo de pilote en la vista 'Pilotes'.",
+                            "Sin tipo de pilote", MessageBoxButton.OK, MessageBoxImage.Information)
+            Return
+        End If
+        _vm.TipoDadoSeleccionado.AgregarPilote(0, 0, nombreTp)
+    End Sub
+
+    Private Sub BtnBorrarPiloteFila_Click(sender As Object, e As RoutedEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then Return
+        Dim btn = TryCast(sender, Button)
+        Dim vm = TryCast(btn?.DataContext, PilotePosicionVM)
+        If vm Is Nothing Then Return
+        _vm.TipoDadoSeleccionado.BorrarPilote(vm)
+    End Sub
+
+    ''' <summary>
+    ''' Abre el diálogo de generación paramétrica y aplica el resultado al
+    ''' TipoDado seleccionado. Alternativa a los 4 generadores hardcoded que
+    ''' viven como "Atajos" al lado de este botón.
+    ''' </summary>
+    Private Sub BtnGenerarParametrico_Click(sender As Object, e As RoutedEventArgs)
+        If _vm.TipoDadoSeleccionado Is Nothing Then
+            MessageBox.Show("Primero selecciona o crea un tipo de dado.",
+                            "Sin dado", MessageBoxButton.OK, MessageBoxImage.Information)
+            Return
+        End If
+        Dim nombreTp = _vm.TiposPilote.FirstOrDefault()?.Nombre
+        If nombreTp Is Nothing Then
+            MessageBox.Show("Primero define al menos un tipo de pilote en la vista 'Pilotes'.",
+                            "Sin tipo de pilote", MessageBoxButton.OK, MessageBoxImage.Information)
+            Return
+        End If
+        Dim dlg As New GenerarDadoDialog(nombreTp) With {.Owner = Me}
+        If dlg.ShowDialog() = True Then
+            _vm.TipoDadoSeleccionado.ReemplazarGeometria(
+                dlg.PoligonoResultante, dlg.PilotesResultantes)
+            _vm.OnPropertyChangedProxy(NameOf(PiloteOverviewVM.ErroresValidacion))
+        End If
     End Sub
 
     Private Sub CanvasEditor_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs)
@@ -962,6 +1175,7 @@ Partial Public Class PiloteOverviewWindow
     '''   CDMin        (default) – peor C/D entre compresión y tracción.
     '''   CDCompresion – solo la relación en compresión.
     '''   CDTraccion   – solo la relación en tracción (muchos apoyos en N/A).
+    '''   CDSTM        – peor C/D del modelo puntal-tensor (puntal/tensores/nodo).
     '''   PuMax        – gradiente azul por magnitud de Pu máximo.
     '''   TipoDado     – color categórico por NombreTipoDado (paleta cíclica).
     ''' Sin tipo asignado ⇒ gris N/A siempre, salvo en modo TipoDado donde
@@ -978,6 +1192,8 @@ Partial Public Class PiloteOverviewWindow
                 Return ColorPorCD(MenorPositivo(d.CD_Compresion, d.CD_Compresion_Estructural))
             Case "CDTraccion"
                 Return ColorPorCD(MenorPositivo(d.CD_Traccion, d.CD_Traccion_Estructural))
+            Case "CDSTM"
+                Return ColorPorCD(PeorCDSTM(d))
             Case "PuMax"
                 Return ColorPorPuMax(d.Pu_Pilote_Max)
             Case "TipoDado"
@@ -986,6 +1202,21 @@ Partial Public Class PiloteOverviewWindow
                 ' Modo CDMin: peor C/D entre los 4 chequeos (ignora los = 0).
                 Return ColorPorCD(PeorCDActiva(d))
         End Select
+    End Function
+
+    ''' <summary>
+    ''' Peor C/D entre los cuatro chequeos STM (puntal, nodo, tensor X, tensor Y),
+    ''' ignorando los que vienen con sentinela 0 = "no aplica / no evaluado".
+    ''' Devuelve 0 si ninguno aplica — se interpreta como "N/A" (gris en planta).
+    ''' </summary>
+    Private Shared Function PeorCDSTM(d As Dado) As Double
+        Dim valores As New List(Of Double)
+        If d.CD_STM_Puntal > 0 Then valores.Add(d.CD_STM_Puntal)
+        If d.CD_STM_Nodo > 0 Then valores.Add(d.CD_STM_Nodo)
+        If d.CD_STM_Tensor_X > 0 Then valores.Add(d.CD_STM_Tensor_X)
+        If d.CD_STM_Tensor_Y > 0 Then valores.Add(d.CD_STM_Tensor_Y)
+        If valores.Count = 0 Then Return 0
+        Return valores.Min()
     End Function
 
     ''' <summary>

@@ -1,0 +1,184 @@
+<Window x:Class="GenerarDadoDialog"
+        Icon="pack://application:,,,/ARCO;component/Resources/ARCO_ICONOGRIS.ico"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Generar geometría del dado"
+        Width="560" Height="540"
+        MinWidth="520" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BrushFondoApp}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="42"
+                            ResizeBorderThickness="6"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Theme.Claro.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/Inicio/Styles.xaml"/>
+                <ResourceDictionary Source="/ARCO;component/Formularios/14_Pilotes/Resources/Pilotes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="42"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource BrushTopBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Generar geometría del dado"
+                           FontFamily="{DynamicResource FuenteDisplay}" FontSize="14"
+                           Foreground="{DynamicResource BrushTopBarTexto}"
+                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <Button Grid.Column="1" Style="{StaticResource BtnIconoTopBar}"
+                        Click="BtnCerrar_Click"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Path Data="M 4,4 L 14,14 M 14,4 L 4,14"
+                          Stroke="{DynamicResource BrushTopBarTexto}" StrokeThickness="1.5"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TabControl Grid.Row="0" x:Name="TabForma" Background="Transparent" BorderThickness="0">
+
+                <!-- ═════════════ TAB RECTANGULAR ═════════════ -->
+                <TabItem Header="Rectangular">
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ANCHO (X) [m]" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                        <TextBox Grid.Row="1" Grid.Column="0" x:Name="TxtAncho" Text="2.60"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="ALTO (Y) [m]" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                        <TextBox Grid.Row="1" Grid.Column="2" x:Name="TxtAlto" Text="2.60"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="COLUMNAS (pilotes en X)" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,16,0,4"/>
+                        <TextBox Grid.Row="3" Grid.Column="0" x:Name="TxtColumnas" Text="2"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="FILAS (pilotes en Y)" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,16,0,4"/>
+                        <TextBox Grid.Row="3" Grid.Column="2" x:Name="TxtFilas" Text="2"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                                   Text="SEPARACIÓN ENTRE PILOTES [m]" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,16,0,4"/>
+                        <TextBox Grid.Row="5" Grid.Column="0" x:Name="TxtSeparacion" Text="1.80"
+                                 FontSize="13" Padding="10,8"/>
+                        <TextBlock Grid.Row="5" Grid.Column="2" VerticalAlignment="Center" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}"
+                                   Text="Lado seguro: 3·D del pilote mayor"/>
+                    </Grid>
+                </TabItem>
+
+                <!-- ═════════════ TAB POLÍGONO REGULAR / CIRCULAR ═════════════ -->
+                <TabItem Header="Circular / Polígono regular">
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="LADOS DEL POLÍGONO" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                        <ComboBox Grid.Row="1" Grid.Column="0" x:Name="CmbLados"
+                                  FontSize="13" Padding="10,8" SelectedIndex="3">
+                            <ComboBoxItem Content="Triángulo (3)"/>
+                            <ComboBoxItem Content="Cuadrado (4)"/>
+                            <ComboBoxItem Content="Pentágono (5)"/>
+                            <ComboBoxItem Content="Hexágono (6)"/>
+                            <ComboBoxItem Content="Octágono (8)"/>
+                            <ComboBoxItem Content="Círculo (32)"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="RADIO DEL DADO [m]" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                        <TextBox Grid.Row="1" Grid.Column="2" x:Name="TxtRadioDado" Text="1.75"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Nº PILOTES EN ANILLO" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,16,0,4"/>
+                        <TextBox Grid.Row="3" Grid.Column="0" x:Name="TxtNPilotes" Text="6"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="RADIO DEL ANILLO [m]" FontSize="11"
+                                   Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,16,0,4"/>
+                        <TextBox Grid.Row="3" Grid.Column="2" x:Name="TxtRadioAnillo" Text="1.00"
+                                 FontSize="13" Padding="10,8"/>
+
+                        <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                                  x:Name="ChkPiloteCentral" Content="Agregar pilote central"
+                                  FontSize="13" Margin="0,16,0,0"
+                                  Foreground="{DynamicResource BrushTextoPrincipal}"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3"
+                                   Margin="0,20,0,0" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource BrushTextoSecundario}"
+                                   Text="El círculo real se aproxima con un polígono de 32 lados."/>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <TextBlock Grid.Row="1" x:Name="LblError" Margin="0,8,0,0" FontSize="11"
+                       Foreground="{DynamicResource BrushNoCumple}" TextWrapping="Wrap"/>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Style="{StaticResource BtnSecundario}" Content="Cancelar"
+                        Click="BtnCancelar_Click" Margin="0,0,10,0" MinWidth="110"/>
+                <Button Style="{StaticResource BtnPrimario}" Content="Aplicar"
+                        Click="BtnAplicar_Click" MinWidth="130"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

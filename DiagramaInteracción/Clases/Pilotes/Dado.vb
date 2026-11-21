@@ -73,6 +73,28 @@ Public Class Dado
     ''' </summary>
     <OptionalField> Public CD_Traccion_Estructural As Double
 
+    ' ── STM (NSR-10 C.23): peor C/D de cada categoría del modelo ──────────
+    ''' <summary>C/D mínimo entre todos los puntales del modelo STM. 0 = no evaluado.</summary>
+    <OptionalField> Public CD_STM_Puntal As Double
+
+    ''' <summary>C/D mínimo entre todos los tensores del modelo STM. 0 = no evaluado.</summary>
+    <OptionalField> Public CD_STM_Tensor As Double
+
+    ''' <summary>C/D mínimo entre todos los nodos del modelo STM. 0 = no evaluado.</summary>
+    <OptionalField> Public CD_STM_Nodo As Double
+
+    ''' <summary>Área de acero requerida por STM para tensores en dirección X [cm²].</summary>
+    <OptionalField> Public As_STM_X_cm2 As Double
+
+    ''' <summary>Área de acero requerida por STM para tensores en dirección Y [cm²].</summary>
+    <OptionalField> Public As_STM_Y_cm2 As Double
+
+    ''' <summary>C/D del tensor en X = As_provisto_X / As_requerido_X. 0 = no aplica.</summary>
+    <OptionalField> Public CD_STM_Tensor_X As Double
+
+    ''' <summary>C/D del tensor en Y = As_provisto_Y / As_requerido_Y. 0 = no aplica.</summary>
+    <OptionalField> Public CD_STM_Tensor_Y As Double
+
     <OnDeserialized>
     Private Sub OnDeserialized(ctx As StreamingContext)
         If JointLabel Is Nothing Then JointLabel = ""

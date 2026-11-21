@@ -1,4 +1,5 @@
 <Window x:Class="PiloteOverviewWindow"
+        Icon="pack://application:,,,/ARCO;component/Resources/ARCO_ICONOGRIS.ico"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ARCO"
@@ -52,38 +53,22 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Marca -->
+                <!-- Marca ARCO -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal"
                             VerticalAlignment="Center" Margin="20,0,0,0">
-                    <Grid Width="32" Height="32" Margin="0,0,10,0">
-                        <Ellipse Fill="{DynamicResource BrushAzulInteraccion}"/>
-                        <Path Data="M 6,20 Q 16,4 26,20"
-                              Stroke="White" StrokeThickness="2.6"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Fill="Transparent"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Grid>
-                    <TextBlock Text="ARCO"
-                               FontFamily="{DynamicResource FuenteDisplay}"
-                               FontSize="18" Foreground="{DynamicResource BrushTopBarTexto}"
-                               VerticalAlignment="Center"/>
+                    <Image Source="pack://application:,,,/ARCO;component/Resources/ARCO_LOGOGRIS.png"
+                           Height="28" Margin="0,0,14,0"
+                           VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           SnapsToDevicePixels="True"/>
                     <Rectangle Width="1" Height="24"
                                Fill="{DynamicResource BrushTopBarDivisor}"
-                               Margin="16,0,16,0"/>
+                               Margin="2,0,16,0"/>
                     <TextBlock Text="Pilotes"
-                               FontFamily="{DynamicResource FuenteBase}"
-                               FontSize="14"
-                               Foreground="{DynamicResource BrushTopBarTextoTenue}"
+                               FontFamily="{DynamicResource FuenteDisplay}"
+                               FontSize="15"
+                               Foreground="{DynamicResource BrushTopBarTexto}"
                                VerticalAlignment="Center"/>
-                    <Border Margin="12,0,0,0" Padding="7,2" CornerRadius="10"
-                            Background="{DynamicResource BrushBadgeFondo}"
-                            BorderBrush="{DynamicResource BrushBadgeBorde}"
-                            BorderThickness="1" VerticalAlignment="Center">
-                        <TextBlock Text="BETA · Nueva UI"
-                                   FontFamily="{DynamicResource FuenteBase}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource BrushBadgeTexto}"/>
-                    </Border>
                 </StackPanel>
 
                 <!-- Breadcrumb -->
@@ -615,6 +600,11 @@
                             <StackPanel Orientation="Horizontal" Margin="16,12">
                                 <TextBlock Text="Generadores:" VerticalAlignment="Center" Margin="0,0,10,0"
                                            Foreground="{DynamicResource BrushTextoSecundario}" FontSize="12"/>
+                                <Button x:Name="BtnGenerarParametrico" Style="{StaticResource BtnPrimario}"
+                                        Content="+ Generar con parámetros…"
+                                        Click="BtnGenerarParametrico_Click" Margin="0,0,10,0"/>
+                                <TextBlock Text="Atajos:" VerticalAlignment="Center" Margin="4,0,8,0"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" FontSize="12"/>
                                 <Button Style="{StaticResource BtnSecundario}" Content="Rectangular 3×3"
                                         Command="{Binding CmdAplicarGeneradorRectangular}" Margin="0,0,6,0"/>
                                 <Button Style="{StaticResource BtnSecundario}" Content="Circular 6"
@@ -630,6 +620,7 @@
                         <Grid Grid.Row="1" ClipToBounds="True">
                             <Canvas x:Name="CanvasEditor" Background="Transparent"
                                     MouseLeftButtonDown="CanvasEditor_MouseLeftButtonDown"
+                                    MouseLeftButtonUp="CanvasEditor_MouseLeftButtonUp"
                                     MouseMove="CanvasEditor_MouseMove"
                                     MouseWheel="CanvasEditor_MouseWheel"
                                     SizeChanged="CanvasEditor_SizeChanged">
@@ -676,8 +667,9 @@
                         <Border Grid.Row="2" Background="{DynamicResource BrushSuperficie}"
                                 BorderBrush="{DynamicResource BrushBorde}" BorderThickness="0,1,0,0"
                                 Padding="16,8">
-                            <TextBlock FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}">
-                                Clic para colocar pilote · Clic derecho sobre pilote para eliminar · Rueda del mouse para zoom
+                            <TextBlock FontSize="11" Foreground="{DynamicResource BrushTextoSecundario}"
+                                       TextWrapping="Wrap">
+                                Clic en vacío = colocar pilote · Arrastrar pilote/vértice = mover · Clic derecho = eliminar · Doble clic en arista = insertar vértice · Rueda = zoom
                             </TextBlock>
                         </Border>
                     </Grid>
@@ -726,6 +718,101 @@
                                              FontSize="13" Padding="10,8"/>
                                 </Grid>
 
+                                <!-- Parámetros STM (NSR-10 C.23) -->
+                                <TextBlock Text="STM — PARÁMETROS DEL CONCRETO" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,8,0,4"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="14"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="fc [MPa]" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="0"
+                                             Text="{Binding Fc, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="fy [MPa]" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="2"
+                                             Text="{Binding Fy, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}"
+                                             FontSize="13" Padding="10,8"/>
+                                </Grid>
+
+                                <TextBlock Text="STM — COLUMNA SOBRE EL DADO Y βs" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Lado X [m]" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="0"
+                                             Text="{Binding LadoColumna_X, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.00}}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Lado Y [m]" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="2"
+                                             Text="{Binding LadoColumna_Y, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.00}}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="4" Text="βs" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="4"
+                                             Text="{Binding Beta_Puntal, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.00}}"
+                                             FontSize="13" Padding="10,8"/>
+                                </Grid>
+
+                                <!-- Refuerzo inferior del dado (tensores del STM) -->
+                                <TextBlock Text="REFUERZO INFERIOR — TENSORES (STM)" FontSize="11"
+                                           Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="N barras X" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="0"
+                                             Text="{Binding NumBarras_Inf_X, UpdateSourceTrigger=LostFocus}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Ø barra X" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="2"
+                                             Text="{Binding Diametro_Barras_Inf_X, UpdateSourceTrigger=LostFocus}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="4" Text="N barras Y" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="4"
+                                             Text="{Binding NumBarras_Inf_Y, UpdateSourceTrigger=LostFocus}"
+                                             FontSize="13" Padding="10,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="6" Text="Ø barra Y" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="6"
+                                             Text="{Binding Diametro_Barras_Inf_Y, UpdateSourceTrigger=LostFocus}"
+                                             FontSize="13" Padding="10,8"/>
+                                </Grid>
+
                                 <TextBlock Text="RESUMEN DEL GRUPO" FontSize="11"
                                            Foreground="{DynamicResource BrushTextoSecundario}" Margin="0,8,0,8"/>
                                 <Border Padding="14,12" CornerRadius="6"
@@ -744,6 +831,94 @@
                                         </Grid>
                                     </StackPanel>
                                 </Border>
+
+                                <!-- ═════════════════ Tabla de vértices ═════════════════ -->
+                                <Grid Margin="0,16,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="VÉRTICES DEL POLÍGONO" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Style="{StaticResource BtnSecundario}"
+                                            Content="+ Vértice" FontSize="11" Padding="10,4"
+                                            Click="BtnAgregarVertice_Click"/>
+                                </Grid>
+                                <DataGrid ItemsSource="{Binding Vertices}"
+                                          AutoGenerateColumns="False" HeadersVisibility="Column"
+                                          CanUserAddRows="False" CanUserDeleteRows="False"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="{DynamicResource BrushBordeTenue}"
+                                          Background="Transparent" BorderThickness="1"
+                                          BorderBrush="{DynamicResource BrushBorde}"
+                                          RowHeight="26" FontSize="12"
+                                          AlternatingRowBackground="{DynamicResource BrushBordeTenue}"
+                                          MaxHeight="180" Margin="0,0,0,8">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="X [m]" Width="*"
+                                                            Binding="{Binding X, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.000}}"/>
+                                        <DataGridTextColumn Header="Y [m]" Width="*"
+                                                            Binding="{Binding Y, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.000}}"/>
+                                        <DataGridTemplateColumn Header="" Width="36" IsReadOnly="True">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="×" FontSize="14" Padding="0"
+                                                            Width="24" Height="20" Margin="0,2"
+                                                            Background="Transparent" BorderThickness="0"
+                                                            Foreground="{DynamicResource BrushTextoSecundario}"
+                                                            ToolTip="Eliminar vértice"
+                                                            Click="BtnBorrarVertice_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- ═════════════════ Tabla de pilotes ═════════════════ -->
+                                <Grid Margin="0,8,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="POSICIONES DE PILOTES" FontSize="11"
+                                               Foreground="{DynamicResource BrushTextoSecundario}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Style="{StaticResource BtnSecundario}"
+                                            Content="+ Pilote" FontSize="11" Padding="10,4"
+                                            Click="BtnAgregarPilote_Click"/>
+                                </Grid>
+                                <DataGrid ItemsSource="{Binding Pilotes}"
+                                          AutoGenerateColumns="False" HeadersVisibility="Column"
+                                          CanUserAddRows="False" CanUserDeleteRows="False"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="{DynamicResource BrushBordeTenue}"
+                                          Background="Transparent" BorderThickness="1"
+                                          BorderBrush="{DynamicResource BrushBorde}"
+                                          RowHeight="26" FontSize="12"
+                                          AlternatingRowBackground="{DynamicResource BrushBordeTenue}"
+                                          MaxHeight="220" Margin="0,0,0,12">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="X [m]" Width="*"
+                                                            Binding="{Binding X, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.000}}"/>
+                                        <DataGridTextColumn Header="Y [m]" Width="*"
+                                                            Binding="{Binding Y, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.000}}"/>
+                                        <DataGridTextColumn Header="Tipo" Width="80"
+                                                            Binding="{Binding NombreTipoPilote, UpdateSourceTrigger=LostFocus}"/>
+                                        <DataGridTemplateColumn Header="" Width="36" IsReadOnly="True">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="×" FontSize="14" Padding="0"
+                                                            Width="24" Height="20" Margin="0,2"
+                                                            Background="Transparent" BorderThickness="0"
+                                                            Foreground="{DynamicResource BrushTextoSecundario}"
+                                                            ToolTip="Eliminar pilote"
+                                                            Click="BtnBorrarPiloteFila_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
 
                                 <TextBlock Text="VALIDACIÓN" FontSize="11"
                                            Foreground="{DynamicResource BrushTextoSecundario}"

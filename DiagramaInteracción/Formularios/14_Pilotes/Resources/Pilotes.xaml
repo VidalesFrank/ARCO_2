@@ -17,14 +17,16 @@
     <SolidColorBrush x:Key="BrushAdvertenciaFondo" Color="#FFF7E3"/>
     <SolidColorBrush x:Key="BrushNoCumpleFondo"    Color="#FBECEC"/>
 
-    <!-- Específicos del canvas del editor de dado -->
-    <SolidColorBrush x:Key="BrushCanvasFondo"   Color="#F7F9FC"/>
-    <SolidColorBrush x:Key="BrushCanvasGrid"    Color="#DFE5EE"/>
-    <SolidColorBrush x:Key="BrushCanvasGridMayor" Color="#C5D0DD"/>
-    <SolidColorBrush x:Key="BrushDadoRelleno"   Color="#DCEBF6"/>
-    <SolidColorBrush x:Key="BrushDadoBorde"     Color="#244A68"/>
-    <SolidColorBrush x:Key="BrushPiloteRelleno" Color="#3273A8"/>
-    <SolidColorBrush x:Key="BrushPiloteBorde"   Color="#172B3A"/>
+    <!-- Específicos del canvas del editor de dado (paleta gris ARCO).
+         Selección y centroide se mantienen en ámbar/naranja porque son
+         marcadores funcionales (atención del usuario), no identidad de marca. -->
+    <SolidColorBrush x:Key="BrushCanvasFondo"   Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="BrushCanvasGrid"    Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="BrushCanvasGridMayor" Color="#C8C8C8"/>
+    <SolidColorBrush x:Key="BrushDadoRelleno"   Color="#E6E6E6"/>
+    <SolidColorBrush x:Key="BrushDadoBorde"     Color="#3C3C3C"/>
+    <SolidColorBrush x:Key="BrushPiloteRelleno" Color="#575757"/>
+    <SolidColorBrush x:Key="BrushPiloteBorde"   Color="#1F1F1F"/>
     <SolidColorBrush x:Key="BrushPiloteSelec"   Color="#F2A93B"/>
     <SolidColorBrush x:Key="BrushCentroideGrupo" Color="#E26F2F"/>
 

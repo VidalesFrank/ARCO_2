@@ -1,60 +1,68 @@
-<!-- Tema CLARO — paleta premium azul petróleo + neutros.
-     Mismas keys en Theme.Oscuro.xaml para permitir switch en caliente. -->
+<!-- Tema CLARO — paleta ARCO 100% GRIS con alto contraste.
+     Jerarquía de 10 niveles:
+       #1F1F1F texto principal · #2B2B2B acento primario · #3C3C3C acento hover
+       #575757 gris ARCO (topbar/sidebar) · #6E6E6E separadores
+       #8A8A8A medio · #B5B5B5 deshabilitado · #D5D5D5 bordes
+       #EAEAEA borde tenue · #F2F2F2 fondo app · #FFFFFF superficie
+     Keys preservadas (incluidas las que llevan "Azul" en el nombre) para no
+     romper bindings existentes; solo cambian los valores. Semáforo
+     (cumple/advertencia/no cumple) se mantiene porque es funcional. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ── Superficies ──────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushFondoApp"           Color="#F5F7FA"/>
+    <SolidColorBrush x:Key="BrushFondoApp"           Color="#F2F2F2"/>
     <SolidColorBrush x:Key="BrushSuperficie"         Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="BrushSuperficieHover"    Color="#EDF4FA"/>
-    <SolidColorBrush x:Key="BrushSuperficiePresion"  Color="#E0ECF6"/>
-    <SolidColorBrush x:Key="BrushSuperficieBanner"   Color="#F0F6FC"/>
+    <SolidColorBrush x:Key="BrushSuperficieHover"    Color="#EDEDED"/>
+    <SolidColorBrush x:Key="BrushSuperficiePresion"  Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="BrushSuperficieBanner"   Color="#F7F7F7"/>
 
-    <!-- ── Sidebar ──────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushSidebar"            Color="#172B3A"/>
-    <SolidColorBrush x:Key="BrushSidebarHover"       Color="#20394D"/>
-    <SolidColorBrush x:Key="BrushSidebarActivo"      Color="#3273A8"/>
-    <SolidColorBrush x:Key="BrushSidebarTitulo"      Color="#87A0B6"/>
-    <SolidColorBrush x:Key="BrushSidebarSeparador"   Color="#28404E"/>
-    <SolidColorBrush x:Key="BrushSidebarTexto"       Color="#E2ECF6"/>
-    <SolidColorBrush x:Key="BrushSidebarTextoTenue"  Color="#9DB5CC"/>
+    <!-- ── Sidebar (gris ARCO oficial #575757) ─────────────────── -->
+    <SolidColorBrush x:Key="BrushSidebar"            Color="#575757"/>
+    <SolidColorBrush x:Key="BrushSidebarHover"       Color="#6B6B6B"/>
+    <SolidColorBrush x:Key="BrushSidebarActivo"      Color="#2B2B2B"/>
+    <SolidColorBrush x:Key="BrushSidebarTitulo"      Color="#CFCFCF"/>
+    <SolidColorBrush x:Key="BrushSidebarSeparador"   Color="#6E6E6E"/>
+    <SolidColorBrush x:Key="BrushSidebarTexto"       Color="#F2F2F2"/>
+    <SolidColorBrush x:Key="BrushSidebarTextoTenue"  Color="#B8B8B8"/>
 
-    <!-- ── TopBar ──────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushTopBar"             Color="#172B3A"/>
+    <!-- ── TopBar (mismo gris ARCO) ────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushTopBar"             Color="#575757"/>
     <SolidColorBrush x:Key="BrushTopBarTexto"        Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="BrushTopBarTextoTenue"   Color="#A6BED4"/>
-    <SolidColorBrush x:Key="BrushTopBarHover"        Color="#253C50"/>
-    <SolidColorBrush x:Key="BrushTopBarDivisor"      Color="#2C445A"/>
-    <SolidColorBrush x:Key="BrushTopBarSearchFondo"  Color="#223B52"/>
-    <SolidColorBrush x:Key="BrushTopBarSearchFoco"   Color="#2B4A66"/>
+    <SolidColorBrush x:Key="BrushTopBarTextoTenue"   Color="#CFCFCF"/>
+    <SolidColorBrush x:Key="BrushTopBarHover"        Color="#6B6B6B"/>
+    <SolidColorBrush x:Key="BrushTopBarDivisor"      Color="#6E6E6E"/>
+    <SolidColorBrush x:Key="BrushTopBarSearchFondo"  Color="#4A4A4A"/>
+    <SolidColorBrush x:Key="BrushTopBarSearchFoco"   Color="#3C3C3C"/>
 
-    <!-- ── Marca y acento ──────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushAzulPrincipal"      Color="#244A68"/>
-    <SolidColorBrush x:Key="BrushAzulInteraccion"    Color="#3273A8"/>
-    <SolidColorBrush x:Key="BrushAzulTenue"          Color="#8DB2CF"/>
+    <!-- ── Marca y acento (gris carbón para contraste alto) ────
+         Keys preservadas por compatibilidad: BrushAzul* ahora es GRIS. -->
+    <SolidColorBrush x:Key="BrushAzulPrincipal"      Color="#2B2B2B"/>
+    <SolidColorBrush x:Key="BrushAzulInteraccion"    Color="#3C3C3C"/>
+    <SolidColorBrush x:Key="BrushAzulTenue"          Color="#8A8A8A"/>
 
     <!-- ── Texto ────────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushTextoPrincipal"     Color="#202B36"/>
-    <SolidColorBrush x:Key="BrushTextoSecundario"    Color="#687786"/>
-    <SolidColorBrush x:Key="BrushTextoDeshabilitado" Color="#AAB6C4"/>
-    <SolidColorBrush x:Key="BrushTextoPlaceholder"   Color="#8EA6BE"/>
+    <SolidColorBrush x:Key="BrushTextoPrincipal"     Color="#1F1F1F"/>
+    <SolidColorBrush x:Key="BrushTextoSecundario"    Color="#575757"/>
+    <SolidColorBrush x:Key="BrushTextoDeshabilitado" Color="#B5B5B5"/>
+    <SolidColorBrush x:Key="BrushTextoPlaceholder"   Color="#9A9A9A"/>
 
     <!-- ── Bordes ──────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushBorde"              Color="#E2E8EF"/>
-    <SolidColorBrush x:Key="BrushBordeHover"         Color="#3273A8"/>
-    <SolidColorBrush x:Key="BrushBordeTenue"         Color="#EEF2F7"/>
+    <SolidColorBrush x:Key="BrushBorde"              Color="#D5D5D5"/>
+    <SolidColorBrush x:Key="BrushBordeHover"         Color="#575757"/>
+    <SolidColorBrush x:Key="BrushBordeTenue"         Color="#EAEAEA"/>
 
-    <!-- ── Badges ─────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="BrushBadgeFondo"         Color="#FFF3CC"/>
-    <SolidColorBrush x:Key="BrushBadgeBorde"         Color="#D7AF5F"/>
-    <SolidColorBrush x:Key="BrushBadgeTexto"         Color="#7C5C1E"/>
+    <!-- ── Badges (neutros grises) ─────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushBadgeFondo"         Color="#EDEDED"/>
+    <SolidColorBrush x:Key="BrushBadgeBorde"         Color="#B5B5B5"/>
+    <SolidColorBrush x:Key="BrushBadgeTexto"         Color="#3C3C3C"/>
 
     <!-- ── Sombra sutil (para elevación de tarjetas) ───────────── -->
     <DropShadowEffect x:Key="ElevacionBaja"
-                      Color="#172B3A" Opacity="0.08"
+                      Color="#1F1F1F" Opacity="0.10"
                       BlurRadius="12" ShadowDepth="2" Direction="270"/>
     <DropShadowEffect x:Key="ElevacionMedia"
-                      Color="#172B3A" Opacity="0.14"
+                      Color="#1F1F1F" Opacity="0.16"
                       BlurRadius="18" ShadowDepth="4" Direction="270"/>
 
 </ResourceDictionary>

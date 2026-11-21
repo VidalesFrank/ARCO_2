@@ -15,6 +15,7 @@ Public Class DadoDetalleVM
     Public ReadOnly TipoDado As TipoDado
     Public ReadOnly Contenedor As cPilotes
     Public ReadOnly Resultado As PiloteService.ResultadoDado
+    Public ReadOnly STM As STMService.ResultadoSTM
 
     ''' <summary>Tabla con columnas dinámicas: Combo | P1 | P2 | ... | Pn | Pmax | Pmin.</summary>
     Public ReadOnly Property MatrizCombinaciones As DataTable
@@ -34,13 +35,125 @@ Public Class DadoDetalleVM
 
         If TipoDado Is Nothing OrElse tpDefault Is Nothing Then
             Resultado = New PiloteService.ResultadoDado()
+            STM = New STMService.ResultadoSTM()
         Else
             Resultado = PiloteService.EvaluarDado(modelo, TipoDado, tpDefault, contenedor)
+            Dim modeloSTM = STMService.GenerarModelo(TipoDado, Resultado, contenedor)
+            STM = STMService.Evaluar(modeloSTM, TipoDado)
         End If
 
         _resumenPorPilote = Resultado.PorPilote
         _matrizCombinaciones = BuildMatriz()
     End Sub
+
+    ' ── Bindings para la pestaña STM ─────────────────────────────
+
+    Public ReadOnly Property Puntales As List(Of PuntalSTM)
+        Get
+            Return If(STM.Modelo IsNot Nothing, STM.Modelo.Puntales, New List(Of PuntalSTM))
+        End Get
+    End Property
+
+    Public ReadOnly Property Tensores As List(Of TensorSTM)
+        Get
+            If STM.Modelo Is Nothing Then Return New List(Of TensorSTM)
+            Dim todos As New List(Of TensorSTM)
+            todos.AddRange(STM.Modelo.TensoresX)
+            todos.AddRange(STM.Modelo.TensoresY)
+            Return todos
+        End Get
+    End Property
+
+    Public ReadOnly Property Nodos As List(Of NodoSTM)
+        Get
+            If STM.Modelo Is Nothing OrElse STM.Modelo.NodoSuperior Is Nothing Then
+                Return New List(Of NodoSTM)
+            End If
+            Dim todos As New List(Of NodoSTM) From {STM.Modelo.NodoSuperior}
+            todos.AddRange(STM.Modelo.NodosInferiores)
+            Return todos
+        End Get
+    End Property
+
+    Public ReadOnly Property CD_STM_Puntal As Double
+        Get
+            Return STM.CD_Puntal_Minimo
+        End Get
+    End Property
+
+    Public ReadOnly Property CD_STM_Nodo As Double
+        Get
+            Return STM.CD_Nodo_Minimo
+        End Get
+    End Property
+
+    Public ReadOnly Property As_STM_X As Double
+        Get
+            Return STM.As_X_cm2
+        End Get
+    End Property
+
+    Public ReadOnly Property As_STM_Y As Double
+        Get
+            Return STM.As_Y_cm2
+        End Get
+    End Property
+
+    Public ReadOnly Property As_STM_X_Provisto As Double
+        Get
+            Return STM.As_X_Provisto_cm2
+        End Get
+    End Property
+
+    Public ReadOnly Property As_STM_Y_Provisto As Double
+        Get
+            Return STM.As_Y_Provisto_cm2
+        End Get
+    End Property
+
+    Public ReadOnly Property CD_STM_Tensor_X As Double
+        Get
+            Return STM.CD_Tensor_X
+        End Get
+    End Property
+
+    Public ReadOnly Property CD_STM_Tensor_Y As Double
+        Get
+            Return STM.CD_Tensor_Y
+        End Get
+    End Property
+
+    Public ReadOnly Property Refuerzo_X_Resumen As String
+        Get
+            If TipoDado Is Nothing OrElse TipoDado.NumBarras_Inf_X <= 0 Then Return "sin refuerzo"
+            Return $"{TipoDado.NumBarras_Inf_X} × {TipoDado.Diametro_Barras_Inf_X}"
+        End Get
+    End Property
+
+    Public ReadOnly Property Refuerzo_Y_Resumen As String
+        Get
+            If TipoDado Is Nothing OrElse TipoDado.NumBarras_Inf_Y <= 0 Then Return "sin refuerzo"
+            Return $"{TipoDado.NumBarras_Inf_Y} × {TipoDado.Diametro_Barras_Inf_Y}"
+        End Get
+    End Property
+
+    Public ReadOnly Property RelacionLH As Double
+        Get
+            Return If(STM.Modelo IsNot Nothing, STM.Modelo.RelacionLH, 0)
+        End Get
+    End Property
+
+    Public ReadOnly Property DadoEsbelto As Boolean
+        Get
+            Return STM.DadoEsbelto
+        End Get
+    End Property
+
+    Public ReadOnly Property AdvertenciasSTM As String
+        Get
+            Return String.Join(Environment.NewLine, STM.Advertencias)
+        End Get
+    End Property
 
     Private Function BuildMatriz() As DataTable
         Dim dt As New DataTable()

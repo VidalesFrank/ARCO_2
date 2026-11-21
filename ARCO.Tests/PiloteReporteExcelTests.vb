@@ -54,18 +54,21 @@ Public Class PiloteReporteExcelTests
         c.Dados.Add(d)
         c.Lista_Combinaciones.Add("Du1")
         c.ListA_Combinaciones_Design.Add("Du1")
+        td.NumBarras_Inf_X = 15 : td.Diametro_Barras_Inf_X = "#6"
+        td.NumBarras_Inf_Y = 15 : td.Diametro_Barras_Inf_Y = "#6"
         PiloteService.EvaluarTodos(c)
+        STMService.EvaluarTodos(c)
         Return c
     End Function
 
     <TestMethod>
-    Public Sub Exportar_GeneraArchivoCon5Hojas()
+    Public Sub Exportar_GeneraArchivoCon6Hojas()
         Dim c = ContenedorConDatos()
         Dim r = PiloteReporteExcelService.Exportar(c, Nothing, _tempFile)
 
         Assert.IsTrue(r.Exito, "La exportación debe tener éxito: " & r.Mensaje)
         Assert.IsTrue(File.Exists(_tempFile), "El archivo debe existir en disco.")
-        Assert.AreEqual(5, r.NumHojas)
+        Assert.AreEqual(6, r.NumHojas)
     End Sub
 
     <TestMethod>
@@ -77,9 +80,27 @@ Public Class PiloteReporteExcelTests
             Dim nombres = wb.Worksheets.Select(Function(w) w.Name).ToList()
             CollectionAssert.Contains(nombres, "Resumen")
             CollectionAssert.Contains(nombres, "Apoyos")
+            CollectionAssert.Contains(nombres, "STM")
             CollectionAssert.Contains(nombres, "Catálogo Pilotes")
             CollectionAssert.Contains(nombres, "Catálogo Dados")
             CollectionAssert.Contains(nombres, "Combinaciones")
+        End Using
+    End Sub
+
+    <TestMethod>
+    Public Sub Exportar_HojaSTM_LlenaChequeosDelDado()
+        Dim c = ContenedorConDatos()
+        PiloteReporteExcelService.Exportar(c, Nothing, _tempFile)
+
+        Using wb As New XLWorkbook(_tempFile)
+            Dim ws = wb.Worksheet("STM")
+            Assert.AreEqual("J1", ws.Cell(2, 1).GetString())
+            Assert.AreEqual("D1", ws.Cell(2, 2).GetString())
+            ' Col 9 = Refuerzo X ("15 × #6") y col 10 = C/D tensor X.
+            Assert.IsTrue(ws.Cell(2, 9).GetString().Contains("#6"),
+                $"Refuerzo X debe mostrarse, obtuvo '{ws.Cell(2, 9).GetString()}'.")
+            Dim cdX = ws.Cell(2, 10).GetDouble()
+            Assert.IsTrue(cdX > 1.0, $"C/D tensor X con 15#6 debe cumplir, obtuvo {cdX:0.00}.")
         End Using
     End Sub
 
@@ -119,7 +140,7 @@ Public Class PiloteReporteExcelTests
         Dim c As New cPilotes()
         Dim r = PiloteReporteExcelService.Exportar(c, Nothing, _tempFile)
         Assert.IsTrue(r.Exito, "Un modelo vacío igual debe generar un archivo válido.")
-        Assert.AreEqual(5, r.NumHojas)
+        Assert.AreEqual(6, r.NumHojas)
     End Sub
 
     <TestMethod>

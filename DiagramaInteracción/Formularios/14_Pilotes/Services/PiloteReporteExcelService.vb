@@ -1,17 +1,20 @@
 Imports ClosedXML.Excel
 
 ''' <summary>
-''' Exportación del módulo de Pilotes a Excel. Cinco hojas:
+''' Exportación del módulo de Pilotes a Excel. Seis hojas:
 '''
 '''   1. Resumen          · KPIs del proyecto + Top-20 críticos (orden por C/D mín).
 '''   2. Apoyos           · Un renglón por Dado: coord, origen, dado asignado,
 '''                         Pu max/min, 4 C/D (geot + estr) con semáforo, combo
 '''                         gobernante, veredicto consolidado.
-'''   3. Catálogo Pilotes · Un renglón por TipoPilote: geometría, capacidades
+'''   3. STM              · Chequeo puntal-tensor NSR-10 C.23 por apoyo:
+'''                         C/D puntal, tensor X/Y, nodo + demandas y refuerzo
+'''                         provisto.
+'''   4. Catálogo Pilotes · Un renglón por TipoPilote: geometría, capacidades
 '''                         admisibles, refuerzo, cuantía, φPn, φTn.
-'''   4. Catálogo Dados   · Un renglón por TipoDado: espesor, pilotes, dimensiones
-'''                         del polígono, cuántos apoyos lo usan.
-'''   5. Combinaciones    · Combos seleccionados de diseño vs. todas las del modelo.
+'''   5. Catálogo Dados   · Un renglón por TipoDado: espesor, pilotes, dimensiones
+'''                         del polígono, parámetros STM, refuerzo inferior.
+'''   6. Combinaciones    · Combos seleccionados de diseño vs. todas las del modelo.
 '''
 ''' Reutiliza ReporteHelpers compartido (EscribirEncabezados, EscribirFactor,
 ''' EscribirValor, EstilarFilaDatos, AjustarColumnas, AgregarBordesTabla) para que
@@ -51,6 +54,7 @@ Public Module PiloteReporteExcelService
             Using wb As New XLWorkbook()
                 ExportarResumen(wb, contenedor, proyecto)
                 ExportarApoyos(wb, contenedor)
+                ExportarSTM(wb, contenedor)
                 ExportarCatalogoPilotes(wb, contenedor)
                 ExportarCatalogoDados(wb, contenedor)
                 ExportarCombinaciones(wb, contenedor)
@@ -306,6 +310,9 @@ Public Module PiloteReporteExcelService
         Dim enc = {"Nombre", "Descripción", "Nº pilotes",
                    "Espesor [m]", "Recubr. [m]", "Área polígono [m²]",
                    "Ancho [m]", "Largo [m]",
+                   "fc [MPa]", "fy [MPa]",
+                   "Col. X [m]", "Col. Y [m]", "βs",
+                   "N barras X", "Ø X", "N barras Y", "Ø Y",
                    "Apoyos que lo usan"}
         ReporteHelpers.EscribirEncabezados(ws, 1, enc)
 
@@ -334,7 +341,18 @@ Public Module PiloteReporteExcelService
             ReporteHelpers.EscribirValor(ws.Cell(fila, 6), DadoGeometria.AreaPoligono(td.Poligono), "0.00")
             ReporteHelpers.EscribirValor(ws.Cell(fila, 7), bbox.Item1, "0.00")
             ReporteHelpers.EscribirValor(ws.Cell(fila, 8), bbox.Item2, "0.00")
-            ReporteHelpers.EscribirValor(ws.Cell(fila, 9), usos, "0")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 9), td.Fc, "0")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 10), td.Fy, "0")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 11), td.LadoColumna_X, "0.00")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 12), td.LadoColumna_Y, "0.00")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 13), td.Beta_Puntal, "0.00")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 14), td.NumBarras_Inf_X, "0")
+            ws.Cell(fila, 15).Value = If(String.IsNullOrEmpty(td.Diametro_Barras_Inf_X), "—", td.Diametro_Barras_Inf_X)
+            ws.Cell(fila, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 16), td.NumBarras_Inf_Y, "0")
+            ws.Cell(fila, 17).Value = If(String.IsNullOrEmpty(td.Diametro_Barras_Inf_Y), "—", td.Diametro_Barras_Inf_Y)
+            ws.Cell(fila, 17).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 18), usos, "0")
 
             ReporteHelpers.EstilarFilaDatos(ws, fila, enc.Length, fila Mod 2 = 1, columnasIzquierda:=2)
             fila += 1
@@ -343,6 +361,101 @@ Public Module PiloteReporteExcelService
         ReporteHelpers.AgregarBordesTabla(ws, 1, fila - 1, enc.Length)
         ReporteHelpers.AjustarColumnas(ws, enc.Length, anchoMinimo:=10)
     End Sub
+
+    ' ══════════════════════════════════════════════════════════════════════
+    ' Hoja STM — chequeo puntal-tensor NSR-10 C.23 por apoyo
+    ' ══════════════════════════════════════════════════════════════════════
+    Private Sub ExportarSTM(wb As XLWorkbook, c As cPilotes)
+        Dim ws = wb.Worksheets.Add("STM")
+        Dim enc = {"Joint/Pier", "Tipo dado", "Espesor [m]", "L/h",
+                   "C/D Puntal", "C/D Nodo",
+                   "As req X [cm²]", "As prov X [cm²]", "Refuerzo X", "C/D Tensor X",
+                   "As req Y [cm²]", "As prov Y [cm²]", "Refuerzo Y", "C/D Tensor Y",
+                   "Veredicto"}
+        ReporteHelpers.EscribirEncabezados(ws, 1, enc)
+
+        If c.Dados.Count = 0 Then
+            ws.Cell(2, 1).Value = "Sin apoyos. Importa desde ETABS en la vista 'Apoyos'."
+            ws.Range(2, 1, 2, enc.Length).Merge()
+            ws.Cell(2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            ws.Cell(2, 1).Style.Font.Italic = True
+            ReporteHelpers.AjustarColumnas(ws, enc.Length)
+            Return
+        End If
+
+        Dim umbral = PiloteService.UMBRAL_CD
+        Dim fila = 2
+        For Each d In c.Dados.OrderBy(Function(x) x.JointLabel)
+            Dim td = c.BuscarTipoDado(d.NombreTipoDado)
+            Dim relLH As Double = 0
+            Dim refX = "—", refY = "—"
+            Dim espesor As Double = 0
+            If td IsNot Nothing Then
+                espesor = td.Espesor
+                If td.NumBarras_Inf_X > 0 Then refX = $"{td.NumBarras_Inf_X} × {td.Diametro_Barras_Inf_X}"
+                If td.NumBarras_Inf_Y > 0 Then refY = $"{td.NumBarras_Inf_Y} × {td.Diametro_Barras_Inf_Y}"
+            End If
+
+            ws.Cell(fila, 1).Value = d.JointLabel
+            ws.Cell(fila, 2).Value = If(String.IsNullOrEmpty(d.NombreTipoDado), "—", d.NombreTipoDado)
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 3), espesor, "0.00")
+
+            ' L/h se recalcula en vivo (barato — una pasada por los pilotes).
+            If td IsNot Nothing AndAlso td.Pilotes.Count >= 2 AndAlso td.Espesor > 0 Then
+                Dim claroMax As Double = 0
+                For i = 0 To td.Pilotes.Count - 1
+                    For j = i + 1 To td.Pilotes.Count - 1
+                        Dim pi = td.Pilotes(i), pj = td.Pilotes(j)
+                        Dim dd = Math.Sqrt((pi.X_Local - pj.X_Local) ^ 2 + (pi.Y_Local - pj.Y_Local) ^ 2)
+                        If dd > claroMax Then claroMax = dd
+                    Next
+                Next
+                relLH = claroMax / td.Espesor
+            End If
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 4), relLH, "0.00")
+
+            ReporteHelpers.EscribirFactor(ws.Cell(fila, 5), d.CD_STM_Puntal, ReporteHelpers.SinDato.CeroOMenor)
+            ReporteHelpers.EscribirFactor(ws.Cell(fila, 6), d.CD_STM_Nodo, ReporteHelpers.SinDato.CeroOMenor)
+
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 7), d.As_STM_X_cm2, "0.0")
+            Dim provX As Double = 0, provY As Double = 0
+            If td IsNot Nothing Then
+                provX = td.NumBarras_Inf_X * Funciones_00_Varias.AreaRefuerzo(td.Diametro_Barras_Inf_X) / 100.0
+                provY = td.NumBarras_Inf_Y * Funciones_00_Varias.AreaRefuerzo(td.Diametro_Barras_Inf_Y) / 100.0
+            End If
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 8), provX, "0.0")
+            ws.Cell(fila, 9).Value = refX
+            ws.Cell(fila, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            ReporteHelpers.EscribirFactor(ws.Cell(fila, 10), d.CD_STM_Tensor_X, ReporteHelpers.SinDato.CeroOMenor)
+
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 11), d.As_STM_Y_cm2, "0.0")
+            ReporteHelpers.EscribirValor(ws.Cell(fila, 12), provY, "0.0")
+            ws.Cell(fila, 13).Value = refY
+            ws.Cell(fila, 13).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            ReporteHelpers.EscribirFactor(ws.Cell(fila, 14), d.CD_STM_Tensor_Y, ReporteHelpers.SinDato.CeroOMenor)
+
+            Dim okSTM = CumpleSTM(d, umbral) AndAlso Not String.IsNullOrEmpty(d.NombreTipoDado)
+            ReporteHelpers.EscribirEstado(ws.Cell(fila, 15), okSTM)
+
+            ReporteHelpers.EstilarFilaDatos(ws, fila, enc.Length, fila Mod 2 = 1, columnasIzquierda:=2)
+            fila += 1
+        Next
+
+        ReporteHelpers.AgregarBordesTabla(ws, 1, fila - 1, enc.Length)
+        ReporteHelpers.AjustarColumnas(ws, enc.Length, anchoMinimo:=10)
+    End Sub
+
+    ''' <summary>
+    ''' Un apoyo cumple STM si todos los C/D activos (&gt; 0) están ≥ umbral.
+    ''' C/D = 0 es sentinela "no aplica" y no participa. Si todos los chequeos
+    ''' son 0 (no se evaluó), devuelve False — no podemos afirmar que cumple.
+    ''' </summary>
+    Private Function CumpleSTM(d As Dado, umbral As Double) As Boolean
+        Dim cds = {d.CD_STM_Puntal, d.CD_STM_Nodo, d.CD_STM_Tensor_X, d.CD_STM_Tensor_Y}.
+                  Where(Function(v) v > 0).ToList()
+        If cds.Count = 0 Then Return False
+        Return cds.All(Function(v) v >= umbral)
+    End Function
 
     ''' <summary>Ancho y largo del rectángulo que envuelve el polígono.</summary>
     Private Function BoundingBoxPoligono(poligono As List(Of Punto2D)) As Tuple(Of Double, Double)
